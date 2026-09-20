@@ -1,12 +1,17 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import { useBrandTemplates, type BrandTemplate, type TemplateDraft } from "./brand-data";
+import {
+  updateTemplateDraft,
+  useBrandTemplates,
+  useTemplateDraft,
+  type BrandTemplate,
+  type TemplateDraft,
+} from "./brand-data";
 import {
   parseDraftInput,
   readTemplateContent,
@@ -19,22 +24,8 @@ import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
 
 export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: string }) {
-  const { database, session } = useAuth();
   const templates = useBrandTemplates(clientId);
-  const draft = useQuery<TemplateDraft | null>({
-    queryKey: ["template-draft", session?.user.id, clientId, draftId],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult<TemplateDraft | null>(
-        await database
-          .from("template_drafts")
-          .select("*")
-          .eq("id", draftId)
-          .eq("client_id", clientId)
-          .eq("owner_id", session!.user.id)
-          .maybeSingle(),
-      ),
-  });
+  const draft = useTemplateDraft(clientId, draftId);
   if (draft.isPending || templates.isPending) return <PageStatus>Opening your draft…</PageStatus>;
   const template = templates.data?.find((item) => item.id === draft.data?.template_id);
   if (!draft.data || !template || draft.error || templates.error)
@@ -78,21 +69,15 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   const save = useMutation({
     mutationFn: async () => {
       const values = parseDraftInput(name, content);
-      const response = await database
-        .from("template_drafts")
-        .update({ ...values, updated_at: new Date().toISOString() })
-        .eq("id", draft.id)
-        .eq("client_id", draft.client_id)
-        .eq("owner_id", session!.user.id)
-        .eq("updated_at", revision)
-        .select("updated_at")
-        .maybeSingle();
-      const result = assertResult(response);
-      if (!result)
-        throw new Error(
-          "This draft changed elsewhere. Reopen it to review the latest version before saving.",
-        );
-      return { ...values, updatedAt: result.updated_at };
+      const updatedAt = await updateTemplateDraft(database, {
+        id: draft.id,
+        clientId: draft.client_id,
+        ownerId: session!.user.id,
+        revision,
+        name: values.name,
+        content: values.content,
+      });
+      return { ...values, updatedAt };
     },
     onSuccess: (result) => {
       setRevision(result.updatedAt);

@@ -1,37 +1,28 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, ImageIcon, Plus, Upload } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Download, FileText, ImageIcon, Plus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
-import { useBrandAssets, type BrandAsset } from "./brand-data";
+import { AssetUpload } from "./brand-asset-upload";
 import {
-  brandFileTypes,
-  matchesBrandSearch,
-  validateBrandFile,
-  validationMessage,
-} from "./brand-model";
+  downloadBrandAssetFile,
+  useBrandAssetPreviewUrl,
+  useBrandAssets,
+  type BrandAsset,
+} from "./brand-data";
+import { brandFileTypes, matchesBrandSearch, validationMessage } from "./brand-model";
 import { CopyButton } from "@/features/shared/copy-button";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 
 function AssetPreview({ asset }: { asset: BrandAsset }) {
-  const { database, session } = useAuth();
   const canPreview =
     !!asset.storage_path &&
     ["image/png", "image/jpeg", "image/webp"].includes(asset.mime_type ?? "");
-  const preview = useQuery({
-    queryKey: ["brand-asset-preview", session?.user.id, asset.id, asset.storage_path],
-    enabled: !!session && canPreview,
-    staleTime: 120_000,
-    queryFn: async () =>
-      assertResult(
-        await database.storage.from("brand-assets").createSignedUrl(asset.storage_path!, 300),
-      ).signedUrl,
-  });
+  const preview = useBrandAssetPreviewUrl(asset.id, asset.storage_path, canPreview);
   return (
     <div className="brand-asset-preview">
       {preview.data ? (
@@ -53,169 +44,6 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
         </>
       )}
     </div>
-  );
-}
-
-function AssetUpload({ clientId, onClose }: { clientId: string; onClose: () => void }) {
-  const { database } = useAuth();
-  const queryClient = useQueryClient();
-  const formId = useId();
-  const [file, setFile] = useState<File | null>(null);
-  const [fileUploaded, setFileUploaded] = useState(false);
-  const [assetId] = useState(() => crypto.randomUUID());
-  const [closing, setClosing] = useState(false);
-  const [closeError, setCloseError] = useState("");
-  const uploaded = useRef<{ file: File; path: string } | null>(null);
-  const upload = useMutation({
-    mutationFn: async (form: FormData) => {
-      if (!file) throw new Error("Choose a brand file to upload.");
-      const extension = validateBrandFile(file);
-      const name = String(form.get("name") ?? "").trim();
-      if (!name) throw new Error("Give the file a clear name.");
-      if (!uploaded.current || uploaded.current.file !== file) {
-        const path = `${clientId}/${crypto.randomUUID()}.${extension}`;
-        assertResult(
-          await database.storage
-            .from("brand-assets")
-            .upload(path, file, { contentType: file.type, upsert: false }),
-        );
-        uploaded.current = { file, path };
-        setFileUploaded(true);
-      }
-      const existing = assertResult(
-        await database.from("brand_assets").select("id").eq("id", assetId).maybeSingle(),
-      );
-      if (!existing)
-        assertResult(
-          await database
-            .from("brand_assets")
-            .insert({
-              id: assetId,
-              client_id: clientId,
-              name,
-              category: String(form.get("category")),
-              description: String(form.get("description") ?? "").trim(),
-              tags: String(form.get("tags") ?? "")
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-                .slice(0, 20),
-              mime_type: file.type,
-              storage_path: uploaded.current.path,
-            })
-            .select("id")
-            .single(),
-        );
-      uploaded.current = null;
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["brand-assets"] });
-      onClose();
-    },
-  });
-  async function close() {
-    if (upload.isPending || closing) return;
-    setClosing(true);
-    setCloseError("");
-    try {
-      if (uploaded.current) {
-        const existing = assertResult(
-          await database.from("brand_assets").select("id").eq("id", assetId).maybeSingle(),
-        );
-        if (!existing)
-          assertResult(await database.storage.from("brand-assets").remove([uploaded.current.path]));
-        else await queryClient.invalidateQueries({ queryKey: ["brand-assets"] });
-      }
-      onClose();
-    } catch {
-      setCloseError("The unfinished upload could not be removed. Please try closing again.");
-    } finally {
-      setClosing(false);
-    }
-  }
-  return (
-    <Modal
-      open
-      title="Add a brand asset"
-      description="Share an approved file with everyone in this workspace."
-      onClose={() => void close()}
-      footer={
-        <>
-          <button
-            type="button"
-            className="button quiet"
-            disabled={upload.isPending || closing}
-            onClick={() => void close()}
-          >
-            Cancel
-          </button>
-          <button
-            form={formId}
-            className="button primary"
-            disabled={upload.isPending || closing}
-            type="submit"
-          >
-            <Upload size={15} />
-            {upload.isPending ? "Uploading…" : "Add asset"}
-          </button>
-        </>
-      }
-    >
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          upload.mutate(new FormData(event.currentTarget));
-        }}
-      >
-        <label>
-          File
-          <input
-            type="file"
-            aria-label="File"
-            required
-            accept={Object.keys(brandFileTypes).join(",")}
-            disabled={upload.isPending || fileUploaded}
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          />
-          <span className="form-help">PNG, JPG, WebP, SVG, or PDF. Up to 50 MB.</span>
-        </label>
-        <label>
-          Asset name
-          <input
-            name="name"
-            required
-            maxLength={300}
-            placeholder="Primary logo — light background"
-          />
-        </label>
-        <label>
-          Category
-          <select name="category" defaultValue="Logo">
-            {["Logo", "Photography", "Product", "Document", "Other"].map((category) => (
-              <option key={category}>{category}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Description
-          <textarea
-            name="description"
-            maxLength={3000}
-            placeholder="When and how to use this asset."
-          />
-        </label>
-        <label>
-          Tags
-          <input name="tags" maxLength={500} placeholder="Primary, approved, print" />
-          <span className="form-help">Separate tags with commas.</span>
-        </label>
-        {(upload.error || closeError) && (
-          <FormError>{closeError || validationMessage(upload.error)}</FormError>
-        )}
-      </form>
-    </Modal>
   );
 }
 
@@ -244,9 +72,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
   const download = useMutation({
     mutationFn: async (asset: BrandAsset) => {
       if (!asset.storage_path) throw new Error("This asset does not have a downloadable file yet.");
-      const blob = assertResult(
-        await database.storage.from("brand-assets").download(asset.storage_path),
-      );
+      const blob = await downloadBrandAssetFile(database, { path: asset.storage_path });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

@@ -6,8 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import { useBrandTemplates, useTemplateDrafts, type BrandTemplate } from "./brand-data";
+import {
+  createTemplateDraft,
+  useBrandTemplates,
+  useTemplateDrafts,
+  type BrandTemplate,
+} from "./brand-data";
 import { matchesBrandSearch, readTemplateContent, validationMessage } from "./brand-model";
 import { TemplatePreview } from "./template-preview";
 import { FormError } from "@/features/shared/form-error";
@@ -24,19 +28,13 @@ export function BrandTemplates({ clientId }: { clientId: string }) {
   const [view, setView] = useState<"templates" | "drafts">("templates");
   const create = useMutation({
     mutationFn: async (template: BrandTemplate) =>
-      assertResult<{ id: string }>(
-        await database
-          .from("template_drafts")
-          .insert({
-            client_id: clientId,
-            template_id: template.id,
-            owner_id: session!.user.id,
-            name: `${template.name} exploration`,
-            content: readTemplateContent(template.content),
-          })
-          .select("id")
-          .single(),
-      ),
+      createTemplateDraft(database, {
+        clientId,
+        templateId: template.id,
+        ownerId: session!.user.id,
+        name: `${template.name} exploration`,
+        content: readTemplateContent(template.content),
+      }),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["template-drafts"] });
       router.push(`/clients/${clientId}/brand/drafts/${result.id}`);

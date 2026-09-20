@@ -6,7 +6,7 @@ import { useId, useState } from "react";
 import type { Json } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
+import { saveBrandSection } from "./brand-data";
 import {
   fieldsForSection,
   parseSectionInput,
@@ -40,21 +40,7 @@ export function SectionEditor({
   const save = useMutation({
     mutationFn: async () => {
       const validated = parseSectionInput(section, fields, palette, products);
-      assertResult(
-        await database
-          .from("brand_sections")
-          .upsert(
-            {
-              client_id: clientId,
-              section,
-              content: validated,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "client_id,section" },
-          )
-          .select("section")
-          .single(),
-      );
+      await saveBrandSection(database, { clientId, section, content: validated });
     },
     onSuccess: async () => {
       await Promise.all([
