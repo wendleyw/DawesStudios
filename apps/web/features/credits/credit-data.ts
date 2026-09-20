@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
+import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { CreditEntry, CreditRequest } from "./credit-model";
 
 export function useCreditAccount(clientId: string) {
@@ -60,4 +60,59 @@ export function useCreditRequests(clientId: string) {
           .order("created_at", { ascending: false }),
       ) as CreditRequest[],
   });
+}
+
+export const creditQueryKeys = [
+  "credit-account",
+  "credit-ledger",
+  "credit-requests",
+  "notifications",
+] as const;
+
+export function useInvalidateCredits() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all(
+      creditQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
+  };
+}
+
+export async function requestCredits(
+  database: SupabaseDatabase,
+  input: { clientId: string; amount: number; note: string },
+) {
+  assertResult(
+    await database.rpc("request_credits", {
+      p_client_id: input.clientId,
+      p_amount: input.amount,
+      p_note: input.note,
+    }),
+  );
+}
+
+export async function adjustCredits(
+  database: SupabaseDatabase,
+  input: { clientId: string; amount: number; description: string; idempotencyKey: string },
+) {
+  assertResult(
+    await database.rpc("adjust_credits", {
+      p_client_id: input.clientId,
+      p_amount: input.amount,
+      p_description: input.description,
+      p_idempotency_key: input.idempotencyKey,
+    }),
+  );
+}
+
+export async function reviewCreditRequest(
+  database: SupabaseDatabase,
+  input: { requestId: string; decision: "fulfill" | "reject"; note: string },
+) {
+  assertResult(
+    await database.rpc(
+      input.decision === "fulfill" ? "fulfill_credit_request" : "reject_credit_request",
+      { p_request_id: input.requestId, p_note: input.note },
+    ),
+  );
 }

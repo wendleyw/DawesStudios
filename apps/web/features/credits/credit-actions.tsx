@@ -1,10 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
+import {
+  adjustCredits,
+  requestCredits,
+  reviewCreditRequest,
+  useInvalidateCredits,
+} from "./credit-data";
 import type { CreditRequest } from "./credit-model";
 
 export function CreditActionDialog({
@@ -17,7 +22,7 @@ export function CreditActionDialog({
   onClose: () => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateCredits = useInvalidateCredits();
   const [amount, setAmount] = useState("50");
   const [note, setNote] = useState("");
   const attempt = useRef<{ payload: string; key: string } | null>(null);
@@ -28,34 +33,22 @@ export function CreditActionDialog({
         throw new Error("Enter a non-zero whole number of credits.");
       if (mode === "request") {
         if (![25, 50, 100].includes(quantity)) throw new Error("Choose a credit package.");
-        assertResult(
-          await database.rpc("request_credits", {
-            p_client_id: clientId,
-            p_amount: quantity,
-            p_note: note.trim(),
-          }),
-        );
+        await requestCredits(database, { clientId, amount: quantity, note: note.trim() });
       } else {
         if (!note.trim()) throw new Error("Add a reason for this credit adjustment.");
         const payload = `${clientId}:${quantity}:${note.trim()}`;
         if (attempt.current?.payload !== payload)
           attempt.current = { payload, key: `adjustment:${crypto.randomUUID()}` };
-        assertResult(
-          await database.rpc("adjust_credits", {
-            p_client_id: clientId,
-            p_amount: quantity,
-            p_description: note.trim(),
-            p_idempotency_key: attempt.current.key,
-          }),
-        );
+        await adjustCredits(database, {
+          clientId,
+          amount: quantity,
+          description: note.trim(),
+          idempotencyKey: attempt.current.key,
+        });
       }
     },
     onSuccess: async () => {
-      await Promise.all(
-        ["credit-account", "credit-ledger", "credit-requests", "notifications"].map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateCredits();
       onClose();
     },
   });
@@ -138,25 +131,16 @@ export function CreditRequestReview({
   onClose: () => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateCredits = useInvalidateCredits();
   const [note, setNote] = useState("");
   const review = useMutation({
     mutationFn: async (decision: "fulfill" | "reject") => {
       if (decision === "reject" && !note.trim())
         throw new Error("Explain why this request is being declined.");
-      assertResult(
-        await database.rpc(
-          decision === "fulfill" ? "fulfill_credit_request" : "reject_credit_request",
-          { p_request_id: request.id, p_note: note.trim() },
-        ),
-      );
+      await reviewCreditRequest(database, { requestId: request.id, decision, note: note.trim() });
     },
     onSuccess: async () => {
-      await Promise.all(
-        ["credit-account", "credit-ledger", "credit-requests", "notifications"].map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateCredits();
       onClose();
     },
   });

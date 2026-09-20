@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@database";
 
+export type SupabaseDatabase = SupabaseClient<Database>;
+
 export type PublicConfiguration = {
   supabaseUrl: string;
   supabaseAnonKey: string;
