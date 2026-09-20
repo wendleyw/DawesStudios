@@ -1,13 +1,19 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import { useBriefings, useCampaigns } from "./briefing-data";
+import {
+  acceptBriefing,
+  confirmBriefingBudget,
+  useBriefingCreditBalance,
+  useBriefingProject,
+  useBriefings,
+  useCampaigns,
+} from "./briefing-data";
 import { briefingStatusLabels, initialDraft, type Briefing } from "./briefing-model";
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
@@ -16,17 +22,10 @@ import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
-  const { database, profile, session } = useAuth();
+  const { profile } = useAuth();
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
-  const linked = useQuery({
-    queryKey: ["briefing-project", session?.user.id, briefingId],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult(
-        await database.from("projects").select("id").eq("briefing_id", briefingId).maybeSingle(),
-      ) as { id: string } | null,
-  });
+  const linked = useBriefingProject(briefingId);
   if (briefings.isPending || campaigns.isPending)
     return <PageStatus>Loading the briefing…</PageStatus>;
   const briefing = briefings.data?.find((item) => item.id === briefingId);
@@ -125,24 +124,14 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
 }
 
 function BudgetReview({ briefing }: { briefing: Briefing }) {
-  const { database, session } = useAuth();
+  const { database } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [credits, setCredits] = useState(
     String(briefing.confirmed_credits ?? briefing.estimated_credits ?? 1),
   );
   const [note, setNote] = useState(briefing.budget_note ?? "");
-  const balance = useQuery({
-    queryKey: ["credit-account", session?.user.id, briefing.client_id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("credit_accounts")
-          .select("balance")
-          .eq("client_id", briefing.client_id)
-          .single(),
-      ) as { balance: number },
-  });
+  const balance = useBriefingCreditBalance(briefing.client_id);
   const confirm = useMutation({
     mutationFn: async () => {
       const amount = Number(credits);
@@ -153,19 +142,16 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
         !note.trim()
       )
         throw new Error("Explain the custom estimate or adjustment.");
-      assertResult(
-        await database.rpc("confirm_briefing_budget", {
-          p_briefing_id: briefing.id,
-          p_credits: amount,
-          p_note: note.trim(),
-        }),
-      );
+      await confirmBriefingBudget(database, {
+        briefingId: briefing.id,
+        credits: amount,
+        note: note.trim(),
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["briefings"] }),
   });
   const accept = useMutation({
-    mutationFn: async () =>
-      assertResult(await database.rpc("accept_briefing", { p_briefing_id: briefing.id })) as string,
+    mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id }),
     onSuccess: async (id) => {
       await Promise.all(
         ["briefings", "projects", "credit-account", "credit-ledger", "notifications"].map((key) =>
