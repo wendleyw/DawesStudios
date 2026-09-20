@@ -17,7 +17,7 @@
 - **English for all project content** — code, identifiers, comments, docs, commit messages. Brazilian Portuguese only for direct chat with the user.
 - **Conventional Commits required.** `commitlint` runs on `commit-msg`; `gitleaks` and `lint-staged` run on `pre-commit`.
 - **Commit trailer:** every commit ends with `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
-- **Verification command:** `npm run check` = `typecheck && lint && format:check && test` (109 unit tests). It runs after every task, not only at the end.
+- **Verification command:** `npm run check` = `typecheck && lint && format:check && test` (274 unit tests across 15 files). It runs after every task, not only at the end.
 - **Playwright runs on port 3003 only.** The media service allows `APP_ORIGIN=http://localhost:3003`; port 3010 returns 403 at the share-version dialog. Results from any other origin are not evidence.
 - **Never discard uncommitted or untracked work** to reach a cleaner state.
 - **Out of scope:** server-side data fetching / Server Actions, visual redesign, schema changes, API contract changes, dependency upgrades, acceptance-matrix rows.
