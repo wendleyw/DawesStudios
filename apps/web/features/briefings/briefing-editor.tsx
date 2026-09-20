@@ -33,6 +33,8 @@ import {
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingEditorPage({
   clientId,
@@ -63,11 +65,7 @@ export function BriefingEditorPage({
     presets.isPending ||
     (briefingId && briefings.isPending)
   )
-    return (
-      <div className="page-content" role="status">
-        Preparing your briefing…
-      </div>
-    );
+    return <PageStatus>Preparing your briefing…</PageStatus>;
   const client = clients.data?.find((item) => item.id === clientId);
   const briefing = briefings.data?.find((item) => item.id === briefingId);
   if (
@@ -271,11 +269,7 @@ function BriefingEditor({
           Draft saved.
         </p>
       )}
-      {save.error && (
-        <p className="form-error" role="alert">
-          {save.error.message}
-        </p>
-      )}
+      {save.error && <FormError>{save.error.message}</FormError>}
       {errors.length > 0 && (
         <div className="briefing-validation" role="alert">
           <strong>A few details need your attention.</strong>

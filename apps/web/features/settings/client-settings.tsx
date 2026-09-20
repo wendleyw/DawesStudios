@@ -11,6 +11,7 @@ import { assertResult } from "@/lib/supabase";
 import { clientSlug, validWebsite } from "./settings-model";
 import { CampaignSettings } from "./campaign-settings";
 import { InvitePerson } from "./team-settings";
+import { FormError } from "@/features/shared/form-error";
 
 export function ClientSettings() {
   const clients = useClients();
@@ -38,12 +39,12 @@ export function ClientSettings() {
       {clients.isPending ? (
         <p role="status">Loading clients…</p>
       ) : clients.error ? (
-        <p className="form-error" role="alert">
+        <FormError>
           Clients could not be loaded.{" "}
           <button className="button quiet" onClick={() => void clients.refetch()}>
             Try again
           </button>
-        </p>
+        </FormError>
       ) : (
         <div className="settings-list">
           {clients.data?.map((client) => (
@@ -226,11 +227,7 @@ function ClientEditor({
             </span>
           </label>
         )}
-        {save.error && (
-          <p className="form-error" role="alert">
-            {save.error.message}
-          </p>
-        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
         <div className="settings-dialog-actions">
           <button className="button" type="button" onClick={onClose} disabled={save.isPending}>
             Cancel

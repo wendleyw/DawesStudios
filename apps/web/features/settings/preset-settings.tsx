@@ -7,6 +7,7 @@ import { useServicePresets } from "@/features/briefings/briefing-data";
 import { services } from "@/features/briefings/briefing-model";
 import { Modal } from "@/features/shared/modal";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 type EditablePreset = {
   service_type: string;
@@ -24,9 +25,7 @@ export function PresetSettings() {
   if (presets.error)
     return (
       <div>
-        <p className="form-error" role="alert">
-          Service presets could not be loaded.
-        </p>
+        <FormError>Service presets could not be loaded.</FormError>
         <button className="button" onClick={() => void presets.refetch()}>
           Try again
         </button>
@@ -185,11 +184,7 @@ function PresetEditor({
             onChange={(event) => setDays(event.target.value)}
           />
         </label>
-        {save.error && (
-          <p className="form-error" role="alert">
-            {save.error.message}
-          </p>
-        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
         <div className="settings-dialog-actions">
           <button className="button" type="button" onClick={onClose} disabled={save.isPending}>
             Cancel

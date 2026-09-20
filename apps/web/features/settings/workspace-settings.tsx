@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { FormError } from "@/features/shared/form-error";
 
 export function WorkspaceSettings() {
   const settings = useWorkspaceSettings();
@@ -12,9 +13,7 @@ export function WorkspaceSettings() {
   if (settings.error || !settings.data)
     return (
       <div>
-        <p className="form-error" role="alert">
-          Workspace settings could not be loaded.
-        </p>
+        <FormError>Workspace settings could not be loaded.</FormError>
         <button className="button" onClick={() => void settings.refetch()}>
           Try again
         </button>
@@ -87,11 +86,7 @@ function WorkspaceForm({
             ))}
           </select>
         </label>
-        {save.error && (
-          <p className="form-error" role="alert">
-            {save.error.message}
-          </p>
-        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
         {save.isSuccess && (
           <p className="settings-success" role="status">
             Workspace updated.

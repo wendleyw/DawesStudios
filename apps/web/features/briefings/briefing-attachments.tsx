@@ -5,6 +5,7 @@ import { FileText, Paperclip, X } from "lucide-react";
 import { useRef } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 type Attachment = {
   id: string;
@@ -113,12 +114,12 @@ export function BriefingAttachments({
       <h3>Attachments</h3>
       {attachments.isPending && <p role="status">Loading attachments…</p>}
       {attachments.error && (
-        <p className="form-error" role="alert">
+        <FormError>
           Attachments could not be loaded.{" "}
           <button className="button quiet" onClick={() => void attachments.refetch()}>
             Try again
           </button>
-        </p>
+        </FormError>
       )}
       {attachments.data?.map((file) => (
         <div className="briefing-attachment" key={file.id}>
@@ -172,9 +173,9 @@ export function BriefingAttachments({
         </>
       )}
       {(upload.error || remove.error || download.error) && (
-        <p className="form-error" role="alert">
+        <FormError>
           {upload.error?.message ?? remove.error?.message ?? download.error?.message}
-        </p>
+        </FormError>
       )}
     </div>
   );

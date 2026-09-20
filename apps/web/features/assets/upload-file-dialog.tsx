@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { prepareDelivery } from "@/features/projects/media-client";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 const formats: Record<string, string> = {
   "image/png": "png",
@@ -154,9 +155,7 @@ export function UploadFileDialog({
           <small>PNG, JPG, WebP, or PDF · up to 50 MB</small>
         </label>
         {(upload.error || closeError) && (
-          <p className="form-error" role="alert">
-            {closeError || upload.error?.message}
-          </p>
+          <FormError>{closeError || upload.error?.message}</FormError>
         )}
         <div className="form-actions">
           <button

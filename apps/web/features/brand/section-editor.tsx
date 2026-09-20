@@ -16,6 +16,7 @@ import {
   validationMessage,
   type EditableSectionId,
 } from "./brand-model";
+import { FormError } from "@/features/shared/form-error";
 
 export function SectionEditor({
   clientId,
@@ -232,11 +233,7 @@ export function SectionEditor({
             </button>
           </>
         )}
-        {save.error && (
-          <p className="form-error" role="alert">
-            {validationMessage(save.error)}
-          </p>
-        )}
+        {save.error && <FormError>{validationMessage(save.error)}</FormError>}
       </form>
     </Modal>
   );

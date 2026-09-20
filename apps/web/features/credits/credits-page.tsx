@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownToLine, ArrowUpRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowDownToLine, ArrowUpRight, Plus, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -20,6 +20,9 @@ import {
   type CreditRequest,
 } from "./credit-model";
 import "./credits.css";
+import { FormError } from "@/features/shared/form-error";
+import { SearchField } from "@/features/shared/search-field";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -61,11 +64,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
     briefings.isPending ||
     campaigns.isPending
   )
-    return (
-      <div className="page-content" role="status">
-        Loading your credits…
-      </div>
-    );
+    return <PageStatus>Loading your credits…</PageStatus>;
   const client = clients.data?.find((item) => item.id === clientId);
   if (
     !client ||
@@ -78,9 +77,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Credits unavailable.</h1>
-        <p className="form-error" role="alert">
-          Your credit report could not be loaded. Please try again.
-        </p>
+        <FormError>Your credit report could not be loaded. Please try again.</FormError>
         <button
           className="button"
           onClick={() => {
@@ -201,15 +198,13 @@ export function CreditsPage({ clientId }: { clientId: string }) {
         </button>
       </div>
       <div className="credit-toolbar">
-        <label className="search-field">
-          <Search size={16} />
-          <input
-            value={filters.search}
-            onChange={(event) => changeFilter({ search: event.target.value })}
-            aria-label="Search credit activity"
-            placeholder="Find an activity…"
-          />
-        </label>
+        <SearchField
+          label="Search credit activity"
+          value={filters.search}
+          onChange={(value) => changeFilter({ search: value })}
+          placeholder="Find an activity…"
+          iconSize={16}
+        />
         <button
           className="button quiet"
           aria-expanded={filtersOpen}
@@ -292,11 +287,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           </button>
         </div>
       )}
-      {exportError && (
-        <p className="form-error" role="alert">
-          {exportError}
-        </p>
-      )}
+      {exportError && <FormError>{exportError}</FormError>}
       {visible.length === 0 ? (
         <div className="empty-state">
           <h2>No activity in this view.</h2>
@@ -361,12 +352,12 @@ export function CreditsPage({ clientId }: { clientId: string }) {
         {requests.isPending ? (
           <p role="status">Loading requests…</p>
         ) : requests.error ? (
-          <p className="form-error" role="alert">
+          <FormError>
             Requests could not be loaded.{" "}
             <button className="button quiet" onClick={() => void requests.refetch()}>
               Try again
             </button>
-          </p>
+          </FormError>
         ) : requests.data?.length ? (
           requests.data.map((item) => (
             <div key={item.id} className="credit-request">

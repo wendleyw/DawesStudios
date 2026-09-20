@@ -8,6 +8,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { formatDate, useClients } from "@/features/workspace/workspace-data";
 import { assertResult } from "@/lib/supabase";
 import "./reviews.css";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { database, profile, session } = useAuth();
@@ -92,12 +93,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
     },
     refetchInterval: 30_000,
   });
-  if (data.isPending || clients.isPending)
-    return (
-      <div className="page-content" role="status">
-        Gathering reviews…
-      </div>
-    );
+  if (data.isPending || clients.isPending) return <PageStatus>Gathering reviews…</PageStatus>;
   if (data.error || !clients.data?.some((client) => client.id === clientId))
     return (
       <div className="page-content">

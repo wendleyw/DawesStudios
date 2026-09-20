@@ -15,6 +15,8 @@ import {
 } from "./brand-model";
 import { TemplatePreview } from "./template-preview";
 import "./brand.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: string }) {
   const { database, session } = useAuth();
@@ -33,12 +35,7 @@ export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: 
           .maybeSingle(),
       ),
   });
-  if (draft.isPending || templates.isPending)
-    return (
-      <div className="page-content" role="status">
-        Opening your draft…
-      </div>
-    );
+  if (draft.isPending || templates.isPending) return <PageStatus>Opening your draft…</PageStatus>;
   const template = templates.data?.find((item) => item.id === draft.data?.template_id);
   if (!draft.data || !template || draft.error || templates.error)
     return (
@@ -228,11 +225,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
               <option value="minimal">Minimal</option>
             </select>
           </label>
-          {save.error && (
-            <p className="form-error" role="alert">
-              {validationMessage(save.error)}
-            </p>
-          )}
+          {save.error && <FormError>{validationMessage(save.error)}</FormError>}
         </form>
         <section className="brand-draft-preview" aria-label="Template preview">
           <div className="brand-preview-toolbar">

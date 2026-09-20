@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText, ImageIcon, Plus, Search, Upload } from "lucide-react";
+import { Download, FileText, ImageIcon, Plus, Upload } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
@@ -15,6 +15,8 @@ import {
   validationMessage,
 } from "./brand-model";
 import { CopyButton } from "@/features/shared/copy-button";
+import { FormError } from "@/features/shared/form-error";
+import { SearchField } from "@/features/shared/search-field";
 
 function AssetPreview({ asset }: { asset: BrandAsset }) {
   const { database, session } = useAuth();
@@ -210,9 +212,7 @@ function AssetUpload({ clientId, onClose }: { clientId: string; onClose: () => v
           <span className="form-help">Separate tags with commas.</span>
         </label>
         {(upload.error || closeError) && (
-          <p className="form-error" role="alert">
-            {closeError || validationMessage(upload.error)}
-          </p>
+          <FormError>{closeError || validationMessage(upload.error)}</FormError>
         )}
       </form>
     </Modal>
@@ -270,15 +270,13 @@ export function BrandAssets({ clientId }: { clientId: string }) {
   return (
     <>
       <div className="brand-resource-toolbar">
-        <label className="search-field">
-          <Search size={15} />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search brand assets"
-            placeholder="Find a brand asset…"
-          />
-        </label>
+        <SearchField
+          label="Search brand assets"
+          value={search}
+          onChange={setSearch}
+          placeholder="Find a brand asset…"
+          iconSize={15}
+        />
         <label>
           <span className="visually-hidden">Asset category</span>
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -375,11 +373,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
           {!selected.storage_path && (
             <p className="form-help">A downloadable file has not been attached yet.</p>
           )}
-          {download.error && (
-            <p className="form-error" role="alert">
-              {validationMessage(download.error)}
-            </p>
-          )}
+          {download.error && <FormError>{validationMessage(download.error)}</FormError>}
         </Modal>
       )}
     </>

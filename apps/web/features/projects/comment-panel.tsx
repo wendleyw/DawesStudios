@@ -8,6 +8,7 @@ import { assertResult } from "@/lib/supabase";
 import { useInvalidateProject, useProjectComments, type ProjectChannel } from "./project-data";
 
 import { useCommentDraft, type PendingPin } from "./comment-draft";
+import { FormError } from "@/features/shared/form-error";
 
 export function CommentPanel({
   projectId,
@@ -198,9 +199,7 @@ export function CommentPanel({
           </button>
         </div>
         {(post.error || resolve.error) && (
-          <p className="form-error" role="alert">
-            {(post.error || resolve.error)?.message}
-          </p>
+          <FormError>{(post.error || resolve.error)?.message}</FormError>
         )}
       </form>
     </aside>

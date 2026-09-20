@@ -8,6 +8,7 @@ import { useCampaigns } from "@/features/briefings/briefing-data";
 import type { Campaign } from "@/features/briefings/briefing-model";
 import { Modal } from "@/features/shared/modal";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 export function CampaignSettings({
   clientId,
@@ -45,12 +46,12 @@ export function CampaignSettings({
           {campaigns.isPending ? (
             <p role="status">Loading campaigns…</p>
           ) : campaigns.error ? (
-            <p className="form-error" role="alert">
+            <FormError>
               Campaigns could not be loaded.{" "}
               <button className="button quiet" onClick={() => void campaigns.refetch()}>
                 Try again
               </button>
-            </p>
+            </FormError>
           ) : campaigns.data?.length ? (
             <div className="settings-list">
               {campaigns.data.map((campaign) => (
@@ -165,11 +166,7 @@ function CampaignForm({
           <input type="date" value={end} onChange={(event) => setEnd(event.target.value)} />
         </label>
       </div>
-      {save.error && (
-        <p className="form-error" role="alert">
-          {save.error.message}
-        </p>
-      )}
+      {save.error && <FormError>{save.error.message}</FormError>}
       <div className="settings-dialog-actions">
         <button className="button" type="button" onClick={onCancel} disabled={save.isPending}>
           Back to campaigns

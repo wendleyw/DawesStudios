@@ -8,6 +8,7 @@ import { Modal } from "@/features/shared/modal";
 import { useClients } from "@/features/workspace/workspace-data";
 import { assertResult, type Profile } from "@/lib/supabase";
 import { invitationRequestSchema, type Invitation } from "./settings-model";
+import { FormError } from "@/features/shared/form-error";
 
 export function TeamSettings() {
   const { database, session } = useAuth();
@@ -70,12 +71,12 @@ export function TeamSettings() {
         {members.isPending ? (
           <p role="status">Loading the team…</p>
         ) : members.error ? (
-          <p className="form-error" role="alert">
+          <FormError>
             Team members could not be loaded.{" "}
             <button className="button quiet" onClick={() => void members.refetch()}>
               Try again
             </button>
-          </p>
+          </FormError>
         ) : (
           <div className="settings-list">
             {members.data?.map((person) => (
@@ -112,12 +113,12 @@ export function TeamSettings() {
         {invitations.isPending ? (
           <p role="status">Loading invitations…</p>
         ) : invitations.error ? (
-          <p className="form-error" role="alert">
+          <FormError>
             Invitations could not be loaded.{" "}
             <button className="button quiet" onClick={() => void invitations.refetch()}>
               Try again
             </button>
-          </p>
+          </FormError>
         ) : invitations.data?.length ? (
           <div className="settings-list">
             {invitations.data.map((item) => {
@@ -160,11 +161,7 @@ export function TeamSettings() {
         ) : (
           <p className="settings-note">No invitations yet.</p>
         )}
-        {revoke.error && (
-          <p className="form-error" role="alert">
-            {revoke.error.message}
-          </p>
-        )}
+        {revoke.error && <FormError>{revoke.error.message}</FormError>}
       </section>
       {inviteOpen && (
         <InvitePerson
@@ -281,11 +278,7 @@ export function InvitePerson({
               ? "Designers can access only the projects assigned to them."
               : "Clients can access only their own workspace and shared work."}
         </p>
-        {invite.error && (
-          <p className="form-error" role="alert">
-            {invite.error.message}
-          </p>
-        )}
+        {invite.error && <FormError>{invite.error.message}</FormError>}
         <div className="settings-dialog-actions">
           <button className="button" type="button" onClick={onClose} disabled={invite.isPending}>
             Cancel

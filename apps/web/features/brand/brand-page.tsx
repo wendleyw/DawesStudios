@@ -12,6 +12,7 @@ import { BrandSectionContent } from "./brand-sections";
 import { BrandTemplates } from "./brand-templates";
 import { SectionEditor } from "./section-editor";
 import "./brand.css";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function BrandPage({ clientId, section }: { clientId: string; section: string }) {
   const { profile } = useAuth();
@@ -20,11 +21,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const [editing, setEditing] = useState(false);
   const client = clients.data?.find((item) => item.id === clientId);
   if (clients.isPending || sections.isPending)
-    return (
-      <div className="page-content" role="status">
-        Opening the brand hub…
-      </div>
-    );
+    return <PageStatus>Opening the brand hub…</PageStatus>;
   if (!client || sections.error || !isBrandSection(section))
     return (
       <div className="page-content">

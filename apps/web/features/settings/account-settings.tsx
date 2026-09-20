@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
+import { FormError } from "@/features/shared/form-error";
 
 export function AccountSettings() {
   const { database, profile, session } = useAuth();
@@ -73,11 +74,7 @@ export function AccountSettings() {
               Your sign-in email is managed with your workspace access.
             </span>
           </label>
-          {saveProfile.error && (
-            <p className="form-error" role="alert">
-              {saveProfile.error.message}
-            </p>
-          )}
+          {saveProfile.error && <FormError>{saveProfile.error.message}</FormError>}
           {saveProfile.isSuccess && (
             <p className="settings-success" role="status">
               Profile saved.
@@ -128,11 +125,7 @@ export function AccountSettings() {
               }}
             />
           </label>
-          {changePassword.error && (
-            <p className="form-error" role="alert">
-              {changePassword.error.message}
-            </p>
-          )}
+          {changePassword.error && <FormError>{changePassword.error.message}</FormError>}
           {changePassword.isSuccess && (
             <p className="settings-success" role="status">
               Password updated.

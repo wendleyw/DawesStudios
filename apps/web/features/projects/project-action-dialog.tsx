@@ -8,6 +8,7 @@ import { assertResult } from "@/lib/supabase";
 import { uploadArtwork } from "./artwork-files";
 import { discardPreparedAssets, preparePublicationAssets } from "./media-client";
 import { useInvalidateProject, type CanvasDesign, type CanvasVersion } from "./project-data";
+import { FormError } from "@/features/shared/form-error";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
@@ -329,9 +330,7 @@ export function ProjectActionDialog({
             </>
           )}
           {(mutation.error || closeError) && (
-            <p className="form-error" role="alert">
-              {closeError || mutation.error?.message}
-            </p>
+            <FormError>{closeError || mutation.error?.message}</FormError>
           )}
           <div className="form-actions">
             <button

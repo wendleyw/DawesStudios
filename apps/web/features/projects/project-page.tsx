@@ -38,6 +38,7 @@ import {
 } from "./project-data";
 import { useProjectEvents } from "./project-events";
 import "./projects.css";
+import { PageStatus } from "@/features/shared/page-status";
 
 type VersionNode = Node<
   {
@@ -247,12 +248,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     return () => observer.disconnect();
   }, [pane]);
   const canProduce = profile?.role !== "client" && channel === "internal";
-  if (data.isPending)
-    return (
-      <div className="page-content" role="status">
-        Opening the project…
-      </div>
-    );
+  if (data.isPending) return <PageStatus>Opening the project…</PageStatus>;
   if (data.error || !data.data)
     return (
       <div className="page-content">

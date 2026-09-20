@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Plus, Search } from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,8 @@ import { assertResult } from "@/lib/supabase";
 import { useBrandTemplates, useTemplateDrafts, type BrandTemplate } from "./brand-data";
 import { matchesBrandSearch, readTemplateContent, validationMessage } from "./brand-model";
 import { TemplatePreview } from "./template-preview";
+import { FormError } from "@/features/shared/form-error";
+import { SearchField } from "@/features/shared/search-field";
 
 export function BrandTemplates({ clientId }: { clientId: string }) {
   const { database, session } = useAuth();
@@ -85,15 +87,13 @@ export function BrandTemplates({ clientId }: { clientId: string }) {
             My drafts ({drafts.data?.length ?? 0})
           </button>
         </div>
-        <label className="search-field">
-          <Search size={15} />
-          <input
-            aria-label="Search templates and drafts"
-            placeholder="Find a starting point…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
+        <SearchField
+          label="Search templates and drafts"
+          value={search}
+          onChange={setSearch}
+          placeholder="Find a starting point…"
+          iconSize={15}
+        />
         <label>
           <span className="visually-hidden">Template category</span>
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -109,11 +109,7 @@ export function BrandTemplates({ clientId }: { clientId: string }) {
       <p className="brand-draft-note">
         Your drafts are private. Exploring a template does not start a project or use credits.
       </p>
-      {create.error && (
-        <p className="form-error" role="alert">
-          {validationMessage(create.error)}
-        </p>
-      )}
+      {create.error && <FormError>{validationMessage(create.error)}</FormError>}
       {view === "templates" ? (
         <div className="brand-template-grid">
           {filteredTemplates.map((template) => (

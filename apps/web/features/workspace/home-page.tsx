@@ -12,6 +12,7 @@ import {
   useProjects,
   useWorkspaceCampaigns,
 } from "./workspace-data";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function HomePage() {
   const { profile } = useAuth();
@@ -52,11 +53,7 @@ export function HomePage() {
     projects.isPending ||
     (profile?.role === "client" && clients.data?.length === 1)
   )
-    return (
-      <div className="page-content" role="status">
-        Gathering your workspace…
-      </div>
-    );
+    return <PageStatus>Gathering your workspace…</PageStatus>;
   if (clients.error || projects.error)
     return (
       <div className="page-content">

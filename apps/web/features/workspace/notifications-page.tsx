@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { useNotifications } from "./workspace-data";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 export function NotificationsPage() {
   const { database, session } = useAuth();
@@ -111,11 +112,7 @@ export function NotificationsPage() {
           <p>Project updates and feedback will appear here.</p>
         </div>
       )}
-      {markRead.error && (
-        <p className="form-error" role="alert">
-          {markRead.error.message}
-        </p>
-      )}
+      {markRead.error && <FormError>{markRead.error.message}</FormError>}
     </div>
   );
 }

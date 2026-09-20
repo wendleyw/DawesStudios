@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
+import { SearchField } from "@/features/shared/search-field";
 
 export function SearchPage() {
   const { database, session, profile } = useAuth();
@@ -86,16 +87,15 @@ export function SearchPage() {
           <p>Projects, briefings, and brand resources, in one search.</p>
         </div>
       </div>
-      <label className="search-field global-search">
-        <Search size={20} />
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Search your workspace…"
-          aria-label="Search your workspace"
-        />
-      </label>
+      <SearchField
+        className="global-search"
+        label="Search your workspace"
+        value={input}
+        onChange={setInput}
+        placeholder="Search your workspace…"
+        iconSize={20}
+        inputRef={inputRef}
+      />
       {search.length < 2 ? (
         <div className="empty-state">
           <Search size={25} />

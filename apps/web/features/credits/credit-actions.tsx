@@ -11,6 +11,7 @@ import {
   useInvalidateCredits,
 } from "./credit-data";
 import type { CreditRequest } from "./credit-model";
+import { FormError } from "@/features/shared/form-error";
 
 export function CreditActionDialog({
   clientId,
@@ -105,11 +106,7 @@ export function CreditActionDialog({
             required={mode === "adjust"}
           />
         </label>
-        {save.error && (
-          <p className="form-error" role="alert">
-            {save.error.message}
-          </p>
-        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
         <div className="credit-dialog-actions">
           <button type="button" className="button" onClick={onClose} disabled={save.isPending}>
             Cancel
@@ -162,11 +159,7 @@ export function CreditRequestReview({
             placeholder="Required when declining"
           />
         </label>
-        {review.error && (
-          <p className="form-error" role="alert">
-            {review.error.message}
-          </p>
-        )}
+        {review.error && <FormError>{review.error.message}</FormError>}
         <div className="credit-dialog-actions">
           <button
             className="button"

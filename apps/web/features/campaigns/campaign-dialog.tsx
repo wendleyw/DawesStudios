@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
 
 export function CampaignDialog({
   clientId,
@@ -78,11 +79,7 @@ export function CampaignDialog({
             <input name="end" type="date" />
           </label>
         </div>
-        {create.error && (
-          <p className="form-error" role="alert">
-            {create.error.message}
-          </p>
-        )}
+        {create.error && <FormError>{create.error.message}</FormError>}
         <div className="form-actions">
           <button className="button" type="button" disabled={create.isPending} onClick={onClose}>
             Cancel

@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { validatePassword } from "./settings-model";
 import "./settings.css";
+import { FormError } from "@/features/shared/form-error";
 
 export function AccountRecovery() {
   const { database, session, loading } = useAuth();
@@ -102,11 +103,7 @@ export function AccountRecovery() {
                     onChange={(event) => setConfirmation(event.target.value)}
                   />
                 </label>
-                {reset.error && (
-                  <p role="alert" className="form-error">
-                    {reset.error.message}
-                  </p>
-                )}
+                {reset.error && <FormError>{reset.error.message}</FormError>}
                 <button className="button primary" disabled={reset.isPending}>
                   {reset.isPending ? "Updating…" : "Set new password"}
                 </button>
@@ -140,11 +137,7 @@ export function AccountRecovery() {
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </label>
-                {send.error && (
-                  <p className="form-error" role="alert">
-                    {send.error.message}
-                  </p>
-                )}
+                {send.error && <FormError>{send.error.message}</FormError>}
                 <button className="button primary" disabled={send.isPending}>
                   {send.isPending ? "Sending…" : "Send reset link"}
                 </button>

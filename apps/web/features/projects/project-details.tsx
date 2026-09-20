@@ -10,6 +10,7 @@ import { Modal } from "@/features/shared/modal";
 import { formatDate } from "@/features/workspace/workspace-data";
 import { assertResult } from "@/lib/supabase";
 import { useInvalidateProject, type TableRow, type CanvasVersion } from "./project-data";
+import { FormError } from "@/features/shared/form-error";
 
 export function ProjectDetails({
   project,
@@ -158,11 +159,7 @@ export function ProjectDetails({
               {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
             </div>
           )}
-          {revoke.error && (
-            <p role="alert" className="form-error">
-              {revoke.error.message}
-            </p>
-          )}
+          {revoke.error && <FormError>{revoke.error.message}</FormError>}
           <button className="button quiet" onClick={() => setAssigning(true)}>
             Assign a designer
           </button>
@@ -248,11 +245,11 @@ export function ProjectDetails({
             </label>
           </div>
           {save.error && (
-            <p className="form-error" role="alert">
+            <FormError>
               {save.error.message.includes("0 rows")
                 ? "This project changed while you were editing. Close and reopen the details to try again."
                 : save.error.message}
-            </p>
+            </FormError>
           )}
           <div className="form-actions">
             <button
@@ -299,11 +296,7 @@ export function ProjectDetails({
                 ))}
             </select>
           </label>
-          {assign.error && (
-            <p role="alert" className="form-error">
-              {assign.error.message}
-            </p>
-          )}
+          {assign.error && <FormError>{assign.error.message}</FormError>}
           <div className="form-actions">
             <button className="button primary" type="submit" disabled={assign.isPending}>
               Assign designer

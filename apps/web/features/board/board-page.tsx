@@ -13,7 +13,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, CornerUpLeft, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpRight, CornerUpLeft, Plus, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,9 @@ import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
 import { ClientMark } from "@/features/workspace/client-mark";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import "./board.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
+import { SearchField } from "@/features/shared/search-field";
 
 type BoardLayout = "canvas" | "list";
 const GUTTER = 24;
@@ -463,12 +466,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
     });
   }
 
-  if (clients.isPending || projects.isPending)
-    return (
-      <div className="page-content" role="status">
-        Opening the board…
-      </div>
-    );
+  if (clients.isPending || projects.isPending) return <PageStatus>Opening the board…</PageStatus>;
   if (!client || projects.error)
     return (
       <div className="page-content">
@@ -494,15 +492,13 @@ export function BoardPage({ clientId }: { clientId: string }) {
           </div>
         </div>
         <div className="board-tools">
-          <label className="search-field">
-            <Search size={16} />
-            <input
-              aria-label="Search projects"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Find a project…"
-            />
-          </label>
+          <SearchField
+            label="Search projects"
+            value={search}
+            onChange={setSearch}
+            placeholder="Find a project…"
+            iconSize={16}
+          />
           <div className="board-filter-menu" ref={filterMenu}>
             <button
               className={`button quiet ${filtersOpen ? "selected" : ""}`}
@@ -578,9 +574,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
         {selectedProject ? `${selectedProject.title} selected.` : ""}
       </p>
       {moveProject.error && (
-        <p className="form-error" role="alert">
-          The new position could not be saved. Please try again.
-        </p>
+        <FormError>The new position could not be saved. Please try again.</FormError>
       )}
       {layout === "canvas" ? (
         <div className="board-canvas" aria-label="Project canvas" ref={setCanvas}>

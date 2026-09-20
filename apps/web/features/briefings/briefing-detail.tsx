@@ -12,6 +12,8 @@ import { briefingStatusLabels, initialDraft, type Briefing } from "./briefing-mo
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
   const { database, profile, session } = useAuth();
@@ -26,11 +28,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
       ) as { id: string } | null,
   });
   if (briefings.isPending || campaigns.isPending)
-    return (
-      <div className="page-content" role="status">
-        Loading the briefing…
-      </div>
-    );
+    return <PageStatus>Loading the briefing…</PageStatus>;
   const briefing = briefings.data?.find((item) => item.id === briefingId);
   if (!briefing || briefings.error || campaigns.error)
     return (
@@ -238,11 +236,7 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             </div>
           </dl>
         )}
-        {confirm.error && (
-          <p className="form-error" role="alert">
-            {confirm.error.message}
-          </p>
-        )}
+        {confirm.error && <FormError>{confirm.error.message}</FormError>}
         <button className="button" disabled={confirm.isPending || accept.isPending}>
           {confirm.isPending ? "Saving…" : "Confirm budget"}
         </button>
@@ -257,11 +251,7 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
                 : `${(briefing.confirmed_credits ?? 0) - (balance.data?.balance ?? 0)} more credits are needed to accept this briefing.`}
             </p>
           )}
-          {accept.error && (
-            <p className="form-error" role="alert">
-              {accept.error.message}
-            </p>
-          )}
+          {accept.error && <FormError>{accept.error.message}</FormError>}
           {unconfirmedEdit && (
             <p className="briefing-note">
               The budget above has unsaved changes. Choose Confirm budget to apply them, or restore
