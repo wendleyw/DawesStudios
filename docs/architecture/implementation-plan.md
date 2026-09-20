@@ -16,7 +16,7 @@ Build Creative Canvas for Brianna Dawes Studios with xyflow, a minimalist modern
 | 4. Core collaboration | Orchestrator | Client board, projects, design/version canvas, pins, comments, agency publishing, review and delivery | In progress |
 | 5. Intake and accounting | Product architecture agent | Service catalog, briefing wizard, explicit campaigns, budget review, idempotent acceptance, credits/report/CSV | In progress |
 | 6. Supporting domains | Product and design agents | Brand Hub, personal templates, uploads, assets, settings, invitations, search and notifications | In progress |
-| 7. Functional and isolation audit | Independent reviewer + orchestrator | Exactly 10 clients and 20 seeded projects, complete flows, concurrency, failure cases, persistence, access boundaries | In progress |
+| 7. Functional and isolation audit | Independent reviewer + orchestrator | Exactly 10 clients and 25 seeded projects, complete flows, concurrency, failure cases, persistence, access boundaries | In progress |
 | 8. Design and maintainability audit | Design reviewer + orchestrator | Alignment, logic, spacing, minimalism, duplicate controls/code, accessibility and responsive QA | In progress |
 | 9. Production verification | Orchestrator | Reproducible build, deployment configuration, operations/recovery documentation and release evidence | In progress |
 
@@ -58,7 +58,7 @@ Every suite below was executed in this session against the rebuilt `dawes-studio
 | `npm --prefix apps/media run test:integration` | pass — 15 checks, temporary objects removed |
 | `npm run test:e2e` | pass — **24 of 24 browser tests**, 1.9 minutes |
 
-The dataset after the run is exactly 10 clients and 20 projects, with no project whose campaign parent disagrees with its client, no leftover `Acceptance %` fixtures and no leftover fixture Auth accounts.
+The dataset after the run is exactly 10 clients and 25 projects, with no project whose campaign parent disagrees with its client, no leftover `Acceptance %` fixtures and no leftover fixture Auth accounts.
 
 Two defects were found and fixed in this session. The invitation endpoint compared the browser `Origin` against `new URL(request.url).origin`, which under the standalone Node.js server reports the bind address, so the container answered every browser invitation with HTTP 403 and would have emailed `http://0.0.0.0:3003` links; it now resolves the workspace origin from `APP_ORIGIN`, which `compose.yaml` passes to the web service. Separately, browser evidence had been collected against a container image older than the working tree, which produced a contrast failure that no longer exists in source; see the [design audit](../verification/design-audit.md) reproduction note.
 

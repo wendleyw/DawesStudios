@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, ArrowUpRight, FolderKanban, Plus } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { formatDate, statusLabels, useClients, useProjects } from "./workspace-data";
+import {
+  formatDate,
+  statusLabels,
+  useClients,
+  useProjects,
+  useWorkspaceCampaigns,
+} from "./workspace-data";
 
 export function HomePage() {
   const { profile } = useAuth();
@@ -16,10 +22,31 @@ export function HomePage() {
       router.replace(`/clients/${clients.data[0].id}/board`);
   }, [profile, clients.data, router]);
   const projects = useProjects();
+  const campaigns = useWorkspaceCampaigns();
   const activeProjects = projects.data?.filter((project) => project.status !== "delivered") ?? [];
   const reviewProjects = activeProjects.filter((project) =>
     ["client_review", "internal_review", "changes_requested"].includes(project.status),
   );
+  const countOf = (status: string) =>
+    activeProjects.filter((project) => project.status === status).length;
+  // One row of figures that decomposes the work, so "needs attention" says who it is waiting on
+  // rather than only that something is waiting. Its parts sum to the badge beside the table.
+  const tiles = [
+    { label: "Active projects", value: activeProjects.length },
+    { label: statusLabels.internal_review, value: countOf("internal_review") },
+    { label: statusLabels.client_review, value: countOf("client_review") },
+    { label: statusLabels.changes_requested, value: countOf("changes_requested") },
+    { label: statusLabels.approved, value: countOf("approved") },
+    {
+      label: profile?.role === "agency" ? "Client workspaces" : "Your workspaces",
+      value: clients.data?.length ?? 0,
+    },
+  ];
+  const today = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(new Date());
   if (
     clients.isPending ||
     projects.isPending ||
@@ -63,6 +90,7 @@ export function HomePage() {
               : "Your projects and next steps."}
           </p>
         </div>
+        <span className="home-date">{today}</span>
         {profile?.role === "agency" && (
           <Link className="button" href="/settings/clients">
             <Plus size={16} />
@@ -71,27 +99,12 @@ export function HomePage() {
         )}
       </div>
       <div className="overview-stats">
-        <div>
-          <span>Active projects</span>
-          <strong>
-            {activeProjects.length}
-            <small>in motion</small>
-          </strong>
-        </div>
-        <div>
-          <span>Ready for attention</span>
-          <strong>
-            {reviewProjects.length}
-            <small>next steps</small>
-          </strong>
-        </div>
-        <div>
-          <span>{profile?.role === "agency" ? "Client workspaces" : "Your workspaces"}</span>
-          <strong>
-            {clients.data?.length ?? 0}
-            <small>connected</small>
-          </strong>
-        </div>
+        {tiles.map((tile) => (
+          <div key={tile.label}>
+            <strong>{tile.value}</strong>
+            <span>{tile.label}</span>
+          </div>
+        ))}
       </div>
       <section className="attention-section">
         <div className="section-heading">
@@ -118,7 +131,14 @@ export function HomePage() {
                   </span>
                   <strong>{project.title}</strong>
                 </span>
-                <span>{clients.data?.find((client) => client.id === project.client_id)?.name}</span>
+                <span className="project-origin">
+                  {clients.data?.find((client) => client.id === project.client_id)?.name}
+                  {project.campaign_id && (
+                    <small>
+                      {campaigns.data?.find((item) => item.id === project.campaign_id)?.title}
+                    </small>
+                  )}
+                </span>
                 <span>
                   <span className={`status-badge ${project.status}`}>
                     {statusLabels[project.status]}

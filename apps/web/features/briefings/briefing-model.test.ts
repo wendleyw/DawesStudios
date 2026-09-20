@@ -7,6 +7,7 @@ import {
   formats,
   initialDraft,
   newDeliverable,
+  nextVariation,
   serviceEstimate,
   services,
   validateBriefing,
@@ -219,5 +220,38 @@ describe("briefing catalog and validation", () => {
         direction: { questions: { scope: "Define our creative strategy" } },
       }).direction.questions?.scope,
     ).toBe("Define our creative strategy");
+  });
+});
+
+describe("variation numbering", () => {
+  it("never reuses a name after a deliverable is removed", () => {
+    // Counting survivors would hand the third card "Variation 2" again, colliding with the second.
+    let list = [newDeliverable("reel", nextVariation([], "reel"))];
+    list = [...list, newDeliverable("reel", nextVariation(list, "reel"))];
+    list = list.slice(1);
+    list = [...list, newDeliverable("reel", nextVariation(list, "reel"))];
+    const names = list.map((item) => item.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toEqual(["Instagram Reels / Variation 2", "Instagram Reels / Variation 3"]);
+  });
+
+  it("starts at one and marks only later variations as adaptations", () => {
+    const first = newDeliverable("reel", nextVariation([], "reel"));
+    expect(first.scope).toBe("original");
+    const second = newDeliverable("reel", nextVariation([first], "reel"));
+    expect(second.scope).toBe("adaptation");
+  });
+
+  it("keeps counting when the client has renamed earlier pieces", () => {
+    // The intake journey renames every deliverable, so a name-derived number would send the next
+    // piece back to Variation 1 instead of continuing the sequence.
+    const first = { ...newDeliverable("reel", 1), name: "Collection launch reel" };
+    const second = { ...newDeliverable("reel", 2), name: "Second audience variation" };
+    expect(nextVariation([first, second], "reel")).toBe(3);
+  });
+
+  it("numbers each format independently", () => {
+    const reel = newDeliverable("reel", nextVariation([], "reel"));
+    expect(nextVariation([reel], "gif")).toBe(1);
   });
 });

@@ -4,7 +4,9 @@ export const invitationRequestSchema = z
   .object({
     email: z.string().trim().email().toLowerCase(),
     role: z.enum(["agency", "client", "designer"]),
-    clientId: z.uuid().optional(),
+    // A workspace id is UUID-shaped rather than RFC 4122 version 4; the seeded workspaces derive
+    // theirs from a hash, and `z.uuid()` would refuse an invitation to any of them.
+    clientId: z.guid().optional(),
   })
   .superRefine((value, context) => {
     if (value.role === "client" && !value.clientId)

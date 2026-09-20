@@ -179,6 +179,10 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
   });
   const enough =
     balance.data && balance.data.balance >= (briefing.confirmed_credits ?? Number(credits));
+  // Accept applies the confirmed figures, so an edited-but-unsaved form must say why it is blocked
+  // instead of greying the button out with no explanation.
+  const unconfirmedEdit =
+    Number(credits) !== briefing.confirmed_credits || note !== (briefing.budget_note ?? "");
   return (
     <>
       <h2>Project budget</h2>
@@ -210,13 +214,30 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             placeholder="Explain any adjustment to the estimate"
           />
         </label>
-        <p className="briefing-note">
-          {balance.isPending
-            ? "Checking balance…"
-            : balance.error
-              ? "Balance unavailable. Try reloading."
-              : `${balance.data?.balance ?? 0} credits available`}
-        </p>
+        {balance.isPending ? (
+          <p className="briefing-note">Checking balance…</p>
+        ) : balance.error ? (
+          <p className="briefing-note">Balance unavailable. Try reloading.</p>
+        ) : (
+          <dl className="briefing-budget-figures">
+            <div>
+              <dt>Scope estimate</dt>
+              <dd>{briefing.estimated_credits ?? "—"} cr</dd>
+            </div>
+            <div>
+              <dt>Approved total</dt>
+              <dd>{Number(credits) || 0} cr</dd>
+            </div>
+            <div>
+              <dt>Available balance</dt>
+              <dd>{balance.data?.balance ?? 0} cr</dd>
+            </div>
+            <div>
+              <dt>Balance after acceptance</dt>
+              <dd>{(balance.data?.balance ?? 0) - (Number(credits) || 0)} cr</dd>
+            </div>
+          </dl>
+        )}
         {confirm.error && (
           <p className="form-error" role="alert">
             {confirm.error.message}
@@ -233,7 +254,7 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             <p className="form-error">
               {balance.error
                 ? "Check the credit account before accepting."
-                : "This client needs additional credits before work can begin."}
+                : `${(briefing.confirmed_credits ?? 0) - (balance.data?.balance ?? 0)} more credits are needed to accept this briefing.`}
             </p>
           )}
           {accept.error && (
@@ -241,15 +262,15 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
               {accept.error.message}
             </p>
           )}
+          {unconfirmedEdit && (
+            <p className="briefing-note">
+              The budget above has unsaved changes. Choose Confirm budget to apply them, or restore
+              the confirmed values to accept as they stand.
+            </p>
+          )}
           <button
             className="button primary"
-            disabled={
-              accept.isPending ||
-              confirm.isPending ||
-              !enough ||
-              Number(credits) !== briefing.confirmed_credits ||
-              note !== (briefing.budget_note ?? "")
-            }
+            disabled={accept.isPending || confirm.isPending || !enough || unconfirmedEdit}
             onClick={() => accept.mutate()}
           >
             {accept.isPending ? "Creating project…" : "Accept & create project"}

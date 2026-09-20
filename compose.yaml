@@ -33,6 +33,8 @@ services:
       SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set the public Supabase key}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set the private server credential}
       APP_ORIGIN: ${APP_ORIGIN:?Set the exact browser origin}
+      # Any further browser origins this service answers, comma separated. Empty means APP_ORIGIN alone.
+      MEDIA_ALLOWED_ORIGINS: ${MEDIA_ALLOWED_ORIGINS:-}
       MEDIA_HOST: 0.0.0.0
       MEDIA_PORT: 55430
     ports:

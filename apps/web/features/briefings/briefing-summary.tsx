@@ -1,4 +1,10 @@
-import { formats, formatSize, services, type BriefingDraft } from "./briefing-model";
+import {
+  directionFields,
+  formats,
+  formatSize,
+  services,
+  type BriefingDraft,
+} from "./briefing-model";
 
 export function BriefingSummary({
   draft,
@@ -45,11 +51,11 @@ export function BriefingSummary({
             {draft.goals}
           </p>
         )}
-        {["audience", "messaging", "resources", "inspirations", "style", "notes"].map((key) => {
-          const value = draft.direction[key as keyof typeof draft.direction];
+        {directionFields.map(({ id, label }) => {
+          const value = draft.direction[id as keyof typeof draft.direction];
           return typeof value === "string" && value ? (
-            <p className="preserve-lines" key={key}>
-              <strong className="briefing-field-name">{key}</strong>
+            <p className="preserve-lines" key={id}>
+              <strong className="briefing-field-name">{label}</strong>
               <br />
               {value}
             </p>

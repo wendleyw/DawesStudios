@@ -9,10 +9,13 @@
     "check": "npm --prefix apps/web run check",
     "test": "npm --prefix apps/web run test",
     "test:e2e": "npm --prefix apps/web run test:e2e",
-    "db:start": "supabase start",
-    "db:reset": "supabase db reset --local",
+    "db:start": "python3 supabase/scripts/local_stack.py start",
+    "db:stop": "python3 supabase/scripts/local_stack.py stop",
+    "db:status": "python3 supabase/scripts/local_stack.py status",
+    "db:reset": "python3 supabase/scripts/local_stack.py reset",
     "db:test": "supabase test db",
     "db:types": "supabase gen types typescript --local > supabase/database.types.ts",
+    "db:artwork:photos": "python3 supabase/scripts/demo_artwork.py",
     "hooks": "node apps/web/node_modules/husky/bin.js"
   }
 }

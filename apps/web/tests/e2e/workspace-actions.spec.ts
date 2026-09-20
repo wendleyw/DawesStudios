@@ -46,30 +46,65 @@ test("board views, filters, campaign validation, movement and scoped search", as
     ).data!.board_position as { x: number; y: number };
     await page.reload();
     await page.getByLabel("Search projects").fill(project.title);
-    await expect(node).toHaveAttribute(
-      "style",
-      new RegExp(`translate\\(${moved.x}px, ${moved.y}px\\)`),
-    );
-    for (const view of ["list", "kanban"]) {
-      await page.getByLabel("Board view").selectOption(view);
-      await expect(
-        page.locator(
-          `.${view === "list" ? "board-list" : "kanban-board"} a[href="/projects/${fixture.projectId}"]`,
-        ),
-      ).toBeVisible();
-    }
-    await page.getByLabel("Board view").selectOption("timeline");
-    const period = await page.locator(".project-timeline header strong").innerText();
-    await page.getByRole("button", { name: "Next two weeks" }).click();
-    await expect(page.locator(".project-timeline header strong")).not.toHaveText(period);
+    // board_position is stored relative to the campaign frame the card now lives in, so the
+    // restored placement is verified as an offset from that frame rather than as a page coordinate.
+    // The stored value is in canvas coordinates while boundingBox reports rendered pixels, and the
+    // board opens fitted to its contents rather than at 1:1, so the offset is converted back
+    // through the canvas zoom. Comparing the two directly only held while the board sat at zoom 1.
+    const frame = page.locator(".react-flow__node-campaign").first();
+    await expect
+      .poll(async () => {
+        const card = await node.boundingBox();
+        const group = await frame.boundingBox();
+        const zoom = await page
+          .locator(".react-flow__viewport")
+          .evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
+        if (!card || !group || !zoom) return null;
+        return Math.max(
+          Math.abs((card.x - group.x) / zoom - moved.x),
+          Math.abs((card.y - group.y) / zoom - moved.y),
+        );
+      })
+      .toBeLessThanOrEqual(1);
+    await page.getByRole("button", { name: "List view", exact: true }).click();
+    await expect(
+      page.locator(`.board-list a[href="/projects/${fixture.projectId}"]`),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+    await page.getByRole("button", { name: "Kanban", exact: true }).click();
+    await expect(
+      page.locator(`.kanban-board a[href="/projects/${fixture.projectId}"]`),
+    ).toBeVisible();
+    await expect(page.locator(".kanban-column")).toHaveCount(7);
+    await page.getByRole("button", { name: "Timeline", exact: true }).click();
+    const periodLabel = page.locator(".project-timeline header strong");
+    await expect(periodLabel).toBeVisible();
+    // innerText reports "" while the frame is still switching back from Kanban.
+    await expect(periodLabel).not.toHaveText("");
+    const period = (await periodLabel.textContent())!.trim();
+    // The arrows page by whichever scale is chosen, so they no longer name a fortnight.
+    await page.getByRole("button", { name: /^Next (fortnight|month|quarter)$/ }).click();
+    await expect(periodLabel).not.toHaveText(period);
     await page.getByRole("button", { name: "Today", exact: true }).click();
-    await expect(page.locator(".project-timeline header strong")).toHaveText(period);
+    await expect(periodLabel).toHaveText(period);
+    // Changing the scale changes what the window covers, which is the whole point of the control:
+    // a fortnight cannot show a project that runs past it.
+    await page.getByRole("group", { name: "Timeline scale" }).getByText("Quarter").click();
+    await expect(periodLabel).not.toHaveText(period);
+    await expect(page.locator(".timeline-lane-head .timeline-day")).toHaveCount(13);
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("delivered");
     await expect(page.getByRole("heading", { name: "No projects match." })).toBeVisible();
-    await page.getByRole("button", { name: "Clear filters" }).click();
+    // Recover from the empty board itself, not from inside the filter menu that caused it.
+    await page
+      .locator(".board-stack-notice")
+      .getByRole("button", { name: "Clear filters" })
+      .click();
     await expect(page.getByLabel("Search projects")).toBeEmpty();
-    await page.getByRole("button", { name: "New campaign", exact: true }).click();
+    // The seven seeded SABRE projects plus this run's own fixture project.
+    await expect(page.locator(".react-flow__node-project")).toHaveCount(8);
+    await expect(node).toBeVisible();
+    await page.getByRole("button", { name: "Add a campaign", exact: true }).click();
     await page.getByLabel("Campaign name").fill(campaignTitle);
     await page.getByLabel("Start date").fill("2026-10-20");
     await page.getByLabel("End date").fill("2026-10-10");
@@ -244,6 +279,49 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(client).toHaveURL(new RegExp(`/projects/${fixture.projectId}\\?channel=client$`));
   } finally {
     await clientContext.close();
+    await cleanupTestProject(fixture.projectId);
+  }
+});
+
+test("one click selects and two open the project, on the card and in the calendar", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    const project = (await agency.from("projects").select("*").eq("id", fixture.projectId).single())
+      .data!;
+    await signIn(page, credentials.agency);
+    const board = `/clients/${fixture.clientId}/board`;
+    await page.goto(board);
+    await page.getByLabel("Search projects").fill(project.title);
+    const node = page.locator(`.react-flow__node[data-id="${fixture.projectId}"]`);
+    const card = node.locator(".board-card-body");
+
+    // One click selects and nothing more. Navigating here is the behaviour this replaced: the card
+    // used to be a link, so a single click left the board entirely.
+    await card.click();
+    await expect(node).toHaveAttribute("aria-current", "true");
+    expect(new URL(page.url()).pathname).toBe(board);
+
+    // Two open the project's own canvas, full screen, rather than inside the board.
+    await card.dblclick();
+    await page.waitForURL(`**/projects/${fixture.projectId}`);
+    await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
+
+    // The calendar lane obeys the same rule, so the board reads consistently wherever a project
+    // appears.
+    await page.goto(board);
+    await page.getByLabel("Search projects").fill(project.title);
+    // The weekday header shares the lane class, so the project rows are the ones that are not it.
+    const lane = page.locator(".timeline-lane:not(.timeline-lane-head)").first();
+    await lane.click();
+    await expect(lane).toHaveAttribute("aria-current", "true");
+    expect(new URL(page.url()).pathname).toBe(board);
+    await lane.dblclick();
+    await page.waitForURL(`**/projects/${fixture.projectId}`);
+  } finally {
     await cleanupTestProject(fixture.projectId);
   }
 });

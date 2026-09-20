@@ -18,7 +18,9 @@ import {
   formats,
   formatSize,
   initialDraft,
+  directionFields,
   newDeliverable,
+  nextVariation,
   serviceEstimate,
   validateBriefing,
   type Briefing,
@@ -382,10 +384,7 @@ function BriefingEditor({
                     update({
                       deliverables: [
                         ...draft.deliverables,
-                        newDeliverable(
-                          id,
-                          draft.deliverables.filter((item) => item.format === id).length + 1,
-                        ),
+                        newDeliverable(id, nextVariation(draft.deliverables, id)),
                       ],
                     })
                   }
@@ -573,16 +572,14 @@ function BriefingEditor({
                   Use brand defaults
                 </button>
               </div>
-              {(
-                ["audience", "messaging", "style", "resources", "inspirations", "notes"] as const
-              ).map((field) => (
-                <label key={field}>
-                  <span className="briefing-field-name">{field}</span>
+              {directionFields.map(({ id, label }) => (
+                <label key={id}>
+                  <span className="briefing-field-name">{label}</span>
                   <textarea
                     rows={2}
-                    value={draft.direction[field] ?? ""}
+                    value={draft.direction[id] ?? ""}
                     onChange={(event) =>
-                      updateDirection({ [field]: event.target.value, source: "project" })
+                      updateDirection({ [id]: event.target.value, source: "project" })
                     }
                   />
                 </label>

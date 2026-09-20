@@ -103,3 +103,20 @@ export function useProjectAssets(clientId: string) {
     },
   });
 }
+
+/**
+ * The project an upload dialog opens on.
+ *
+ * A delivery can only be attached to an approved project, so the choices are narrowed — but the
+ * narrowing must not throw away which project the viewer is actually looking at. Preferring the
+ * first approved project in the workspace over the current filter silently attached a final file
+ * to a different project, and the client was notified about that one instead: the assets page was
+ * filtered to one project, the dialog targeted another, and nothing on screen disagreed.
+ */
+export function initialUploadProject(
+  candidates: { id: string }[],
+  filteredProject: string,
+): string {
+  if (candidates.some((candidate) => candidate.id === filteredProject)) return filteredProject;
+  return candidates[0]?.id ?? "";
+}

@@ -11,6 +11,7 @@ import { Modal } from "@/features/shared/modal";
 import { formatDate, useClients } from "@/features/workspace/workspace-data";
 import { assertResult } from "@/lib/supabase";
 import { useProjectAssets, type ProjectAsset } from "./asset-data";
+import { initialUploadProject } from "./asset-data";
 import { UploadFileDialog } from "./upload-file-dialog";
 import "./assets.css";
 
@@ -73,6 +74,8 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       (!search || asset.name.toLowerCase().includes(search.trim().toLowerCase())),
   );
   const selectedProject = projects.find((item) => item.id === project);
+  // A delivery belongs to an approved project, and the dialog opens on the one being looked at.
+  const deliverable = projects.filter((item) => item.status === "approved");
   const canDeliver =
     profile?.role === "agency" &&
     selectedProject?.status === "approved" &&
@@ -95,7 +98,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             {profile?.role === "agency" && (
               <button
                 className="button"
-                disabled={!projects.some((item) => item.status === "approved")}
+                disabled={!deliverable.length}
                 title="Available when a project is approved"
                 onClick={() => setUpload("delivery")}
               >
@@ -219,12 +222,10 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       {upload && (
         <UploadFileDialog
           kind={upload}
-          projects={
-            upload === "delivery" ? projects.filter((item) => item.status === "approved") : projects
-          }
+          projects={upload === "delivery" ? deliverable : projects}
           initialProject={
             upload === "delivery"
-              ? (projects.find((item) => item.status === "approved")?.id ?? "")
+              ? initialUploadProject(deliverable, project)
               : project || projects[0].id
           }
           onClose={() => setUpload(null)}

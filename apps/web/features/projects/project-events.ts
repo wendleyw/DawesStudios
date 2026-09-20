@@ -21,18 +21,41 @@ export function useProjectEvents(projectId: string) {
     );
     const tables =
       profile.role === "designer"
-        ? ["internal_comments"]
+        ? ["internal_comments", "design_versions", "designs"]
         : profile.role === "client"
           ? ["client_comments", "published_versions", "publication_reviews"]
-          : ["internal_comments", "client_comments", "published_versions", "publication_reviews"];
+          : [
+              "internal_comments",
+              "client_comments",
+              "published_versions",
+              "publication_reviews",
+              "design_versions",
+              "designs",
+            ];
     for (const table of tables)
       channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table, filter: `project_id=eq.${projectId}` },
         refresh,
       );
-    channel.subscribe();
+    // A dropped socket used to fail silently: no reconnect, no fallback and nothing on screen, so
+    // the canvas simply stopped updating. Poll while the channel is down, and refresh once on
+    // recovery to pick up whatever was missed.
+    let polling: ReturnType<typeof setInterval> | undefined;
+    const stopPolling = () => {
+      if (polling) clearInterval(polling);
+      polling = undefined;
+    };
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        stopPolling();
+        refresh();
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!polling) polling = setInterval(refresh, 15_000);
+      }
+    });
     return () => {
+      stopPolling();
       void database.removeChannel(channel);
     };
   }, [database, session, profile, projectId, queryClient]);

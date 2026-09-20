@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { credentials, localAgency, localCaller, signIn } from "./test-support";
 
-test("all ten clients and twenty projects render with matching records and scoped navigation", async ({
+test("all ten clients and twenty-five projects render with matching records and scoped navigation", async ({
   browser,
 }) => {
   test.setTimeout(180_000);
@@ -15,7 +15,7 @@ test("all ten clients and twenty projects render with matching records and scope
   ).data!;
   const deliverables = (await agency.from("deliverables").select("id,project_id")).data!;
   expect(clients).toHaveLength(10);
-  expect(projects).toHaveLength(20);
+  expect(projects).toHaveLength(25);
   const timings: { role: string; projectId: string; milliseconds: number }[] = [];
   const errors: string[] = [];
   const actors = [
@@ -40,7 +40,10 @@ test("all ten clients and twenty projects render with matching records and scope
       const allowed = (await caller.from("projects").select("id,title,client_id").order("title"))
         .data!;
       if (actor.role === "client") {
-        expect(allowed).toHaveLength(2);
+        // Nine workspaces carry the uniform pair; SABRE carries the seven the reference documents.
+        expect(allowed).toHaveLength(
+          projects.filter((project) => project.client_id === actor.clientId).length,
+        );
         expect(allowed.every((project) => project.client_id === actor.clientId)).toBe(true);
       }
       for (const project of allowed) {
@@ -71,14 +74,25 @@ test("all ten clients and twenty projects render with matching records and scope
         }
       }
       if (actor.role === "client") {
-        const versions = (await caller.from("published_versions").select("id,deliverable_id,version_number")).data!;
-        const reviews = (await caller.from("publication_reviews").select("publication_id,status")).data!;
-        const latest = new Map<string, typeof versions[number]>();
-        for (const version of versions) if (!latest.has(version.deliverable_id) || latest.get(version.deliverable_id)!.version_number < version.version_number) latest.set(version.deliverable_id, version);
-        const approved = [...latest.values()].filter(version=>reviews.find(review=>review.publication_id===version.id)?.status==="approved").length;
+        const versions = (
+          await caller.from("published_versions").select("id,deliverable_id,version_number")
+        ).data!;
+        const reviews = (await caller.from("publication_reviews").select("publication_id,status"))
+          .data!;
+        const latest = new Map<string, (typeof versions)[number]>();
+        for (const version of versions)
+          if (
+            !latest.has(version.deliverable_id) ||
+            latest.get(version.deliverable_id)!.version_number < version.version_number
+          )
+            latest.set(version.deliverable_id, version);
+        const approved = [...latest.values()].filter(
+          (version) =>
+            reviews.find((review) => review.publication_id === version.id)?.status === "approved",
+        ).length;
         await page.goto(`/clients/${actor.clientId}/reviews`);
-        await expect(page.locator(".review-card")).toHaveCount(latest.size-approved);
-        await page.getByRole("button",{name:"Approved",exact:true}).click();
+        await expect(page.locator(".review-card")).toHaveCount(latest.size - approved);
+        await page.getByRole("button", { name: "Approved", exact: true }).click();
         await expect(page.locator(".review-card")).toHaveCount(approved);
       }
       await page.goto("/search");
@@ -86,8 +100,14 @@ test("all ten clients and twenty projects render with matching records and scope
       await page.getByLabel("Search your workspace").fill(known.title);
       await expect(page.locator(`.search-result[href="/projects/${known.id}"]`)).toBeVisible();
       if (actor.role !== "agency") {
+        // The title has to match nothing this actor may read, which is not the same as belonging to
+        // another workspace. SABRE's projects carry bare names like "Brand Guidelines", and search
+        // covers brand assets too, so "Brand Guidelines" finds Acme's own "Sample brand
+        // guidelines". A title that names another workspace cannot collide with anything in this
+        // one, so the negative case is taken from those.
         const forbidden = projects.find(
-          (project) => !allowed.some((item) => item.id === project.id),
+          (project) =>
+            !allowed.some((item) => item.id === project.id) && project.title.includes(" / "),
         )!;
         await page.getByLabel("Search your workspace").fill(forbidden.title);
         await expect(page.locator(`.search-result[href="/projects/${forbidden.id}"]`)).toHaveCount(

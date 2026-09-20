@@ -4,9 +4,10 @@ import {
   Background,
   Controls,
   ReactFlow,
+  useReactFlow,
+  useStore,
   type Node,
   type NodeProps,
-  type NodeChange,
 } from "@xyflow/react";
 import {
   ArrowLeft,
@@ -20,10 +21,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { formatDate, statusLabels } from "@/features/workspace/workspace-data";
 import { Artwork } from "./artwork";
+import { buildCanvas, canvasBounds, canvasFit } from "./canvas-layout";
 import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
 import { DesignViewer } from "./design-viewer";
@@ -45,6 +47,10 @@ type VersionNode = Node<
     canProduce: boolean;
     canPublish: boolean;
     canReview: boolean;
+    /** The artwork box every tile of this deliverable uses, in the deliverable's proportions. */
+    artworkHeight: number;
+    /** Designs the row shows; the rest stay behind the card's "+N more designs" control. */
+    visibleDesigns: number;
     openDesign: (id: string) => void;
     action: (action: ProjectAction) => void;
   },
@@ -55,25 +61,71 @@ type DeliverableNode = Node<
   "deliverable"
 >;
 
+/**
+ * One version as a single line: its label and meta in the column on the left, its designs in a row
+ * beside them. The next version is the line below, so the canvas reads as a list of versions.
+ */
 const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) {
   return (
     <article className="version-card">
-      <header>
-        <strong>V{data.version.number}</strong>
-        <span className="version-state">{data.version.status.replaceAll("_", " ")}</span>
-        {data.canProduce && (
-          <button
-            className="icon-button nodrag"
-            aria-label={`Add design to version ${data.version.number}`}
-            onClick={() => data.action({ kind: "design", version: data.version })}
-          >
-            <Plus size={15} />
-          </button>
+      <div className="version-label">
+        <header>
+          <strong>V{data.version.number}</strong>
+          <span className="version-state">{data.version.status.replaceAll("_", " ")}</span>
+          {data.canProduce && (
+            <button
+              className="icon-button nodrag"
+              aria-label={`Add design to version ${data.version.number}`}
+              onClick={() => data.action({ kind: "design", version: data.version })}
+            >
+              <Plus size={15} />
+            </button>
+          )}
+        </header>
+        {data.version.note && <p className="version-note">{data.version.note}</p>}
+        {data.version.feedback && (
+          <p className="version-feedback">
+            <strong>Client feedback</strong>
+            <span>{data.version.feedback}</span>
+          </p>
         )}
-      </header>
-      <div className="version-designs">
+        <footer>
+          <span>
+            {data.designs.length} design{data.designs.length === 1 ? "" : "s"}
+          </span>
+          {data.canPublish && data.designs.length > 0 ? (
+            <button
+              className="button quiet nodrag"
+              onClick={() => data.action({ kind: "publish", version: data.version })}
+            >
+              {data.version.status === "reviewed" ? <Check size={14} /> : <Send size={13} />}
+              {data.version.status === "reviewed" ? "Share update" : "Share with client"}
+            </button>
+          ) : data.canProduce && data.designs.length > 0 ? (
+            <button
+              className="button quiet nodrag"
+              onClick={() => data.action({ kind: "submit", version: data.version })}
+            >
+              <Send size={13} />
+              Send to studio
+            </button>
+          ) : data.canReview ? (
+            <button
+              className="button quiet nodrag"
+              onClick={() => data.action({ kind: "review", version: data.version })}
+            >
+              Review version
+              <ArrowUpRight size={13} />
+            </button>
+          ) : null}
+        </footer>
+      </div>
+      <div
+        className="version-designs"
+        style={{ "--artwork-height": `${data.artworkHeight}px` } as CSSProperties}
+      >
         {data.designs.length ? (
-          data.designs.slice(0, 2).map((design) => (
+          data.designs.slice(0, data.visibleDesigns).map((design) => (
             <button
               key={design.id}
               className="design-preview nodrag"
@@ -101,53 +153,16 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
             )}
           </div>
         )}
+        {data.designs.length > data.visibleDesigns && (
+          <button
+            className="button quiet more-designs nodrag"
+            onClick={() => data.openDesign(data.designs[data.visibleDesigns].id)}
+          >
+            +{data.designs.length - data.visibleDesigns} more designs
+            <ChevronRight size={14} />
+          </button>
+        )}
       </div>
-      {data.designs.length > 2 && (
-        <button
-          className="button quiet more-designs nodrag"
-          onClick={() => data.openDesign(data.designs[2].id)}
-        >
-          +{data.designs.length - 2} more designs
-          <ChevronRight size={14} />
-        </button>
-      )}
-      {data.version.note && <p className="version-note">{data.version.note}</p>}
-      {data.version.feedback && (
-        <p className="version-feedback">
-          <strong>Client feedback</strong>
-          {data.version.feedback}
-        </p>
-      )}
-      <footer>
-        <span>
-          {data.designs.length} design{data.designs.length === 1 ? "" : "s"}
-        </span>
-        {data.canPublish && data.designs.length > 0 ? (
-          <button
-            className="button quiet nodrag"
-            onClick={() => data.action({ kind: "publish", version: data.version })}
-          >
-            {data.version.status === "reviewed" ? <Check size={14} /> : <Send size={13} />}
-            {data.version.status === "reviewed" ? "Share update" : "Share with client"}
-          </button>
-        ) : data.canProduce && data.designs.length > 0 ? (
-          <button
-            className="button quiet nodrag"
-            onClick={() => data.action({ kind: "submit", version: data.version })}
-          >
-            <Send size={13} />
-            Send to studio
-          </button>
-        ) : data.canReview ? (
-          <button
-            className="button quiet nodrag"
-            onClick={() => data.action({ kind: "review", version: data.version })}
-          >
-            Review version
-            <ArrowUpRight size={13} />
-          </button>
-        ) : null}
-      </footer>
     </article>
   );
 });
@@ -173,6 +188,35 @@ function DeliverableHeader({ data }: NodeProps<DeliverableNode>) {
 }
 const nodeTypes = { version: VersionCard, deliverable: DeliverableHeader };
 
+/**
+ * Places the opening view once the canvas knows how wide it is.
+ *
+ * xyflow's own Fit View is not used on load: a project with several deliverables is a tall list, and
+ * fitting its full height would centre it at a scale where nothing can be read and hide its first
+ * version above the pane. The view is computed from the frames instead, so it does not depend on
+ * xyflow having finished rendering, and it is applied once — a later resize, such as opening the
+ * conversation panel, must not drag the canvas out from under the viewer. The Fit View control
+ * remains for anyone who does want the whole project at once.
+ */
+function CanvasOpeningView({
+  content,
+  view,
+}: {
+  content: { width: number; height: number };
+  view: { width: number; height: number };
+}) {
+  const { setViewport } = useReactFlow();
+  // Setting a viewport before the pan/zoom instance exists is silently dropped.
+  const ready = useStore((state) => !!state.panZoom);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!ready || placed.current || view.width <= 0 || content.width <= 0) return;
+    placed.current = true;
+    void setViewport(canvasFit(content, view));
+  }, [ready, content, view, setViewport]);
+  return null;
+}
+
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
   useProjectEvents(projectId);
@@ -191,27 +235,17 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<{ designId: string; versionId: string } | null>(null);
   const [format, setFormat] = useState("");
   const [action, setAction] = useState<ProjectAction | null>(null);
-  const [nodeHeights, setNodeHeights] = useState<Record<string, number>>({});
-  function measureNodes(changes: NodeChange<VersionNode | DeliverableNode>[]) {
-    const dimensions = changes.filter(
-      (change) => change.type === "dimensions" && change.dimensions?.height,
+  // The canvas pane's own size, which is all the opening view needs; the frames supply the rest.
+  const [pane, setPane] = useState<HTMLDivElement | null>(null);
+  const [view, setView] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!pane) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setView({ width: entry.contentRect.width, height: entry.contentRect.height }),
     );
-    if (!dimensions.length) return;
-    setNodeHeights((current) => {
-      const next = { ...current };
-      let changed = false;
-      for (const item of dimensions)
-        if (
-          item.type === "dimensions" &&
-          item.dimensions &&
-          Math.abs((current[item.id] ?? 0) - item.dimensions.height) > 0.5
-        ) {
-          next[item.id] = item.dimensions.height;
-          changed = true;
-        }
-      return changed ? next : current;
-    });
-  }
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, [pane]);
   const canProduce = profile?.role !== "client" && channel === "internal";
   if (data.isPending)
     return (
@@ -234,18 +268,50 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const chosenDeliverable = deliverables.find(
     (deliverable) => deliverable.id === chosenVersion?.deliverableId,
   );
+  const shownDeliverables = deliverables.filter(
+    (deliverable) => !format || deliverable.id === format,
+  );
+  const versionsByDeliverable = new Map(
+    shownDeliverables.map((deliverable) => [
+      deliverable.id,
+      versions.filter((version) => version.deliverableId === deliverable.id),
+    ]),
+  );
+  const designsByVersion = new Map(
+    versions.map((version) => [
+      version.id,
+      designs.filter((design) => design.versionId === version.id),
+    ]),
+  );
+  // One section per deliverable, stacked. The geometry is computed, not measured, so the canvas
+  // lands in its final shape on first paint.
+  const frames = buildCanvas(
+    shownDeliverables.map((deliverable) => ({
+      deliverable: { id: deliverable.id, width: deliverable.width, height: deliverable.height },
+      versions: (versionsByDeliverable.get(deliverable.id) ?? []).map((version) => ({
+        id: version.id,
+        designCount: designsByVersion.get(version.id)?.length ?? 0,
+        hasNote: Boolean(version.note),
+        hasFeedback: Boolean(version.feedback),
+      })),
+    })),
+  );
   const nodes: (VersionNode | DeliverableNode)[] = [];
-  deliverables
-    .filter((deliverable) => !format || deliverable.id === format)
-    .forEach((deliverable, column) => {
-      const deliverableVersions = versions.filter(
-        (version) => version.deliverableId === deliverable.id,
-      );
-      const latest = deliverableVersions.at(-1);
+  for (const frame of frames) {
+    const deliverable = shownDeliverables.find((item) => item.id === frame.deliverableId);
+    if (!deliverable) continue;
+    const deliverableVersions = versionsByDeliverable.get(deliverable.id) ?? [];
+    const latest = deliverableVersions.at(-1);
+    const style = {
+      width: frame.width,
+      height: frame.height,
+      pointerEvents: "all",
+    } satisfies CSSProperties;
+    if (frame.kind === "deliverable") {
       nodes.push({
-        id: `deliverable-${deliverable.id}`,
+        id: frame.id,
         type: "deliverable",
-        position: { x: column * 332, y: 0 },
+        position: { x: frame.x, y: frame.y },
         data: {
           name: deliverable.name,
           format: deliverable.format,
@@ -261,38 +327,39 @@ export function ProjectPage({ projectId }: { projectId: string }) {
               sourceVersionId: latest?.id,
             }),
         },
-        style: { width: 296, pointerEvents: "all" },
+        style,
         draggable: false,
         selectable: false,
       });
-      let nextY = (nodeHeights[`deliverable-${deliverable.id}`] ?? 74) + 32;
-      deliverableVersions.forEach((version) => {
-        const versionDesigns = designs.filter((design) => design.versionId === version.id);
-        nodes.push({
-          id: version.id,
-          type: "version",
-          position: { x: column * 332, y: nextY },
-          data: {
-            version,
-            designs: versionDesigns,
-            channel,
-            canProduce,
-            canPublish: profile?.role === "agency" && channel === "internal",
-            canReview:
-              profile?.role === "client" &&
-              version.id === latest?.id &&
-              version.status === "pending" &&
-              project.status !== "delivered",
-            openDesign: (id) => setSelected({ designId: id, versionId: version.id }),
-            action: setAction,
-          },
-          style: { width: 296, pointerEvents: "all" },
-          draggable: false,
-          selectable: false,
-        });
-        nextY += (nodeHeights[version.id] ?? 430) + 32;
-      });
+      continue;
+    }
+    const version = deliverableVersions.find((item) => item.id === frame.versionId);
+    if (!version) continue;
+    nodes.push({
+      id: version.id,
+      type: "version",
+      position: { x: frame.x, y: frame.y },
+      data: {
+        version,
+        designs: designsByVersion.get(version.id) ?? [],
+        channel,
+        canProduce,
+        canPublish: profile?.role === "agency" && channel === "internal",
+        canReview:
+          profile?.role === "client" &&
+          version.id === latest?.id &&
+          version.status === "pending" &&
+          project.status !== "delivered",
+        artworkHeight: frame.artworkHeight,
+        visibleDesigns: frame.visible,
+        openDesign: (id) => setSelected({ designId: id, versionId: version.id }),
+        action: setAction,
+      },
+      style,
+      draggable: false,
+      selectable: false,
     });
+  }
 
   return (
     <div className="project-page">
@@ -388,21 +455,20 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             </select>
           </div>
           <div className="project-body">
-            <div className="project-canvas">
+            <div className="project-canvas" ref={setPane}>
               <ReactFlow
                 key={`${channel}:${format}`}
                 nodes={nodes}
                 edges={[]}
                 nodeTypes={nodeTypes}
-                onNodesChange={measureNodes}
                 nodesConnectable={false}
                 deleteKeyCode={null}
-                fitView
-                fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 minZoom={0.2}
                 maxZoom={1.5}
                 panOnScroll
               >
+                <CanvasOpeningView content={canvasBounds(frames)} view={view} />
                 <Background gap={20} color="#d4d4d0" />
                 <Controls showInteractive={false} />
               </ReactFlow>

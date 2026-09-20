@@ -50,6 +50,74 @@ export function useClients() {
   });
 }
 
+/**
+ * Resolves the workspace a project belongs to, so the shell can keep that client selected while the
+ * viewer is on the non-nested /projects/:id route.
+ */
+export function useProjectClient(projectId?: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-client", session?.user.id, projectId ?? "none"],
+    enabled: !!session && !!projectId,
+    staleTime: 300_000,
+    queryFn: async () =>
+      assertResult(
+        await database.from("projects").select("client_id").eq("id", projectId!).maybeSingle(),
+      ) as { client_id: string } | null,
+  });
+}
+
+export type WorkspaceNotification = {
+  id: string;
+  user_id: string;
+  client_id: string | null;
+  project_id: string | null;
+  title: string;
+  body: string;
+  kind: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+/**
+ * The single source for notifications. The shell's bell and the notifications page share this cache
+ * entry, so marking everything read updates both without a second query or a divergent count.
+ */
+export function useNotifications() {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["notifications", session?.user.id],
+    enabled: !!session,
+    refetchInterval: 30_000,
+    queryFn: async () =>
+      assertResult(
+        await database
+          .from("notifications")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ) as WorkspaceNotification[],
+  });
+}
+
+/**
+ * Every campaign the caller may read, so a cross-client row can name its campaign without a query
+ * per client. RLS scopes the result: a designer sees only campaigns in workspaces it works in.
+ */
+export function useWorkspaceCampaigns() {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["campaigns", session?.user.id, "workspace"],
+    enabled: !!session,
+    staleTime: 120_000,
+    queryFn: async () =>
+      assertResult(await database.from("campaigns").select("id, title")) as {
+        id: string;
+        title: string;
+      }[],
+  });
+}
+
 export function useProjects(clientId?: string) {
   const { database, session } = useAuth();
   return useQuery({

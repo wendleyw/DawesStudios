@@ -23,8 +23,23 @@ function displayName(value, extension) {
   return `${label || 'Creative delivery'}.${extension}`;
 }
 
+/**
+ * The browser origins this service answers, as an exact-match allowlist.
+ *
+ * `APP_ORIGIN` names the one canonical workspace origin, which the web application also uses to
+ * build invitation links, so it stays a single value. `MEDIA_ALLOWED_ORIGINS` adds the others a
+ * machine legitimately serves the same application from — a `next dev` on its own port beside the
+ * container — which is what a developer hits when a publication is prepared from port 3010 against
+ * a service configured for 3003. Entries are compared whole; no origin is ever reflected back
+ * merely because it asked.
+ */
+export function allowedOrigins({ appOrigin, additionalOrigins } = {}) {
+  return new Set([appOrigin, ...String(additionalOrigins ?? '').split(/[,\s]+/)].filter(Boolean));
+}
+
 export function createMediaServer(config) {
   const backend = createBackend(config);
+  const permitted = config.allowedOrigins instanceof Set ? config.allowedOrigins : allowedOrigins(config);
   let active = 0;
   const server = createServer({ maxHeaderSize: 16 * 1024, requestTimeout: 120_000, headersTimeout: 10_000 }, async (request, response) => {
     response.setHeader('Content-Type', 'application/json');
@@ -32,7 +47,7 @@ export function createMediaServer(config) {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     const origin = request.headers.origin;
     const send = (status, data) => { if (!response.destroyed) { response.statusCode = status; response.end(JSON.stringify(data)); } };
-    if (origin && origin !== config.appOrigin) { request.resume(); return send(403, { error: 'Origin is not allowed.' }); }
+    if (origin && !permitted.has(origin)) { request.resume(); return send(403, { error: 'Origin is not allowed.' }); }
     if (origin) { response.setHeader('Access-Control-Allow-Origin', origin); response.setHeader('Vary', 'Origin'); }
     if (request.method === 'OPTIONS') {
       response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -103,8 +118,8 @@ export function createMediaServer(config) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const config = { supabaseUrl: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY, serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY, appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:3003' };
-  if (Object.values(config).some(value => !value)) throw new Error('Supabase and app-origin configuration is required.');
+  const config = { supabaseUrl: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY, serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY, appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:3003', additionalOrigins: process.env.MEDIA_ALLOWED_ORIGINS ?? '' };
+  if (['supabaseUrl', 'anonKey', 'serviceKey', 'appOrigin'].some(key => !config[key])) throw new Error('Supabase and app-origin configuration is required.');
   for (const tool of ['pdfinfo', 'pdftoppm']) execFileSync(tool, ['-v'], { stdio: 'ignore', timeout: 5000 });
   const port = Number(process.env.MEDIA_PORT ?? 55430);
   createMediaServer(config).listen(port, process.env.MEDIA_HOST ?? '127.0.0.1', () => process.stdout.write(`Media service listening on port ${port}.\n`));

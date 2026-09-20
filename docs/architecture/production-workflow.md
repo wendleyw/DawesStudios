@@ -24,6 +24,6 @@ The application has one studio and isolated client workspaces. Routes compose fe
 
 ## Verification
 
-The browser suites under `apps/web/tests/e2e` exercise real Auth, database commands and Storage. The production journey compares immutable published records and SHA-256 file hashes after an internal edit. Recovery tests inject failed HTTP writes and inspect final object/record counts. Canonical traversal reconciles all 20 projects across agency, ten clients and both designers, recording navigation timings and runtime errors.
+The browser suites under `apps/web/tests/e2e` exercise real Auth, database commands and Storage. The production journey compares immutable published records and SHA-256 file hashes after an internal edit. Recovery tests inject failed HTTP writes and inspect final object/record counts. Canonical traversal reconciles all 25 projects across agency, ten clients and both designers, recording navigation timings and runtime errors.
 
 Database tests separately verify forbidden payloads, parent integrity, locking, retries and concurrent transitions. The [acceptance matrix](acceptance-matrix.md) and evidence under `docs/verification` record which checks actually passed. Local production containers and a configured local mailbox are not a claim of public DNS/TLS deployment, paid billing or external SMTP delivery.

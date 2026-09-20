@@ -33,7 +33,6 @@ export function ProjectActionDialog({
 }) {
   const { database, mediaUrl } = useAuth();
   const invalidate = useInvalidateProject();
-  const [publicationKey] = useState(() => crypto.randomUUID());
   const [stagedArtwork, setStagedArtwork] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
@@ -155,7 +154,10 @@ export function ProjectActionDialog({
               p_version_id: action.version.id,
               p_release_note: value("note"),
               p_assets: assets,
-              p_idempotency_key: publicationKey,
+              // No submission key: publish_version then treats one internal version as mapping to
+              // exactly one client snapshot, so reopening this dialog and sharing an unchanged
+              // version returns the existing publication instead of minting a second one. A caller
+              // that genuinely wants a fresh snapshot of the same version still passes a key.
             }),
           );
         } finally {

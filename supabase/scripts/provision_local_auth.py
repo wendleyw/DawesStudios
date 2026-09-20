@@ -65,17 +65,24 @@ for asset in fixtures.get('brand_assets',[]):
     elif asset['kind']=='mark-png':content=monogram_png(asset['client_name'])
     elif asset['kind']=='mark-pdf':content=monogram_pdf(asset['client_name'])
     elif asset['kind']=='guidelines':content=simple_pdf(asset['client_name']+' / Sample brand guidelines')
-    else:content=png_card(asset['index']+int(asset['kind'][-1]))
+    # The manifest carries the pixel canvas of every rendered fixture image, so provisioning renders
+    # each one at the size the generator decided instead of guessing one here.
+    else:content=png_card(asset['index']+int(asset['kind'][-1]),asset['width'],asset['height'])
     fixture_object('brand-assets',asset['storage_path'],content,asset['mime_type']);brand_count+=1
 working_count=0
+publication_count=0
 for asset in fixtures.get('working_assets',[]):
     design=request('/rest/v1/designs?id=eq.'+asset['design_id'],method='GET')
     if not design or design[0]['internal_asset_path']!=asset['source_path']:continue
-    fixture_object('internal-assets',asset['source_path'],png_card(asset['index'],internal=True),'image/png')
-    clean=png_card(asset['index'])
+    fixture_object('internal-assets',asset['source_path'],png_card(asset['index'],asset['width'],asset['height'],internal=True),'image/png')
+    working_count+=1
+    # Only a design the fixture actually published owns a client-readable copy; production work that
+    # has not been shared yet must stay in the internal bucket alone.
+    if not asset['published_path']:continue
+    clean=png_card(asset['index'],asset['width'],asset['height'])
     fixture_object('published-assets',asset['published_path'],clean,'image/png')
     request('/rest/v1/rpc/register_sanitized_asset',{'p_project_id':asset['project_id'],'p_bucket_id':'published-assets','p_storage_path':asset['published_path'],'p_sha256':hashlib.sha256(clean).hexdigest(),'p_mime_type':'image/png','p_file_size':len(clean),'p_prepared_by':agency['id'],'p_source_design_id':asset['design_id'],'p_source_path':asset['source_path']})
-    working_count+=1
+    publication_count+=1
 
 project=fixtures['delivery_project_id']
 current=request('/rest/v1/delivery_files?project_id=eq.'+project, method='GET', token=agency_token)
@@ -98,4 +105,4 @@ content='\n'.join(['# Local demonstration credentials. Never deploy or commit.',
 fd=os.open(env_path, os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
 with os.fdopen(fd,'w') as file:file.write(content)
 os.chmod(env_path,0o600)
-print(f'Provisioned {0 if arguments.files_only else len(fixtures["users"])} Auth accounts, {brand_count} brand files, {working_count} working/publication pairs and the delivery fixture. Credentials: supabase/.env.local')
+print(f'Provisioned {0 if arguments.files_only else len(fixtures["users"])} Auth accounts, {brand_count} brand files, {working_count} internal working files, {publication_count} published copies and the delivery fixture. Credentials: supabase/.env.local')

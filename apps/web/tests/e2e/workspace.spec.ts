@@ -10,9 +10,10 @@ test("agency signs in, sees ten workspaces, and opens a live project canvas", as
   await page.screenshot({ path: `${screenshotDirectory}/agency-home.png`, fullPage: true });
   await page.locator(".workspace-card").filter({ hasText: "SABRE" }).click();
   await expect(page.locator(".board-canvas .react-flow")).toBeVisible();
-  await expect(page.locator(".board-card")).toHaveCount(2);
+  await expect(page.locator(".board-card")).toHaveCount(7);
   await page.screenshot({ path: `${screenshotDirectory}/agency-board.png` });
-  await page.locator(".board-card-body").first().click();
+  // One click selects; a double click opens the project inside the Planning frame.
+  await page.locator(".board-card-body").first().dblclick();
   await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
   await expect(page.getByRole("button", { name: "Working files", exact: true })).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/agency-project.png` });
@@ -28,9 +29,10 @@ test("client sees only its own workspace and no internal production controls", a
   await expect(page.locator(".client-nav")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Studio settings" })).toHaveCount(0);
   await expect(page.getByText("Alex Morgan", { exact: true })).toHaveCount(0);
-  await expect(page.locator(".board-card")).toHaveCount(2);
+  await expect(page.locator(".board-card")).toHaveCount(7);
   await expect(page.locator(".board-card-grip")).toHaveCount(0);
-  await page.locator(".board-card-body").first().click();
+  // One click selects; a double click opens the project inside the Planning frame.
+  await page.locator(".board-card-body").first().dblclick();
   await expect(page.getByText("Shared designs", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Share with client" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Working files" })).toHaveCount(0);

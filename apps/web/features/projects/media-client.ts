@@ -2,13 +2,39 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@database";
 
-const publicationSchema = z.object({ assets: z.record(z.string().uuid(), z.string().min(1)) });
-const deliverySchema = z.object({
-  id: z.string().uuid(),
+/*
+ * Identifiers are validated as UUID-shaped, not as RFC 4122 version 4.
+ *
+ * A `uuid` column holds any 128-bit value: `gen_random_uuid()` happens to produce version 4, but the
+ * deterministic fixtures derive their ids from a hash, so their version and variant nibbles are
+ * whatever the digest gave. `z.uuid()` rejects those, which turned a working publication into "The
+ * file service returned an incomplete response" — the service had done its job and the client threw
+ * the answer away. `z.guid()` checks the shape the database actually guarantees.
+ */
+export const publicationSchema = z.object({ assets: z.record(z.guid(), z.string().min(1)) });
+export const deliverySchema = z.object({
+  id: z.guid(),
   storagePath: z.string().min(1),
-  mimeType: z.enum(["image/png", "application/pdf"]),
+  mimeType: z.enum(["image/png", "image/jpeg", "application/pdf"]),
   fileSize: z.number().int().positive(),
 });
+
+/**
+ * What a refused preparation should say to the person who asked for it.
+ *
+ * A session that no longer exists still carries a valid signature, so PostgREST keeps answering and
+ * the workspace renders as normal while the media service — which resolves the session through the
+ * auth server — refuses every file with its own wording, `Access denied.`. That is accurate and
+ * useless: it names no cause and no next step. A refusal that carries a more specific reason, such
+ * as a viewer without agency access, keeps that reason.
+ */
+export function mediaErrorMessage(status: number, payload: unknown): string {
+  const parsed = z.object({ error: z.string() }).safeParse(payload);
+  const reported = parsed.success ? parsed.data.error : "";
+  if ((status === 401 || status === 403) && (!reported || reported === "Access denied."))
+    return "Your sign-in is no longer valid. Sign out, sign in again, and retry.";
+  return reported || "The file could not be prepared. Please try again.";
+}
 
 async function requestMedia<T>(
   database: SupabaseClient<Database>,
@@ -37,12 +63,7 @@ async function requestMedia<T>(
     signal: AbortSignal.timeout(120_000),
   });
   const result: unknown = await response.json();
-  if (!response.ok) {
-    const error = z.object({ error: z.string() }).safeParse(result);
-    throw new Error(
-      error.success ? error.data.error : "The file could not be prepared. Please try again.",
-    );
-  }
+  if (!response.ok) throw new Error(mediaErrorMessage(response.status, result));
   const validated = schema.safeParse(result);
   if (!validated.success)
     throw new Error("The file service returned an incomplete response. Please try again.");

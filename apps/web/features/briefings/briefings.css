@@ -251,7 +251,6 @@
   margin-block: 18px;
 }
 .briefing-field-name {
-  text-transform: capitalize;
 }
 .briefing-note {
   font-size: 12px !important;
@@ -491,4 +490,26 @@
     align-items: flex-start;
     gap: 8px;
   }
+}
+
+/* The four figures that decide the quote, read as one row rather than a prose sentence. */
+.briefing-budget-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin: 4px 0 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+.briefing-budget-figures dt {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.briefing-budget-figures dd {
+  margin-top: 3px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }

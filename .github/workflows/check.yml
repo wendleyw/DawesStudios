@@ -1,0 +1,36 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static:
+    name: Types, lint, formatting and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install web dependencies
+        run: npm ci --prefix apps/web
+      - name: Install media dependencies
+        run: npm ci --prefix apps/media
+      - name: Web gate
+        run: npm run check
+      - name: Media unit tests
+        run: npm --prefix apps/media test
+
+# The browser suite is deliberately absent from this workflow.
+#
+# tests/e2e create and delete real rows, so they need a provisioned Supabase stack, the trusted
+# media worker, the seeded ten-client dataset and the fixture Auth accounts — none of which this
+# runner has. Adding a job that starts them is real work, not a config tweak, and a workflow that
+# silently skipped the suite would read as coverage it does not have.
+#
+# When that job is added it must set ACCEPTANCE_SUPABASE_URL to the throwaway stack it provisions
+# (tests/e2e/test-support.ts refuses to run against an undeclared backend) and PLAYWRIGHT_BASE_URL
+# to the app it starts, then assert the eight-table before/after count that section B of the
+# acceptance matrix records.

@@ -16,3 +16,7 @@ supabase/.local/
 apps/web/next-env.d.ts
 outputs/
 work/
+.playwright-mcp/
+__pycache__/
+*.pyc
+supabase/.restore-drill/

@@ -15,7 +15,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
   const [tab, setTab] = useState("all");
-  if (briefings.isPending || clients.isPending)
+  if (briefings.isPending || clients.isPending || campaigns.isPending)
     return (
       <div className="page-content" role="status">
         Loading briefings…

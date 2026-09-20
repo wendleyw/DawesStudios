@@ -1,122 +1,340 @@
+/*
+ * The Planning frame's calendar.
+ *
+ * Class names are prefixed `timeline-lane` rather than `timeline-row`: the application stylesheet
+ * owns a `.timeline-row` of its own, and a shared name meant the calendar silently inherited that
+ * rule's padding and its vertical connector pseudo-element.
+ */
 .project-timeline {
-  padding: 24px 32px;
-  flex: 1;
+  display: flex;
   min-width: 0;
-}
-.project-timeline > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-  font-size: 14px;
-}
-.project-timeline > header > div {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 24px 32px;
 }
 .timeline-scroll {
+  min-height: 0;
+  flex: 1;
   overflow: auto;
   border: 1px solid var(--border);
-  background: white;
   border-radius: 8px;
+  background: var(--surface);
+  /* A grid this dense cannot afford a platform scrollbar the width of a day column. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
+.timeline-scroll:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.timeline-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.timeline-scroll::-webkit-scrollbar-track,
+.timeline-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.timeline-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 6px;
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+.timeline-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
+}
+/*
+ * Wide enough that a day column stays legible — the 280px identity column plus a fortnight of 40px
+ * day pairs — and past that the grid takes the frame's full width. Below it the grid scrolls
+ * sideways inside the frame rather than crushing the dates into each other.
+ */
 .timeline-calendar {
-  min-width: 850px;
-  min-height: 280px;
+  min-width: 840px;
 }
-.timeline-day-row,
-.timeline-project-row {
+
+/*
+ * One identity column plus a fortnight of day columns. The label stays put while the days scroll.
+ * The identity column holds a project title of about thirty characters without an ellipsis, which
+ * the frame can now afford: Planning is sized for the Kanban's seven stages, so the calendar has
+ * width to spare.
+ */
+.timeline-lane {
   display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
+  min-height: 56px;
+  grid-template-columns: 280px repeat(var(--timeline-columns, 14), minmax(0, 1fr));
+  align-items: center;
 }
-.timeline-day-row {
+.timeline-lane > * {
+  grid-row: 1;
+}
+.timeline-lane + .timeline-lane {
+  border-top: 1px solid #f1f1ec;
+}
+.timeline-lane-head + .timeline-lane {
+  border-top: 0;
+}
+.timeline-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 0;
+  height: 100%;
+  padding: 7px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* The head carries the period control and the weekday scale, and stays put as the lanes scroll. */
+.timeline-lane-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
-.timeline-day-row > span {
-  padding: 14px 5px;
-  text-align: center;
-  font-size: 13px;
-  color: #66665f;
-  border-right: 1px solid #efefe9;
+.timeline-period {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
 }
-.timeline-day-row small {
-  display: block;
+.timeline-period strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline-period-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -4px;
+}
+.timeline-period .icon-button {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+  border-radius: 6px;
+}
+.timeline-period .button {
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/* The lane itself is the grid: the whole cell selects on one click and opens on two, so the layout
+   can no longer hang off a link that wraps everything. */
+.timeline-label:not(.timeline-period) {
+  display: grid;
+  align-content: center;
+  gap: 1px 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+}
+.timeline-label strong {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline-label span {
+  grid-area: 2 / 1;
+  overflow: hidden;
+  color: var(--muted);
   font-size: 10px;
-  margin-bottom: 6px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.timeline-day-row .today {
-  background: #f0f2e9;
+/* The open affordance is pinned to the title it opens rather than floated in the cell. */
+.timeline-open {
+  display: flex;
+  grid-area: 1 / 2;
+  align-items: center;
+}
+.timeline-label svg {
+  align-self: center;
+  color: var(--muted);
+  opacity: 0.5;
+  transition: opacity 140ms ease;
+}
+.timeline-open:hover svg,
+.timeline-open:focus-visible svg {
+  opacity: 1;
+  color: var(--foreground);
+}
+
+.timeline-day {
+  /* Tabular figures keep every column's digits the same width, and nowrap stops the wider pairs —
+     the bold today column especially — from breaking onto a second line while their neighbours stay
+     on one, which is what made the header row ragged. */
+  padding: 8px 2px;
+  border-right: 1px solid #efefe9;
+  color: #66665f;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+.timeline-day small {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+}
+/* The current day is marked in the header and carried down through every lane, so the reference
+   point survives once the eye is among the bars. */
+.timeline-day.today {
+  background: #ecefe3;
   color: #222;
   font-weight: 600;
 }
-.timeline-project-row {
-  padding-block: 9px;
-  min-height: 66px;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent calc(100% / 14 - 1px),
-    #f0f0eb calc(100% / 14 - 1px),
-    #f0f0eb calc(100% / 14)
-  );
+.timeline-cell {
+  height: 100%;
+  border-right: 1px solid #f0f0eb;
 }
+.timeline-cell.weekend,
+.timeline-day.weekend {
+  background: #fafaf7;
+}
+.timeline-cell.today {
+  background: #f4f6ef;
+  border-right-color: #dfe3d3;
+}
+
+/*
+ * A bar reads its status from the same vocabulary the status badge uses: the olive family for work
+ * in hand, the amber one for work sent back, and the neutral one for work that is finished or not
+ * started. Only the tint changes with the status, so the calendar gains no palette of its own.
+ */
 .timeline-project-bar {
-  margin: 0 5px;
+  --bar-fill: #eef1e7;
+  --bar-edge: #87975f;
+  --bar-ink: #3b4828;
+
+  z-index: 1;
+  display: flex;
   min-width: 0;
-  padding: 9px 11px;
-  border: 1px solid #dce1d2;
-  background: #eef1e7;
+  align-items: center;
+  gap: 7px;
+  margin: 0 4px;
+  padding: 5px 9px;
+  overflow: hidden;
+  border: 1px solid var(--bar-edge);
   border-radius: 5px;
-  overflow: hidden;
-  color: #4e5f39;
+  background: var(--bar-fill);
+  color: var(--bar-ink);
 }
-.timeline-project-bar strong {
-  display: block;
-  font-size: 11px;
-  white-space: nowrap;
+.timeline-project-bar:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.timeline-bar-status {
+  min-width: 0;
   overflow: hidden;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
   text-overflow: ellipsis;
-}
-.timeline-project-bar span {
-  display: block;
-  font-size: 9px;
-  margin-top: 4px;
   white-space: nowrap;
+}
+/* A bar that continues outside the window loses its rounded edge on that side. */
+.timeline-project-bar.clipped-start {
+  margin-left: 0;
+  border-left-width: 3px;
+  border-radius: 0 5px 5px 0;
+}
+.timeline-project-bar.clipped-end {
+  margin-right: 0;
+  border-right-width: 3px;
+  border-radius: 5px 0 0 5px;
+}
+.timeline-project-bar.planned {
+  --bar-fill: #fff;
+  --bar-edge: #93938a;
+  --bar-ink: #5d5d57;
+
+  border-style: dashed;
+}
+.timeline-project-bar.in_progress {
+  --bar-fill: #d3dcbc;
+  --bar-edge: #7f9152;
+  --bar-ink: #333f1e;
+}
+.timeline-project-bar.internal_review {
+  --bar-fill: #e7ebde;
+  --bar-edge: #8b9a6b;
+  --bar-ink: #3f4d2c;
+}
+.timeline-project-bar.client_review {
+  --bar-fill: #e0e7d0;
+  --bar-edge: #87975f;
+  --bar-ink: #3b4828;
 }
 .timeline-project-bar.changes_requested {
-  background: #faf0de;
-  border-color: #eadfc8;
-  color: #795b23;
+  --bar-fill: #f6ead0;
+  --bar-edge: #b08b2f;
+  --bar-ink: #61470e;
+}
+.timeline-project-bar.approved {
+  --bar-fill: #e8e8e0;
+  --bar-edge: #93938a;
+  --bar-ink: #45453f;
 }
 .timeline-project-bar.delivered {
-  background: #f2f2ef;
-  border-color: #e1e1d9;
-  color: #666;
+  --bar-fill: #dededa;
+  --bar-edge: #8e8e86;
+  --bar-ink: #4c4c45;
+}
+
+/* Dot shapes follow the status badge: hollow while the studio still holds the work, square once it
+   has been handed over. The status is also written out, so shape and tint are never the only cue. */
+.timeline-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+.timeline-project-bar.internal_review .timeline-status-dot {
+  border: 1px solid currentcolor;
+  background: transparent;
+}
+.timeline-project-bar.delivered .timeline-status-dot {
+  border-radius: 1px;
+}
+
+.timeline-unscheduled {
+  grid-column: 2 / -1;
+  padding-left: 12px;
+  color: #9a9a92;
+  font-size: 10px;
 }
 .timeline-no-work {
   padding: 50px 24px;
-  font-size: 13px;
   color: #74746d;
+  font-size: 13px;
 }
-.unscheduled-projects {
-  font-size: 12px;
-  margin-top: 20px;
-}
-.unscheduled-projects summary {
-  cursor: pointer;
-}
-.unscheduled-projects a {
-  display: block;
-  padding: 10px 0;
-}
+
 @media (max-width: 720px) {
   .project-timeline {
     padding: 20px 16px;
   }
-  .project-timeline > header {
-    font-size: 12px;
-    gap: 8px;
+  .timeline-lane {
+    grid-template-columns: 168px repeat(var(--timeline-columns, 14), minmax(0, 1fr));
+  }
+  .timeline-label {
+    padding: 7px 10px;
+  }
+  .timeline-period strong {
+    font-size: 10px;
   }
 }

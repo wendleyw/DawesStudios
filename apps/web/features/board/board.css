@@ -1,0 +1,332 @@
+/* Stacked board canvas: a Planning frame above one frame per campaign, in a single column. */
+
+.board-canvas .react-flow__node-planning,
+.board-canvas .react-flow__node-campaign,
+.board-canvas .react-flow__node-notice,
+.board-canvas .react-flow__node-addCampaign {
+  cursor: default;
+}
+
+/*
+ * xyflow sets `pointer-events: none` inline on any node that is neither selectable nor draggable,
+ * which is every frame in this stack. The frames still hold real controls, so their content opts
+ * back in; the frame element itself stays transparent to the pane.
+ */
+.board-planning,
+.board-campaign,
+.board-slot,
+.board-add-campaign,
+.board-stack-notice {
+  pointer-events: auto;
+}
+
+.board-planning {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.board-planning-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 14px 0 8px;
+}
+.board-planning-head h2 {
+  flex: 1;
+  font-size: 14px;
+}
+.board-planning-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+.board-planning-body > * {
+  min-height: 0;
+  flex: 1;
+}
+.board-campaign {
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #f6f5f4;
+}
+.board-campaign-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 12px 0 18px;
+  color: var(--muted);
+}
+.board-campaign-head h2 {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-campaign-dates {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.board-slot {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.board-slot:hover {
+  border-color: var(--ink);
+  color: var(--foreground);
+}
+
+.board-add-campaign {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+.board-add-campaign:hover {
+  border-color: var(--ink);
+  color: var(--foreground);
+}
+
+.board-stack-notice {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.kanban-empty {
+  display: grid;
+  min-height: 84px;
+  place-items: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.board-planning-body .project-timeline {
+  padding: 16px;
+  border: 0;
+}
+/* The stage title wraps rather than widening its column past the shared width. */
+.kanban-heading :is(h2, h3) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .board-planning-head {
+    gap: 6px;
+    padding-right: 8px;
+  }
+  .board-planning-head h2 {
+    font-size: 13px;
+  }
+  .board-campaign-dates {
+    display: none;
+  }
+}
+
+.board-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+.board-card-head h2 {
+  min-width: 0;
+  color: var(--foreground);
+}
+
+/* One explicit card height keeps a row aligned when a title wraps; the footer stays at the bottom. */
+.board-canvas .react-flow__node-project .board-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+.board-canvas .react-flow__node-project .board-card-body {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  /* The card answers to the pointer even though it no longer links anywhere. */
+  cursor: pointer;
+}
+.board-canvas .react-flow__node-project .board-card-head h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.board-canvas .react-flow__node-project .board-card-footer {
+  margin-top: auto;
+}
+
+/*
+ * The artwork band. It takes whatever height the fixed card has left, so it fits both the agency
+ * card — which gives 22px to its drag grip — and the shorter card the other roles read.
+ */
+.board-card-media {
+  display: flex;
+  min-height: 158px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 11px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f1f1ec;
+  color: #b4b4a7;
+}
+.board-card-media.empty {
+  gap: 5px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  opacity: 0.75;
+}
+.board-card-media > img {
+  /* The whole design, not a crop of its middle. A reel is 1080x1920, and covering a wide box with
+     it showed a horizontal slice that read as nothing at all. Letterboxing a portrait is the price
+     of the card being recognisable as the work it stands for. */
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* The second click is the shortcut; this is the control that says so and answers the keyboard. */
+.board-card-open {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--muted);
+}
+.board-card-open:hover,
+.board-card-open:focus-visible {
+  border-color: var(--ink);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+/*
+ * A selected card has to read as chosen across a board of them, so it carries a ring rather than
+ * the hairline the shared rule gives every canvas node. The extra class matches the same element
+ * twice to win on specificity wherever the two stylesheets land in the bundle.
+ */
+.board-canvas .react-flow__node.react-flow__node-project.selected .board-card {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 26%, transparent);
+}
+
+/* The stage list scrolls under its own pinned heading rather than pushing it out of the frame. */
+.board-planning-body .kanban-board {
+  min-height: 0;
+  align-items: stretch;
+}
+.board-planning-body .kanban-column {
+  min-height: 0;
+  overflow: hidden auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+.board-planning-body .kanban-column > * {
+  flex: 0 0 auto;
+}
+
+.board-list-empty {
+  padding: 40px 24px 44px;
+  color: var(--muted);
+  text-align: center;
+}
+.board-list-empty h2 {
+  margin-bottom: 6px;
+  color: var(--foreground);
+  font-size: 15px;
+}
+.board-list-empty p {
+  font-size: 12px;
+}
+
+/* The version names the artwork above it and the type names the deliverable; a separator keeps the
+   two from reading as one string. */
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+/* A dash between the version and the deliverable type, so "V1" and "Infographic" read as two
+   facts rather than one run-on label. */
+.board-card-meta > span + span::before {
+  margin-right: 7px;
+  color: var(--border-strong);
+  content: "–";
+}
+.board-card-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-card-meta .board-card-version {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}

@@ -82,15 +82,13 @@ export function UploadFileDialog({
       );
       if (!existing.length)
         assertResult(
-          await database
-            .from("project_assets")
-            .insert({
-              project_id: projectId,
-              name,
-              storage_path: asset.path,
-              mime_type: asset.mime,
-              file_size: asset.size,
-            }),
+          await database.from("project_assets").insert({
+            project_id: projectId,
+            name,
+            storage_path: asset.path,
+            mime_type: asset.mime,
+            file_size: asset.size,
+          }),
         );
     },
     onSuccess: async () => {

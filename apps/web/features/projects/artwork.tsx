@@ -43,8 +43,11 @@ export function Artwork({
       // eslint-disable-next-line @next/next/no-img-element
       <img
         className="uploaded-artwork"
+        // The design's title is already rendered beside this image, so repeating it here makes a
+        // screen reader announce the same name twice. The artwork carries no information a caption
+        // can express, which is what `alt=""` is for.
+        alt=""
         src={asset.data}
-        alt={design.title}
         draggable={false}
         onError={() => setFailedSource(asset.data!)}
       />

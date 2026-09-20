@@ -121,18 +121,18 @@ test.describe("Briefing intake, credits, and account administration", () => {
     await page.getByLabel("Video duration").selectOption("30 seconds");
     await page.getByLabel("Footage & production").selectOption("Use supplied footage");
     await page.getByText("Brand direction & additional details", { exact: true }).click();
-    await expect(page.getByRole("textbox", { name: "audience", exact: true })).toHaveValue(
+    await expect(page.getByRole("textbox", { name: "Audience", exact: true })).toHaveValue(
       "Thoughtful outdoor explorers",
     );
     await page
-      .getByRole("textbox", { name: "audience", exact: true })
+      .getByRole("textbox", { name: "Audience", exact: true })
       .fill("Weekend explorers planning their next trip");
     await page.getByRole("button", { name: "Use brand defaults", exact: true }).click();
-    await expect(page.getByRole("textbox", { name: "audience", exact: true })).toHaveValue(
+    await expect(page.getByRole("textbox", { name: "Audience", exact: true })).toHaveValue(
       "Thoughtful outdoor explorers",
     );
     await page
-      .getByRole("textbox", { name: "audience", exact: true })
+      .getByRole("textbox", { name: "Audience", exact: true })
       .fill("Weekend explorers planning their next trip");
     await page.getByLabel("Target due date").fill("2026-10-12");
     await page.getByRole("button", { name: "Save draft", exact: true }).click();

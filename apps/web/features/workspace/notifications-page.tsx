@@ -1,28 +1,18 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Bell, Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { useNotifications } from "./workspace-data";
 import { assertResult } from "@/lib/supabase";
 
 export function NotificationsPage() {
   const { database, session } = useAuth();
   const queryClient = useQueryClient();
   const settings = useWorkspaceSettings();
-  const notifications = useQuery({
-    queryKey: ["notifications", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("notifications")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ),
-    refetchInterval: 30_000,
-  });
+  const notifications = useNotifications();
   const markRead = useMutation({
     mutationFn: async (id?: string) => {
       const query = database
