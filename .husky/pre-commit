@@ -1,0 +1,2 @@
+gitleaks git --staged --redact
+cd apps/web && npx --no -- lint-staged

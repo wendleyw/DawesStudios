@@ -1,0 +1,257 @@
+{
+  "capturedAt": "2026-09-20T09:57:09.838Z",
+  "surfaces": [
+    {
+      "name": "login",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "home",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "search",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "notifications",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "account",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "settings",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "briefings",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "new-briefing",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "reviews",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "assets",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "credits",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-canvas",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-kanban",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-list",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-timeline",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "project",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "design-pinned-draft",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "home",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "search",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "notifications",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "account",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "settings",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "briefings",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "new-briefing",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "reviews",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "assets",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "credits",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-canvas",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-kanban",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-list",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-timeline",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "project",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "design-pinned-draft",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-canvas",
+      "width": 1024,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "project",
+      "width": 1024,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "design-viewer",
+      "width": 1024,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-canvas",
+      "width": 1000,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "project",
+      "width": 1000,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "design-viewer",
+      "width": 1000,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "board-canvas",
+      "width": 768,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "project",
+      "width": 768,
+      "overflow": false,
+      "violations": []
+    },
+    {
+      "name": "design-viewer",
+      "width": 768,
+      "overflow": false,
+      "violations": []
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - img "Brianna Dawes Studios" [ref=e4]
+      - generic [ref=e5]:
+        - generic [ref=e6]: A little structure. More room to create.
+        - heading "Good work, in good company." [level=1] [ref=e7]: Good work,in good company.
+        - paragraph [ref=e8]: Your projects, feedback, and brand.One considered space to move things forward.
+      - generic [ref=e9]: CREATIVE CANVAS · BRIANNA DAWES STUDIOS
+    - generic [ref=e11]:
+      - generic [ref=e12]: YOUR WORKSPACE
+      - heading "Welcome back." [level=2] [ref=e13]
+      - paragraph [ref=e14]: Sign in to pick up where you left off.
+      - generic [ref=e15]:
+        - text: Email address
+        - textbox "Email address" [ref=e16]:
+          - /placeholder: you@company.com
+      - generic [ref=e17]:
+        - text: Password
+        - textbox "Password" [ref=e18]
+      - button "Sign in" [disabled] [ref=e19]
+      - link "Forgot password?" [ref=e22] [cursor=pointer]:
+        - /url: /auth/recovery
+      - paragraph [ref=e23]: Need access? Ask your studio contact for an invitation.
+  - button "Open Next.js Dev Tools" [ref=e29] [cursor=pointer]

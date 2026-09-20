@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-20",
+  "sourceCommit": "de1ca9e3acfa0ec37a3b7b1eeb9886237fd6ad8b",
+  "sourceURL": "http://localhost:3001/",
+  "publishedReference": "https://creative-canvas-wireframe.wendleyw.chatgpt.site",
+  "viewport": {
+    "width": 1600,
+    "height": 1000
+  },
+  "pngCount": 711,
+  "states": 499,
+  "counts": {
+    "agency": 306,
+    "client": 247,
+    "designer": 158
+  },
+  "baseStates": {
+    "agency": 215,
+    "client": 174,
+    "designer": 110
+  },
+  "coverage": "Desktop; páginas, modais e estados dos três perfis. SABRE completo; outros clientes por exemplo de board. Não enumera todas as combinações de dados ou breakpoints."
+}

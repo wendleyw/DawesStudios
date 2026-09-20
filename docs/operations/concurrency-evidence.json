@@ -1,0 +1,20 @@
+{
+  "executed_at": "2026-09-20T09:33:37.094621+00:00",
+  "api_url": "http://127.0.0.1:55521",
+  "command": "python3 supabase/tests/concurrent_workflows_test.py",
+  "result": "PASS",
+  "scenarios": [
+    "Eight concurrent acceptances: one project and debit",
+    "Eight same-key publications: one immutable snapshot",
+    "Eight identical reviews: one decision event",
+    "Conflicting decisions and stale reviews cannot overwrite newer publication state",
+    "Concurrent delivery versus new revision: only one transition succeeds",
+    "Competing full-balance acceptances: no overdraft or partial losing project",
+    "Concurrent credit fulfillment and idempotent allocation: exactly one entry each",
+    "Compensating correction preserves ledger history",
+    "Parallel acceptance and allocation reconcile without lost balance",
+    "Two draft editors: one saved revision, one immediate HTTP409",
+    "Eight submit requests: one submission notification and no project/debit"
+  ],
+  "source_stack_modified": false
+}

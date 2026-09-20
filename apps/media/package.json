@@ -1,0 +1,10 @@
+{
+  "name": "@dawes/media",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.0.0" },
+  "scripts": { "start": "node --env-file-if-exists=.env.local src/server.js", "test": "vitest run", "test:integration": "node --env-file-if-exists=.env.local src/integration-test.js" },
+  "dependencies": { "sharp": "^0.35.0", "pdf-lib": "^1.17.1" },
+  "devDependencies": { "vitest": "^4.1.0" }
+}

@@ -1,0 +1,751 @@
+{
+  "source": "app/briefing-catalog.ts",
+  "types": [
+    {
+      "id": "ai",
+      "name": "AI-Enhanced Add-On",
+      "min": 1,
+      "max": 2,
+      "days": 2,
+      "category": "Other",
+      "description": "AI research, upscaling, or generation add-on",
+      "formats": [
+        "research",
+        "custom-px",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "task",
+          "label": "What needs to be enhanced?",
+          "placeholder": "Research, image generation, or an existing asset…"
+        }
+      ]
+    },
+    {
+      "id": "blog",
+      "name": "Blog Design / Infographic",
+      "min": 3,
+      "max": 5,
+      "days": 5,
+      "category": "Documents",
+      "description": "Long-form layout or standalone infographic",
+      "formats": [
+        "infographic",
+        "article",
+        "a4",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "guidelines",
+      "name": "Brand Guidelines",
+      "min": 10,
+      "max": 15,
+      "days": 14,
+      "category": "Brand & print",
+      "description": "Full brand book, multiple revisions",
+      "formats": [
+        "guidelines",
+        "a4",
+        "slides"
+      ],
+      "questions": [
+        {
+          "id": "pages",
+          "label": "Approximate pages",
+          "placeholder": "e.g. 12"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "specialty",
+      "name": "Branded Specialty Design",
+      "min": 6,
+      "max": 10,
+      "days": 7,
+      "category": "Brand & print",
+      "description": "Packaging, merch, bespoke items",
+      "formats": [
+        "dieline",
+        "custom-mm",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "template",
+          "label": "Supplier template / dieline",
+          "options": [
+            "Available — add as a resource",
+            "I need help defining it"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "production",
+      "name": "Content Production",
+      "min": 3,
+      "max": 6,
+      "days": 5,
+      "category": "Video",
+      "description": "Shot lists, content shoots, production prep",
+      "formats": [
+        "shot-list",
+        "reel",
+        "video",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "production",
+          "label": "Production needs",
+          "placeholder": "Shoot planning, location, talent, photo or video…"
+        }
+      ]
+    },
+    {
+      "id": "direction",
+      "name": "Creative Direction / Operations",
+      "min": 3,
+      "max": 10,
+      "days": 30,
+      "category": "Other",
+      "description": "Monthly creative direction + ops retainer",
+      "formats": [
+        "direction",
+        "research",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "scope",
+          "label": "Support needed",
+          "placeholder": "Creative direction, planning, team coordination…"
+        }
+      ]
+    },
+    {
+      "id": "deck",
+      "name": "Deck / Presentation Design",
+      "min": 5,
+      "max": 9,
+      "days": 7,
+      "category": "Documents",
+      "description": "Up to 20 slides, data viz included",
+      "formats": [
+        "slides",
+        "a4",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "pages",
+          "label": "Number of slides",
+          "placeholder": "e.g. 12"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "animated-ad",
+      "name": "Digital Ad (Animated)",
+      "min": 3,
+      "max": 6,
+      "days": 3,
+      "category": "Social & ads",
+      "description": "Animated creative for a digital campaign",
+      "formats": [
+        "reel",
+        "feed",
+        "square",
+        "video",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "duration",
+          "label": "Video duration",
+          "options": [
+            "15 seconds",
+            "30 seconds",
+            "60 seconds",
+            "Custom — add to Notes"
+          ]
+        },
+        {
+          "id": "production",
+          "label": "Footage & production",
+          "options": [
+            "Use supplied footage",
+            "Animation / motion design",
+            "New filming needed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "static-ad",
+      "name": "Digital Ad (Static)",
+      "min": 2,
+      "max": 4,
+      "days": 3,
+      "category": "Social & ads",
+      "description": "Meta/LinkedIn/Display sizes",
+      "formats": [
+        "feed",
+        "square",
+        "landscape",
+        "story",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "email-hero",
+      "name": "Email Hero",
+      "min": 1,
+      "max": 2,
+      "days": 2,
+      "category": "Web & email",
+      "description": "Header image for campaign email",
+      "formats": [
+        "email-hero",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "email",
+      "name": "Full Email Design",
+      "min": 4,
+      "max": 7,
+      "days": 5,
+      "category": "Web & email",
+      "description": "Complete HTML email layout",
+      "formats": [
+        "email",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "sections",
+          "label": "Sections to include",
+          "placeholder": "Hero, product grid, offer, footer…"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gif",
+      "name": "GIF Animation",
+      "min": 3,
+      "max": 6,
+      "days": 4,
+      "category": "Video",
+      "description": "3–6s looping animation",
+      "formats": [
+        "square",
+        "story",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "duration",
+          "label": "Loop duration",
+          "options": [
+            "3 seconds",
+            "6 seconds",
+            "Custom — add to Notes"
+          ]
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "name": "Printed Marketing Materials",
+      "min": 6,
+      "max": 12,
+      "days": 7,
+      "category": "Brand & print",
+      "description": "Flyer, brochure, window decal",
+      "formats": [
+        "a4",
+        "a5",
+        "letter",
+        "custom-mm"
+      ],
+      "questions": [
+        {
+          "id": "print",
+          "label": "Print specifications",
+          "placeholder": "Sides, folds, bleed or printer requirements…"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reel",
+      "name": "Short Video / Reel",
+      "min": 3,
+      "max": 6,
+      "days": 5,
+      "category": "Video",
+      "description": "15–30s animated or live-action",
+      "formats": [
+        "reel",
+        "story",
+        "video",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "duration",
+          "label": "Video duration",
+          "options": [
+            "15 seconds",
+            "30 seconds",
+            "60 seconds",
+            "Custom — add to Notes"
+          ]
+        },
+        {
+          "id": "production",
+          "label": "Footage & production",
+          "options": [
+            "Use supplied footage",
+            "Animation / motion design",
+            "New filming needed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branding",
+      "name": "Simple Branding Package",
+      "min": 12,
+      "max": 12,
+      "days": 10,
+      "category": "Brand & print",
+      "description": "Logo + color + type, 1 round",
+      "formats": [
+        "brand-kit",
+        "guidelines",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "brand",
+          "label": "Brand starting point",
+          "options": [
+            "New brand",
+            "Refresh an existing brand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "name": "Social Post (Static)",
+      "min": 1,
+      "max": 2,
+      "days": 3,
+      "category": "Social & ads",
+      "description": "Single image IG/LinkedIn/X",
+      "formats": [
+        "feed",
+        "square",
+        "story",
+        "landscape",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "name": "UI Web Layout",
+      "min": 10,
+      "max": 15,
+      "days": 10,
+      "category": "Web & email",
+      "description": "Single landing or product page",
+      "formats": [
+        "desktop",
+        "mobile",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "sections",
+          "label": "Pages / sections",
+          "placeholder": "Landing page, product page, key sections…"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "whitepaper",
+      "name": "Whitepaper",
+      "min": 5,
+      "max": 9,
+      "days": 7,
+      "category": "Documents",
+      "description": "Long-form document, infographics",
+      "formats": [
+        "a4",
+        "letter",
+        "custom"
+      ],
+      "questions": [
+        {
+          "id": "pages",
+          "label": "Approximate pages",
+          "placeholder": "e.g. 12"
+        },
+        {
+          "id": "content",
+          "label": "Content & assets",
+          "options": [
+            "I’ll provide the content",
+            "Please help create it",
+            "A mix of both"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube Video",
+      "min": 5,
+      "max": 10,
+      "days": 7,
+      "category": "Video",
+      "description": "60–180s edited video w/ graphics",
+      "formats": [
+        "video",
+        "custom-px"
+      ],
+      "questions": [
+        {
+          "id": "duration",
+          "label": "Video duration",
+          "options": [
+            "60 seconds",
+            "120 seconds",
+            "180 seconds",
+            "Custom — add to Notes"
+          ]
+        },
+        {
+          "id": "production",
+          "label": "Footage & production",
+          "options": [
+            "Use supplied footage",
+            "Animation / motion design",
+            "New filming needed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "category": "Other",
+      "description": "Tell us what you need. We’ll define the scope and estimate together.",
+      "formats": [
+        "custom",
+        "custom-px",
+        "custom-mm"
+      ],
+      "questions": [
+        {
+          "id": "scope",
+          "label": "Work to be scoped",
+          "placeholder": "Describe the service and expected outcome…"
+        }
+      ]
+    }
+  ],
+  "formats": [
+    {
+      "id": "reel",
+      "name": "Instagram Reels",
+      "width": 1080,
+      "height": 1920,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "story",
+      "name": "Instagram Story",
+      "width": 1080,
+      "height": 1920,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "feed",
+      "name": "Portrait Feed",
+      "width": 1080,
+      "height": 1350,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "square",
+      "name": "Square",
+      "width": 1080,
+      "height": 1080,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "landscape",
+      "name": "Landscape Ad",
+      "width": 1200,
+      "height": 628,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "video",
+      "name": "Horizontal Video",
+      "width": 1920,
+      "height": 1080,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "email-hero",
+      "name": "Email Hero",
+      "width": 1200,
+      "height": 600,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "email",
+      "name": "Responsive Email",
+      "width": 600,
+      "unit": "px",
+      "layout": "fluid"
+    },
+    {
+      "id": "desktop",
+      "name": "Desktop Layout",
+      "width": 1440,
+      "unit": "px",
+      "layout": "fluid"
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile Layout",
+      "width": 390,
+      "unit": "px",
+      "layout": "fluid"
+    },
+    {
+      "id": "slides",
+      "name": "Presentation 16:9",
+      "width": 1920,
+      "height": 1080,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "a4",
+      "name": "A4",
+      "width": 210,
+      "height": 297,
+      "unit": "mm",
+      "layout": "fixed"
+    },
+    {
+      "id": "a5",
+      "name": "A5",
+      "width": 148,
+      "height": 210,
+      "unit": "mm",
+      "layout": "fixed"
+    },
+    {
+      "id": "letter",
+      "name": "US Letter",
+      "width": 216,
+      "height": 279,
+      "unit": "mm",
+      "layout": "fixed"
+    },
+    {
+      "id": "infographic",
+      "name": "Infographic",
+      "width": 1080,
+      "height": 1920,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "article",
+      "name": "Blog Article",
+      "width": 1200,
+      "unit": "px",
+      "layout": "fluid"
+    },
+    {
+      "id": "brand-kit",
+      "name": "Brand Kit",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Vector files + PDF"
+    },
+    {
+      "id": "guidelines",
+      "name": "Brand Guidelines",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "PDF document"
+    },
+    {
+      "id": "research",
+      "name": "Research / Planning",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Document"
+    },
+    {
+      "id": "shot-list",
+      "name": "Shot List",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Production document"
+    },
+    {
+      "id": "direction",
+      "name": "Creative Direction",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Direction + operations plan"
+    },
+    {
+      "id": "dieline",
+      "name": "Production Template",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Supplier dimensions / dieline"
+    },
+    {
+      "id": "custom-px",
+      "name": "Custom Digital Size",
+      "width": 1080,
+      "height": 1080,
+      "unit": "px",
+      "layout": "fixed"
+    },
+    {
+      "id": "custom-mm",
+      "name": "Custom Print Size",
+      "width": 210,
+      "height": 297,
+      "unit": "mm",
+      "layout": "fixed"
+    },
+    {
+      "id": "custom",
+      "name": "Custom Deliverable",
+      "unit": "none",
+      "layout": "none",
+      "sizeLabel": "Format to be defined"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "result": "PASS",
+  "api_url": "http://127.0.0.1:55421",
+  "clients": 10,
+  "projects": 20,
+  "service_types": 20,
+  "formats": 25,
+  "multiple_deliverable_projects_with_v1_v2": 4,
+  "product_records": 30,
+  "brand_templates": 70,
+  "verified_actual_file_downloads": 59,
+  "client_logins_and_tenant_checks": 10,
+  "agency_and_both_designer_project_scope": true,
+  "credit_ledger_reconciled": true,
+  "all_project_briefings_and_questions_valid": true,
+  "all_publications_have_client_pins": true,
+  "fixture_manifest_sha256": "d2bfe2cf389261ba5f8e99a7dc364967d6968615761f29b2cb3fb12ddbc7c204"
+}

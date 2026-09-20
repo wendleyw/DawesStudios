@@ -1,0 +1,8 @@
+
+.env*
+!.env.example
+*.log
+.backups/
+.restore-drill/
+.local-state/
+__pycache__/

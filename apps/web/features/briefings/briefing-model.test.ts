@@ -1,0 +1,223 @@
+import { describe, expect, it } from "vitest";
+import {
+  brandDefaults,
+  briefingPayload,
+  catalogWithPresets,
+  decodeBriefing,
+  formats,
+  initialDraft,
+  newDeliverable,
+  serviceEstimate,
+  services,
+  validateBriefing,
+  type BriefingDraft,
+  type ServiceDefinition,
+} from "./briefing-model";
+import type { Database } from "@database";
+
+function completeDraft(service: ServiceDefinition): BriefingDraft {
+  return {
+    serviceId: service.id,
+    campaignId: "selected-campaign",
+    title: "A considered launch",
+    overview: "Introduce the collection with one clear next step.",
+    goals: "Build awareness",
+    direction: {
+      questions: Object.fromEntries(
+        service.questions.map((question) => [
+          question.id,
+          question.options?.[0] ?? (question.id === "pages" ? "8" : "A clear creative direction"),
+        ]),
+      ),
+    },
+    deliverables: service.formats.map((id) => newDeliverable(id)),
+    dueDate: "2026-10-15",
+  };
+}
+
+describe("briefing catalog and validation", () => {
+  it("retains 20 unique services and 25 unique formats with no dangling associations", () => {
+    expect(services).toHaveLength(20);
+    expect(formats).toHaveLength(25);
+    expect(new Set(services.map((item) => item.id)).size).toBe(20);
+    expect(new Set(formats.map((item) => item.id)).size).toBe(25);
+    expect(
+      services
+        .flatMap((item) => item.formats)
+        .every((id) => formats.some((format) => format.id === id)),
+    ).toBe(true);
+  });
+
+  it.each(services)("accepts all declared formats and complete answers for $name", (service) => {
+    expect(validateBriefing(completeDraft(service))).toEqual([]);
+  });
+
+  it("requires an explicit campaign instead of deriving one from other draft state", () => {
+    const draft = completeDraft(services[0]);
+    draft.campaignId = "";
+    expect(validateBriefing(draft)).toContain("Choose or create a campaign.");
+    expect(initialDraft(undefined, { source: "brand_hub" }).campaignId).toBe("");
+  });
+
+  it.each(formats)(
+    "enforces the $name size contract for missing and invalid dimensions",
+    (format) => {
+      const service = services.find((item) => item.formats.includes(format.id))!;
+      const draft = completeDraft(service);
+      draft.deliverables = [newDeliverable(format.id)];
+      expect(validateBriefing(draft)).toEqual([]);
+      if (format.layout === "none") {
+        expect(draft.deliverables[0].width).toBeUndefined();
+        expect(draft.deliverables[0].height).toBeUndefined();
+        return;
+      }
+      for (const invalid of [undefined, 0, -1, 0.5]) {
+        draft.deliverables = [{ ...newDeliverable(format.id), width: invalid }];
+        expect(validateBriefing(draft)).toContain(
+          "Deliverable 1 needs a positive whole-number width.",
+        );
+        if (format.layout === "fixed") {
+          draft.deliverables = [{ ...newDeliverable(format.id), height: invalid }];
+          expect(validateBriefing(draft)).toContain(
+            "Deliverable 1 needs a positive whole-number height.",
+          );
+        }
+      }
+    },
+  );
+
+  it("rejects a format belonging to a different service", () => {
+    const service = services.find((item) => item.id === "email-hero")!;
+    const draft = completeDraft(service);
+    draft.deliverables = [newDeliverable("a4")];
+    expect(validateBriefing(draft)).toContain(
+      "Deliverable 1 needs a format supported by this service.",
+    );
+  });
+
+  it.each([0, -1, 1.5, 101, Number.NaN])("rejects invalid deliverable quantity %s", (quantity) => {
+    const draft = completeDraft(services[0]);
+    draft.deliverables[0].quantity = quantity;
+    expect(validateBriefing(draft)).toContain("Deliverable 1 needs a quantity from 1 to 100.");
+  });
+
+  it("allows non-dimensional and fluid formats without inventing a fixed height", () => {
+    const document = newDeliverable("research");
+    const email = newDeliverable("email");
+    expect(document.width).toBeUndefined();
+    expect(document.height).toBeUndefined();
+    expect(email.width).toBe(600);
+    expect(email.height).toBeUndefined();
+  });
+
+  it("rejects a missing fixed-format height and fractional width", () => {
+    const draft = completeDraft(services.find((item) => item.id === "social")!);
+    draft.deliverables[0].height = undefined;
+    draft.deliverables[0].width = 0.5;
+    expect(validateBriefing(draft)).toEqual(
+      expect.arrayContaining([
+        "Deliverable 1 needs a positive whole-number width.",
+        "Deliverable 1 needs a positive whole-number height.",
+      ]),
+    );
+  });
+
+  it("requires service answers and rejects options outside the catalog", () => {
+    const draft = completeDraft(services.find((item) => item.id === "reel")!);
+    draft.direction.questions = { duration: "45 years" };
+    expect(validateBriefing(draft)).toEqual(
+      expect.arrayContaining([
+        "Choose an available option for “Video duration”.",
+        "Complete “Footage & production”.",
+      ]),
+    );
+  });
+
+  it("requires a positive whole number for page counts", () => {
+    const draft = completeDraft(services.find((item) => item.id === "deck")!);
+    draft.direction.questions!.pages = "1.5";
+    expect(validateBriefing(draft)).toContain("“Number of slides” needs a positive whole number.");
+  });
+
+  it("rejects dates that overflow a calendar month", () => {
+    const draft = completeDraft(services[0]);
+    draft.dueDate = "2026-02-31";
+    expect(validateBriefing(draft)).toContain("Choose a valid due date.");
+  });
+
+  it("keeps one service estimate when deliverables or quantities grow", () => {
+    const service = services.find((item) => item.id === "reel")!;
+    const draft = completeDraft(service);
+    draft.deliverables[0].quantity = 10;
+    draft.deliverables.push(newDeliverable("story", 2));
+    expect(briefingPayload("client", draft, null).p_estimated_credits).toBe(
+      serviceEstimate(service),
+    );
+  });
+
+  it("applies new preset estimates without changing source definitions or inventing a custom-service price", () => {
+    const original = services.find((item) => item.id === "social")!;
+    const revised = catalogWithPresets([
+      { service_type: "social", min_credits: 4, max_credits: 8, due_days: 6, revision: 2 },
+      { service_type: "other", min_credits: 3, max_credits: 6, due_days: 7, revision: 1 },
+    ]);
+    const social = revised.find((item) => item.id === "social")!;
+    expect(social.min).toBe(4);
+    expect(social.days).toBe(6);
+    expect(original.min).toBe(1);
+    expect(revised.find((item) => item.id === "other")?.min).toBeUndefined();
+    expect(
+      briefingPayload("client", completeDraft(social), null, serviceEstimate(social))
+        .p_estimated_credits,
+    ).toBe(6);
+  });
+
+  it("omits empty nullable RPC fields so SQL defaults clear optional values, without inventing IDs", () => {
+    const draft = initialDraft(undefined, {});
+    draft.serviceId = "other";
+    const payload = briefingPayload("client", draft, null);
+    expect(payload).not.toHaveProperty("p_campaign_id");
+    expect(payload).not.toHaveProperty("p_due_date");
+    expect(payload).not.toHaveProperty("p_briefing_id");
+  });
+
+  it("copies brand defaults without sharing or mutating the canonical section objects", () => {
+    const sections = [
+      { section: "overview", content: { audience: "Outdoor explorers" } },
+      { section: "visual-style", content: { photography: "Natural light" } },
+    ];
+    const direction = brandDefaults(sections);
+    direction.audience = "A project-specific audience";
+    expect(sections[0].content.audience).toBe("Outdoor explorers");
+    expect(direction.style).toBe("Natural light");
+  });
+
+  it("validates JSON records at the database boundary", () => {
+    const row: Database["public"]["Tables"]["briefings"]["Row"] = {
+      id: "brief",
+      client_id: "client",
+      campaign_id: null,
+      title: "Draft",
+      service_type: "other",
+      status: "draft",
+      overview: "",
+      goals: "",
+      direction: { questions: { scope: 42 } },
+      requested_deliverables: [],
+      due_date: null,
+      estimated_credits: 1,
+      confirmed_credits: null,
+      budget_note: null,
+      created_by: "person",
+      created_at: "2026-09-20T00:00:00Z",
+      updated_at: "2026-09-20T00:00:00Z",
+    };
+    expect(() => decodeBriefing(row)).toThrow();
+    expect(
+      decodeBriefing({
+        ...row,
+        direction: { questions: { scope: "Define our creative strategy" } },
+      }).direction.questions?.scope,
+    ).toBe("Define our creative strategy");
+  });
+});

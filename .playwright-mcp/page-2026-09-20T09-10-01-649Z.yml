@@ -1,0 +1,218 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e29] [cursor=pointer]
+  - alert [ref=e33]
+  - generic [ref=e34]:
+    - navigation "Accessibility":
+      - link "Skip to content" [ref=e35] [cursor=pointer]:
+        - /url: "#main-content"
+    - complementary "Workspace navigation" [ref=e36]:
+      - link "Dawes Studio home" [ref=e37] [cursor=pointer]:
+        - /url: /home
+        - img "Dawes Studio" [ref=e38]
+      - button "Collapse sidebar" [ref=e39] [cursor=pointer]
+      - navigation "Main navigation" [ref=e43]:
+        - link "Overview" [ref=e44] [cursor=pointer]:
+          - /url: /home
+        - link "Search ⌘ K" [ref=e49] [cursor=pointer]:
+          - /url: /search
+          - generic [ref=e53]: Search
+          - generic [ref=e54]: ⌘ K
+        - generic [ref=e55]: WORKSPACES
+        - generic [ref=e56]:
+          - link "Acme" [ref=e57] [cursor=pointer]:
+            - /url: /clients/f69a2150-613b-3883-906c-738e84007117/board
+            - generic [aria-hidden] [ref=e58]: A
+          - link "Harbor & Pine" [ref=e60] [cursor=pointer]:
+            - /url: /clients/97902ff1-3440-ccb2-4443-76333c5cc517/board
+            - generic [aria-hidden] [ref=e61]: HP
+          - link "Kestrel Outdoor" [ref=e63] [cursor=pointer]:
+            - /url: /clients/338df280-25b0-0736-1b34-299128d4e0bc/board
+            - generic [aria-hidden] [ref=e64]: KO
+          - link "Northfield Bank" [ref=e66] [cursor=pointer]:
+            - /url: /clients/c8c131b0-5ccd-6495-851f-11baa70b4acd/board
+            - generic [aria-hidden] [ref=e67]: NB
+          - link "Otto & Sons" [ref=e69] [cursor=pointer]:
+            - /url: /clients/87010e42-ec39-7ebd-cf86-308803fa2790/board
+            - generic [aria-hidden] [ref=e70]: OS
+          - link "Pelagic" [ref=e72] [cursor=pointer]:
+            - /url: /clients/ea650ad5-f8e2-8a3c-5012-bf0d69df498e/board
+            - generic [aria-hidden] [ref=e73]: P
+          - link "Rune Fitness" [ref=e75] [cursor=pointer]:
+            - /url: /clients/bde5d700-7a2e-816b-9b55-d4a78a27d3cc/board
+            - generic [aria-hidden] [ref=e76]: RF
+          - link "Sablefish Provisions" [ref=e78] [cursor=pointer]:
+            - /url: /clients/532f831e-0486-e47a-2c15-6bddd1b47218/board
+            - generic [aria-hidden] [ref=e79]: SP
+          - link "SABRE" [ref=e81] [cursor=pointer]:
+            - /url: /clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/board
+            - generic [aria-hidden] [ref=e82]: S
+          - link "Vela Skincare" [ref=e84] [cursor=pointer]:
+            - /url: /clients/10a69063-0151-b8c8-9584-2bfef7fe5f43/board
+            - generic [aria-hidden] [ref=e85]: VS
+      - generic [ref=e87]:
+        - link "Studio settings" [ref=e88] [cursor=pointer]:
+          - /url: /settings
+        - button "Help & support" [ref=e93] [cursor=pointer]
+        - generic [ref=e98]:
+          - link "Account settings for Dawes Studio" [ref=e99] [cursor=pointer]:
+            - /url: /settings/account
+            - generic [aria-hidden] [ref=e100]: DS
+            - generic [ref=e101]:
+              - strong [ref=e102]: Dawes Studio
+              - generic [ref=e103]: Studio team
+          - button "Sign out" [ref=e104] [cursor=pointer]
+    - generic [ref=e108]:
+      - banner [ref=e109]:
+        - generic [ref=e110]: Dawes Studio
+        - link "Notifications" [ref=e117] [cursor=pointer]:
+          - /url: /notifications
+      - main [ref=e121]:
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - generic [ref=e125]: YOUR CREATIVE WORKSPACE
+              - heading "Overview" [level=1] [ref=e126]
+              - paragraph [ref=e127]: Projects and next steps across your clients.
+            - link "New client" [ref=e128] [cursor=pointer]:
+              - /url: /settings/clients
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - text: Active projects
+              - strong [ref=e132]: "19"
+            - generic [ref=e133]:
+              - text: Ready for attention
+              - strong [ref=e134]: "9"
+            - generic [ref=e135]:
+              - text: Client workspaces
+              - strong [ref=e136]: "10"
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - heading "Needs attention" [level=2] [ref=e140]
+                - paragraph [ref=e141]: Work ready for its next move.
+              - generic [ref=e142]: "9"
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - generic [ref=e145]: PROJECT
+                - generic [ref=e146]: WORKSPACE
+                - generic [ref=e147]: STATUS
+                - generic [ref=e148]: DUE
+              - link "Harbor & Pine / Brand Guidelines Harbor & Pine Studio review Oct 5" [ref=e149] [cursor=pointer]:
+                - /url: /projects/cd179de9-0dd1-00da-89d1-74fab5225237
+                - strong [ref=e151]: Harbor & Pine / Brand Guidelines
+                - generic [ref=e152]: Harbor & Pine
+                - generic [ref=e153]: Studio review
+                - generic [ref=e155]: Oct 5
+              - link "Harbor & Pine / Branded Specialty Design Harbor & Pine In review Oct 6" [ref=e159] [cursor=pointer]:
+                - /url: /projects/0b135ab6-c478-b933-f5b0-fd52d69be33e
+                - strong [ref=e161]: Harbor & Pine / Branded Specialty Design
+                - generic [ref=e162]: Harbor & Pine
+                - generic [ref=e163]: In review
+                - generic [ref=e165]: Oct 6
+              - link "Kestrel Outdoor / Content Production Kestrel Outdoor Changes requested Oct 7" [ref=e169] [cursor=pointer]:
+                - /url: /projects/438efff4-c04a-d623-d4ac-243072ddccc5
+                - strong [ref=e171]: Kestrel Outdoor / Content Production
+                - generic [ref=e172]: Kestrel Outdoor
+                - generic [ref=e173]: Changes requested
+                - generic [ref=e175]: Oct 7
+              - link "Otto & Sons / Digital Ad (Static) Otto & Sons In review Oct 11" [ref=e179] [cursor=pointer]:
+                - /url: /projects/61afc339-e8f7-296f-c4a6-6ea9cb3a3613
+                - strong [ref=e181]: Otto & Sons / Digital Ad (Static)
+                - generic [ref=e182]: Otto & Sons
+                - generic [ref=e183]: In review
+                - generic [ref=e185]: Oct 11
+              - link "Pelagic / GIF Animation Pelagic In review Oct 14" [ref=e189] [cursor=pointer]:
+                - /url: /projects/1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f
+                - strong [ref=e191]: Pelagic / GIF Animation
+                - generic [ref=e192]: Pelagic
+                - generic [ref=e193]: In review
+                - generic [ref=e195]: Oct 14
+              - link "Rune Fitness / Printed Marketing Materials Rune Fitness Changes requested Oct 15" [ref=e199] [cursor=pointer]:
+                - /url: /projects/9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf
+                - strong [ref=e201]: Rune Fitness / Printed Marketing Materials
+                - generic [ref=e202]: Rune Fitness
+                - generic [ref=e203]: Changes requested
+                - generic [ref=e205]: Oct 15
+              - link "SABRE / Simple Branding Package SABRE Studio review Oct 17" [ref=e209] [cursor=pointer]:
+                - /url: /projects/ef7aa2ff-5aec-1443-c3d9-f9c386fdada8
+                - strong [ref=e211]: SABRE / Simple Branding Package
+                - generic [ref=e212]: SABRE
+                - generic [ref=e213]: Studio review
+                - generic [ref=e215]: Oct 17
+              - link "SABRE / Social Post (Static) SABRE In review Oct 18" [ref=e219] [cursor=pointer]:
+                - /url: /projects/95dc529b-2db0-50ad-9a6f-f33697568ed5
+                - strong [ref=e221]: SABRE / Social Post (Static)
+                - generic [ref=e222]: SABRE
+                - generic [ref=e223]: In review
+                - generic [ref=e225]: Oct 18
+              - link "Vela Skincare / Other Vela Skincare In review Oct 22" [ref=e229] [cursor=pointer]:
+                - /url: /projects/83b5cc40-19c5-c3c7-8825-5a6464be2d01
+                - strong [ref=e231]: Vela Skincare / Other
+                - generic [ref=e232]: Vela Skincare
+                - generic [ref=e233]: In review
+                - generic [ref=e235]: Oct 22
+          - generic [ref=e239]:
+            - generic [ref=e241]:
+              - heading "Client workspaces" [level=2] [ref=e242]
+              - paragraph [ref=e243]: Projects, files, and brand direction for each client.
+            - generic [ref=e244]:
+              - link "A Acme Consumer goods 2 active projects" [ref=e245] [cursor=pointer]:
+                - /url: /clients/f69a2150-613b-3883-906c-738e84007117/board
+                - generic [ref=e246]: A
+                - heading "Acme" [level=3] [ref=e251]
+                - paragraph [ref=e252]: Consumer goods
+                - generic [ref=e253]: 2 active projects
+              - link "HP Harbor & Pine Hospitality 2 active projects" [ref=e257] [cursor=pointer]:
+                - /url: /clients/97902ff1-3440-ccb2-4443-76333c5cc517/board
+                - generic [ref=e258]: HP
+                - heading "Harbor & Pine" [level=3] [ref=e263]
+                - paragraph [ref=e264]: Hospitality
+                - generic [ref=e265]: 2 active projects
+              - link "KO Kestrel Outdoor Outdoor 2 active projects" [ref=e269] [cursor=pointer]:
+                - /url: /clients/338df280-25b0-0736-1b34-299128d4e0bc/board
+                - generic [ref=e270]: KO
+                - heading "Kestrel Outdoor" [level=3] [ref=e275]
+                - paragraph [ref=e276]: Outdoor
+                - generic [ref=e277]: 2 active projects
+              - link "NB Northfield Bank Finance 1 active project" [ref=e281] [cursor=pointer]:
+                - /url: /clients/c8c131b0-5ccd-6495-851f-11baa70b4acd/board
+                - generic [ref=e282]: NB
+                - heading "Northfield Bank" [level=3] [ref=e287]
+                - paragraph [ref=e288]: Finance
+                - generic [ref=e289]: 1 active project
+              - link "OS Otto & Sons Retail 2 active projects" [ref=e293] [cursor=pointer]:
+                - /url: /clients/87010e42-ec39-7ebd-cf86-308803fa2790/board
+                - generic [ref=e294]: OS
+                - heading "Otto & Sons" [level=3] [ref=e299]
+                - paragraph [ref=e300]: Retail
+                - generic [ref=e301]: 2 active projects
+              - link "P Pelagic Travel 2 active projects" [ref=e305] [cursor=pointer]:
+                - /url: /clients/ea650ad5-f8e2-8a3c-5012-bf0d69df498e/board
+                - generic [ref=e306]: P
+                - heading "Pelagic" [level=3] [ref=e311]
+                - paragraph [ref=e312]: Travel
+                - generic [ref=e313]: 2 active projects
+              - link "RF Rune Fitness Wellness 2 active projects" [ref=e317] [cursor=pointer]:
+                - /url: /clients/bde5d700-7a2e-816b-9b55-d4a78a27d3cc/board
+                - generic [ref=e318]: RF
+                - heading "Rune Fitness" [level=3] [ref=e323]
+                - paragraph [ref=e324]: Wellness
+                - generic [ref=e325]: 2 active projects
+              - link "SP Sablefish Provisions Food & beverage 2 active projects" [ref=e329] [cursor=pointer]:
+                - /url: /clients/532f831e-0486-e47a-2c15-6bddd1b47218/board
+                - generic [ref=e330]: SP
+                - heading "Sablefish Provisions" [level=3] [ref=e335]
+                - paragraph [ref=e336]: Food & beverage
+                - generic [ref=e337]: 2 active projects
+              - link "S SABRE Personal safety 2 active projects" [ref=e341] [cursor=pointer]:
+                - /url: /clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/board
+                - generic [ref=e342]: S
+                - heading "SABRE" [level=3] [ref=e347]
+                - paragraph [ref=e348]: Personal safety
+                - generic [ref=e349]: 2 active projects
+              - link "VS Vela Skincare Beauty 2 active projects" [ref=e353] [cursor=pointer]:
+                - /url: /clients/10a69063-0151-b8c8-9584-2bfef7fe5f43/board
+                - generic [ref=e354]: VS
+                - heading "Vela Skincare" [level=3] [ref=e359]
+                - paragraph [ref=e360]: Beauty
+                - generic [ref=e361]: 2 active projects

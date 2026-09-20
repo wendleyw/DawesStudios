@@ -1,0 +1,330 @@
+.credits-page {
+  max-width: 1320px;
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+.credit-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 32px;
+  padding: 30px 0 40px;
+  margin-top: 20px;
+  border-bottom: 1px solid #e3e2dc;
+}
+.credit-overview > section + section {
+  border-left: 1px solid #e3e2dc;
+  padding-left: 32px;
+}
+.credit-balance {
+  font-size: 52px;
+  letter-spacing: -0.06em;
+  margin-top: 14px;
+  line-height: 1.1;
+}
+.credit-balance span {
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-left: 12px;
+}
+.credit-consumed {
+  font-size: 36px;
+  letter-spacing: -0.04em;
+  margin-top: 24px;
+  line-height: 1.1;
+}
+.credit-overview p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-top: 18px;
+}
+.credit-plan h2 {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin: 12px 0;
+}
+.credit-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 22px;
+  border-bottom: 1px solid #e3e2dc;
+}
+.credit-tabs {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  border: 0;
+}
+.credit-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 17px 0;
+  background: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+.credit-tabs button.active {
+  border-bottom-color: #242424;
+  color: #242424;
+}
+.credit-toolbar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin: 24px 0;
+}
+.credit-toolbar > .search-field {
+  flex: 1;
+  max-width: 360px;
+}
+.credit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  padding: 18px 0 26px;
+}
+.credit-filters label,
+.credit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.credit-filters select,
+.credit-form input,
+.credit-form textarea {
+  background: white;
+  border: 1px solid #deded7;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  min-height: 40px;
+}
+.credit-filters select {
+  max-width: 240px;
+}
+.credit-form textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.credit-table-wrap {
+  position: relative;
+  overflow: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+.credit-table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+}
+.credit-table th {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  padding: 16px 12px;
+  border-bottom: 1px solid #e3e2dc;
+  white-space: nowrap;
+}
+.credit-table td {
+  padding: 20px 12px;
+  border-bottom: 1px solid #eeede8;
+  color: var(--muted);
+}
+.credit-table td:first-child {
+  min-width: 220px;
+}
+.credit-table td:first-child strong {
+  display: block;
+  font-weight: 500;
+  color: #30302c;
+  margin-bottom: 7px;
+}
+.credit-table td:first-child span {
+  font-size: 12px;
+}
+.credit-table td:nth-child(2) {
+  white-space: nowrap;
+}
+.credit-number {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.credit-table td.credit-number {
+  color: #393934;
+}
+.credit-requests {
+  margin-top: 44px;
+}
+.credit-requests > h2 {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+.credit-request {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #e9e8e1;
+}
+.credit-request > div {
+  flex: 1;
+}
+.credit-request strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.credit-request p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.credit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.credit-packages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.credit-packages button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 10px;
+  border: 1px solid #ddddd5;
+  border-radius: 7px;
+  background: #fff;
+}
+.credit-packages button.selected {
+  border-color: #292927;
+  background: #f4f4ef;
+}
+.credit-packages strong {
+  font-size: 25px;
+  font-weight: 500;
+}
+.credit-packages span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.credit-detail {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.credit-detail h3 {
+  font-size: 19px;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+}
+.credit-detail h4 {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.credit-detail section {
+  border-top: 1px solid #e3e2dc;
+  margin-top: 20px;
+  padding-top: 8px;
+}
+.credit-detail p {
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.credit-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.credit-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+@media (max-width: 1000px) {
+  .credit-overview {
+    grid-template-columns: 1fr 1fr;
+  }
+  .credit-overview > .credit-plan {
+    grid-column: 1/-1;
+    border-left: 0;
+    border-top: 1px solid #e3e2dc;
+    padding: 12px 0 0;
+  }
+  .credit-plan p {
+    margin-top: 6px;
+  }
+  .credit-plan h2 {
+    margin-bottom: 0;
+  }
+}
+@media (max-width: 650px) {
+  .credit-overview {
+    gap: 16px;
+  }
+  .credit-overview > section + section {
+    padding-left: 16px;
+  }
+  .credit-overview > .credit-plan {
+    padding-left: 0;
+  }
+  .credit-balance {
+    font-size: 42px;
+  }
+  .credit-balance span {
+    display: block;
+    margin: 8px 0 0;
+  }
+  .credit-navigation {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 12px;
+  }
+  .credit-navigation > .button {
+    align-self: flex-end;
+  }
+  .credit-filters {
+    gap: 12px;
+  }
+  .credit-filters label {
+    flex: 1;
+    min-width: 130px;
+  }
+  .credit-filters select {
+    max-width: none;
+    width: 100%;
+  }
+  .credit-table td,
+  .credit-table th {
+    padding-inline: 8px;
+  }
+  .credit-table td:first-child {
+    min-width: 180px;
+  }
+  .credit-request {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .credit-request > div {
+    min-width: 180px;
+  }
+  .credit-dialog-actions {
+    flex-wrap: wrap;
+  }
+}

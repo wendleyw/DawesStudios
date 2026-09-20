@@ -1,0 +1,264 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuth } from "@/features/auth/auth-provider";
+import { assertResult } from "@/lib/supabase";
+import { useBriefings, useCampaigns } from "./briefing-data";
+import { briefingStatusLabels, initialDraft, type Briefing } from "./briefing-model";
+import { BriefingAttachments } from "./briefing-attachments";
+import { BriefingSummary } from "./briefing-summary";
+import "./briefings.css";
+
+export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
+  const { database, profile, session } = useAuth();
+  const briefings = useBriefings(clientId);
+  const campaigns = useCampaigns(clientId);
+  const linked = useQuery({
+    queryKey: ["briefing-project", session?.user.id, briefingId],
+    enabled: !!session,
+    queryFn: async () =>
+      assertResult(
+        await database.from("projects").select("id").eq("briefing_id", briefingId).maybeSingle(),
+      ) as { id: string } | null,
+  });
+  if (briefings.isPending || campaigns.isPending)
+    return (
+      <div className="page-content" role="status">
+        Loading the briefing…
+      </div>
+    );
+  const briefing = briefings.data?.find((item) => item.id === briefingId);
+  if (!briefing || briefings.error || campaigns.error)
+    return (
+      <div className="page-content">
+        <h1>Briefing unavailable.</h1>
+        <p>This briefing may no longer be available, or you may not have access.</p>
+        <Link href={`/clients/${clientId}/briefings`} className="button">
+          Back to briefings
+        </Link>
+      </div>
+    );
+  return (
+    <div className="page-content briefing-detail">
+      <header className="briefing-detail-header">
+        <Link href={`/clients/${clientId}/briefings`} className="button quiet">
+          <ArrowLeft size={16} />
+          All briefings
+        </Link>
+        <span className={`status-badge ${briefing.status}`}>
+          {briefingStatusLabels[briefing.status]}
+        </span>
+      </header>
+      <div className="briefing-detail-layout">
+        <div>
+          <BriefingSummary
+            draft={initialDraft(briefing, {})}
+            campaignName={campaigns.data?.find((item) => item.id === briefing.campaign_id)?.title}
+          />
+          <BriefingAttachments briefingId={briefing.id} />
+        </div>
+        <aside className="briefing-review-aside">
+          {profile?.role === "designer" ? (
+            <>
+              <h2>Creative direction</h2>
+              <p>
+                This is the accepted project scope. Coordinate changes with the studio in your
+                project.
+              </p>
+              {linked.data && (
+                <Link className="button primary" href={`/projects/${linked.data.id}`}>
+                  Open project
+                  <ArrowUpRight size={15} />
+                </Link>
+              )}
+            </>
+          ) : briefing.status === "draft" ? (
+            <>
+              <h2>Ready when you are.</h2>
+              <p>Continue shaping your brief before sending it to the studio.</p>
+              <Link
+                className="button primary"
+                href={`/clients/${clientId}/briefings/${briefing.id}/edit`}
+              >
+                Continue briefing
+              </Link>
+            </>
+          ) : briefing.status === "accepted" ? (
+            <>
+              <h2>Your project is underway.</h2>
+              <p>{briefing.confirmed_credits} credits were used once for this project.</p>
+              {briefing.budget_note && <p>{briefing.budget_note}</p>}
+              {linked.data && (
+                <Link href={`/projects/${linked.data.id}`} className="button primary">
+                  Open project
+                  <ArrowUpRight size={15} />
+                </Link>
+              )}
+              <Link
+                className="button quiet"
+                href={`/clients/${clientId}/credits${linked.data ? `?project=${linked.data.id}` : ""}`}
+              >
+                View credit report
+              </Link>
+            </>
+          ) : profile?.role === "agency" ? (
+            <BudgetReview key={`${briefing.id}-${briefing.updated_at}`} briefing={briefing} />
+          ) : (
+            <>
+              <h2>
+                {briefing.status === "budget_confirmed" ? "Scope confirmed." : "With the studio."}
+              </h2>
+              <p>
+                {briefing.status === "budget_confirmed"
+                  ? `The project budget is ${briefing.confirmed_credits} credits. The studio will confirm the start of work.`
+                  : "The studio is reviewing your scope and will confirm the project budget. No credits have been used."}
+              </p>
+              {briefing.budget_note && <p>{briefing.budget_note}</p>}
+            </>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function BudgetReview({ briefing }: { briefing: Briefing }) {
+  const { database, session } = useAuth();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [credits, setCredits] = useState(
+    String(briefing.confirmed_credits ?? briefing.estimated_credits ?? 1),
+  );
+  const [note, setNote] = useState(briefing.budget_note ?? "");
+  const balance = useQuery({
+    queryKey: ["credit-account", session?.user.id, briefing.client_id],
+    queryFn: async () =>
+      assertResult(
+        await database
+          .from("credit_accounts")
+          .select("balance")
+          .eq("client_id", briefing.client_id)
+          .single(),
+      ) as { balance: number },
+  });
+  const confirm = useMutation({
+    mutationFn: async () => {
+      const amount = Number(credits);
+      if (!Number.isSafeInteger(amount) || amount < 1)
+        throw new Error("Enter a positive whole number of credits.");
+      if (
+        (amount !== briefing.estimated_credits || briefing.service_type === "other") &&
+        !note.trim()
+      )
+        throw new Error("Explain the custom estimate or adjustment.");
+      assertResult(
+        await database.rpc("confirm_briefing_budget", {
+          p_briefing_id: briefing.id,
+          p_credits: amount,
+          p_note: note.trim(),
+        }),
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["briefings"] }),
+  });
+  const accept = useMutation({
+    mutationFn: async () =>
+      assertResult(await database.rpc("accept_briefing", { p_briefing_id: briefing.id })) as string,
+    onSuccess: async (id) => {
+      await Promise.all(
+        ["briefings", "projects", "credit-account", "credit-ledger", "notifications"].map((key) =>
+          queryClient.invalidateQueries({ queryKey: [key] }),
+        ),
+      );
+      router.push(`/projects/${id}`);
+    },
+  });
+  const enough =
+    balance.data && balance.data.balance >= (briefing.confirmed_credits ?? Number(credits));
+  return (
+    <>
+      <h2>Project budget</h2>
+      <p>Confirm one total for the agreed scope.</p>
+      <form
+        className="briefing-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          confirm.mutate();
+        }}
+      >
+        <label>
+          Approved project credits
+          <input
+            type="number"
+            min={1}
+            step={1}
+            required
+            value={credits}
+            onChange={(event) => setCredits(event.target.value)}
+          />
+        </label>
+        <label>
+          Scope note
+          <textarea
+            rows={3}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Explain any adjustment to the estimate"
+          />
+        </label>
+        <p className="briefing-note">
+          {balance.isPending
+            ? "Checking balance…"
+            : balance.error
+              ? "Balance unavailable. Try reloading."
+              : `${balance.data?.balance ?? 0} credits available`}
+        </p>
+        {confirm.error && (
+          <p className="form-error" role="alert">
+            {confirm.error.message}
+          </p>
+        )}
+        <button className="button" disabled={confirm.isPending || accept.isPending}>
+          {confirm.isPending ? "Saving…" : "Confirm budget"}
+        </button>
+      </form>
+      {briefing.status === "budget_confirmed" && (
+        <div className="briefing-accept">
+          <p>{briefing.confirmed_credits} credits · one project</p>
+          {!enough && !balance.isPending && (
+            <p className="form-error">
+              {balance.error
+                ? "Check the credit account before accepting."
+                : "This client needs additional credits before work can begin."}
+            </p>
+          )}
+          {accept.error && (
+            <p className="form-error" role="alert">
+              {accept.error.message}
+            </p>
+          )}
+          <button
+            className="button primary"
+            disabled={
+              accept.isPending ||
+              confirm.isPending ||
+              !enough ||
+              Number(credits) !== briefing.confirmed_credits ||
+              note !== (briefing.budget_note ?? "")
+            }
+            onClick={() => accept.mutate()}
+          >
+            {accept.isPending ? "Creating project…" : "Accept & create project"}
+          </button>
+          <Link href={`/clients/${briefing.client_id}/credits`} className="button quiet">
+            View credits
+          </Link>
+        </div>
+      )}
+    </>
+  );
+}

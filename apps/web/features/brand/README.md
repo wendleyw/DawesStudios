@@ -1,0 +1,25 @@
+# Brand workspace
+
+The Brand Hub lives at `/clients/:clientId/brand/:section`. Its single section selector groups identity, resources, and guidance without adding a second persistent sidebar. Sections are overview, logos, colors, typography, visual-style, products, assets, templates, messaging, and ai (presented as Brand context).
+
+`brand-model.ts` validates field-based editing and safely reads the existing seeded content shapes. Forms expose named fields, palette rows, product fields, and line-separated guidance rather than raw JSON. `brand-data.ts` owns session-scoped queries. Agency members may edit shared content; client and assigned designer sessions read it through Supabase policies. Successful section edits also invalidate briefing brand defaults.
+
+Colors copy as HEX, RGB, a named CSS custom property, or Tailwind arbitrary-value utilities. Typography has custom sample text and optional HTTPS heading/body font-source links; previews use locally available fonts. Visual style stores Use/Avoid guidance; messaging stores reusable blocks, preferred terminology, and rules; Brand context combines explicit Use/Never direction with an allowlist of the current client's identity. Missing optional fields in older section records default safely to empty values.
+
+Brand assets use the private `brand-assets` bucket and opaque `<client UUID>/<random UUID>.<extension>` paths. Allowed file types match the bucket: PNG, JPEG, WebP, SVG, and PDF up to 50 MiB. Raster previews use short-lived signed URLs; SVG/PDF files are downloaded, not embedded as active document content. Upload failure retains an already uploaded file and stable metadata ID for retry. A retry checks whether that ID already committed. Cancellation cleans only unregistered files through the agency-only policy; a cleanup error keeps the dialog open with a retry message. Downloading retrieves the real authenticated blob. Search covers asset names, descriptions, and tags; `category`, `search`, and `asset` query parameters open a useful filtered or selected state. Product asset links search by the product name, which seeded asset tags can reference.
+
+Templates use `brand_templates` as read-only shared starting points. Creating a personal exploration writes a separate `template_drafts` row for the authenticated owner and navigates to `/clients/:clientId/brand/drafts/:draftId`. Draft queries filter owner and client in addition to server RLS. Editing never invokes project, briefing, or credit writes. Save validates content and matches the prior `updated_at` value to avoid silently overwriting another tab's changes. Existing partial drafts read missing presentation fields from their template. New drafts copy the complete supported presentation content. Browser unload and the editor's Back action warn about unsaved edits; navigation elsewhere in the application is not globally intercepted.
+
+The seven seeded starting points are Instagram Post, Website Hero, Amazon Gallery, Presentation, Email Header, Print Flyer, and Product Card. They share one editor for name, headline, body, CTA, colors, layout, and preview zoom. CTA text is artwork content, not an unconfigured navigation action.
+
+The reusable [CopyButton](../shared/copy-button.tsx) handles clipboard permission failure with an accessible manual-copy dialog. Brand context includes an explicit allowlist of client brand fields; it is reusable guidance, not an AI service.
+
+Feature styles are in `brand.css`; shared controls, shell, and modal styling remain in `app/globals.css`. Brand color values are content and may be chromatic while application chrome stays restrained.
+
+## Verification
+
+- `npm test -- features/brand/brand-model.test.ts`: 18 domain tests cover palette parsing and four copy formats, malformed style rejection, typography bounds and safe source links, guidance lists, CTA/template isolation/defaults, draft naming, asset search, file limits, and context allowlisting.
+- `npx eslint features/brand features/shared/copy-button.tsx 'app/(workspace)/clients/[clientId]/brand'`: scoped lint; private image previews intentionally use ordinary image elements with authenticated signed URLs.
+- `npm run typecheck`: whole-application generated database contract verification.
+
+The repeatable browser suites are `npx playwright test tests/e2e/brand-accessibility.spec.ts tests/e2e/brand-guidance.spec.ts`. They cover section layouts at six viewport sizes, keyboard navigation/dialogs, canonical guidance persistence and role denial, four copy formats and manual fallback, all seven template definitions, private draft save/reload and owner isolation, and real asset upload/search/download/retry/cancellation with isolated cleanup. The baseline suite expects the final seven-template seed. Run concurrent specialist invocations with separate output directories; the orchestrator runs the final suite once with one worker. [The design audit](../../../../docs/verification/design-audit.md) records executed results separately from planned coverage. Unit tests alone do not prove live authorization or complete production acceptance.

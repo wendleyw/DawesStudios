@@ -1,0 +1,16 @@
+{
+  "pngs": 711,
+  "states": 499,
+  "missingImages": 0,
+  "typesPerAgencyAndClient": 20,
+  "brandSectionsPerRole": 10,
+  "templateEditorsPerRole": 7,
+  "namedDesignerControlsInClientView": 0,
+  "recoveredCaptureErrors": "Tentativas iniciais de automação foram corrigidas e os estados faltantes recapturados. Nenhuma fase final ficou com erro.",
+  "reviewedSamples": [
+    "01-agencia/02-board/01-canvas.png",
+    "01-agencia/03-projeto/10-pin-comentario.png",
+    "02-cliente/04-briefings/03-type/01-servicos.png",
+    "03-designer/07-brand-hub/06-products/produto-1-specs.png"
+  ]
+}

@@ -1,0 +1,310 @@
+{
+  "clients": 10,
+  "projects": 20,
+  "authenticatedActors": 13,
+  "projectVisits": 60,
+  "p95Milliseconds": 183,
+  "consoleErrors": [],
+  "timings": [
+    {
+      "role": "agency",
+      "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
+      "milliseconds": 152
+    },
+    {
+      "role": "agency",
+      "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
+      "milliseconds": 96
+    },
+    {
+      "role": "agency",
+      "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
+      "milliseconds": 199
+    },
+    {
+      "role": "agency",
+      "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
+      "milliseconds": 115
+    },
+    {
+      "role": "agency",
+      "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
+      "milliseconds": 100
+    },
+    {
+      "role": "agency",
+      "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
+      "milliseconds": 91
+    },
+    {
+      "role": "agency",
+      "projectId": "0124c675-4357-beea-4c83-0870d323acda",
+      "milliseconds": 88
+    },
+    {
+      "role": "agency",
+      "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
+      "milliseconds": 107
+    },
+    {
+      "role": "agency",
+      "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
+      "milliseconds": 181
+    },
+    {
+      "role": "agency",
+      "projectId": "9790601b-4480-3698-12a8-677157977a42",
+      "milliseconds": 97
+    },
+    {
+      "role": "agency",
+      "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
+      "milliseconds": 91
+    },
+    {
+      "role": "agency",
+      "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
+      "milliseconds": 106
+    },
+    {
+      "role": "agency",
+      "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
+      "milliseconds": 92
+    },
+    {
+      "role": "agency",
+      "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
+      "milliseconds": 88
+    },
+    {
+      "role": "agency",
+      "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
+      "milliseconds": 92
+    },
+    {
+      "role": "agency",
+      "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
+      "milliseconds": 95
+    },
+    {
+      "role": "agency",
+      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
+      "milliseconds": 88
+    },
+    {
+      "role": "agency",
+      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
+      "milliseconds": 106
+    },
+    {
+      "role": "agency",
+      "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
+      "milliseconds": 100
+    },
+    {
+      "role": "agency",
+      "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
+      "milliseconds": 84
+    },
+    {
+      "role": "client",
+      "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
+      "milliseconds": 140
+    },
+    {
+      "role": "client",
+      "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
+      "milliseconds": 94
+    },
+    {
+      "role": "client",
+      "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
+      "milliseconds": 149
+    },
+    {
+      "role": "client",
+      "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
+      "milliseconds": 100
+    },
+    {
+      "role": "client",
+      "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
+      "milliseconds": 139
+    },
+    {
+      "role": "client",
+      "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
+      "milliseconds": 92
+    },
+    {
+      "role": "client",
+      "projectId": "0124c675-4357-beea-4c83-0870d323acda",
+      "milliseconds": 142
+    },
+    {
+      "role": "client",
+      "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
+      "milliseconds": 99
+    },
+    {
+      "role": "client",
+      "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
+      "milliseconds": 141
+    },
+    {
+      "role": "client",
+      "projectId": "9790601b-4480-3698-12a8-677157977a42",
+      "milliseconds": 90
+    },
+    {
+      "role": "client",
+      "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
+      "milliseconds": 150
+    },
+    {
+      "role": "client",
+      "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
+      "milliseconds": 98
+    },
+    {
+      "role": "client",
+      "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
+      "milliseconds": 144
+    },
+    {
+      "role": "client",
+      "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
+      "milliseconds": 93
+    },
+    {
+      "role": "client",
+      "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
+      "milliseconds": 151
+    },
+    {
+      "role": "client",
+      "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
+      "milliseconds": 98
+    },
+    {
+      "role": "client",
+      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
+      "milliseconds": 153
+    },
+    {
+      "role": "client",
+      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
+      "milliseconds": 101
+    },
+    {
+      "role": "client",
+      "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
+      "milliseconds": 147
+    },
+    {
+      "role": "client",
+      "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
+      "milliseconds": 91
+    },
+    {
+      "role": "designer",
+      "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
+      "milliseconds": 147
+    },
+    {
+      "role": "designer",
+      "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
+      "milliseconds": 105
+    },
+    {
+      "role": "designer",
+      "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
+      "milliseconds": 190
+    },
+    {
+      "role": "designer",
+      "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
+      "milliseconds": 124
+    },
+    {
+      "role": "designer",
+      "projectId": "9790601b-4480-3698-12a8-677157977a42",
+      "milliseconds": 86
+    },
+    {
+      "role": "designer",
+      "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
+      "milliseconds": 107
+    },
+    {
+      "role": "designer",
+      "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
+      "milliseconds": 121
+    },
+    {
+      "role": "designer",
+      "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
+      "milliseconds": 93
+    },
+    {
+      "role": "designer",
+      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
+      "milliseconds": 202
+    },
+    {
+      "role": "designer",
+      "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
+      "milliseconds": 107
+    },
+    {
+      "role": "designer",
+      "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
+      "milliseconds": 138
+    },
+    {
+      "role": "designer",
+      "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
+      "milliseconds": 100
+    },
+    {
+      "role": "designer",
+      "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
+      "milliseconds": 183
+    },
+    {
+      "role": "designer",
+      "projectId": "0124c675-4357-beea-4c83-0870d323acda",
+      "milliseconds": 106
+    },
+    {
+      "role": "designer",
+      "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
+      "milliseconds": 93
+    },
+    {
+      "role": "designer",
+      "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
+      "milliseconds": 93
+    },
+    {
+      "role": "designer",
+      "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
+      "milliseconds": 95
+    },
+    {
+      "role": "designer",
+      "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
+      "milliseconds": 96
+    },
+    {
+      "role": "designer",
+      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
+      "milliseconds": 92
+    },
+    {
+      "role": "designer",
+      "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
+      "milliseconds": 182
+    }
+  ]
+}

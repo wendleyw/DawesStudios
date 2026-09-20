@@ -1,0 +1,357 @@
+{
+  "capturedAt": "2026-09-20T09:07:34.923Z",
+  "screenshots": [
+    {
+      "name": "brand-audit-home-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/home",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-1600",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-1000",
+      "viewport": {
+        "width": 1000,
+        "height": 800
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-768",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-overview-320",
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-navigation-mobile",
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-edit-dialog",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/overview",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-logos-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/logos",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-colors-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/colors",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-typography-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/typography",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-visual-style-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/visual-style",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-products-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/products",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-assets-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/assets",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-templates-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/templates",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-messaging-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/messaging",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-ai-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/ai",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-draft-desktop",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/drafts/88176c51-36fc-45be-961b-795d24db70fb",
+      "horizontalOverflow": false
+    },
+    {
+      "name": "brand-audit-draft-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "http://localhost:3003/clients/e4401a17-cbe2-1d70-400d-d40f9e6b8632/brand/drafts/88176c51-36fc-45be-961b-795d24db70fb",
+      "horizontalOverflow": false
+    }
+  ],
+  "accessibility": [
+    {
+      "name": "overview-1600",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "overview-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "violations": []
+    },
+    {
+      "name": "overview-1000",
+      "viewport": {
+        "width": 1000,
+        "height": 800
+      },
+      "violations": []
+    },
+    {
+      "name": "overview-768",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "violations": []
+    },
+    {
+      "name": "overview-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": []
+    },
+    {
+      "name": "overview-320",
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "violations": []
+    },
+    {
+      "name": "navigation-mobile",
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "violations": []
+    },
+    {
+      "name": "edit-dialog",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "logos",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "colors",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "typography",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "visual-style",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "products",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "assets",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "templates",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "messaging",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "ai",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "violations": []
+    },
+    {
+      "name": "draft-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "violations": []
+    }
+  ],
+  "actions": {
+    "mobileWorkspaceInert": true,
+    "mobileInitialFocusInside": true,
+    "mobileFocusContained": true,
+    "mobileFocusRestored": true,
+    "mobileNavigationCloses": true,
+    "modalFocusContained": true,
+    "modalFocusRestored": true,
+    "templateCategoryFilter": true,
+    "draftSaveReload": true,
+    "assetUploadDownload": true,
+    "assetSearch": true,
+    "clientReadOnlyBrand": true,
+    "otherOwnerDraftHidden": true
+  },
+  "errors": [],
+  "cleanup": [
+    {
+      "entity": "draft",
+      "success": true
+    },
+    {
+      "entity": "asset",
+      "success": true
+    }
+  ]
+}

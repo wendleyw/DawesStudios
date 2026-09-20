@@ -1,0 +1,93 @@
+# Permissions and information boundaries
+
+Status: target security contract; implementation is unverified. The [acceptance matrix](acceptance-matrix.md) requires authenticated API, database, storage, realtime, and browser evidence before these boundaries can be considered enforced.
+
+## Identity and scope
+
+This installation serves one agency/studio and its isolated client workspaces. Every request has a verified person, a protected role, and authorized client/project scope. Agency members act within this studio; clients are limited to their client membership; designers are limited to explicitly assigned projects and the brand resources needed for those projects. IDs, UI flags, role selectors, client-provided author IDs, and hidden buttons are never authorization. A separate multi-agency SaaS tenancy layer is outside the current product scope.
+
+Agency administration is an explicit capability for membership, workspace, preset, and credit-allocation changes. A revoked membership or assignment stops new reads, writes, subscriptions, and file access; cached data must be evicted or partitioned on context changes.
+
+## Action matrix
+
+`Scoped` means the same workspace/client/project constraints apply on the server. `Own` also requires the authenticated person to own the record. No access is the default.
+
+| Resource / action | Agency | Client | Designer |
+|---|---|---|---|
+| Studio-wide overview/client directory | Scoped | No | No |
+| Own workspace/client session | Scoped | Own client | Assigned scope |
+| Search and notifications | Scoped | Own client and recipient | Assigned and recipient |
+| View board/campaigns/project summaries | Scoped | Own client, sanitized | Assigned projects only |
+| Create campaign | Scoped | Own client, including briefing | No |
+| Edit campaign planning | Scoped | No implied production authority | No |
+| View briefing list and detail | Scoped | Own client | Safe assigned accepted list/detail; no budget |
+| Create and save briefing | Scoped | Own authorized draft | No |
+| Edit submitted/accepted briefing | Explicit controlled revision | No direct overwrite | No |
+| Submit briefing | Scoped authorized draft | Own authorized draft | No |
+| Quote and accept briefing | Scoped agency capability | View only | No |
+| Project debit and credit report | Read, authorized commands | Own client read | No |
+| Request additional credits | Scoped | Own client | No |
+| Grant/adjust credits | Agency administrator, audited | No | No |
+| Designer assignment and staff directory | Scoped agency capability | Never | Own assignment only |
+| Project properties/status | Valid agency transitions | Client review commands only | Valid production transitions on assigned work |
+| Read internal versions/designs | Scoped | No | Assigned work |
+| Upload design/create version | Scoped | No | Assigned work |
+| Submit design/version to agency | Scoped internal workflow | No | Assigned work |
+| Publish immutable client version | Agency only | No | No |
+| Read published version | Scoped | Own client | Assigned work if needed for production, without client messages |
+| Client-channel project/design comments | Read/write as Studio | Read/write own client | No |
+| Internal-channel project/design comments | Read/write | Never | Read/write assigned work |
+| Pinned design comments | Authorized design and channel | Published design and client channel | Assigned design and internal channel |
+| Client approval/change request | Manage workflow; do not impersonate client | Published review only | No |
+| Agency internal approval/change request | Scoped | No | Receive internal result |
+| Attach and publish delivery files/mark delivered | Agency only | No | Prepare internal files only |
+| Download files | Scoped | Published/delivered files only | Assigned production files |
+| Canonical Brand Hub read | Scoped | Own client | Brand resources for assigned client |
+| Canonical Brand Hub edit/create | Agency only | No | No |
+| Copy brand text/context/color/reference | Scoped | Own client | Assigned client |
+| Create/read/update template draft | Own | Own | Own, assigned client scope |
+| Read another person's template draft | No implicit access | No | No |
+| Workspace/team/client/preset administration | Agency administrator | No | No |
+| Preview another perspective | Agency-only sanitized, non-mutating view | No | No |
+| Reset test dataset | Isolated local/test operator only | No | No |
+
+The source [permissions guide](../ref/00-guia/PERFIS-E-PERMISSOES.md) and [control inventory](../ref/00-guia/CONTROLES-E-OPCOES.json) include controls that were safe only because the wireframe mutated memory. Production controls must invoke the capability and state transition specified here. The agency's reference approval control may approve an internal submission; it must not forge a client's approval event.
+
+## Client-facing projection
+
+Client payloads contain only authorized public project metadata, approved briefing scope and credit information, published design snapshots, client-channel conversation, approved brand resources, and client-safe activity. Agency messages are presented as **Studio**.
+
+Never serialize designer names, avatars, emails, staff membership IDs, assignment relations, internal author metadata, internal comments, unpublished versions, internal notes, internal activity, internal notification counts, or storage paths containing private identity. Do not fetch these fields and hide them with CSS. Apply the restriction to nested relations, search results, reports, CSV, notifications, realtime events, error details, file names, downloadable file metadata, and browser caches.
+
+A published design uses immutable file content and sanitized customer-visible metadata. Internal editing does not replace its bytes or mutate its snapshot. Publishing a later revision creates a new publication and keeps review/comment history bound to the prior publication. Client summaries may show that work is in progress before anything is published, with an explicit **Not shared yet** state; they must not include production design payloads.
+
+Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, assigned production versions, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
+
+## Comments and pins
+
+Each conversation has an explicit channel: `client` for Client ↔ Studio, or `internal` for Designer ↔ Agency. The backend resolves the permissible channel from the caller and resource. An agency user explicitly chooses a channel; changing channels clears or restores only the matching channel's draft.
+
+A design thread identifies workspace, client, project, version or publication, design or published design, and channel. A project conversation omits the design anchor but retains project and channel. Every referenced parent must belong to the same authorized hierarchy. A pending pin becomes visible to others only when its comment is successfully persisted. Coordinates are normalized in the design's own bounds. A client comment references a published design, never an internal version by guessed ID.
+
+Authors are set from the authenticated identity. Comments cannot carry a forged author, role, tenant, design, or channel. Client-safe author presentation is a server-controlled projection. Text and links are rendered safely; messages and uploaded metadata never become executable HTML.
+
+## Atomic commands
+
+| Command | Authorization and invariant |
+|---|---|
+| Accept briefing | Agency; same-client campaign; submitted immutable scope; valid quote and explanation; sufficient balance; one transaction creates exactly one project and one debit. Duplicate or concurrent requests return the original result or fail without partial records. |
+| Publish version | Agency; version belongs to the project; snapshot contains only intended designs and immutable authorized files; no internal identities/channels; publication/review/event written consistently. |
+| Submit review | Authorized reviewer and pending review; targeted publication/version is current for that review; one terminal decision; change request includes actionable feedback. |
+| Mark delivered | Agency; required client approval exists for the delivered publication; all advertised files exist and are authorized; delivery is durable and idempotent. |
+| Allocate credits | Agency administrator or verified settlement worker; positive validated amount; immutable ledger reason/reference; idempotency key; no browser service secret. |
+| Create/accept invitation | Agency administrator creates scoped invitation; valid unexpired single-use token; invitee identity verified; cannot choose extra permissions from request parameters. |
+| Upload/download asset | Authorized parent; enforced file policy and size; private storage; ownership cannot be changed through an object key; publication access never implies internal bucket access. |
+| Update role or assignment | Agency capability; validated target in workspace; audit trail; revoked access invalidates affected subscriptions and sessions as applicable. |
+
+## Negative security cases
+
+Tests must issue direct requests as unauthenticated, Client A, Client B, assigned Designer A, unassigned Designer B, and Agency. Repeat against reads, writes, downloads, subscriptions, CSV, search, and notification endpoints. Check cross-client parent combinations within this single-studio installation; no second studio tenancy layer is required. Agency administrative capability currently follows the protected Agency role; introducing finer-grained staff permissions later must preserve these existing boundaries.
+
+Attempt ID substitution, forged author/role/channel/client IDs, invalid parent combinations, privilege escalation, stale session reuse, duplicate/concurrent acceptance, overdraft, double fulfillment, republishing via mutable file replacement, and HTML/script injection in titles/comments/file metadata. Verify denial and unchanged persisted state. UI-only role checks do not satisfy these cases.
+
+Supabase policies, database constraints/transactions, API authorization, and storage policies must agree. Secret/service credentials remain in backend-only configuration. Privileged server code rechecks the same caller scope before operating with elevated database permissions. Audit records retain actor/action/target/time without leaking private payloads into client-readable event feeds.

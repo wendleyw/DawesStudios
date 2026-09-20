@@ -1,0 +1,15 @@
+.git
+**/node_modules
+**/.next
+**/.env*
+**/test-results
+**/playwright-report
+**/coverage
+**/dist
+supabase/.temp
+supabase/.branches
+supabase/.local
+docs/ref
+docs/verification/screenshots
+*.log
+.DS_Store

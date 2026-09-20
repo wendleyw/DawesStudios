@@ -1,0 +1,122 @@
+.project-timeline {
+  padding: 24px 32px;
+  flex: 1;
+  min-width: 0;
+}
+.project-timeline > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.project-timeline > header > div {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.timeline-scroll {
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+}
+.timeline-calendar {
+  min-width: 850px;
+  min-height: 280px;
+}
+.timeline-day-row,
+.timeline-project-row {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+}
+.timeline-day-row {
+  border-bottom: 1px solid var(--border);
+}
+.timeline-day-row > span {
+  padding: 14px 5px;
+  text-align: center;
+  font-size: 13px;
+  color: #66665f;
+  border-right: 1px solid #efefe9;
+}
+.timeline-day-row small {
+  display: block;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+.timeline-day-row .today {
+  background: #f0f2e9;
+  color: #222;
+  font-weight: 600;
+}
+.timeline-project-row {
+  padding-block: 9px;
+  min-height: 66px;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / 14 - 1px),
+    #f0f0eb calc(100% / 14 - 1px),
+    #f0f0eb calc(100% / 14)
+  );
+}
+.timeline-project-bar {
+  margin: 0 5px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #dce1d2;
+  background: #eef1e7;
+  border-radius: 5px;
+  overflow: hidden;
+  color: #4e5f39;
+}
+.timeline-project-bar strong {
+  display: block;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline-project-bar span {
+  display: block;
+  font-size: 9px;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.timeline-project-bar.changes_requested {
+  background: #faf0de;
+  border-color: #eadfc8;
+  color: #795b23;
+}
+.timeline-project-bar.delivered {
+  background: #f2f2ef;
+  border-color: #e1e1d9;
+  color: #666;
+}
+.timeline-no-work {
+  padding: 50px 24px;
+  font-size: 13px;
+  color: #74746d;
+}
+.unscheduled-projects {
+  font-size: 12px;
+  margin-top: 20px;
+}
+.unscheduled-projects summary {
+  cursor: pointer;
+}
+.unscheduled-projects a {
+  display: block;
+  padding: 10px 0;
+}
+@media (max-width: 720px) {
+  .project-timeline {
+    padding: 20px 16px;
+  }
+  .project-timeline > header {
+    font-size: 12px;
+    gap: 8px;
+  }
+}

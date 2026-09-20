@@ -1,0 +1,84 @@
+{
+  "executed_at": "2026-09-20T09:36:26.802372+00:00",
+  "scope": "Local dawes-studios backend; web browser/build evidence is separate.",
+  "result": "PASS",
+  "checks": [
+    {
+      "command": [
+        "supabase",
+        "test",
+        "db"
+      ],
+      "result": "PASS",
+      "output": "/Users/wendleywilson/DawesStudios/supabase/tests/database/access_and_workflows.test.sql ....... ok\n/Users/wendleywilson/DawesStudios/supabase/tests/database/authorization_matrix.test.sql ....... ok\n/Users/wendleywilson/DawesStudios/supabase/tests/database/production_integrity.test.sql ....... ok\n/Users/wendleywilson/DawesStudios/supabase/tests/database/requests_and_storage.test.sql ....... ok\n/Users/wendleywilson/DawesStudios/supabase/tests/database/trusted_media_and_catalog.test.sql .. ok\nAll tests successful.\nFiles=5, Tests=133,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.01 cusr  0.00 csys =  0.03 CPU)\nResult: PASS\nConnecting to local database...\npsql:/Users/wendleywilson/DawesStudios/supabase/tests/database/access_and_workflows.test.sql:2: NOTICE:  extension \"pgtap\" already exists, skipping\npsql:/Users/wendleywilson/DawesStudios/supabase/tests/database/authorization_matrix.test.sql:2: NOTICE:  extension \"pgtap\" already exists, skipping\npsql:/Users/wendleywilson/DawesStudios/supabase/tests/database/production_integrity.test.sql:2: NOTICE:  extension \"pgtap\" already exists, skipping\npsql:/Users/wendleywilson/DawesStudios/supabase/tests/database/requests_and_storage.test.sql:2: NOTICE:  extension \"pgtap\" already exists, skipping\npsql:/Users/wendleywilson/DawesStudios/supabase/tests/database/trusted_media_and_catalog.test.sql:2: NOTICE:  extension \"pgtap\" already exists, skipping\nA new version of Supabase CLI is available: v2.117.0 (currently installed v2.98.2)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n"
+    },
+    {
+      "command": [
+        "supabase",
+        "db",
+        "lint",
+        "--local"
+      ],
+      "result": "PASS",
+      "output": "Connecting to local database...\nLinting schema: extensions\nLinting schema: private\nLinting schema: public\n\nNo schema errors found\nA new version of Supabase CLI is available: v2.117.0 (currently installed v2.98.2)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n"
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "supabase/tests/http_auth_storage_test.py"
+      ],
+      "result": "PASS",
+      "output": "test_all_resource_families_enforce_cross_client_reads_and_writes (__main__.AuthorizationIntegrationTests.test_all_resource_families_enforce_cross_client_reads_and_writes) ... ok\ntest_anonymous_rest_and_rpc_are_rejected (__main__.AuthorizationIntegrationTests.test_anonymous_rest_and_rpc_are_rejected) ... ok\ntest_client_wildcard_queries_cannot_reveal_internal_metadata (__main__.AuthorizationIntegrationTests.test_client_wildcard_queries_cannot_reveal_internal_metadata) ... ok\ntest_cross_tenant_read_and_credit_mutation_are_rejected (__main__.AuthorizationIntegrationTests.test_cross_tenant_read_and_credit_mutation_are_rejected) ... ok\ntest_delivery_has_real_bytes_and_tenant_isolation (__main__.AuthorizationIntegrationTests.test_delivery_has_real_bytes_and_tenant_isolation) ... ok\ntest_designer_cannot_read_credits_or_client_channel (__main__.AuthorizationIntegrationTests.test_designer_cannot_read_credits_or_client_channel) ... ok\ntest_real_password_authentication_resolves_protected_roles (__main__.AuthorizationIntegrationTests.test_real_password_authentication_resolves_protected_roles) ... ok\ntest_storage_refuses_client_access_to_a_real_internal_object (__main__.AuthorizationIntegrationTests.test_storage_refuses_client_access_to_a_real_internal_object) ... ok\ntest_untrusted_signup_metadata_cannot_assign_agency (__main__.AuthorizationIntegrationTests.test_untrusted_signup_metadata_cannot_assign_agency) ... ok\n\n----------------------------------------------------------------------\nRan 9 tests in 0.537s\n\nOK\n"
+    },
+    {
+      "command": [
+        "node",
+        "supabase/tests/realtime_boundary_test.mjs"
+      ],
+      "result": "PASS",
+      "output": "Realtime boundary PASS: four authenticated subscriptions; internal/client recipients match RLS; cross-client events absent; deleted-row events disabled.\n"
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "apps/media",
+        "test"
+      ],
+      "result": "PASS",
+      "output": "\n> @dawes/media@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.11 /Users/wendleywilson/DawesStudios/apps/media\n\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  05:36:22\n   Duration  573ms (transform 16ms, setup 0ms, import 100ms, tests 354ms, environment 0ms)\n\n"
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "apps/media",
+        "run",
+        "test:integration"
+      ],
+      "result": "PASS",
+      "output": "\n> @dawes/media@0.1.0 test:integration\n> node --env-file-if-exists=.env.local src/integration-test.js\n\nMedia HTTP integration passed 15 checks; temporary source, publication and delivery objects were removed.\n"
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "apps/media",
+        "audit",
+        "--omit=dev"
+      ],
+      "result": "PASS",
+      "output": "found 0 vulnerabilities\n"
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "supabase/scripts/verify_seed.py",
+        "--output",
+        "docs/operations/seed-evidence.json"
+      ],
+      "result": "PASS",
+      "output": "{\n  \"result\": \"PASS\",\n  \"api_url\": \"http://127.0.0.1:55421\",\n  \"clients\": 10,\n  \"projects\": 20,\n  \"service_types\": 20,\n  \"formats\": 25,\n  \"multiple_deliverable_projects_with_v1_v2\": 4,\n  \"product_records\": 30,\n  \"brand_templates\": 70,\n  \"verified_actual_file_downloads\": 59,\n  \"client_logins_and_tenant_checks\": 10,\n  \"agency_and_both_designer_project_scope\": true,\n  \"credit_ledger_reconciled\": true,\n  \"all_project_briefings_and_questions_valid\": true,\n  \"all_publications_have_client_pins\": true,\n  \"fixture_manifest_sha256\": \"d2bfe2cf389261ba5f8e99a7dc364967d6968615761f29b2cb3fb12ddbc7c204\"\n}\n"
+    }
+  ]
+}
