@@ -4,8 +4,13 @@ import { useMutation } from "@tanstack/react-query";
 import { Check, MapPin, MessageSquare, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import { useInvalidateProject, useProjectComments, type ProjectChannel } from "./project-data";
+import {
+  postComment,
+  resolveComment,
+  useInvalidateProject,
+  useProjectComments,
+  type ProjectChannel,
+} from "./project-data";
 
 import { useCommentDraft, type PendingPin } from "./comment-draft";
 import { FormError } from "@/features/shared/form-error";
@@ -44,16 +49,14 @@ export function CommentPanel({
   const [showResolved, setShowResolved] = useState(false);
   const post = useMutation({
     mutationFn: async () =>
-      assertResult(
-        await database.rpc("post_comment", {
-          p_project_id: projectId,
-          p_channel: channel,
-          p_body: body.trim(),
-          ...(versionId ? { p_version_id: versionId } : {}),
-          ...(designId ? { p_design_id: designId } : {}),
-          ...(pendingPin ? { p_pin_x: pendingPin.x, p_pin_y: pendingPin.y } : {}),
-        }),
-      ),
+      postComment(database, {
+        projectId,
+        channel,
+        body: body.trim(),
+        versionId,
+        designId,
+        pin: pendingPin,
+      }),
     onSuccess: async () => {
       clear();
       onClearPin?.();
@@ -62,13 +65,7 @@ export function CommentPanel({
   });
   const resolve = useMutation({
     mutationFn: async ({ id, resolved }: { id: string; resolved: boolean }) =>
-      assertResult(
-        await database.rpc("resolve_comment", {
-          p_comment_id: id,
-          p_channel: channel,
-          p_resolved: resolved,
-        }),
-      ),
+      resolveComment(database, { commentId: id, channel, resolved }),
     onSuccess: invalidate,
   });
   const visibleComments =

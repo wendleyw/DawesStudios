@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -8,8 +8,15 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { CopyButton } from "@/features/shared/copy-button";
 import { Modal } from "@/features/shared/modal";
 import { formatDate } from "@/features/workspace/workspace-data";
-import { assertResult } from "@/lib/supabase";
-import { useInvalidateProject, type TableRow, type CanvasVersion } from "./project-data";
+import {
+  assignDesigner,
+  revokeDesignAssignment,
+  updateProjectDetails,
+  useInvalidateProject,
+  useProjectAssignments,
+  type TableRow,
+  type CanvasVersion,
+} from "./project-data";
 import { FormError } from "@/features/shared/form-error";
 
 export function ProjectDetails({
@@ -21,25 +28,12 @@ export function ProjectDetails({
   deliverables: TableRow<"deliverables">[];
   versions: CanvasVersion[];
 }) {
-  const { database, profile, session } = useAuth();
+  const { database, profile } = useAuth();
   const invalidate = useInvalidateProject();
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
-  const assignments = useQuery({
-    queryKey: ["assignments", session?.user.id, project.id],
-    enabled: profile?.role === "agency",
-    queryFn: async () => {
-      const [members, assigned] = await Promise.all([
-        database.from("profiles").select("id,display_name").eq("role", "designer"),
-        database.from("project_assignments").select("designer_id").eq("project_id", project.id),
-      ]);
-      return {
-        members: assertResult(members),
-        assigned: assertResult(assigned).map((item) => item.designer_id),
-      };
-    },
-  });
+  const assignments = useProjectAssignments(project.id);
   const save = useMutation({
     mutationFn: async (form: FormData) => {
       const start = String(form.get("start")) || null;
@@ -48,23 +42,14 @@ export function ProjectDetails({
         throw new Error("The due date must be on or after the start date.");
       const title = String(form.get("title")).trim();
       if (!title) throw new Error("Add a project title.");
-      const result = await database
-        .from("projects")
-        .update({
-          title,
-          description: String(form.get("description")).trim(),
-          start_date: start,
-          due_date: due,
-        })
-        .eq("id", project.id)
-        .eq("updated_at", editRevision)
-        .select("id")
-        .single();
-      if (result.error?.code === "PGRST116")
-        throw new Error(
-          "This project changed while you were editing. Close and reopen the details to try again.",
-        );
-      assertResult(result);
+      await updateProjectDetails(database, {
+        id: project.id,
+        revision: editRevision,
+        title,
+        description: String(form.get("description")).trim(),
+        startDate: start,
+        dueDate: due,
+      });
     },
     onSuccess: async () => {
       await invalidate();
@@ -76,12 +61,7 @@ export function ProjectDetails({
   });
   const assign = useMutation({
     mutationFn: async (designerId: string) =>
-      assertResult(
-        await database.rpc("assign_designer", {
-          p_project_id: project.id,
-          p_designer_id: designerId,
-        }),
-      ),
+      assignDesigner(database, { projectId: project.id, designerId }),
     onSuccess: async () => {
       await assignments.refetch();
       setAssigning(false);
@@ -89,12 +69,7 @@ export function ProjectDetails({
   });
   const revoke = useMutation({
     mutationFn: async (designerId: string) =>
-      assertResult(
-        await database.rpc("revoke_design_assignment", {
-          p_project_id: project.id,
-          p_designer_id: designerId,
-        }),
-      ),
+      revokeDesignAssignment(database, { projectId: project.id, designerId }),
     onSuccess: async () => {
       await assignments.refetch();
     },
