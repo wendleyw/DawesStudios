@@ -52,7 +52,6 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
     <div className="page-content briefings-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">{client.name}</span>
           <h1>Briefings</h1>
           <p>A clear starting point for your next project.</p>
         </div>

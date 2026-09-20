@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { ClientIdentity } from "./client-identity";
+import { TopbarToolsOutlet, TopbarToolsProvider } from "./topbar-tools";
 import { useClients } from "./workspace-data";
 import "./activity.css";
 
@@ -80,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
   const clientTabs = [{ path: "board", label: "Board" }, { path: "briefings", label: "Briefings" }, { path: "reviews", label: "Reviews" }, { path: "assets", label: "Assets" }, { path: "brand/overview", label: "Brand Hub" }, ...(profile.role !== "designer" ? [{ path: "credits", label: "Credits" }] : [])];
 
-  return <div className={`application ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}>
+  return <TopbarToolsProvider><div className={`application ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}>
     <nav aria-label="Accessibility"><a className="skip-link" href="#main-content">Skip to content</a></nav>
     {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" tabIndex={-1} onClick={() => setMobileOpen(false)} />}
     <div id="workspace-navigation" ref={sidebar} className="sidebar" role={mobileOpen ? "dialog" : "complementary"} aria-modal={mobileOpen || undefined} aria-label="Workspace navigation" onClickCapture={event => { if (mobileOpen && event.target instanceof Element && event.target.closest("a[href]")) setMobileOpen(false); }}>
@@ -100,10 +102,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
     <div className="workspace" inert={mobileOpen || undefined}>
-      <header className="topbar"><button ref={menuButton} className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="workspace-navigation" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div className="topbar-breadcrumb"><Layers3 size={16} /><span>{studioName}</span>{activeClient && <><span className="separator">/</span><strong>{activeClient.name}</strong></>}</div><div className="topbar-actions"><Link href="/notifications" className="icon-button" aria-label="Notifications"><Bell size={17} /></Link></div></header>
+      <header className="topbar"><button ref={menuButton} className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="workspace-navigation" onClick={() => setMobileOpen(true)}><Menu size={20} /></button>{activeClient ? <ClientIdentity client={activeClient} /> : <div className="topbar-identity"><Layers3 size={16} /><strong>{studioName}</strong></div>}<TopbarToolsOutlet /><div className="topbar-actions"><Link href="/notifications" className="icon-button" aria-label="Notifications"><Bell size={17} /></Link></div></header>
       {activeClient && <nav className="client-tabs" aria-label={`${activeClient.name} navigation`}>{clientTabs.map(item => { const active = pathname.includes(`/clients/${activeClient.id}/${item.path.split("/")[0]}`); return <Link key={item.path} href={`/clients/${activeClient.id}/${item.path}`} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>{item.label}</Link>; })}</nav>}
       <main id="main-content" className="main-content" tabIndex={-1}>{children}</main>
     </div>
     <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Help & support" footer={<button className="button primary" onClick={() => setHelpOpen(false)}>Done</button>}><div className="form-stack"><p>Open a project to message the studio. Select a design to add feedback or place a comment pin.</p><p>For account access or a new workspace, contact your studio representative.</p></div></Modal>
-  </div>;
+  </div></TopbarToolsProvider>;
 }

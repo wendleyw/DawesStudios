@@ -142,7 +142,6 @@ export function CreditsPage({ clientId }: { clientId: string }) {
     <div className="page-content credits-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">{client.name}</span>
           <h1>Credits</h1>
           <p>A clear view of your creative investment.</p>
         </div>

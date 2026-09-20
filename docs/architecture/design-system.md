@@ -62,8 +62,8 @@ The following measurements explain the source hierarchy. They are not pixel-leve
 | Navigation row | 36 px high; 12 px outer inset | Measured home selection is x=12 to x=236 |
 | Nested client navigation | Indented under active client; thin vertical guide | Shared board captures; use a single expanded client context |
 | Topbar | 56 px high | Measured boundary y=56 |
-| Board/project action bar | Approximately 56 px high | Measured breadcrumb/action row below topbar |
-| Board filter strip | Approximately 58 px high | Measured board canvas starts at y=170 |
+| Board/project action bar | Approximately 56 px high | Measured breadcrumb/action row below topbar; the board now folds this row into the topbar |
+| Board filter strip | Approximately 58 px high | Measured board canvas starts at y=170; the board now opens these filters from the topbar |
 | Canvas bottom toolbar | 42 px high | Measured y=958–1000; never cover actionable content |
 | Home and credits content | Approximately 1052 px maximum width, centered in main region | Measured x=398–1450 on home/credits |
 | Home top content inset | 40 px below topbar | Inferred page eyebrow y≈100 |
@@ -77,7 +77,15 @@ The following measurements explain the source hierarchy. They are not pixel-leve
 
 Agency Home summarizes only authorized studio data and provides one attention queue. Client Home opens that client's board. Designer My work lists assigned production work. Counts must derive from the same scoped data used by the corresponding list; the screenshot's fixture counts are not production values. Navigation must not imply access to unassigned client work.
 
-Keep one primary page title, one active context breadcrumb, and one action cluster per screen. Show the current task's primary action directly; place secondary actions in a labeled menu or contextual inspector. Account, search, and notifications are global controls without repeated sidebar/topbar copies. Use one client switcher or a compact expandable client list, not ten permanently expanded navigation trees. The active client belongs in navigation and breadcrumbs; avoid repeating it as a large decorative heading on every nested panel. Place settings and client creation in the agency workspace controls for members with the required permission.
+Keep one primary page title, one active context marker, and one action cluster per screen. Show the current task's primary action directly; place secondary actions in a labeled menu or contextual inspector. Account, search, and notifications are global controls without repeated sidebar/topbar copies. Use one client switcher or a compact expandable client list, not ten permanently expanded navigation trees. The active client belongs in navigation and in the topbar; avoid repeating it as a large decorative heading on every nested panel. Place settings and client creation in the agency workspace controls for members with the required permission.
+
+### Workspace topbar
+
+The topbar carries the active context on the left, the current page's controls on the right, and the global actions last. Inside a client workspace the context is that client's approved brand mark with its name, falling back to an initials mark when the workspace has no logo asset; outside one it is the studio name. The client name is not repeated as a page heading below it, so pages inside a client workspace title the work itself.
+
+Pages contribute their controls through the topbar tool slot in [`topbar-tools.tsx`](../../apps/web/features/workspace/topbar-tools.tsx), which portals them into the topbar while the page keeps their state. The board uses it for search, the filter menu, the result count, the view selector, and the primary action, so no separate header or toolbar row sits above the canvas. Disclosure panels belong to their trigger: the board filter menu opens as a popover under its button and closes on Escape or an outside click.
+
+Below 1100 px the tools take their own row and `--topbar-height` grows to match, so `--workspace-chrome` keeps the canvas height derived from the measured chrome rather than a fixed number. Below 640 px the tool labels collapse to icons that keep their accessible names.
 
 ## Board and project canvas
 

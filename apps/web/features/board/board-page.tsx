@@ -19,7 +19,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
   formatDate,
@@ -33,6 +33,7 @@ import { assertResult } from "@/lib/supabase";
 
 import { ProjectTimeline } from "./project-timeline";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
+import { TopbarTools } from "@/features/workspace/topbar-tools";
 
 type BoardNode = Node<{ project: Project; campaign: string; canMove: boolean }, "project">;
 type BoardView = "canvas" | "kanban" | "list" | "timeline";
@@ -93,6 +94,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filterMenu = useRef<HTMLDivElement>(null);
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const campaigns = useQuery({
@@ -126,6 +128,22 @@ export function BoardPage({ clientId }: { clientId: string }) {
         return next;
       }),
   });
+  useEffect(() => {
+    if (!filtersOpen) return;
+    function dismiss(event: Event) {
+      if (event.target instanceof Node && !filterMenu.current?.contains(event.target))
+        setFiltersOpen(false);
+    }
+    function close(event: KeyboardEvent) {
+      if (event.key === "Escape") setFiltersOpen(false);
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", close);
+    };
+  }, [filtersOpen]);
   const filteredProjects = useMemo(
     () =>
       (projects.data ?? []).filter(
@@ -185,37 +203,8 @@ export function BoardPage({ clientId }: { clientId: string }) {
 
   return (
     <div className="board-page">
-      <div className="board-header">
-        <div>
-          <span className="eyebrow">{client.industry || "YOUR WORKSPACE"}</span>
-          <h1>
-            {client.name}
-            <span className="subtle-count">{projects.data?.length}</span>
-          </h1>
-        </div>
-        <div className="board-header-actions">
-          <label className="visually-hidden" htmlFor="board-view">
-            Board view
-          </label>
-          <select
-            id="board-view"
-            value={view}
-            onChange={(event) => setView(event.target.value as BoardView)}
-          >
-            <option value="canvas">Canvas view</option>
-            <option value="kanban">Kanban view</option>
-            <option value="list">List view</option>
-            <option value="timeline">Timeline view</option>
-          </select>
-          {profile?.role !== "designer" && (
-            <Link href={`/clients/${clientId}/briefings/new`} className="button primary">
-              <Plus size={16} />
-              New briefing
-            </Link>
-          )}
-        </div>
-      </div>
-      <div className="board-toolbar">
+      <h1 className="visually-hidden">{client.name} project board</h1>
+      <TopbarTools>
         <label className="search-field">
           <Search size={16} />
           <input
@@ -225,60 +214,89 @@ export function BoardPage({ clientId }: { clientId: string }) {
             placeholder="Find a project…"
           />
         </label>
-        <button
-          className={`button quiet ${filtersOpen ? "selected" : ""}`}
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          aria-expanded={filtersOpen}
-        >
-          <SlidersHorizontal size={15} />
-          Filters{(campaign || status) && <span className="filter-indicator" />}
-        </button>
+        <div className="topbar-filters" ref={filterMenu}>
+          <button
+            className={`button quiet ${filtersOpen ? "selected" : ""}`}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            aria-expanded={filtersOpen}
+            aria-label="Filters"
+          >
+            <SlidersHorizontal size={15} />
+            <span className="button-label">Filters</span>
+            {(campaign || status) && <span className="filter-indicator" />}
+          </button>
+          {filtersOpen && (
+            <div className="board-filters">
+              <label>
+                Campaign
+                <select value={campaign} onChange={(event) => setCampaign(event.target.value)}>
+                  <option value="">All campaigns</option>
+                  {campaigns.data?.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Status
+                <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                  <option value="">All statuses</option>
+                  {visibleStatuses.map((item) => (
+                    <option key={item} value={item}>
+                      {statusLabels[item]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="board-filter-actions">
+                <button
+                  className="button quiet"
+                  onClick={() => {
+                    setCampaign("");
+                    setStatus("");
+                    setSearch("");
+                  }}
+                >
+                  Clear filters
+                </button>
+                {profile?.role === "agency" && (
+                  <button className="button quiet" onClick={() => setCreatingCampaign(true)}>
+                    <Plus size={14} />
+                    New campaign
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <span className="board-result-count">
           {filteredProjects.length} project{filteredProjects.length === 1 ? "" : "s"}
         </span>
-      </div>
-      {filtersOpen && (
-        <div className="board-filters">
-          <label>
-            Campaign
-            <select value={campaign} onChange={(event) => setCampaign(event.target.value)}>
-              <option value="">All campaigns</option>
-              {campaigns.data?.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="">All statuses</option>
-              {visibleStatuses.map((item) => (
-                <option key={item} value={item}>
-                  {statusLabels[item]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="button quiet"
-            onClick={() => {
-              setCampaign("");
-              setStatus("");
-              setSearch("");
-            }}
+        <label className="visually-hidden" htmlFor="board-view">
+          Board view
+        </label>
+        <select
+          id="board-view"
+          value={view}
+          onChange={(event) => setView(event.target.value as BoardView)}
+        >
+          <option value="canvas">Canvas view</option>
+          <option value="kanban">Kanban view</option>
+          <option value="list">List view</option>
+          <option value="timeline">Timeline view</option>
+        </select>
+        {profile?.role !== "designer" && (
+          <Link
+            href={`/clients/${clientId}/briefings/new`}
+            className="button primary"
+            aria-label="New briefing"
           >
-            Clear filters
-          </button>
-          {profile?.role === "agency" && (
-            <button className="button quiet" onClick={() => setCreatingCampaign(true)}>
-              <Plus size={14} />
-              New campaign
-            </button>
-          )}
-        </div>
-      )}
+            <Plus size={16} />
+            <span className="button-label">New briefing</span>
+          </Link>
+        )}
+      </TopbarTools>
       {moveProject.error && (
         <p className="form-error" role="alert">
           The new position could not be saved. Please try again.
