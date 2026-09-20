@@ -20,3 +20,4 @@ work/
 __pycache__/
 *.pyc
 supabase/.restore-drill/
+.superpowers/
