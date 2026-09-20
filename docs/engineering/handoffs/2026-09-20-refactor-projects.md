@@ -7,7 +7,7 @@
 - Owned paths: `apps/web/features/projects/`, `.superpowers/sdd/2026-09-20-repository-structural-refactor/task-8-report.md`, and this report
 - Dependencies: `docs/architecture/data-access.md`; the `features/credits` and `features/board` exemplars; `features/shared/README.md`
 - Acceptance criteria: `npm run check` passes with no test modified; `grep -c '\.from(\|\.rpc(\|\.storage\.' apps/web/features/projects/*.tsx` returns 0 for every file; each relocated query keeps its table, columns, filters, ordering and error handling; each extracted write has a unit test naming its table or procedure and its exact argument object
-- Commit: `f358e2e` on `refactor/repository-structure`
+- Commit: `6383240` on `refactor/repository-structure`
 
 ## Completed work and changed files
 
@@ -73,12 +73,14 @@ two hooks already satisfied the contract and were not edited.
    of React, `useAuth` and TanStack Query, and because `board-data.ts` already keeps its
    `createSignedUrls` beside the rows it signs. The reason is recorded in the header comment of both
    modules, not only here.
-2. **Three reads are plain functions, not hooks** — `findUnchangedDesign`, `findDesignByAsset` and
-   the assignment read's non-hook siblings. `findUnchangedDesign` and `findDesignByAsset` run inside
-   a mutation to decide whether the write that follows repeats one already stored; a hook would read
-   on render and answer from a cache populated before the upload it is meant to judge. This is the
-   feature's one deviation from the contract's "reads are `use<Thing>()` hooks" rule and is recorded
-   in a block comment above the two functions in `project-data.ts`.
+2. **Two reads are plain functions, not hooks** — `findUnchangedDesign` and `findDesignByAsset`.
+   Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx` (`:99` and
+   `:113`), where React does not permit a hook to be called, to decide whether the write that follows
+   repeats one already stored; a hook would read on render and answer from a cache populated before
+   the upload it is meant to judge. This is the feature's one deviation from the contract's "reads
+   are `use<Thing>()` hooks" rule. It is recorded in a block comment above the two functions in
+   `project-data.ts`, in `apps/web/features/projects/README.md`, and — as of fix round 1 — as a
+   general rule under rule 2 of `docs/architecture/data-access.md`.
 3. **Both `PGRST116` conflict messages moved with their query.** The zero-row result only exists
    because of the `.eq("updated_at", …)` / `.eq("title", previous)` guards in the query itself;
    leaving the interpretation at the call site would have left a component reasoning about a filter
@@ -137,13 +139,13 @@ with `.board-canvas` — the case you asked me not to flag.
 feature. Four remaining status/alert elements were examined and left alone because adopting a
 primitive would change their rendered output:
 
-- `artwork.tsx:55` — `<div className="artwork-loading" role="status">`; a feature-styled box, not
+- `artwork.tsx:40` — `<div className="artwork-loading" role="status">`; a feature-styled box, not
   `page-content`.
-- `comment-panel.tsx:100` — bare `<p role="status">`; the shared README already records plain
+- `comment-panel.tsx:97` — bare `<p role="status">`; the shared README already records plain
   `<p role="status">` loading text as a rejected primitive candidate.
-- `comment-panel.tsx:102` — `<div role="alert">` wrapping a paragraph and a retry button; `FormError`
+- `comment-panel.tsx:99` — `<div role="alert">` wrapping a paragraph and a retry button; `FormError`
   renders a `<p className="form-error">`.
-- `project-details.tsx:141` — `<p role="alert">` with **no** `form-error` class; converting it would
+- `project-details.tsx:116` — `<p role="alert">` with **no** `form-error` class; converting it would
   add a class the element does not have today.
 
 `features/shared/README.md` needs no edit: this feature's consumer list is unchanged.
@@ -176,7 +178,7 @@ primitive would change their rendered output:
 | Extraction fidelity of `project-nodes.tsx` + `project-canvas-view.tsx` vs `git show HEAD:project-page.tsx` | local, 18:57 | every non-comment line of the removed block is present in the new files; the only 4 differences are added `export` keywords | terminal |
 | `globals.css` class cross-reference (projects `className` tokens ∩ `globals.css` selectors − `projects.css`) | local, 18:54 | 8 generic utilities, no feature namespace | terminal |
 | Unused-export sweep across `apps/web` for every `features/projects` export | local, 18:56 | only `sanitizeArtwork` (fixed) and two `canvas-layout.ts` exports (out of scope, see risks) | terminal |
-| `git commit` with `commitlint`, `gitleaks`, `lint-staged` | local, 18:57 | committed `f358e2e`; gitleaks "no leaks found"; commitlint reported 1 style warning, 0 problems | terminal |
+| `git commit` with `commitlint`, `gitleaks`, `lint-staged` | local, 18:57 | committed `6383240`; gitleaks "no leaks found"; commitlint reported 1 style warning, 0 problems | terminal |
 
 Test counts: **281 → 320** (+39), **17 → 19 files**. No existing test was modified; `canvas-layout.test.ts`
 and `media-client.test.ts` pass untouched.
@@ -187,20 +189,20 @@ and `media-client.test.ts` pass untouched.
    3003 (which was left running, as instructed) or against Playwright. The relocation is proved by
    type checking and by argument-level unit tests, not by a live request. The publish path in
    particular still depends on the media service, which no unit test touches.
-2. **One documentation edit is outside my write scope, so I did not make it.**
-   `docs/architecture/data-access.md` ends with an "Exception — None identified yet for this feature"
-   section. This feature introduces a documented deviation (three reads that run inside a mutation
-   stay plain functions rather than `use<Thing>()` hooks). The reason is recorded in the code above
-   those functions, which is the standard you set; if you want it in the contract document too, that
-   edit is yours. The same applies to adding `projects` to that document's worked-example list.
-   `apps/web/features/projects/` has no `README.md`; `brand/` and `briefings/` do. Creating one is in
-   my write scope but felt like scope creep for this task — say the word and I will.
+2. **Resolved in fix round 1 (see below).** Reported here originally as out of scope: the contract
+   `docs/architecture/data-access.md` still read "Exception — None identified yet", and
+   `apps/web/features/projects/` had no `README.md`, so the read-inside-mutation deviation was
+   recorded only in code. The coordinator extended my write scope; rule 2 of the contract now covers
+   reads that cannot be hooks as a general rule, the Exceptions section is rewritten, and the feature
+   `README.md` exists. (That earlier note also said "three reads"; there are two in `project-data.ts`
+   — the miscount is corrected in the code comment and below.)
 3. **Two pre-existing lint warnings in `features/board/`** (`board-canvas-controls.tsx:30`
    exhaustive-deps, `board-nodes.tsx:4` unused `ArrowLeft`) were present at baseline and are outside
    my write scope. They are unrelated to this task but will show in any `npm run check` output.
 4. **Two unused exports remain in `canvas-layout.ts`** (`CanvasLayoutDeliverable`,
    `DEFAULT_ARTWORK_RATIO`). That file was on the explicit leave-alone list, so I did not touch them.
-5. **Next required action:** orchestrator review of `f358e2e`, then decide items 2 and 4 above.
+5. **Next required action:** orchestrator review of `6383240` and of the fix-round commit recorded
+   below, then a decision on item 4.
 
 ## Ownership at handoff
 
@@ -208,3 +210,75 @@ All paths under `apps/web/features/projects/` are released; nothing is left unco
 server on port 3003 was not stopped, restarted or otherwise touched, and Docker was not touched. The
 working tree contains only the two untracked `docs/superpowers/` files belonging to the concurrent
 session, which were left exactly as found.
+
+---
+
+# Fix round 1 — contract and feature documentation
+
+- Updated at: 2026-09-20T19:05:00-03:00
+- Reporting agent and tool: Task 8 delegated worker / Claude Code
+- State: implemented and verified by `npm run check`; no behavior change to verify in a browser
+- Write scope for this round: extended by the coordinator to include `docs/architecture/data-access.md`
+- Commits: `f6f9bba` (contract, feature README, code comment) and the report commit that follows it
+
+## What the coordinator asked for, and what was done
+
+1. **The deviation was recorded where the contract does not point.** Created
+   `apps/web/features/projects/README.md`, following the shape of `features/brand/README.md` and
+   `features/briefings/README.md`: prose over the feature's modules and role boundaries, a dedicated
+   section for the deviation naming both call sites (`project-action-dialog.tsx:99` and `:113`), and
+   a Verification section separating checks actually executed from what stubbed tests cannot prove.
+   `features/projects` was the only migrated feature without a README; it now has one.
+
+2. **The contract covered only *write* exceptions.** `docs/architecture/data-access.md` rule 2 now
+   carries a general sub-rule, *Reads that cannot be hooks*: a read invoked from inside a mutation
+   callback — a `mutationFn`, an `onSuccess`, a submit handler — is a plain `async (database, input)`
+   function, not a `use<Thing>()` hook, because React only permits a hook at the top level of a
+   component or another hook. It is stated as a rule, not as a note about one feature: what decides
+   the shape is the call site rather than the SQL, such a function still lives in `<feature>-data.ts`
+   and still returns through `assertResult(...)`, and it is unit-tested exactly like a write.
+   `projects` is cited as the worked example. The rule closes with the counter-case the next four
+   migrations need more than the rule itself: moving a read into a mutation *in order* to avoid
+   writing a hook is not covered, because it gives up caching, deduplication and the `enabled` gate.
+
+   The stale `## Exception — None identified yet for this feature` section is rewritten as
+   `## Exceptions`, recording that a read that cannot be a hook is no longer an exception at all
+   (rule 2 now decides it, so a later feature meeting the same case needs no new entry), and keeping
+   the unclaimed write-path exception with its original wording.
+
+3. **Miscounted comment fixed.** The block comment above `findUnchangedDesign` said "The three reads
+   below" while two follow it — the third is `discardUnreferencedArtwork`, in `artwork-files.ts`. It
+   now names the two functions, says where they are called from, and links the contract rule and the
+   feature README. This is the only code edit in this round.
+
+4. **Report hygiene.** Corrected in both this report and the handoff copy: the commit is `6383240`,
+   not `f358e2e` (it was amended after the report was drafted); the shared-primitive line references
+   were pre-refactor and are now `artwork.tsx:40`, `comment-panel.tsx:97`, `comment-panel.tsx:99` and
+   `project-details.tsx:116`. The same "three reads" miscount appeared in decision 2 above and in
+   risk 2 and is corrected there.
+
+## Checks actually executed
+
+| Command or scenario | Environment and time | Observed result | Evidence |
+| --- | --- | --- | --- |
+| `npm run check` | local, 2026-09-20 19:02, exit code 0 | **pass — 19 files / 320 tests**, unchanged from the code round; the same 2 pre-existing `board` lint warnings | scratchpad `check4.log` |
+| `npm run test -- features/projects` | local, 19:01 | pass — 4 files / 80 tests, confirming the file list quoted in the new README | terminal |
+| `git diff apps/web/features/projects/project-data.ts` before committing | local, 19:03 | the only hunk is the block comment; no statement changed | terminal |
+| `ls docs/architecture/acceptance-matrix.md` | local, 19:01 | exists — the README's link resolves | terminal |
+| `git commit` with `commitlint`, `gitleaks`, `lint-staged` | local, 19:04 | committed `f6f9bba`, hooks clean | terminal |
+
+No test file was modified, `app/globals.css` was not touched, and no behavior changed: the round is
+two new or edited documents plus one comment.
+
+## Remaining risks and next action
+
+1. The browser gap from the code round is unchanged — nothing here was exercised against the dev
+   server on port 3003 (left running) or Playwright, and this round could not change that because it
+   ships no behavior.
+2. **`docs/superpowers/plans/2026-09-20-repository-structural-refactor.md` shows as modified in the
+   working tree and I did not touch it.** It was clean at the end of my code round and modified by
+   the time this round finished, so another writer holds it. I left it unstaged and uncommitted, as
+   with the two untracked `docs/superpowers/` files belonging to the concurrent session.
+3. The four later feature migrations should be pointed at rule 2's new sub-rule before they start;
+   it is the part of this round meant for them rather than for `projects`.
+4. **Next required action:** orchestrator review of `6383240` and `f6f9bba`.
