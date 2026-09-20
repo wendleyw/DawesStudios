@@ -333,13 +333,14 @@ export async function createDesignVersion(
 }
 
 /*
- * The three reads below are plain functions rather than `use<Thing>()` hooks, which is the one
- * deviation from the data-access contract in this feature.
+ * `findUnchangedDesign` and `findDesignByAsset` are plain functions rather than `use<Thing>()`
+ * hooks. Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx`, where a
+ * hook cannot be called at all, so the contract's read rule cannot apply — see the `Reads that
+ * cannot be hooks` rule in `docs/architecture/data-access.md` and this feature's `README.md`.
  *
- * Each runs inside a mutation, on the submit that needs it, to decide whether the write that
- * follows is a repeat of one already stored. A hook would read on render instead — the answer would
- * be cached from before the upload it is meant to judge, and there is no component that wants the
- * row on screen.
+ * Each runs on the submit that needs it, to decide whether the write that follows is a repeat of
+ * one already stored. A hook would read on render instead — the answer would be cached from before
+ * the upload it is meant to judge, and there is no component that wants the row on screen.
  */
 
 /** The design row already holding exactly what this save would write, if there is one. */

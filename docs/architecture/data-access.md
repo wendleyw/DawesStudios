@@ -14,6 +14,12 @@ This document is the contract every feature module follows for talking to Supaba
 
 2. **Read paths are exported as `use<Thing>()` hooks wrapping `useQuery`.** See `useCreditAccount`, `useCreditLedger` and `useCreditRequests` in `credit-data.ts`. Each hook owns its query key, its `enabled` gate and its `assertResult(...)` cast; components consume the hook and never see the underlying `database.from(...)` call.
 
+   **Reads that cannot be hooks.** A read invoked from inside a mutation callback — a `mutationFn`, an `onSuccess`, a submit handler — is a plain `async (database, input)` function shaped like a write path, not a `use<Thing>()` hook. This is not a per-feature exception to be argued case by case: React only permits a hook at the top level of a component or of another hook, so no restructuring turns such a call site into one. What decides the shape is the call site, not the SQL — the same `select` is a hook when a component renders its result and a plain function when a mutation branches on it. A read in this shape still lives in `<feature>-data.ts`, still returns through `assertResult(...)`, and is unit-tested exactly like a write: its table, its columns, its filters and their order, and the surfacing of the database error message.
+
+   The worked example is `features/projects`. `findUnchangedDesign` and `findDesignByAsset` in `project-data.ts` are called from `mutation.mutationFn` in `project-action-dialog.tsx` (`:99` and `:113`) to decide whether the write that follows repeats one already stored. A hook would instead read on render, answering from a cache filled before the upload it is meant to judge, and no component wants the row on screen. The reason is recorded above the two functions and in [`features/projects/README.md`](../../apps/web/features/projects/README.md).
+
+   Prefer a hook wherever the call site allows one. Moving a read into a mutation *in order* to avoid writing a hook is the opposite of this rule: it gives up caching, deduplication and the `enabled` gate, and it is not covered here.
+
 3. **Write paths are exported as plain `async` functions taking `(database, input)`.** They take no hooks internally, so they run outside React and are unit-testable with a stub `{ rpc: vi.fn() }` object — see `credit-data.test.ts` and, e.g.:
 
    ```ts
@@ -48,6 +54,9 @@ This document is the contract every feature module follows for talking to Supaba
 - `features/credits/credit-actions.tsx` — the two dialog components. They hold only form state, validation, retry/idempotency logic and rendering; they call the data-module functions and `useInvalidateCredits()`, and hold no query or mutation payload construction beyond what `requestCredits`/`adjustCredits`/`reviewCreditRequest` accept.
 - `features/credits/credit-model.ts` / `credit-model.test.ts` — pure domain logic (filtering, CSV export), unrelated to this contract but colocated because it is credits-only.
 
-## Exception
+## Exceptions
 
-None identified yet for this feature. If a later feature has a write path that genuinely cannot be a plain `(database, input)` async function — for example, one that must read a hook's reactive value mid-mutation — document the specific reason in that feature's `README.md` and keep the deviation as small as possible; do not generalize the exception into a new default pattern here.
+A deviation is recorded in the deviating feature's `README.md`, at its smallest possible size, and is linked from the code it applies to. Two cases have come up so far:
+
+- **A read that cannot be a hook** is no longer an exception. It is covered by rule 2 above, because React decides it rather than the feature does. `features/projects` is the worked example and [its `README.md`](../../apps/web/features/projects/README.md) records the two call sites; a later feature meeting the same case follows the rule and needs no new entry here.
+- **A write that genuinely cannot be a plain `(database, input)` async function** — for example, one that must read a hook's reactive value mid-mutation — has not been found in any migrated feature. If one appears, document the specific reason in that feature's `README.md` and keep the deviation as small as possible; do not generalize it into a new default pattern here.
