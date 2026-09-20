@@ -106,6 +106,12 @@
   display: flex;
   gap: 8px;
 }
+.filter-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
 .board-page > .form-error {
   margin: 16px var(--space-page) 0;
 }

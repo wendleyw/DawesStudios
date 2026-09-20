@@ -3,17 +3,13 @@
 import {
   Background,
   BackgroundVariant,
-  ControlButton,
-  Controls,
   PanOnScrollMode,
   ReactFlow,
-  useReactFlow,
-  useStore,
   type Node,
   type NodeChange,
 } from "@xyflow/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, CornerUpLeft, Plus, SlidersHorizontal } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowUpRight, Plus, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,29 +21,23 @@ import {
   useProjects,
   type Project,
 } from "@/features/workspace/workspace-data";
-import { assertResult } from "@/lib/supabase";
 
 import {
-  CARD_H,
   FRAME_HEAD,
   FRAME_PAD,
   MAX_COLUMN,
   MAX_SPLIT,
-  boardFit,
   isTwoColumn,
-  buildStack,
-  cardWidth,
-  hasStoredPosition,
   orderCampaigns,
-  slotPosition,
-  type BoardCampaign,
 } from "./board-layout";
 import { projectHref } from "./project-open";
 import { smallestScaleFor, type TimelineScale } from "./timeline-model";
-import { mondayOf, sharedTitlePrefix } from "./timeline-model";
+import { mondayOf } from "./timeline-model";
 import { boardNodeTypes } from "./board-nodes";
 import { boardStatuses, selectionFromChanges, type PlanningMode } from "./planning-view";
-import { artworkFor, useProjectArtwork } from "./project-thumbnail";
+import { useBoardCampaigns, useProjectArtwork, moveProjectPosition } from "./board-data";
+import { BoardCanvasControls } from "./board-canvas-controls";
+import { useBoardCanvasNodes } from "./board-canvas-nodes";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
 import { ClientMark } from "@/features/workspace/client-mark";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
@@ -59,84 +49,8 @@ import { SearchField } from "@/features/shared/search-field";
 type BoardLayout = "canvas" | "list";
 const GUTTER = 24;
 
-/**
- * The built-in Fit View is dropped: on a tall document-like stack, fitting everything on screen
- * always lands at an unreadable scale — the defect recorded in the frontend review. `onFitView` is
- * only a notification (xyflow runs its own fitView first), so the button is replaced by a fit
- * computed from the frame geometry, which does not depend on xyflow having finished rendering.
- */
-/** The box the built nodes occupy, which is what a fit has to cover. */
-function contentBounds(nodes: Node[]): { width: number; height: number } {
-  let width = 0;
-  let height = 0;
-  for (const node of nodes) {
-    // Cards are positioned relative to their frame, so only top-level frames set the bounds.
-    if (node.parentId) continue;
-    const style = node.style as { width?: number; height?: number } | undefined;
-    width = Math.max(width, node.position.x + (style?.width ?? 0));
-    height = Math.max(height, node.position.y + (style?.height ?? 0));
-  }
-  return { width, height };
-}
-
-/**
- * A node that states its own size.
- *
- * xyflow keeps the measured size on the internal node it builds from the array it is given, and
- * throws it away whenever that array is rebuilt. Until the resize observer runs again the node has
- * no dimensions: it is rendered hidden and clamped to its parent's corner. On this board the array
- * is rebuilt whenever a card is selected or dragged, which is exactly when a card has to stay
- * under the pointer — the second click of a double click would otherwise land on the pane.
- */
-function sized(width: number, height: number) {
-  return { width, height, style: { width, height } };
-}
-
-function BoardCanvasControls({
-  content,
-  view,
-  fitKey,
-}: {
-  content: { width: number; height: number };
-  view: { width: number; height: number };
-  /** Changes whenever the board being shown changes, which is when the view is fitted again. */
-  fitKey: string;
-}) {
-  const { setViewport } = useReactFlow();
-  const fit = useCallback(
-    (animate: boolean) => {
-      if (content.width <= 0 || view.width <= 0) return;
-      void setViewport(boardFit(content, view), animate ? { duration: 200 } : undefined);
-    },
-    [content.width, content.height, view.width, view.height, setViewport],
-  );
-  // Entering a board — or returning to one — shows all of it. Refitting on every geometry change
-  // would fight the viewer, so this runs once per board and then only on request.
-  // The pan/zoom instance is created in its own effect, and setting a viewport before it exists is
-  // silently dropped — which left a board wider than the canvas opening clipped at the far left.
-  const ready = useStore((state) => !!state.panZoom);
-  const fitted = useRef("");
-  useEffect(() => {
-    if (!ready || !fitKey || fitted.current === fitKey || content.width <= 0 || view.width <= 0)
-      return;
-    fitted.current = fitKey;
-    fit(false);
-  }, [ready, fitKey, content.width, view.width, fit]);
-  return (
-    <Controls showInteractive={false} showFitView={false}>
-      <ControlButton
-        onClick={() => fit(true)}
-        title="Fit board to view"
-        aria-label="Fit board to view"
-      >
-        <CornerUpLeft size={13} />
-      </ControlButton>
-    </Controls>
-  );
-}
-
 export function BoardPage({ clientId }: { clientId: string }) {
-  const { database, profile, session } = useAuth();
+  const { database, profile } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
   const clients = useClients();
@@ -197,30 +111,13 @@ export function BoardPage({ clientId }: { clientId: string }) {
     return () => observer.disconnect();
   }, [canvas]);
 
-  const campaigns = useQuery({
-    queryKey: ["campaigns", session?.user.id, clientId],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("campaigns")
-          .select("id, title, start_date, end_date")
-          .eq("client_id", clientId)
-          .order("title"),
-      ) as BoardCampaign[],
-  });
+  const campaigns = useBoardCampaigns(clientId);
   const client = clients.data?.find((item) => item.id === clientId);
   const canMove = profile?.role === "agency";
   const canCreate = profile?.role !== "designer";
   const moveProject = useMutation({
     mutationFn: async ({ id, position }: { id: string; position: { x: number; y: number } }) =>
-      assertResult(
-        await database
-          .from("projects")
-          .update({ board_position: position })
-          .eq("id", id)
-          .select("id")
-          .single(),
-      ),
+      moveProjectPosition(database, { id, position }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
     onError: (_error, variables) =>
       setPositions((current) => {
@@ -299,140 +196,19 @@ export function BoardPage({ clientId }: { clientId: string }) {
   // is wide enough to split — while still leaving a gutter the zoom controls sit clear of.
   const usable = viewport.width - GUTTER * 2;
   const column = Math.max(320, Math.min(isTwoColumn(usable) ? MAX_SPLIT : MAX_COLUMN, usable));
-  const { nodes, content } = useMemo(() => {
-    // Seeded titles repeat the client name the viewer is already inside, which is what pushes the
-    // distinguishing tail out of a fixed-width card. The calendar drops the same head.
-    const titlePrefix = sharedTitlePrefix(filteredProjects.map((item) => item.title));
-    // A designer reads only the campaigns they hold work in: campaigns_read is scoped to the
-    // client, so an empty frame would expose a campaign title and dates they have no part in.
-    const frames = buildStack({
-      projects: filteredProjects,
-      campaigns: campaigns.data ?? [],
-      columnWidth: column,
-      viewportWidth: viewport.width,
-      planningOpen,
-      planningKanban: planningMode === "kanban",
-      canCreate,
-      keepEmptyCampaigns: canCreate,
-      filtered,
-      overrides: positions,
-    });
-    const built: Node[] = [];
-    for (const frame of frames) {
-      const shared = {
-        position: { x: frame.x, y: frame.y },
-        draggable: false,
-        selectable: false,
-        // xyflow only adds `nopan` to draggable nodes, so a non-draggable frame would let the pane
-        // swallow every click on the controls inside it.
-        className: "nopan",
-        ...sized(frame.width, frame.height),
-      };
-      if (frame.kind === "planning")
-        built.push({
-          ...shared,
-          id: frame.id,
-          type: "planning",
-          ariaLabel: "Planning",
-          ...sized(frame.width, frame.height),
-          data: {
-            open: planningOpen,
-            mode: planningMode,
-            projects: filteredProjects,
-            campaignName,
-            campaignOrder,
-            period,
-            onPeriod: setPeriod,
-            scale,
-            onScale: setChosenScale,
-            onToggle: () => setPlanningOpen((open) => !open),
-            onMode: setPlanningMode,
-            selectedId: selectedProjectId,
-            onSelect: setSelectedProjectId,
-            onOpen: openProject,
-          },
-        });
-      else if (frame.kind === "notice")
-        built.push({
-          ...shared,
-          id: frame.id,
-          type: "notice",
-          ariaLabel: "No matching projects",
-          data: { filtered, onClear: clearFilters },
-        });
-      else if (frame.kind === "addCampaign")
-        built.push({
-          ...shared,
-          id: frame.id,
-          type: "addCampaign",
-          ariaLabel: "Add a campaign",
-          data: { onCreate: () => setCreatingCampaign(true) },
-        });
-      else if (frame.campaign) {
-        const group = frame.campaign;
-        const real = group.id !== "none";
-        built.push({
-          ...shared,
-          id: frame.id,
-          type: "campaign",
-          ariaLabel: `Campaign ${group.title}`,
-          data: { campaign: group, count: frame.projects?.length ?? 0 },
-        });
-        const width = cardWidth();
-        (frame.projects ?? []).forEach((project, index) => {
-          const stored = positions[project.id] ?? project.board_position;
-          built.push({
-            id: project.id,
-            type: "project",
-            parentId: frame.id,
-            extent: "parent",
-            position: hasStoredPosition(stored) ? stored : slotPosition(index),
-            data: {
-              project,
-              titlePrefix,
-              canMove,
-              artwork: artworkFor(artwork.data, project.id),
-              onOpen: openProject,
-            },
-            draggable: canMove,
-            dragHandle: ".board-card-grip",
-            ...sized(width, CARD_H),
-            selected: project.id === selectedProjectId,
-            ariaLabel: project.title,
-            // The node is the selectable thing, so it is the node that reports being current.
-            domAttributes: project.id === selectedProjectId ? { "aria-current": true } : undefined,
-          });
-        });
-        if (frame.briefingSlot)
-          built.push({
-            id: `${frame.id}:new`,
-            type: "briefingSlot",
-            parentId: frame.id,
-            extent: "parent",
-            position: slotPosition(frame.projects?.length ?? 0),
-            draggable: false,
-            selectable: false,
-            className: "nopan",
-            ...sized(width, CARD_H),
-            data: {
-              href: real
-                ? `/clients/${clientId}/briefings/new?campaign=${group.id}`
-                : `/clients/${clientId}/briefings/new`,
-              campaign: group.title,
-            },
-          });
-      }
-    }
-    return { nodes: built, content: contentBounds(built) };
-  }, [
+  const { nodes, content } = useBoardCanvasNodes({
     filteredProjects,
-    campaigns.data,
+    campaigns: campaigns.data,
     column,
-    viewport.width,
+    viewportWidth: viewport.width,
     planningOpen,
     planningMode,
     period,
+    setPeriod,
     scale,
+    setChosenScale,
+    setPlanningOpen,
+    setPlanningMode,
     campaignOrder,
     canCreate,
     canMove,
@@ -441,10 +217,12 @@ export function BoardPage({ clientId }: { clientId: string }) {
     campaignName,
     clearFilters,
     clientId,
+    setCreatingCampaign,
     openProject,
     selectedProjectId,
-    artwork.data,
-  ]);
+    setSelectedProjectId,
+    artwork: artwork.data,
+  });
 
   function changeNodes(changes: NodeChange<Node>[]) {
     // Selection is controlled, so xyflow reports the click and the board records it; a selection

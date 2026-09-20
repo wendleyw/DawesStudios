@@ -766,12 +766,6 @@ select {
   background: var(--surface);
   color: var(--foreground);
 }
-.filter-indicator {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--ink);
-}
 .board-canvas .react-flow__attribution,
 .project-canvas .react-flow__attribution,
 .design-viewport .react-flow__attribution {
