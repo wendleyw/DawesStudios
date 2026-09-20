@@ -167,6 +167,73 @@ Follow feature colocation: briefings own their wizard and service-driven fields;
 
 The same project entity drives Home, Board, Reviews, Credits links, and notifications. Use shared display rules for project names, statuses, dates, quantities, and credit amounts. Role-specific visibility does not justify duplicated mutable state or parallel business logic. Derived counts must have one authoritative definition.
 
+## Styling boundary
+
+Three systems share the frontend, and each has exactly one job. This is the answer to "which
+system do I use here", established by the [repository structural refactor](../superpowers/specs/2026-09-20-repository-structural-refactor-design.md) and enforced by every feature agent that follows it.
+
+- **Tailwind v4** supplies the design-token bridge and utility classes. `apps/web/app/globals.css`
+  opens with `@import "tailwindcss"`, followed by a `:root` block of 14 custom properties (colors,
+  radii, and the sidebar/topbar geometry) and an `@theme inline` block that maps four of them —
+  `--color-background`, `--color-foreground`, `--font-sans`, `--font-mono` — into Tailwind's theme,
+  so a utility class such as `bg-background` resolves to the same token the hand-authored CSS
+  reads. Reach for a Tailwind utility for one-off layout or spacing on new markup; reach for the
+  `:root` token, not a hardcoded value, whenever a color, radius or the shared shell geometry is
+  needed. Beyond that bridge, the application is hand-authored CSS, not a Tailwind component
+  system — there is no utility-first componentry to adopt here.
+- **`apps/web/app/globals.css`** (1,105 lines after the Task 5 split, down from 2,221) holds the
+  `:root` tokens and `@theme` block above, the reset and base element styles (`*`, `html`, `body`,
+  headings, links, focus states), and the styles of the shared primitives in
+  `apps/web/features/shared/` — `Modal`, `FormError`, `PageStatus`, `SearchField` — plus the older
+  base classes every feature composes with (`button`, `icon-button`, `panel`, `toolbar`,
+  `empty-state`, `page-heading`/`section-heading`, the `form-*` classes). Nothing feature-specific
+  belongs here.
+- **`apps/web/features/<feature>/<feature>.css`** holds every rule specific to that one feature —
+  `board/board.css`, `board/timeline.css`, `workspace/workspace.css`, `workspace/activity.css`,
+  `auth/auth.css`, and the rest, one stylesheet per feature, plus `shared/forms.css` for the shared
+  form-layout classes (`stack-form`, `form-row`, `checkbox-label`, `form-actions`), loaded once
+  globally by `app/layout.tsx`.
+
+**The multi-feature override.** A namespace that reads as feature-specific by name stays in
+`globals.css` regardless of its name when it has consumers in two or more features. Moving it would
+either duplicate the rule into two stylesheets (a drift risk — the two copies stop matching) or
+force one feature to import another feature's stylesheet, which breaks the boundary a different
+way. Twelve namespaces stay global for exactly this reason after the Task 5 split. For example:
+`.project-row`, `.project-table`, `.project-title`, `.project-origin` and `.project-symbol` read as
+`projects`-owned by name, but they are the table-list markup shared by `workspace/home-page.tsx` and
+`board/board-page.tsx`/`board-kanban.tsx` — neither `features/projects/` nor `projects.css` uses
+them at all. `.brand-logo` reads as `brand`-owned but is shared by `auth` and `workspace`.
+`.status-badge` has consumers in six features (`board`, `briefings`, `credits`, `projects`,
+`settings`, `workspace`); `.topbar` has consumers in three (`board`, `brand`, `workspace`);
+`.segmented-control` has consumers in five (`assets`, `board`, `brand`, `projects`, `reviews`). Each
+stays in `globals.css` under this rule.
+
+Three named exceptions from the same split, kept in `globals.css` for reasons other than the
+multi-feature count above:
+
+- `.client-mark` has consumers in `board` and `workspace`, but it stays here for a cascade reason,
+  not the count rule: `board.css` overrides its `--client-mark-size` custom property at equal
+  specificity on the same element (58px on the board canvas versus 26px everywhere else), so
+  `.client-mark` has to stay in `globals.css`, loaded before `board.css`, for that override to keep
+  winning where it currently does.
+- `.sidebar-collapse`'s only consumer, `workspace/app-shell.tsx`, renders it with
+  `className="icon-button sidebar-collapse"` — the toggle carries both classes on one element. The
+  shared `.icon-button` rule at the 640px breakpoint has to keep winning over `.sidebar-collapse`'s
+  own sizing there, which depends on their current relative order inside `globals.css`; splitting
+  them across two stylesheets would let a different load order change which one wins.
+- `.workspace-status` is dead: it has zero consumers left in any `.tsx` file. It was left in place
+  rather than deleted, because Task 5's mandate was relocation, not cleanup; removing it is a
+  decision for whichever Phase B agent owns `workspace`, not for this document.
+
+**Where the original spec's prediction was wrong.** The spec's Foundation 3 predicted `brand.css`
+and `projects.css` would each receive rules split out of `globals.css`. Neither did. `.brand-link`
+and `.brand-monogram` read as brand-owned by name, but their only consumer is the sidebar brand mark
+in `workspace/app-shell.tsx`, so Task 5 moved them into `workspace/workspace.css` instead. Every
+`project-*` namespace has consumers in `board` in addition to wherever else it appears, which is
+exactly the condition the multi-feature override keeps in `globals.css` rather than moving into
+`projects.css`. `projects.css` and `brand.css` therefore received nothing from the split — not
+because their features have no CSS, but because none of the rules that moved were theirs alone.
+
 ## Final audit gate — not yet executed
 
 Complete the functional production-simulation gate first with exactly 10 clients and 25 seeded projects, then execute the comprehensive alignment audit. Preserve fixture identifiers and record any additional entities created during action testing separately. Neither the screenshots' 23 active projects nor a test that only checks the home count proves the required workflow coverage across all 25. The audit covers every action exposed by the product and all agreed end-to-end workflows; it does not require reproducing every prototype screen.

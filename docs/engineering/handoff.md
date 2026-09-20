@@ -105,7 +105,7 @@ Implemented: the client workspace topbar now carries the client's brand mark and
 
 Changed: `apps/web/features/workspace/{app-shell,topbar-tools,client-identity}.tsx`, `apps/web/features/board/board-page.tsx`, `apps/web/features/brand/brand-data.ts`, `apps/web/features/{briefings/briefings-page,credits/credits-page}.tsx`, `apps/web/app/globals.css`, and [the design system](../architecture/design-system.md).
 
-Verified in this session: `npx tsc --noEmit`, `npm run lint` and `npm test` (109 unit tests) pass. The Playwright suite ran against a development server on port 3010: 23 passed, and `production-workflow.spec.ts` failed at the share-version dialog with `Failed to fetch`. That failure is environmental — the media service allows only `APP_ORIGIN=http://localhost:3003`, and a request carrying the port 3010 origin returns 403 while the same request from port 3003 returns 200. The spec passes against the container on port 3003. Re-run it from an allowed origin before treating any production-workflow row as evidence. Layout was measured at 1440, 1200, 1100, 1000, 900, 700 and 390 px with no horizontal or vertical overflow, and the `design-audit` accessibility spec passes.
+Verified in this session: `npx tsc --noEmit`, `npm run lint` and `npm test` (109 unit tests — historical count for this 2026-09-20 session; stale as a current figure, see the "Repository structural refactor" entry below for the count as of Phase A) pass. The Playwright suite ran against a development server on port 3010: 23 passed, and `production-workflow.spec.ts` failed at the share-version dialog with `Failed to fetch`. That failure is environmental — the media service allows only `APP_ORIGIN=http://localhost:3003`, and a request carrying the port 3010 origin returns 403 while the same request from port 3003 returns 200. The spec passes against the container on port 3003. Re-run it from an allowed origin before treating any production-workflow row as evidence. Layout was measured at 1440, 1200, 1100, 1000, 900, 700 and 390 px with no horizontal or vertical overflow, and the `design-audit` accessibility spec passes.
 
 Not done: the acceptance matrix rows remain as they were; no fixture, container or deployment state was changed.
 
@@ -1035,3 +1035,81 @@ neither was changed under this task.
 One thing that is **not** a defect: the dark circle over the sign-out row in development screenshots
 is Next.js's own dev-tools badge, not workspace UI.
 
+
+## Repository structural refactor: Phase A closed, boundaries documented (2026-09-20)
+
+Owner: Claude Code, as orchestrator. Objective: restructure `apps/web` — data-access placement, the
+shared component layer, the styling architecture, file size and dead code — without changing
+behavior, per [the design](../superpowers/specs/2026-09-20-repository-structural-refactor-design.md)
+and [the implementation plan](../architecture/implementation-plan.md). The existing suites are the
+safety net; a test that has to change to keep passing is evidence behavior changed, and grounds to
+revert whatever caused it.
+
+**Baseline commit:** `31a2f7a` ("chore: commit the in-flight workspace and board work as a refactor
+baseline") — the reference point every later diff in this refactor is measured against.
+
+**Phase A commits, in order, and what each established:**
+
+| Commit | What it established |
+| --- | --- |
+| `aa5d586`, `c6d9260` | The refactor design and implementation plan, committed before any code moved. |
+| `8e2085d` | Repository hygiene: `.playwright-mcp/` untracked, `.superpowers/` ignored. |
+| `41c0ccb` | Corrected the plan's stale "109 unit tests" figure to the tree's actual 274/15 at that point. |
+| `0b8db54` (Task 3) | The data-access contract, worked end to end on `credits`: Supabase queries live only in `features/<feature>/<feature>-data.ts`; reads are `use<Thing>()` hooks, writes are plain `async (database, input)` functions; validation/trimming/idempotency/retry state stay in the component. Documented in [`docs/architecture/data-access.md`](../architecture/data-access.md). Added `credit-data.test.ts` (274 → 279 tests, 15 → 16 files). |
+| `c09124c` | Corrected the plan's central-test-verification check: it demanded an empty test diff, which correct work (adding tests for extracted functions) can never satisfy; filtered on modified-or-deleted instead. |
+| `4641bea` (Task 4) | The shared-layer evidence test: a primitive moves to `apps/web/features/shared/` only with two or more real consumers today. Extracted `FormError`, `PageStatus`, `SearchField` (64 call sites); evaluated and rejected seven candidates (`empty-state`, `centered-state`, `form-actions`, bare `role="status"` text, `settings-success`, `button`, `field`) because their consumers differ too much to share one component body without normalizing away real differences. Documented in [`apps/web/features/shared/README.md`](../../apps/web/features/shared/README.md). |
+| `af9acf1` (Task 5) | The styling boundary: 58 namespaces moved out of `globals.css` (21 to `board.css`, 32 to a new `workspace.css`, 5 to a new `auth.css`); `globals.css` went from 2,221 to 1,105 lines. Twelve namespaces legitimately stay global because their consumers span two or more features (e.g. `.project-row`, `.status-badge`, `.topbar`), plus `.client-mark` and `.sidebar-collapse` for cascade-order reasons and the dead `.workspace-status` rule. `brand.css` and `projects.css` received nothing — not a gap, see below. |
+| `b31a8f6` | Refreshed the design-audit evidence after the split and corrected the plan's boundary expectation (0 remaining feature-named rules in `globals.css` was never the right target; 20 remain, 12 of them legitimately). |
+| This entry's commit (Task 6) | Wrote down the three boundaries above for the seven Phase B feature agents: [`docs/architecture/design-system.md`](../architecture/design-system.md#styling-boundary) states the styling boundary (Tailwind's role, the `globals.css`/`<feature>.css` split, the multi-feature override, with verified examples); `AGENTS.md`/`CLAUDE.md` gained a short "Codebase Architecture Boundaries" subsection linking to all three contracts; corrected two rows in [the design spec](../superpowers/specs/2026-09-20-repository-structural-refactor-design.md) — the "16 dialog files" row was a measurement error (`grep` matched the word `Modal`, i.e. consumers, not duplicate dialog markup: there is exactly one dialog implementation and 15 consumers, 0 duplication), and the implicit assumption that `brand.css`/`projects.css` would receive split rules (neither did, for the reasons above). |
+
+**Verified test count.** `npm test -- --run` from `apps/web`: **279 tests passed across 16 files**
+(274/15 immediately after Task 3, +5 tests in `credit-data.test.ts`). Any earlier figure recorded
+elsewhere in this file (for example "109 unit tests" in the 2026-09-20 workspace-topbar entry above)
+is historical evidence of that session's own state, not a claim about the tree today — treat this
+paragraph as the current count.
+
+**Standing rule: rebuild before browser verification, every time.** `dawes-studios-app-web-1` has
+**zero bind mounts** and runs a baked `node apps/web/server.js`; it does not see source changes. This
+refactor's own tree diverged from that image mid-session — the image was built at 19:59 UTC on
+2026-09-20 while the branch head was already at 22:10 UTC — so a Playwright run against the running
+container that afternoon would have been **a false green**: it passes on source the refactor had
+already replaced. This file already recorded one earlier instance of the identical mistake, before
+this refactor. The rule going forward, unconditionally:
+
+1. Before any browser verification, rebuild the web image and confirm its build timestamp is newer
+   than `git log -1 --format=%cI` for the commit under test — do not trust "the container is
+   already running."
+2. During this refactor, the container was not rebuilt after each Phase A commit. The working
+   alternative used instead: `npm run dev` (from `apps/web`) serves the live tree on port 3003, which
+   is the one origin the media service allows (`APP_ORIGIN=http://localhost:3003`; port 3010 and
+   other origins get a 403 from the media service, an environmental constraint, not a defect). Prefer
+   this over the container whenever the container has not just been rebuilt.
+
+**What remains.**
+
+- **Phase B** — seven delegated feature agents, each confined to one owned path, applying the same
+  mandate (relocate queries into `<feature>-data.ts`, adopt the shared primitives, move
+  feature-specific CSS into `<feature>.css`, split files over ~350 lines along responsibility
+  boundaries, remove dead code), each running `npm run check` itself before reporting and filing its
+  report under `docs/engineering/handoffs/2026-09-20-refactor-<feature>.md`:
+
+  | Wave | Agent scope | Owned paths |
+  | --- | --- | --- |
+  | 1 | board | `apps/web/features/board/` |
+  | 1 | projects | `apps/web/features/projects/` |
+  | 1 | brand | `apps/web/features/brand/` |
+  | 2 | briefings | `apps/web/features/briefings/` |
+  | 2 | settings | `apps/web/features/settings/` |
+  | 2 | workspace | `apps/web/features/workspace/` |
+  | 3 | small features | `apps/web/features/{assets,auth,campaigns,reviews}/` |
+
+  `apps/media`, `supabase/`, `apps/web/app/`, `apps/web/lib/`, `apps/web/features/shared/`, and root
+  tooling stay with the orchestrator.
+- **Phase C** — closing verification once all waves land: `npm run check`, `npm run build`,
+  `npm --prefix apps/media test`, `npm run db:test`, and `npm run test:e2e` **run from an allowed
+  origin per the standing rule above**, plus the orchestrator's final security/functional/visual
+  audit.
+- **Explicitly not addressed by this refactor:** the 75 Unverified rows in the acceptance matrix
+  (`docs/architecture/acceptance-matrix.md`). This refactor is a structural change under a
+  behavior-preservation constraint; it does not advance acceptance-matrix coverage, and nothing in
+  Phase A or this entry should be read as evidence toward those rows.

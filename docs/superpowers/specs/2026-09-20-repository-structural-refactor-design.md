@@ -45,7 +45,7 @@ Measured on 2026-09-20 against the working tree.
 | Global stylesheet | `app/globals.css`, 2,221 lines, 4 section comments, 14 `:root` tokens |
 | Feature stylesheets | 9 files, roughly 3,300 lines |
 | Styling systems in use | Tailwind v4 (`@import "tailwindcss"`, `@theme inline`), bespoke global CSS, per-feature CSS |
-| Dialog markup | 16 files contain dialog markup; 14 sit outside `features/shared/` |
+| Dialog markup | `grep -rln '<dialog\|role="dialog"'` returns exactly one file, `features/shared/modal.tsx`; 15 files already consume it, 0 duplicate |
 | Shared layer | `features/shared/` 342 lines in 6 files; `lib/` a single file |
 | Largest components | `briefing-editor.tsx` 664, `board-page.tsx` 659, `project-page.tsx` 504, `credits-page.tsx` 433, `app-shell.tsx` 415 |
 
@@ -137,11 +137,20 @@ the rule against sharing server sessions. It is not restructured.
 real consumers today. No speculative design system, no component library built
 for consumers that do not exist.
 
-**Scope of change.** Dialog markup appears in 16 files while `shared/modal.tsx`
-already exists; 14 of those files are outside `shared/`. The orchestrator
-audits the duplication and extracts only what genuinely repeats — candidates
-are dialog, form field, button, empty state, and loading state. Each extraction
-is justified by naming its consumers.
+**Scope of change.** *Corrected 2026-09-20 (Task 6): the row below was a
+measurement error.* The original current-state table read "Dialog markup
+appears in 16 files; 14 sit outside `features/shared/`" and presented it as
+duplication. That measurement matched the word `Modal`, which catches
+*consumers* of the shared component, not separate dialog implementations.
+`grep -rln '<dialog\|role="dialog"'` returns exactly one file,
+`features/shared/modal.tsx`; the other 15 files import and consume that shared
+`Modal` — there is no dialog duplication to extract. See
+[`features/shared/README.md`](../../../apps/web/features/shared/README.md) for
+the actual audit: three primitives extracted (`FormError`, `PageStatus`,
+`SearchField`) and seven candidates evaluated and rejected because their
+consumers differ too much to share one component body without normalizing
+away real differences. Each extraction and rejection is justified there by
+naming its consumers.
 
 `features/shared/` grows from 342 lines to whatever the real duplication
 justifies. `lib/` remains narrow: it holds cross-cutting infrastructure
@@ -169,6 +178,23 @@ comments, and 9 per-feature stylesheets.
 feature-specific rules move to the owning feature's stylesheet. Selectors and
 declarations move verbatim; cascade order is preserved so computed styles do
 not change.
+
+*Corrected 2026-09-20 (Task 6): the implicit assumption that every feature
+stylesheet would receive rules from the split did not hold for two of them.*
+Task 5 moved 58 namespaces out of `globals.css` — 21 into `board.css`, 32 into
+a new `workspace.css`, and 5 into a new `auth.css` — but `brand.css` and
+`projects.css` received nothing. That is not a gap: `.brand-link` and
+`.brand-monogram` read as brand-owned by name, but their only consumer is the
+sidebar brand mark in `workspace/app-shell.tsx`, so they moved to
+`workspace.css` instead; and every `project-*` namespace (`.project-row`,
+`.project-table`, `.project-title`, and others) has consumers in `board` as
+well as elsewhere, which is exactly the condition that keeps a namespace in
+`globals.css` under the multi-feature override documented in
+[`design-system.md`](../../architecture/design-system.md#styling-boundary)
+rather than moving it into `projects.css`. Twelve namespaces remain in
+`globals.css` for that reason, plus one grouped selector (`.sidebar-collapse`,
+which shares a selector with `icon-button`) and one dead rule
+(`.workspace-status`, zero remaining `.tsx` consumers).
 
 **Verification.** Because CSS changes are invisible to unit tests, the styling
 work is verified by the Playwright design-audit and accessibility specs and by

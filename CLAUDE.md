@@ -26,6 +26,12 @@
 - Keep feature code, data access, validation, and unit tests colocated. Share code only when multiple consumers need it. Avoid duplicate domain rules, catch-all modules, competing state stores, and unnecessary services.
 - Do not run permanent background AI agents as product infrastructure merely to implement this development workflow. Persistent agent orchestration is documented in docs/engineering/agent-orchestration.md.
 
+## Codebase Architecture Boundaries
+
+- Data access: Supabase queries live only in `features/<feature>/<feature>-data.ts` — reads as `use<Thing>()` hooks, writes as plain `async (database, input)` functions; validation, trimming, idempotency keys and retry state stay in the component. See `docs/architecture/data-access.md`.
+- Shared UI layer: a primitive moves to `apps/web/features/shared/` only with two or more real consumers today; consumer differences become props, never a normalized-away behavior. See `apps/web/features/shared/README.md`.
+- Styling boundary: `apps/web/app/globals.css` holds tokens/`@theme`, reset and base element styles, and shared-primitive styles only; `apps/web/features/<feature>/<feature>.css` holds that feature's own rules; a namespace with consumers in two or more features stays in `globals.css` regardless of its name. See `docs/architecture/design-system.md#styling-boundary`.
+
 ## Cross-Agent Continuity
 
 - Read `docs/engineering/handoff.md` before resuming work in either Codex or Claude Code. Preserve the current objective, accepted decisions, unfinished changes, and verification gaps.
