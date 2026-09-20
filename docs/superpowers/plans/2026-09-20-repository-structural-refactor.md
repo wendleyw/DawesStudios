@@ -911,7 +911,7 @@ Substitute `BASELINE` with the commit SHA recorded in Task 1, Step 6:
 
 ```bash
 BASELINE=<the SHA recorded in Task 1 Step 6>
-grep -rc '\.from(\|\.rpc(\|\.storage\.' apps/web/features --include='*.tsx' | grep -v ':0$' | wc -l
+grep -rn '\.from(\|\.rpc(\|\.storage\.' apps/web/features --include='*.tsx' | grep -v 'Array\.from(' | wc -l
 grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)' apps/web/app/globals.css
 git diff --diff-filter=MD --stat "$BASELINE" HEAD -- apps/web/features apps/web/tests \
   | grep -E '\.test\.|\.spec\.' || echo "no existing test modified or deleted"
@@ -920,6 +920,13 @@ diff AGENTS.md CLAUDE.md && echo "identical"
 ```
 
 Expected: `0` components with queries; **20** remaining feature-named rules in `globals.css` — the documented multi-feature, grouped-selector and dead-code exceptions from Task 5, not missed moves; `no existing test modified or deleted` from the first test command; a list of ADDED test files from the second; instruction files identical.
+
+**The query grep must exclude `Array.from(`.** The bare pattern `\.from(` matches
+`Array.from(`, which is ordinary JavaScript and appears in `features/shared/modal.tsx`'s
+focus trap among others — four occurrences repo-wide. Without the `grep -v 'Array\.from('`
+filter, the "zero queries in components" check can never reach zero on correct code, and an
+executor under pressure would "fix" it by rewriting legitimate JavaScript. Expect **0** from
+the filtered command.
 
 **The test check is the single most important verification in this plan**, and it filters on `MD` — modified or deleted — deliberately. It must NOT be an "empty test diff" check: the agent mandate requires every agent to **add** unit tests for the write functions it extracts, so added test files are expected and required. What must never happen is an existing test being edited or removed to accommodate the refactor. A modified test is the signature of changed behavior; an added test is the signature of newly testable behavior.
 
