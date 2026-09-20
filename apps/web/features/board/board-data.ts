@@ -129,7 +129,13 @@ export function useProjectArtwork(projectIds: string[]) {
   return useQuery(useBoardArtworkQuery(projectIds));
 }
 
-/** Moves a project card to a stored canvas position. */
+/**
+ * Moves a project card to a stored canvas position.
+ *
+ * No `boardQueryKeys`/`useInvalidateBoard()` here: this write invalidates `projects`, a key
+ * `workspace` owns, not one of board's own. Call `workspace`'s invalidation helper instead once
+ * one exists, rather than adding a board-owned key set to describe someone else's cache entry.
+ */
 export async function moveProjectPosition(
   database: SupabaseDatabase,
   input: { id: string; position: { x: number; y: number } },

@@ -20,7 +20,8 @@
 
 ## Decisions and interface changes
 
-- No `boardQueryKeys` / `useInvalidateBoard()` helper was introduced. Board's one write (`moveProjectPosition`) invalidates `["projects"]`, a key owned by `features/workspace`, not by board's own reads. Wrapping that single, cross-feature invalidation in a board-named helper would misdescribe it, so the direct `queryClient.invalidateQueries({ queryKey: ["projects"] })` call stays in `board-page.tsx`'s `onSuccess`, unchanged from before. This is a documented deviation from data-access.md rule 5's general guidance, not a behavior change — flagging for the next reviewer to confirm agreement.
+- No `boardQueryKeys` / `useInvalidateBoard()` helper was introduced. Board's one write (`moveProjectPosition`) invalidates `["projects"]`, a key owned by `features/workspace`, not by board's own reads. Wrapping that single, cross-feature invalidation in a board-named helper would misdescribe it, so the direct `queryClient.invalidateQueries({ queryKey: ["projects"] })` call stays in `board-page.tsx`'s `onSuccess`, unchanged from before. This is a documented deviation from data-access.md rule 5's general guidance, not a behavior change.
+  - **Fix round 1 (coordinator-requested):** this reasoning originally lived only in the task report, invisible to the six agents that will read `apps/web/features/board/` as the worked example for the remaining feature migrations. Added a comment directly above `moveProjectPosition` in `board-data.ts` recording, in the codebase's existing comment tone, that the helper is intentionally absent — board's write invalidates a key `workspace` owns, not one of its own — and that the call site should switch to `workspace`'s invalidation helper once one exists. No behavior changed; comment only.
 - Named the campaigns read hook `useBoardCampaigns` rather than `useCampaigns`, because `features/briefings/briefing-data.ts` already exports a differently-shaped `useCampaigns(clientId)` (same query key shape, different column selection — pre-existing, not touched). Avoids name confusion for future readers; no behavior change since board-page.tsx doesn't import the briefings hook.
 - No cross-domain interface changes: nothing outside `apps/web/features/board/` imports any of board's exports except the one `globals.css` line removed (a pure CSS deletion, no selector reused elsewhere — verified `.filter-indicator` had zero other consumers).
 
@@ -40,8 +41,8 @@
 
 - No browser/e2e confirmation that the board canvas still renders, drags, and fits identically after the split — only static analysis (typecheck/lint) and the unit test suite were run. Risk judged low: the extraction was mechanical (same `buildStack` call, same per-node `data` shape, same `useMemo` dependency list), and the feature's existing tests (`board-layout`, `timeline-model`, `planning-view`, `project-open`, `project-thumbnail`) all still pass unmodified.
 - `board-page.tsx` is 431 lines, above the ~350-line prompt in the task brief. A further split (e.g. the filter-menu dropdown into its own component) was considered and deliberately not done — judged not to improve cohesion enough to justify the extra indirection. Open for reviewer judgment.
-- The no-`boardQueryKeys` decision above should be explicitly accepted or overridden by the next reviewer before this pattern is treated as precedent for the remaining six feature migrations.
-- Next required action: orchestrator review of this task's diff and report, then a Conventional Commits commit (`Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`) — not yet created as of this report.
+- The no-`boardQueryKeys` decision is now recorded in-code (`board-data.ts`, above `moveProjectPosition`), not only in reports, so it should read as a documented, intentional precedent rather than an oversight for the remaining six feature migrations.
+- Next required action: orchestrator review of this task's diff and both reports.
 
 ## Ownership at handoff
 
