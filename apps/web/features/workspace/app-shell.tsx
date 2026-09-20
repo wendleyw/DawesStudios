@@ -23,6 +23,7 @@ import { Modal } from "@/features/shared/modal";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { NotificationsBell } from "./notifications-bell";
 import { useClients, useProjectClient } from "./workspace-data";
+import "./workspace.css";
 import "./activity.css";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
