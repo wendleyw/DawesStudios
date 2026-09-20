@@ -19,6 +19,7 @@
 - **Commit trailer:** every commit ends with `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - **Verification command:** `npm run check` = `typecheck && lint && format:check && test` (274 unit tests across 15 files). It runs after every task, not only at the end.
 - **Playwright runs on port 3003 only.** The media service allows `APP_ORIGIN=http://localhost:3003`; port 3010 returns 403 at the share-version dialog. Results from any other origin are not evidence.
+- **Rebuild the web container before every Playwright run.** `dawes-studios-app-web-1` has **zero bind mounts** and runs a baked `node apps/web/server.js`, so it serves whatever source was current when its image was built — not the working tree. Verified on 2026-09-20: the image was built at 19:59 UTC while the branch head was 22:10 UTC, more than two hours newer. Running the suite against a stale image produces a **false green**: it passes on code the refactor already replaced. This exact failure is recorded in `docs/engineering/handoff.md`, where earlier browser evidence had been measured against an image older than the source. Before any task's browser verification, rebuild and restart the web service, then confirm the image is newer than `git log -1 --format=%cI`. A browser result from an unrebuilt container is not evidence and must not be recorded as one.
 - **Never discard uncommitted or untracked work** to reach a cleaner state.
 - **Out of scope:** server-side data fetching / Server Actions, visual redesign, schema changes, API contract changes, dependency upgrades, acceptance-matrix rows.
 - **Documentation is part of every change.** `AGENTS.md` and `CLAUDE.md` stay byte-identical; affected docs update in the same task.
@@ -557,7 +558,7 @@ Expected: all pass. Then measure the documented widths — 1440, 1200, 1100, 100
 wc -l apps/web/app/globals.css
 grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)' apps/web/app/globals.css
 ```
-Expected: a substantially smaller file; the grep reports `0`.
+Expected: a substantially smaller file. The grep reports **20**, not `0`, and that is the correct result: 12 namespaces legitimately stay in `globals.css` because they have consumers in two or more features (`.topbar`, `.project-table`, `.project-row`, `.client-mark`, `.client-mark-initials`, `.board-canvas`, `.project-canvas`, `.project-origin`, `.project-symbol`, `.project-title`), because they sit in grouped selectors that cannot be split without changing specificity (`.sidebar-collapse`, which also carries `icon-button`), or because they are dead (`.workspace-status`, zero consumers). Each is justified individually in the Task 5 report. A `0` here would mean rules were moved that should not have been.
 
 - [ ] **Step 6: Commit**
 
@@ -918,7 +919,7 @@ git diff --diff-filter=A --stat "$BASELINE" HEAD -- apps/web/features | grep -E 
 diff AGENTS.md CLAUDE.md && echo "identical"
 ```
 
-Expected: `0` components with queries; `0` feature namespaces in `globals.css`; `no existing test modified or deleted` from the first test command; a list of ADDED test files from the second; instruction files identical.
+Expected: `0` components with queries; **20** remaining feature-named rules in `globals.css` — the documented multi-feature, grouped-selector and dead-code exceptions from Task 5, not missed moves; `no existing test modified or deleted` from the first test command; a list of ADDED test files from the second; instruction files identical.
 
 **The test check is the single most important verification in this plan**, and it filters on `MD` — modified or deleted — deliberately. It must NOT be an "empty test diff" check: the agent mandate requires every agent to **add** unit tests for the write functions it extracts, so added test files are expected and required. What must never happen is an existing test being edited or removed to accommodate the refactor. A modified test is the signature of changed behavior; an added test is the signature of newly testable behavior.
 
