@@ -198,41 +198,72 @@ system do I use here", established by the [repository structural refactor](../su
 `globals.css` regardless of its name when it has consumers in two or more features. Moving it would
 either duplicate the rule into two stylesheets (a drift risk — the two copies stop matching) or
 force one feature to import another feature's stylesheet, which breaks the boundary a different
-way. Twelve namespaces stay global for exactly this reason after the Task 5 split. For example:
-`.project-row`, `.project-table`, `.project-title`, `.project-origin` and `.project-symbol` read as
-`projects`-owned by name, but they are the table-list markup shared by `workspace/home-page.tsx` and
-`board/board-page.tsx`/`board-kanban.tsx` — neither `features/projects/` nor `projects.css` uses
-them at all. `.brand-logo` reads as `brand`-owned but is shared by `auth` and `workspace`.
-`.status-badge` has consumers in six features (`board`, `briefings`, `credits`, `projects`,
-`settings`, `workspace`); `.topbar` has consumers in three (`board`, `brand`, `workspace`);
-`.segmented-control` has consumers in five (`assets`, `board`, `brand`, `projects`, `reviews`). Each
-stays in `globals.css` under this rule.
+way. `.status-badge` has consumers in six features (`board`, `briefings`, `credits`, `projects`,
+`settings`, `workspace`); `.segmented-control` has consumers in five (`assets`, `board`, `brand`,
+`projects`, `reviews`); `.brand-logo` reads as `brand`-owned but is shared by `auth` and
+`workspace`. Each stays in `globals.css` under this rule. (These three are additional instances of
+the rule, verified the same way as the twelve below, but outside the specific count Task 5 tracked —
+see the note on that count at the end of this section.)
 
-Three named exceptions from the same split, kept in `globals.css` for reasons other than the
-multi-feature count above:
+**The twelve namespaces Task 5 tracked, verified individually, in four categories.** The refactor
+plan measured a specific, narrower set — everything matching
+`grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)'`
+against `globals.css` — and found 20 matches, 12 of which are legitimate exceptions to "feature-named
+rules move out." Re-checking each of the 12 individually (`grep -rln 'className.*\bNAME\b'
+apps/web/features --include="*.tsx" | sed 's#^features/##;s#/.*##' | sort -u`, plus reading the
+actual CSS) found that an earlier draft of this document mischaracterized five of them as directly
+multi-feature by consumer count when they are not — the real reasons are grouped selectors or, in
+two cases, not established at all. The corrected breakdown:
 
-- `.client-mark` has consumers in `board` and `workspace`, but it stays here for a cascade reason,
-  not the count rule: `board.css` overrides its `--client-mark-size` custom property at equal
-  specificity on the same element (58px on the board canvas versus 26px everywhere else), so
-  `.client-mark` has to stay in `globals.css`, loaded before `board.css`, for that override to keep
-  winning where it currently does.
-- `.sidebar-collapse`'s only consumer, `workspace/app-shell.tsx`, renders it with
-  `className="icon-button sidebar-collapse"` — the toggle carries both classes on one element. The
-  shared `.icon-button` rule at the 640px breakpoint has to keep winning over `.sidebar-collapse`'s
-  own sizing there, which depends on their current relative order inside `globals.css`; splitting
-  them across two stylesheets would let a different load order change which one wins.
-- `.workspace-status` is dead: it has zero consumers left in any `.tsx` file. It was left in place
-  rather than deleted, because Task 5's mandate was relocation, not cleanup; removing it is a
-  decision for whichever Phase B agent owns `workspace`, not for this document.
+- **Multi-feature consumers (5): `.topbar`, `.project-row`, `.project-table`, `.client-mark`,
+  `.client-mark-initials`.** `.topbar` has consumers in `brand` and `workspace`. `.project-row` and
+  `.project-table` are independently hand-authored with the same class names in both
+  `board/board-page.tsx` and `workspace/home-page.tsx` — genuinely duplicated markup across two
+  features, not a shared component. `.client-mark`/`.client-mark-initials` reach two features by a
+  different mechanism: the `ClientMark` component is defined in `features/workspace/client-mark.tsx`,
+  but its only current renderer is `features/board/board-page.tsx` (`import { ClientMark } from
+  "@/features/workspace/client-mark"`), and `board-page.tsx` imports only `./board.css`, not
+  `workspace.css` — so the class has to be visible outside feature boundaries for board's render to
+  pick it up. Separately, `board.css`'s `.board-identity-mark` overrides the `--client-mark-size`
+  custom property at equal specificity on the same element (58px there against `.client-mark`'s own
+  26px default), so `.client-mark` also has to stay loaded before `board.css` for that override to
+  keep resolving the same way.
+- **Grouped selectors binding a single-feature namespace to a multi-feature or shared rule (4):
+  `.project-title`, `.board-canvas`, `.project-canvas`, `.sidebar-collapse`.** `.project-title`'s
+  only consumer is `workspace/home-page.tsx`, but `globals.css` groups it with `.project-row` in one
+  rule (`.project-title strong, .project-row > strong { … }`), and `.project-row` is multi-feature —
+  splitting the group would duplicate the rule or change its specificity. `.board-canvas` (`board`
+  only) and `.project-canvas` (`projects` only) are each single-feature, but `globals.css` groups
+  both (with `.design-viewport`, also `projects`-owned) into one `.react-flow__attribution` rule
+  spanning `board` and `projects`. `.sidebar-collapse`'s only consumer,
+  `workspace/app-shell.tsx`, renders it with `className="icon-button sidebar-collapse"` — the toggle
+  carries both classes on one element, and the shared `.icon-button` rule at the 640px breakpoint has
+  to keep winning over `.sidebar-collapse`'s own sizing there, which depends on their relative order
+  inside `globals.css`.
+- **Dead (1): `.workspace-status`.** Zero consumers left in any `.tsx` file. Left in place rather
+  than deleted, because Task 5's mandate was relocation, not cleanup; removing it is a decision for
+  whichever Phase B agent owns `workspace`, not for this document.
+- **Unexplained — flagged for follow-up, not justified (2): `.project-origin`, `.project-symbol`.**
+  Both have exactly one consumer, `workspace/home-page.tsx` (`.project-origin small` at
+  `globals.css:556`, `.project-symbol` at `globals.css:615` plus a `:911` media override), and
+  neither is part of any grouped selector with a multi-feature rule. No cascade or specificity
+  dependency was found either. These two do not currently satisfy the multi-feature override, the
+  grouped-selector exception, or any other stated reason to stay in `globals.css` — they are
+  candidates for relocation into `workspace.css` in Phase B, and are recorded here as unresolved
+  rather than given a fabricated justification.
 
 **Where the original spec's prediction was wrong.** The spec's Foundation 3 predicted `brand.css`
-and `projects.css` would each receive rules split out of `globals.css`. Neither did. `.brand-link`
-and `.brand-monogram` read as brand-owned by name, but their only consumer is the sidebar brand mark
-in `workspace/app-shell.tsx`, so Task 5 moved them into `workspace/workspace.css` instead. Every
-`project-*` namespace has consumers in `board` in addition to wherever else it appears, which is
-exactly the condition the multi-feature override keeps in `globals.css` rather than moving into
-`projects.css`. `projects.css` and `brand.css` therefore received nothing from the split — not
-because their features have no CSS, but because none of the rules that moved were theirs alone.
+and `projects.css` would each receive rules split out of `globals.css`. Neither did, for two
+different reasons. `.brand-link` and `.brand-monogram` read as brand-owned by name, but their only
+consumer is the sidebar brand mark in `workspace/app-shell.tsx`, so Task 5 moved them into
+`workspace/workspace.css` instead. Every `project-*` namespace that stayed behind in `globals.css`
+stayed for one of the reasons above — genuinely multi-feature (`.project-row`, `.project-table`),
+grouped with a multi-feature rule (`.project-title`, `.project-canvas`), or unexplained
+(`.project-origin`, `.project-symbol`) — and none of those reasons points at `projects.css`: the
+unexplained pair's sole consumer is `workspace/home-page.tsx`, not `features/projects/`, so if they
+are ever relocated the destination is `workspace.css`, not `projects.css`. `projects.css` therefore
+received nothing from the split — not because `projects` has no CSS, but because no rule that moved
+or stayed behind was exclusively `projects`-owned.
 
 ## Final audit gate — not yet executed
 

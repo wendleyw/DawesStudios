@@ -179,22 +179,26 @@ feature-specific rules move to the owning feature's stylesheet. Selectors and
 declarations move verbatim; cascade order is preserved so computed styles do
 not change.
 
-*Corrected 2026-09-20 (Task 6): the implicit assumption that every feature
+*Corrected 2026-09-20 (Task 6, round 1): the implicit assumption that every feature
 stylesheet would receive rules from the split did not hold for two of them.*
 Task 5 moved 58 namespaces out of `globals.css` — 21 into `board.css`, 32 into
 a new `workspace.css`, and 5 into a new `auth.css` — but `brand.css` and
 `projects.css` received nothing. That is not a gap: `.brand-link` and
 `.brand-monogram` read as brand-owned by name, but their only consumer is the
 sidebar brand mark in `workspace/app-shell.tsx`, so they moved to
-`workspace.css` instead; and every `project-*` namespace (`.project-row`,
-`.project-table`, `.project-title`, and others) has consumers in `board` as
-well as elsewhere, which is exactly the condition that keeps a namespace in
-`globals.css` under the multi-feature override documented in
-[`design-system.md`](../../architecture/design-system.md#styling-boundary)
-rather than moving it into `projects.css`. Twelve namespaces remain in
-`globals.css` for that reason, plus one grouped selector (`.sidebar-collapse`,
-which shares a selector with `icon-button`) and one dead rule
-(`.workspace-status`, zero remaining `.tsx` consumers).
+`workspace.css` instead. Of the `project-*` namespaces that stayed behind, only
+`.project-row` and `.project-table` are directly multi-feature (`board` and
+`workspace`); `.project-title` and `.project-canvas` stay because `globals.css`
+groups them into a shared selector with a multi-feature rule, not because they
+have multi-feature consumers themselves; and `.project-origin`/`.project-symbol`
+have no identified reason at all — their sole consumer is
+`workspace/home-page.tsx`, so a relocation candidate is `workspace.css`, not
+`projects.css`. See the full, individually-verified breakdown — 5 multi-feature
+consumers, 4 grouped-selector dependents, 1 dead rule, 2 unexplained, for a
+tracked total of 12 — in
+[`design-system.md`](../../architecture/design-system.md#styling-boundary).
+`projects.css` received nothing because no rule that moved or stayed behind
+was exclusively `projects`-owned.
 
 **Verification.** Because CSS changes are invisible to unit tests, the styling
 work is verified by the Playwright design-audit and accessibility specs and by
