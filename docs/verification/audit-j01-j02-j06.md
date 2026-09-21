@@ -290,3 +290,19 @@ docker exec supabase_db_dawes-studios psql -U postgres -d postgres -tAc "select 
 Both fixtures created during this audit were removed by `cleanupTestProject`; `projects` and
 `briefings` hold zero rows matching `title like 'Acceptance %'`. `git status` shows no modified
 tracked files from this audit and the temporary probe spec has been deleted.
+
+## Follow-up observed during the fix pass (2026-09-21)
+
+**94 of 106 `<label>` elements wrap their control instead of using `htmlFor`; only 3 use the
+explicit association.** This is valid HTML and axe reports no violation — the association is
+correct. The consequence is that the *computed accessible name* concatenates the label text with
+the control's current value, producing names like `ClientChoose a client` and
+`RoleDesignerAgencyClient`.
+
+Two costs: a screen reader announces the label and the value as one run-on string, and any test
+addressing the control by label becomes brittle, because selecting a different option changes the
+name. `tests/e2e/intake-admin.spec.ts:575` now encodes one of these concatenated names for exactly
+that reason — bare `Client` collides with the role select's own computed name.
+
+Not fixed here: 94 sites is its own task, and the change is mechanical but wide. Recorded so the
+next person treats the concatenated selector as a symptom rather than a convention to copy.
