@@ -1314,3 +1314,102 @@ clients, 25 projects, unchanged.
 **Not done:** the new `--space-xs/sm/md/lg` spacing scale is declared but not yet consumed anywhere —
 converting spacing literals to it was out of this batch's scope. The J08-2 near-match literals remain
 literals by design; growing the token scale to absorb them is explicitly the orchestrator's call.
+
+## J-family final quality audit, five fix batches landed, matrix updated (2026-09-21)
+
+Owner: Claude Code, as orchestrator, integrating five delegated fix batches against three
+measurement-only audit reports. This closes the acceptance-matrix work the "Next actions" list above
+named as item 3 ("Complete the J family visual review... then refresh the design audit").
+
+### The audit
+
+Three measurement passes, each recorded as `docs/verification/audit-*.md`, read rendered markup and
+applied CSS/behavior rather than inferring from file structure or names, and changed no code:
+
+| Report | Rows covered | Findings |
+| --- | --- | --- |
+| `audit-j01-j02-j06.md` | J01, J02, J06 (J07 already Verified, not re-audited) | J01: 1 Medium (759/760 layout cells clean across 19 routes × 40 widths). J02: 3 (2 Medium, 1 Low). J06: 2 (1 Medium, 1 Low); axe across 49 captures found zero violations, and a full keyboard-only journey (16 Tab presses inside a dialog, Escape returning focus to the trigger) completed. |
+| `audit-j03-j04-j08-j09.md` | J03, J04, J08, J09 | J03: 5 (0/3/2). J04: 17 (3/7/7) — the highest-value row, with a full terminology table. J08: 6 (0/5/1). J09: 5 (0/3/2). |
+| `audit-j05-duplication.md` | J05 | 0 High, 9 Medium, 9 Low. No High finding anywhere: credit arithmetic, role gating and briefing-status transitions are each implemented exactly once, in Postgres. |
+
+### The five fix batches
+
+Each filed its own report under `docs/engineering/handoffs/2026-09-21-audit-fixes-*.md`:
+
+1. **Layout** (`audit-fixes-layout.md`) — J01/J02/J06's 6 findings, all fixed: three headings gained
+   `overflow-wrap: anywhere`, the design-viewer toolbar breakpoint gap closed, a board-list row got a
+   `title` fallback, `.board-tools` gained `flex-wrap` (fixing both the 320px spill and the 390px
+   search field), and a `sessionStorage`-flagged focus move now lands on `#main-content` after
+   sign-in.
+2. **Terminology** (`audit-fixes-terminology.md`) — all 17 J04 findings. A `versionStatusLabels` map
+   now covers all six version-status enum values; every user-facing date/instant routes through
+   `createDateFormatters`/`useDateFormat`, honoring the studio timezone everywhere instead of one
+   screen; "Workspace" retired as a name for a client or the studio account (two decisions that went
+   further than the audit's own narrower recommendation, by this orchestrator's instruction).
+3. **Minimalism** (`audit-fixes-minimalism.md`) — J03's 5 and J09's 5 findings. J03-5 was reviewed and
+   **rejected, not fixed** — see "Deliberately open" below. J09-3 replaced the product's one
+   `window.confirm` with the shared `Modal` and added confirmation to the destructive actions that
+   had none; a later same-day correction reverted an over-applied confirmation on an unsaved-draft-row
+   removal (nothing persisted is lost there) and added the resulting dialog step to two Playwright
+   specs under a narrow, explicit exception to the no-test-modification rule.
+4. **Tokens** (`audit-fixes-tokens.md`, two batches plus a documentation addendum) — J08's 6 findings.
+   Exact-value literals converged onto existing tokens; a four-step type scale absorbed ~230 font-size
+   literals; a four-tone semantic badge vocabulary (`status-tone.ts`) replaced four project-only
+   variants, asserted total against the generated database enums. A follow-up orchestrator decision
+   converged 23 of 35 near-twin grey literals onto their tokens, leaving 12 as literals with a
+   recorded semantic-mismatch reason each.
+5. **Duplication** (`audit-fixes-duplication.md`) — J05's 9 Medium + 9 Low findings; all 9 Medium and
+   7 of 9 Low fixed behind new shared modules (`upload-rules.ts`, `version-row.ts`, `save-blob.ts`)
+   plus local extractions. L1 and L4 deliberately deferred — see below.
+
+### Deliberately open — not fixed, and the matrix rows say so
+
+- **J03-5** — `Try again` stays `button primary` on the full-page error screen and plain `button` in
+  fourteen in-page panels. Reviewed and rejected: on an error screen it is the only action available;
+  in a panel beside working content it is secondary. Flattening the two would remove a real
+  distinction, not close a gap.
+- **J05 L1 and L4** — the credits page's two tabs still render the same records with one cell
+  differing, because the report tab's column carries the campaign attribution the CSV export also
+  depends on; consolidating first needs a design that gives campaign its own column. `ClientMark`'s
+  initials-fallback duplication (3 sites) stays, because `ClientMark` also fires a signed-URL query
+  per client — folding the other two sites into it would add one query per client in a list (ten on
+  the seeded baseline). The J05 row's own wording is "consolidated **without removing useful
+  actions**"; both deferrals satisfy that clause.
+- **The upload ceiling was declared five times, not four** — a finding the audit missed, caught by a
+  concurrent session after the fact. The fifth, `ARTWORK_MAX_BYTES` (25 MB) in
+  `features/projects/artwork-files.ts`, deliberately disagrees with the shared 50 MB
+  `BUCKET_MAX_BYTES` because it guards a `createImageBitmap` decode before the artwork path's own
+  40-megapixel check can run. It is now a named, separate constant rather than merged into the shared
+  module — recorded under J05 as the clearest case in the codebase of duplication where one copy was
+  right to differ.
+
+### Verification, measured just now against a rebuilt container
+
+Image built `2026-09-21T12:30:40Z`, branch head `12:30:08Z` — the image is newer than the code, so
+this evidence reflects the current tree:
+
+| Suite | Result |
+| --- | --- |
+| `npm run check` | 430 tests / 30 files |
+| `npm run build` | compiled |
+| `npm --prefix apps/media test` | 14 tests |
+| `npm run db:test` | 133 tests, PASS |
+| `npm run test:e2e` | 25 of 25 |
+
+### Acceptance matrix updated
+
+`docs/architecture/acceptance-matrix.md`'s J family: J01, J02, J03, J04, J05, J06, J08 and J09 moved
+from `Unverified` to `Verified`, each row rewritten to name the actual measured evidence (the audit
+report, the fix report, the specific figures) rather than the generic evidence description the row
+held before, matching the style of the already-Verified J07 and B01 rows. **J10 stays `Unverified`**
+and now says why: it requires no open failed requirement across the *entire* matrix, and roughly 67
+rows outside the J family (sections A–I) remain Unverified, so J10 is blocked on the rest of the
+matrix rather than overlooked. Matrix totals: **48 Verified / 67 Unverified** (was 40/75).
+
+### What remains
+
+**The J family is now evidenced. The other ~67 Unverified rows (sections A–I) are not** — this session
+did not touch them, and the standing instruction from the "Next actions" list above (work through the
+remaining rows by domain; the C, E, F and I families hold the largest gaps) still applies. No fixture,
+container or deployment state was changed by this session; the audits and fixes were measured against
+the already-running local stack and a container rebuild performed for final verification only.
