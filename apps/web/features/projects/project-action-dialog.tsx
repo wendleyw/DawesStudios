@@ -216,6 +216,15 @@ export function ProjectActionDialog({
   const field = (name: string, fallback = "") =>
     typeof content[name] === "string" ? (content[name] as string) : fallback;
 
+  // The resumable transfer reports its own fraction up to exactly 1 (tus's `onProgress` fires
+  // with `sent === total` on the last chunk); reaching 1 while the mutation is still pending
+  // means the bytes are on `internal-assets` and control has moved into `sanitizeVideoAsset`,
+  // which can run for several more minutes with no progress channel of its own. `uploadProgress`
+  // is only ever set for the video branch (see the round-1 fix in `mutationFn`), so this can
+  // never be true for an image upload. Once the mutation settles — success or failure —
+  // `mutation.isPending` goes false and this reverts on its own; nothing here needs its own reset.
+  const sanitizing = mutation.isPending && uploadProgress === 1;
+
   return (
     <Modal
       open={!!action}
@@ -274,8 +283,16 @@ export function ProjectActionDialog({
               </label>
               {uploadProgress !== null && (
                 <p className="upload-progress" aria-live="polite">
-                  <progress value={uploadProgress} max={1} aria-label="Upload progress" />
-                  <span>{Math.round(uploadProgress * 100)}%</span>
+                  {sanitizing ? (
+                    // No `value`: an indeterminate `<progress>` renders as an animated bar in
+                    // every evergreen browser, which is the honest signal here — the transfer is
+                    // done, the server is remuxing, and there is no percentage to report for that
+                    // step. A bar pinned at 100% would say "done" for an operation that is not.
+                    <progress max={1} aria-label="Processing video" />
+                  ) : (
+                    <progress value={uploadProgress} max={1} aria-label="Upload progress" />
+                  )}
+                  <span>{sanitizing ? "Processing…" : `${Math.round(uploadProgress * 100)}%`}</span>
                 </p>
               )}
               <details className="design-text-options">
@@ -375,9 +392,11 @@ export function ProjectActionDialog({
             </button>
             <button className="button primary" type="submit" disabled={mutation.isPending}>
               {mutation.isPending
-                ? uploadProgress !== null
-                  ? `Uploading… ${Math.round(uploadProgress * 100)}%`
-                  : "Saving…"
+                ? sanitizing
+                  ? "Processing…"
+                  : uploadProgress !== null
+                    ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+                    : "Saving…"
                 : {
                     version: "Create version",
                     design: "Add design",
