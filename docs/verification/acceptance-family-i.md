@@ -117,6 +117,24 @@ journey produced an unprompted error.
 pass, and exercised journeys are console-clean; the browser suite does not pass. The row stays open
 on I-2.
 
+### Reassessment (this pass, after repairing Defect I-2)
+
+| Command | Result |
+|---|---|
+| `npm run check` | **exit 0**. 0 type errors. ESLint: 0 errors, the same pre-existing 2 warnings (`board-canvas-controls.tsx:30`, `board-nodes.tsx:4` — untouched by this pass). Prettier clean. **449 unit tests in 33 files pass** (444/32 plus the 5 new tests in `lib/supabase.test.ts` for Defect I-3). |
+| `npm run build` | **exit 0.** |
+| `npm run test:e2e` against `:3003` (the long-lived container, unrebuilt, still serving `54645f1`'s application code) | **exit 0, 2m 12s. 25 passed, 0 failed.** |
+
+The one failure was the stale assertion in `brand-guidance.spec.ts:161`, repaired above without
+touching application behaviour; nothing else in this pass's `git status` touches a file this
+requirement depends on. Console-error evidence is unchanged from the original pass (the `[]`
+collected list above) — this pass added no new browser journeys to `:3003` beyond the repaired
+spec, which itself passed cleanly.
+
+**Verdict: Verified.** Production build, type/lint/format checks, all 449 unit tests and the full
+25-test browser suite pass; exercised journeys remain console-clean. I02 moves from Unverified to
+**Verified**.
+
 ## I04 — loading, empty, transport failure, permission loss and unavailable resources
 
 **Requirement.** Loading, empty, offline/transport failure, permission loss and unavailable-resource
@@ -452,6 +470,32 @@ This is a stale test, not a regression in the product — the behaviour it contr
 family G asked for. It is left unrepaired here because this pass changes no existing test, but I02
 cannot be marked while the suite is red.
 
+### Repair (this pass)
+
+**Fixed in the spec, not the application** — the link-filtering behaviour from `54645f1` is
+correct and unchanged. `tests/e2e/brand-guidance.spec.ts:1` now imports `localAdmin`, and the
+products block (previously line ~161) inserts one real `brand_assets` row —
+`{ client_id: fixture.clientId, name: "Product 1 field kit", category: "Reference" }` — between
+saving the three products and reloading the page. `matchesBrandSearch` matches on a substring
+of `name`/`description`/`tags`, so `"product 1 field kit"` contains `"product 1"` (Product 1's
+search term) but not `"product 2"` or `"product 3"`.
+
+The assertion shape: Product 1 (the one with a match) still gets the exact original
+`toHaveAttribute("href", base + "/assets?search=Product%201")` check — the encoding proof the
+original assertion existed for is preserved verbatim, not weakened. Product 2 and Product 3 (no
+match) are now asserted with `toHaveCount(0)` on their link — a new assertion proving the other
+half of `54645f1`'s behaviour: an empty result gets no link at all. Nothing was deleted; the spec
+now proves both branches instead of only the stale one. `cleanupIntakeFixture` already deletes
+`brand_assets where client_id = fixture.clientId` unconditionally, so the inserted row needs no
+separate teardown.
+
+**Verification.** `npx playwright test` against the running `:3003` container (unrebuilt, still
+serving `54645f1`'s application code — only the spec changed): **25 passed, 0 failed**, 2 m 12 s.
+`brand-guidance.spec.ts:8` (the renumbered line for this test) passes. `npm run check`:
+**449 tests in 33 files pass** (444/32 plus the 5 new unit tests added for
+[Defect I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message) below),
+0 type errors, the same pre-existing 2 lint warnings, build exits 0.
+
 ## Defect I-3 — a raw `TypeError: Failed to fetch` is the product's offline message
 
 **Charged to I04 and I05.** Found in this pass.
@@ -487,6 +531,56 @@ await page.getByRole("button", { name: "Send message" }).click();
 
 The same shape applies to every `useMutation` that renders `<FormError>{error.message}</FormError>`;
 the comment composer is where it was measured.
+
+### Repair (this pass)
+
+**Translated at the one chokepoint every data module already shares: `assertResult` in
+`lib/supabase.ts`.** Nothing else changed — `FormError` still renders whatever string it is given,
+and every data module still calls `assertResult(await database...)` exactly as before.
+
+`assertResult` now recognises the shape a transport failure takes once it reaches
+`result.error.message`: `${name}: ${message}` where the browser's own `fetch` rejection produced
+it — `TypeError: Failed to fetch` in Chromium/Firefox, `TypeError: Load failed` in Safari — via a
+narrow regex anchored to the end of the (trimmed) string, `/(?:^|:\s)(failed to fetch|load failed)$/i`.
+When it matches, `assertResult` throws `"The connection failed and your changes were not saved —
+try again."` instead. Every other message — a Postgres constraint, an RLS refusal, a validation
+message from a data module, `assertResult`'s own pre-existing error text — is thrown completely
+unchanged, because the regex only matches that one exception shape and nothing else ends in those
+two phrases.
+
+```ts
+function isTransportFailure(message: string): boolean {
+  return /(?:^|:\s)(failed to fetch|load failed)$/i.test(message.trim());
+}
+const TRANSPORT_FAILURE_MESSAGE =
+  "The connection failed and your changes were not saved — try again.";
+export function assertResult<T>(result: { data: T | null; error: { message: string } | null }): T {
+  if (result.error)
+    throw new Error(
+      isTransportFailure(result.error.message) ? TRANSPORT_FAILURE_MESSAGE : result.error.message,
+    );
+  return result.data as T;
+}
+```
+
+**Unit tests** (`lib/supabase.test.ts`, new file, 5 tests): data passes through untouched; both the
+Chromium/Firefox and Safari transport-failure spellings translate to the one message; a Postgres
+unique-constraint message and a data-module validation message both pass through byte for byte.
+
+**Browser verification.** The `:3003` container cannot be used for this defect — it was built
+before this repair existed and this pass was told not to rebuild it — so verification used a
+second, disposable `next start` on port 3011, built from this pass's own `npm run build` against
+the same backend, torn down afterwards. A throwaway probe
+(`tests/e2e/zz-scratch/zz-i3-probe.spec.ts`, deleted after use) ran against it on a disposable
+`Acceptance production …` project from `createProductionFixture`:
+
+| Case | Route handling | Alert text observed |
+|---|---|---|
+| Transport failure | `route.abort("internetdisconnected")` on `post_comment` | `"The connection failed and your changes were not saved — try again."` |
+| Genuine non-transport error | `route.fulfill({ status: 400, body: {"message":"new row for relation \"comments\" violates check constraint \"comments_channel_check\"", "code":"23514", ...} })`, with the `OPTIONS` preflight left to `route.continue()` and CORS response headers set so the fulfilled response isn't itself blocked as an opaque failure | `"new row for relation \"comments\" violates check constraint \"comments_channel_check\""` — verbatim, untranslated |
+
+The draft-retained/send-button-re-enabled/nothing-written behaviour this pass measured earlier is
+unaffected — only the string handed to `<FormError>` changed.
 
 ## Defect I-4 — an interrupted write reports failure after committing, and a retry duplicates it
 
@@ -575,7 +669,7 @@ form without the same guard.
 | Row | Verdict | Why |
 |---|---|---|
 | I01 | Unverified | [I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset): the documented start command exits 1 on every run |
-| I02 | Unverified | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1): 24/25 browser tests pass; checks, 444 unit tests and the build pass |
+| I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
 | I04 | Unverified | [I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message): the offline state of every form is a raw `TypeError` |
 | I05 | Unverified | [I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) and I-3 |
 | I06 | Unverified | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save): a stale client-settings form silently reverts a newer save |
