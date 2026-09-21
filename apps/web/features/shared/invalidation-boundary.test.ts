@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { assetQueryKeys } from "@/features/assets/asset-data";
 import { brandQueryKeys } from "@/features/brand/brand-data";
 import { briefingQueryKeys } from "@/features/briefings/briefing-data";
+import { workspaceQueryKeys, notificationsQueryKeys } from "@/features/workspace/workspace-data";
 
 // Structural-refactor context: the refactor put every Supabase *read* behind a feature data module,
 // but left the *writes* addressing the cache by hand — every mutation's `onSuccess` spelled its
@@ -149,5 +150,21 @@ describe("query key ownership", () => {
     // `useInvalidateAssets()` exists only because this set has one member and both of its call
     // sites already invalidated exactly that one. A second key here would widen both of them.
     expect(assetQueryKeys).toEqual(["assets"]);
+  });
+
+  it("pins workspace's keys, so a widened set does not widen every call site", () => {
+    // `useInvalidateWorkspace()` routes through a single constant. If someone adds a key here,
+    // every call site that uses that helper silently invalidates more than it did before, without
+    // test coverage. This pins the set so a change is caught and each affected call site
+    // (`board/board-page.tsx`) can be checked for intent.
+    expect(workspaceQueryKeys).toEqual(["projects"]);
+  });
+
+  it("pins notifications' keys, so a widened set does not widen every call site", () => {
+    // `useInvalidateNotifications()` routes through a single constant. If someone adds a key here,
+    // every call site that uses that helper silently invalidates more than it did before, without
+    // test coverage. This pins the set so a change is caught and each affected call site
+    // (`briefings/briefing-editor-form.tsx`) can be checked for intent.
+    expect(notificationsQueryKeys).toEqual(["notifications"]);
   });
 });
