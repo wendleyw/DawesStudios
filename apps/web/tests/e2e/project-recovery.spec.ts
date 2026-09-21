@@ -32,13 +32,13 @@ test("failed design registration preserves input, retries one file, and removes 
     );
     await page.getByRole("button", { name: "Add design to version 1" }).click();
     await page.getByLabel("Design name").fill("Retry-safe artwork");
-    await page.getByLabel("Artwork file").setInputFiles(artwork);
+    await page.getByLabel("Design file").setInputFiles(artwork);
     await page.getByRole("dialog").getByRole("button", { name: "Add design", exact: true }).click();
     await expect(page.locator("main [role=alert]")).toHaveText(
       "Temporary registration failure. Try again.",
     );
     await expect(page.getByLabel("Design name")).toHaveValue("Retry-safe artwork");
-    await expect(page.getByLabel("Artwork file")).toBeDisabled();
+    await expect(page.getByLabel("Design file")).toBeDisabled();
     expect(await objects()).toHaveLength(1);
     expect(
       (await agency.from("designs").select("id").eq("project_id", fixture.projectId)).data,
@@ -59,7 +59,7 @@ test("failed design registration preserves input, retries one file, and removes 
     );
     await page.getByRole("button", { name: "Add design to version 1" }).click();
     await page.getByLabel("Design name").fill("Abandoned artwork");
-    await page.getByLabel("Artwork file").setInputFiles(artwork);
+    await page.getByLabel("Design file").setInputFiles(artwork);
     await page.getByRole("dialog").getByRole("button", { name: "Add design", exact: true }).click();
     await expect(page.locator("main [role=alert]")).toBeVisible();
     expect(await objects()).toHaveLength(2);

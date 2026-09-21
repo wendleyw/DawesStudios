@@ -442,7 +442,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       await page.getByLabel("Studio name", { exact: true }).fill("Acceptance Studio");
       await page.getByRole("combobox", { name: "Timezone", exact: true }).selectOption("UTC");
       await page.getByRole("button", { name: "Save changes" }).click();
-      await expect(page.getByText("Workspace updated.", { exact: true })).toBeVisible();
+      await expect(page.getByText("Studio updated.", { exact: true })).toBeVisible();
       await page.reload();
       await expect(page.getByLabel("Studio name", { exact: true })).toHaveValue(
         "Acceptance Studio",
@@ -459,7 +459,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
         .getByRole("combobox", { name: "Timezone", exact: true })
         .selectOption("America/New_York");
       await page.getByRole("button", { name: "Save changes" }).click();
-      await expect(page.getByText("Workspace updated.", { exact: true })).toBeVisible();
+      await expect(page.getByText("Studio updated.", { exact: true })).toBeVisible();
       await page.goto("/notifications");
       await expect(
         page.getByRole("article").filter({ hasText: noticeTitle }).locator("time"),
@@ -572,7 +572,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Email address").fill(email);
     await dialog.getByRole("combobox", { name: "Role", exact: true }).selectOption("client");
-    await dialog.getByLabel("Client workspace").selectOption(fixture.clientId);
+    await dialog.getByLabel("ClientChoose a client").selectOption(fixture.clientId);
     await page.getByRole("button", { name: "Send invitation" }).click();
     await expect(dialog).not.toBeVisible();
     await expect(page.getByText("Invitation email sent.", { exact: true })).toBeVisible();
@@ -678,7 +678,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       await expect(
         recoveryPage.getByText("Your password has been updated.", { exact: true }),
       ).toBeVisible();
-      await recoveryPage.getByRole("link", { name: "Open your workspace" }).click();
+      await recoveryPage.getByRole("link", { name: "Back to your work" }).click();
       await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/board$`));
       await recoveryPage.getByRole("button", { name: "Sign out", exact: true }).click();
       await recoveryPage.getByLabel("Email address").fill(email);
@@ -756,7 +756,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     await signIn(page, fixture.email);
     await page.goto(`/clients/${fixture.clientId}/briefings`);
     await expect(page.locator(".briefing-list-row")).toHaveCount(22);
-    await page.getByRole("button", { name: "Awaiting review", exact: true }).click();
+    await page.getByRole("button", { name: "With the studio", exact: true }).click();
     await expect(page.locator(".briefing-list-row")).toHaveCount(20);
     await page.getByRole("button", { name: "Draft", exact: true }).click();
     await expect(page.locator(".briefing-list-row")).toHaveCount(1);

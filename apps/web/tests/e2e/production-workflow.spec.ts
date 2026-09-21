@@ -21,7 +21,7 @@ async function addVersion(page: Page) {
 async function addDesign(page: Page, name: string) {
   await page.getByRole("button", { name: "Add design to version 1" }).click();
   await page.getByRole("textbox", { name: "Design name" }).fill(name);
-  await page.getByLabel("Artwork file").setInputFiles(preview);
+  await page.getByLabel("Design file").setInputFiles(preview);
   await page.getByRole("dialog").getByRole("button", { name: "Add design", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }

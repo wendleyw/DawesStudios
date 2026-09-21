@@ -5,7 +5,7 @@ test("agency signs in, sees ten workspaces, and opens a live project canvas", as
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn(page, "studio@dawes.local");
-  await expect(page.getByRole("heading", { name: "Client workspaces" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Clients" })).toBeVisible();
   await expect(page.locator(".workspace-card")).toHaveCount(10);
   await page.screenshot({ path: `${screenshotDirectory}/agency-home.png`, fullPage: true });
   await page.locator(".workspace-card").filter({ hasText: "SABRE" }).click();
