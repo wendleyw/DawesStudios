@@ -897,11 +897,24 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 npm run check
 npm run build
 npm --prefix apps/media test
-npm run db:test
+npm run db:test   # SEE THE NOTE BELOW — red before this refactor began
 python3 supabase/tests/http_auth_storage_test.py
 npm --prefix apps/media run test:integration
 npm run test:e2e
 ```
+
+**`npm run db:test` is expected to FAIL, and that failure predates this refactor.**
+`supabase/scripts/build_seed.py` and `supabase/seed.sql` were rewritten (+382 / -163) at
+16:44 on 2026-09-20, roughly an hour before this refactor's first commit, and the pgTAP
+suite was not updated to match. The tests reference the fixture keys `dawes:version-16-2`
+and `dawes:version-3-1`; the regenerated seed produces neither, so
+`public.publish_version` raises `P0001: Version not found`. The failure is
+11 of 53 in `access_and_workflows`, 1 of 1 in `production_integrity`, and 3 of 14 in
+`trusted_media_and_catalog`. This refactor touched **zero** SQL files — `git diff
+--name-only 31a2f7a HEAD -- '*.sql' supabase/migrations/` is empty — so it is not the
+cause and must not be blamed for it. **Do not "fix" it here.** Repairing it means either
+editing test files, which this plan forbids outright, or changing the seed, which is not
+behavior-preserving work. Record it as a pre-existing defect for its owner and move on.
 
 Record each command's actual result. The Playwright suite runs against the container on port 3003. The handoff's reference point is **24 of 24 browser tests passing**; anything less is a regression to investigate, not to explain away.
 
