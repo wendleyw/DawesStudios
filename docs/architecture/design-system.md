@@ -339,8 +339,13 @@ fair question: without `@layer` or a pinned import order in `app/layout.tsx`, wh
 added to one feature's stylesheet from silently winning or losing against another feature's rule
 of the same name? The answer is that the boundary rule above — a namespace with consumers in two
 or more features stays in `globals.css` — makes the feature stylesheets' selectors disjoint by
-construction: at the time this was checked, the 13 feature stylesheets declared 730 distinct
-selectors between them and shared none. With disjoint selectors, the relative load order of
+construction: the feature stylesheets declare their selectors disjointly and share none.
+
+The exact counts are deliberately not written here. `apps/web/features/shared/stylesheet-boundary.test.ts`
+recomputes them on every run and fails on an actual overlap, so the test is the live answer and any
+figure copied into prose is a snapshot that starts rotting immediately. This sentence previously
+carried one: it said 736, was corrected to 730, and was 739 within the same day as feature work
+landed. Read the test's output, not a number in a document. With disjoint selectors, the relative load order of
 feature stylesheets cannot matter, because nothing in them can conflict; pinning an import order
 would only order a conflict that does not exist. The two deliberate exceptions are `board.css`'s
 `h3` (an inherited override of the base heading rule in `globals.css`, not a designed shared rule)

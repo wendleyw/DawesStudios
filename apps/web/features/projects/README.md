@@ -69,7 +69,7 @@ Feature styles are local to `projects.css`. The shared controls, shell and modal
 `async (database, input)` functions instead of `use<Thing>()` hooks.
 
 Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx`
-(`findUnchangedDesign` at `:100`, `findDesignByAsset` at `:114`), where React does not permit a hook
+(both by name, inside `mutationFn`), where React does not permit a hook
 to be called at all. This is the case [rule 2 of the contract](../../../../docs/architecture/data-access.md)
 now names directly, so it is the rule for these call sites rather than a licence this feature
 claimed for itself; the reason is also recorded above the two functions in `project-data.ts`.
