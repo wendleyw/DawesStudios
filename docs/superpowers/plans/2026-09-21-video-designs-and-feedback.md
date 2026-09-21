@@ -225,7 +225,7 @@ Create `supabase/tests/database/video_storage.test.sql`:
 
 ```sql
 begin;
-select plan(6);
+select plan(8);
 
 select is((select file_size_limit from storage.buckets where id = 'internal-assets'),
           1073741824::bigint, 'internal-assets holds a gigabyte');
@@ -244,6 +244,24 @@ select is((select file_size_limit from storage.buckets where id = 'brand-assets'
 select ok(private.opaque_storage_path(
             md5('a')::uuid::text || '/' || md5('b')::uuid::text || '.mp4'),
           'an mp4 object path is opaque-valid');
+
+-- The attestation table must accept what the bucket now accepts, or a published video lands in
+-- storage and then fails registration, leaving bytes with no attestation row.
+select lives_ok($$
+  insert into private.sanitized_assets(bucket_id,storage_path,project_id,sha256,mime_type,file_size,prepared_by)
+  values('published-assets',
+         md5('dawes:project-2')::uuid::text||'/'||md5('probe')::uuid::text||'.mp4',
+         md5('dawes:project-2')::uuid, repeat('a',64), 'video/mp4', 1073741824,
+         md5('dawes:agency')::uuid)
+$$, 'the attestation table accepts a gigabyte video');
+
+select throws_ok($$
+  insert into private.sanitized_assets(bucket_id,storage_path,project_id,sha256,mime_type,file_size,prepared_by)
+  values('published-assets',
+         md5('dawes:project-2')::uuid::text||'/'||md5('probe2')::uuid::text||'.mp4',
+         md5('dawes:project-2')::uuid, repeat('a',64), 'video/mp4', 1073741825,
+         md5('dawes:agency')::uuid)
+$$, '23514', null, 'the attestation table still has a ceiling');
 
 select * from finish();
 rollback;
@@ -270,6 +288,19 @@ update storage.buckets
    set file_size_limit = 1073741824,
        allowed_mime_types = allowed_mime_types || array['video/mp4','video/webm']
  where id in ('internal-assets','published-assets');
+
+-- The attestation table caps what may be registered, and it is a CHECK rather than a bucket
+-- setting, so raising the bucket alone would let a gigabyte video upload successfully and then
+-- fail its `register_sanitized_asset` insert. That is a split brain and the worst possible
+-- shape: the bytes are already in the bucket and the failed insert does not roll them back.
+--
+-- Raising this does NOT widen delivery files. `sanitized_assets.bucket_id` covers
+-- 'published-assets' and 'delivery-files', but `delivery-files` keeps its 50 MiB bucket limit,
+-- which stays the binding constraint for that path. Briefing attachments carry their own
+-- identical CHECK in 202609200004 and are deliberately untouched — that bucket is not widening.
+alter table private.sanitized_assets drop constraint sanitized_assets_file_size_check;
+alter table private.sanitized_assets add constraint sanitized_assets_file_size_check
+  check(file_size between 1 and 1073741824);
 
 -- `.raw` names the object a resumable upload lands on before the media service has stripped its
 -- metadata. It exists for the duration of one sanitisation and is deleted once the clean object
@@ -360,7 +391,42 @@ function effectiveBucketLimits(sources: string[]): Map<string, number> {
 }
 ```
 
-Then the assertion becomes per bucket, with the design buckets expected to differ:
+**`bucketMimeTypes()` is blind in exactly the same way, and repairing only the limits
+leaves the worse half broken.** It uses the same insert-only pattern, so Task 2's
+`allowed_mime_types = allowed_mime_types || array['video/mp4','video/webm']` is invisible
+to it. Two assertions go quietly wrong: the one comparing `internal-assets` against
+`standardUploadMimes` stays green while the real bucket diverges, and the SVG sweep
+iterating every bucket never sees the updated lists. The limits guard at least fails
+loudly when wrong; this one fails silently, which is why it matters more.
+
+Give `bucketMimeTypes` the same treatment — compute the effective list per bucket by
+applying the `||` appends over the inserted arrays:
+
+```ts
+/** Each bucket's effective `allowed_mime_types`: the inserted list with later appends applied. */
+function effectiveBucketMimeTypes(sources: string[]): Map<string, string[]> {
+  const mimes = new Map<string, string[]>();
+  const unquote = (v: string) => v.trim().replace(/^'|'$/g, "");
+  for (const sql of sources) {
+    for (const m of sql.matchAll(/\('([a-z-]+)','[a-z-]+',(?:true|false),\d+,array\[([^\]]*)\]\)/g))
+      mimes.set(m[1], m[2].split(",").map(unquote));
+    // `update storage.buckets set ... allowed_mime_types = allowed_mime_types || array[...]
+    //  where id in ('a','b')`
+    for (const m of sql.matchAll(
+      /update storage\.buckets[\s\S]*?allowed_mime_types\s*=\s*allowed_mime_types\s*\|\|\s*array\[([^\]]*)\][\s\S]*?where id in \(([^)]*)\)/gi,
+    ))
+      for (const id of m[2].split(",").map(unquote))
+        mimes.set(id, [...(mimes.get(id) ?? []), ...m[1].split(",").map(unquote)]);
+  }
+  return mimes;
+}
+```
+
+Update the three MIME assertions to read from it, and expect the two design buckets to
+carry the video types in addition to their image types. Keep the SVG assertion's meaning
+intact: SVG still belongs to `brand-assets` alone.
+
+Then the limit assertion becomes per bucket, with the design buckets expected to differ:
 
 ```ts
 it("matches the effective file_size_limit on every bucket the migrations create", () => {
