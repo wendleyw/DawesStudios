@@ -23,7 +23,7 @@ python3 supabase/scripts/local_stack.py stop
 | Trusted media | `http://127.0.0.1:55430` |
 | Web application | `http://localhost:3003` |
 
-The media container uses a read-only root filesystem, a bounded temporary filesystem, non-root user, memory/CPU/PID limits and no privilege escalation. Local keys/passwords are generated or read into ignored mode-0600 environment files. The fixture password survives supported resets through `supabase/.env.local`. Service credentials are server-only.
+The media container uses a read-only root filesystem, a bounded temporary filesystem, non-root user, memory/CPU/PID limits and no privilege escalation. Local keys/passwords are generated or read into ignored mode-0600 environment files. The fixture password survives supported resets through `supabase/.env.local`, in the working tree that holds that file. A second tree without one cannot read the stack's current password, so `start` refuses to provision rather than minting a replacement and locking the first tree out. Service credentials are server-only.
 
 Auth redirect URLs include the configured app origin, `/auth/recovery` and `/auth/invite` for both `localhost` and `127.0.0.1`. After changing Auth runtime values on an already-running local stack, `python3 supabase/scripts/reload_auth_config.py` recreates only this project's Auth container while preserving signing keys and database state.
 
