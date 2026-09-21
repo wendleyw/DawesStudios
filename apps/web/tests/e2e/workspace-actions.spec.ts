@@ -203,6 +203,10 @@ test("project details detect stale edits, persist dates, revoke assignment and k
       (await designer.from("projects").select("id").eq("id", fixture.projectId)).data,
     ).toHaveLength(1);
     await page.getByRole("button", { name: /Remove .+ from project/ }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Remove designer", exact: true })
+      .click();
     await expect(page.getByText("Not assigned yet", { exact: true })).toBeVisible();
     expect((await designer.from("projects").select("id").eq("id", fixture.projectId)).data).toEqual(
       [],

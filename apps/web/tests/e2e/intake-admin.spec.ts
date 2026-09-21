@@ -160,6 +160,10 @@ test.describe("Briefing intake, credits, and account administration", () => {
         .single()
     ).data!.storage_path;
     await page.getByRole("button", { name: "Remove launch-reference.png", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Remove file", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: "launch-reference.png", exact: true }),
     ).not.toBeVisible();

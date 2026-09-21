@@ -99,3 +99,57 @@ unplaced pin from a draft comment, which is an editing gesture rather than a des
 The orchestrator runs the Playwright suite against a container rebuilt from `e868ded`, then decides
 on the three confirmation/spec conflicts above (and specifically on whether a draft deliverable row
 should confirm). After that, batches for J08 and J05 remain.
+
+## Follow-up — orchestrator adjudication (2026-09-21, later same day)
+
+- Reporting agent and tool: Claude (Claude Code)
+- State: implemented and verified locally (`npm run check` + the two affected Playwright specs run
+  against a throwaway `next dev` on port 3103, stopped afterward). The container on `:3003` was not
+  touched.
+- Commit: (recorded by the orchestrator after this report).
+
+**Correction 1 — reverted the deliverable-removal confirmation.** The orchestrator ruled on the
+judgement call this batch flagged: `draft.deliverables` in
+`apps/web/features/briefings/briefing-editor-details.tsx` is local, unsaved form state — a row
+created by clicking a format button above it and removed by the control next to it. Removing it is
+undoing a form edit, not destroying a persisted record; nothing in storage or the database is lost.
+The `Modal` confirmation, its `removing`/`setRemoving` state, the now-unused `useState` import, and
+the now-unused `Modal` import were all removed. The `X` button goes back to removing the row
+directly on click. The other three confirmations named in this batch (designer removal in
+`project-details.tsx`, attachment removal in `briefing-attachments.tsx`, and the `window.confirm` →
+`Modal` swap in `draft-editor.tsx`) are untouched — each of those destroys a persisted record.
+
+**Correction 2 — added the missing dialog step to two specs**, under a narrow, explicitly granted
+exception to the no-test-modification rule: the flow now passes through a confirmation dialog before
+reaching the same assertion, so a step was added to click through it. No `expect(...)` value, no
+assertion, and no fixture/setup/teardown changed.
+
+- `apps/web/tests/e2e/workspace-actions.spec.ts` — after
+  `page.getByRole("button", { name: /Remove .+ from project/ }).click()` (line 205), added
+  `page.getByRole("dialog").getByRole("button", { name: "Remove designer", exact: true }).click()`
+  before the existing `Not assigned yet` assertion.
+- `apps/web/tests/e2e/intake-admin.spec.ts` — after
+  `page.getByRole("button", { name: "Remove launch-reference.png", exact: true }).click()`
+  (line 162), added
+  `page.getByRole("dialog").getByRole("button", { name: "Remove file", exact: true }).click()`
+  before the existing "attachment gone" assertion.
+
+`intake-admin.spec.ts:112` (`Remove Instagram Reels / Variation 3`, the deliverable removal) was
+verified, not assumed: with Correction 1 reverting that confirmation, this spec needed no change and
+passed untouched in the same run.
+
+**Verification.** `npm run check`: 412 tests / 28 files, all passing; typecheck and lint clean (two
+pre-existing, unrelated `react-hooks`/`no-unused-vars` warnings in `features/board/*`, untouched by
+this work). Started `next dev --port 3103` against the same local Supabase stack
+(`http://127.0.0.1:55421`) used by the `:3003` container; ran
+`PLAYWRIGHT_BASE_URL=http://localhost:3103 npx playwright test tests/e2e/workspace-actions.spec.ts
+tests/e2e/intake-admin.spec.ts` — 9/9 passed, including `intake-admin.spec.ts:112` untouched. Fixture
+counts confirmed via the REST API against the local Supabase stack: 10 clients, 25 projects. The
+dev server on port 3103 was stopped after verification.
+
+**Files changed:** `apps/web/features/briefings/briefing-editor-details.tsx`,
+`apps/web/tests/e2e/workspace-actions.spec.ts`, `apps/web/tests/e2e/intake-admin.spec.ts`, and this
+report. No other file touched; `app/globals.css` and Docker untouched.
+
+**Next required action:** the orchestrator runs the full Playwright suite against a container
+rebuilt from this commit.
