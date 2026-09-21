@@ -91,7 +91,17 @@ from being a shared module with a single caller, which the boundary forbids.
 > Orchestrator combines specialist changes, verifies interfaces, resolves conflicting decisions, and
 > records unresolved acceptance items honestly.
 
-**Verdict: Unverified — one clause fails, and it is the honesty clause.**
+**Verdict: Verified — after the clause that was failing was closed, and after correcting this
+section's own overstatement.**
+
+**The original finding was right in kind and wrong by one.** It counted 11 rows carrying a bare
+`Unverified`. It was 10. H11 was miscounted: the check read each row's *status* cell, while H11
+states its remaining gap in the *evidence* cell — "Help dialog and production preview/reset exposure
+still need the orchestrator's final read-only walkthrough." A measurement that reads one column and
+concludes about the row is the same class of error this pass was created to find, so it is recorded
+here rather than corrected silently.
+
+What follows is the finding as it stood, then what closed it.
 
 The first three clauses are evidenced. Integration and interface verification are recorded throughout
 `docs/engineering/handoff.md`, and adjudication of conflicting decisions is recorded rather than
@@ -107,14 +117,27 @@ A bare `Unverified` is not dishonest, but it is not an honest record of an unres
 does not distinguish *measured and failing* from *not yet measured*, and those are different facts
 with different next actions. The I-family rows make that distinction; these eleven do not.
 
-**What would close this row.** Every `Unverified` row states which of the two it is, and for a
-failure, what blocks it. Three of the eleven (A01, A02, A05) are resolved by this document; A03 and
-A04 by the companion pass. The remaining six — B04 through B08 and H11 — need either their
-measurement or a stated reason.
+**What closed it.** A01 and A02 were measured in this document, A03 and A04 in the companion pass,
+and B04 through B08 in [`acceptance-family-b.md`](./acceptance-family-b.md) — nine of the ten. The
+tenth, A05, is this row, and it now states its own history.
 
-This row is therefore blocked on the matrix's own completeness rather than on any product defect,
-and it is recorded here rather than marked Verified on the strength of the three clauses that do
-hold.
+Every remaining `Unverified` row states why, and the distinction the clause demands — *measured and
+failing* versus *not yet measured* — is now visible on each one:
+
+| Row | What it says blocks it | Which kind |
+| --- | --- | --- |
+| H11 | Help dialog and preview/reset exposure await a read-only walkthrough | not yet measured |
+| I01 | Defect I-1 | measured and failing |
+| I02 | Defect I-2 | measured and failing |
+| I04 | Defect I-3 | measured and failing |
+| I05 | Defects I-3 and I-4 | measured and failing |
+| J10 | The five rows above, now named rather than counted | blocked by construction |
+
+**No row says `Unverified` without saying why.** J10's own statement was corrected in the same pass:
+it cited "roughly 67 rows" outside the J family, a figure that had rotted to six, and now names the
+rows instead of counting them so the same drift cannot recur.
+
+Matrix totals moved from 98 Verified / 16 Unverified to **108 / 6** across this work.
 
 ## Correction made during this pass
 
