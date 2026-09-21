@@ -14,14 +14,20 @@ const clip = fileURLToPath(new URL("../fixtures/campaign-clip.mp4", import.meta.
  * guards the same way for the same reason.
  *
  * The retry itself is not precautionary: measured directly against this branch's rebuilt
- * containers (12 runs of this spec), a fresh `service_role` read immediately following a
- * `postComment` call whose result the *client's own* authenticated read had already rendered on
- * screen came back with zero rows twice, in both cases resolving to the expected one row on the
- * very next attempt roughly 300 ms later. The row is never lost — `production-workflow.spec.ts`'s
- * own single-attempt `client_comments` read has not shown the same gap in the same number of
- * runs — so this is read-after-write visibility latency between two independently pooled
- * PostgREST connections, not a persistence defect, and is treated as one here rather than
- * silently retried without comment.
+ * containers, a fresh `service_role` read immediately following a `postComment` call whose
+ * result the *client's own* authenticated read had already rendered on screen came back with
+ * zero rows twice across many runs of this spec, in both observed cases resolving to the
+ * expected one row on the very next attempt roughly 300 ms later. The row was never lost.
+ *
+ * **What causes the gap is not established, and it is not attributed to connection pooling
+ * here** — `supabase/config.toml` has `db.pooler.enabled = false`, there is no Supavisor or
+ * pgbouncer in front of this stack, and `compose.yaml` defines no read replica, so on a
+ * single-node Postgres a transaction committed on one connection is visible to a fresh query on
+ * any other connection immediately; "two independently pooled connections" was an earlier,
+ * incorrect guess at a mechanism this topology does not support. See [Observation
+ * F-5](../../../../docs/verification/acceptance-family-f.md#observation-f-5-an-intermittent-read-after-write-gap-of-unestablished-cause)
+ * for the full write-up, including a dedicated 40-run reproduction attempt that did not
+ * reproduce a third, separate failure seen once during earlier stress-testing.
  */
 async function readRowsEventually<T>(
   query: () => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
@@ -89,14 +95,26 @@ test("a video design carries pinned time-coded feedback across all three roles, 
   // network, not about what the page renders. Every REST response the client's session receives,
   // from the moment it signs in, is captured here and inspected as text below — a UI check could
   // only prove what was drawn, not what PostgREST actually returned.
+  //
+  // Each `response.text()` read is fire-and-forget from the event handler's own perspective, so
+  // `pendingReads` tracks every one of those promises explicitly; the scan near the end of this
+  // test awaits `Promise.all(pendingReads)` before reading `clientRest`, which is what actually
+  // guarantees every captured response has finished being read by then. Without that await the
+  // guarantee would depend on however many unrelated `await`s happen to run first — true today,
+  // but true by accident, not by construction.
   const clientRest: { url: string; body: string }[] = [];
+  const pendingReads: Promise<void>[] = [];
   client.on("response", (response) => {
     const url = response.url();
     if (!url.includes("/rest/v1/")) return;
-    void response
-      .text()
-      .then((body) => clientRest.push({ url, body }))
-      .catch(() => undefined);
+    pendingReads.push(
+      response
+        .text()
+        .then((body) => {
+          clientRest.push({ url, body });
+        })
+        .catch(() => undefined),
+    );
   });
 
   try {
@@ -238,6 +256,10 @@ test("a video design carries pinned time-coded feedback across all three roles, 
       ["id", "project_id", "publication_id", "title", "content", "asset_path", "sort_order"].sort(),
     );
     expect(publishedDesign.asset_path).toMatch(/\.mp4$/);
+
+    // The barrier that makes `clientRest` safe to read: every response-text read the handler
+    // above started is awaited here, explicitly, before the scan below runs.
+    await Promise.all(pendingReads);
 
     // Every `/rest/v1/` response the client's browser actually received, over the whole session,
     // named neither the internal comment's text nor the designer's identity — not just the ones
