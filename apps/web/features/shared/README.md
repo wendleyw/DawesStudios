@@ -120,11 +120,10 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-assets`,
 
 ## Non-component modules
 
-| Module             | Purpose                                                                           | Consumers                                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `canvas-fit.ts`    | Viewport fit maths for the board and project canvases.                            | `board/board-layout`, `projects/canvas-layout`                                                                       |
-| `file-download.ts` | Downloads a signed URL without leaving the page.                                  | `assets/assets-page` **only** — by the rule above this belongs in `features/assets` until a second feature needs it. |
-| `forms.css`        | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes. | Loaded once globally by `app/layout.tsx`.                                                                            |
+| Module          | Purpose                                                                           | Consumers                                      |
+| --------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `canvas-fit.ts` | Viewport fit maths for the board and project canvases.                            | `board/board-layout`, `projects/canvas-layout` |
+| `forms.css`     | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes. | Loaded once globally by `app/layout.tsx`.      |
 
 ## Candidates that were evaluated and rejected
 

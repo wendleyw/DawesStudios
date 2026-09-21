@@ -5,8 +5,13 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { prepareDelivery } from "@/features/projects/media-client";
-import { assertResult } from "@/lib/supabase";
 import { FormError } from "@/features/shared/form-error";
+import {
+  findAssetByStoragePath,
+  recordProjectAsset,
+  removeUnusedUpload,
+  uploadInternalAsset,
+} from "./asset-data";
 
 const formats: Record<string, string> = {
   "image/png": "png",
@@ -39,11 +44,8 @@ export function UploadFileDialog({
     setCloseError("");
     try {
       if (prepared) {
-        const existing = assertResult(
-          await database.from("project_assets").select("id").eq("storage_path", prepared.path),
-        );
-        if (!existing.length)
-          assertResult(await database.storage.from("internal-assets").remove([prepared.path]));
+        const existing = await findAssetByStoragePath(database, { path: prepared.path });
+        if (!existing.length) await removeUnusedUpload(database, { path: prepared.path });
       }
       onClose();
     } catch {
@@ -69,28 +71,20 @@ export function UploadFileDialog({
           return;
         } else {
           const path = `${projectId}/${crypto.randomUUID()}.${formats[file.type]}`;
-          assertResult(
-            await database.storage
-              .from("internal-assets")
-              .upload(path, file, { contentType: file.type, upsert: false }),
-          );
+          await uploadInternalAsset(database, { path, file });
           asset = { path, mime: file.type, size: file.size };
         }
         setPrepared(asset);
       }
-      const existing = assertResult(
-        await database.from("project_assets").select("id").eq("storage_path", asset.path),
-      );
+      const existing = await findAssetByStoragePath(database, { path: asset.path });
       if (!existing.length)
-        assertResult(
-          await database.from("project_assets").insert({
-            project_id: projectId,
-            name,
-            storage_path: asset.path,
-            mime_type: asset.mime,
-            file_size: asset.size,
-          }),
-        );
+        await recordProjectAsset(database, {
+          projectId,
+          name,
+          path: asset.path,
+          mime: asset.mime,
+          size: asset.size,
+        });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["assets"] });

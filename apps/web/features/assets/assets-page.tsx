@@ -6,12 +6,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { downloadPrivateFile } from "@/features/shared/file-download";
+import { downloadPrivateFile } from "./file-download";
 import { Modal } from "@/features/shared/modal";
 import { formatDate, useClients } from "@/features/workspace/workspace-data";
-import { assertResult } from "@/lib/supabase";
-import { useProjectAssets, type ProjectAsset } from "./asset-data";
-import { initialUploadProject } from "./asset-data";
+import {
+  initialUploadProject,
+  markProjectDelivered,
+  useProjectAssets,
+  type ProjectAsset,
+} from "./asset-data";
 import { UploadFileDialog } from "./upload-file-dialog";
 import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
@@ -40,10 +43,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   });
   const deliver = useMutation({
     mutationFn: async () => {
-      if (deliverProject)
-        assertResult(
-          await database.rpc("mark_project_delivered", { p_project_id: deliverProject }),
-        );
+      if (deliverProject) await markProjectDelivered(database, { projectId: deliverProject });
     },
     onSuccess: async () => {
       await Promise.all([

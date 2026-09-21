@@ -1,0 +1,35 @@
+# Assets
+
+The files page at `/clients/:clientId/assets` lists working files, shared designs and delivery
+files across a client's projects, and lets the agency upload a working file or a delivery file and
+mark an approved project as delivered.
+
+`asset-data.ts` owns every Supabase read and write for the feature, as
+[the data-access contract](../../../../docs/architecture/data-access.md) requires. `useProjectAssets`
+is the page's single read hook. `findAssetByStoragePath`, `removeUnusedUpload`,
+`uploadInternalAsset`, `recordProjectAsset` and `markProjectDelivered` were relocated from
+`upload-file-dialog.tsx` and `assets-page.tsx` during the small-features migration (task 15).
+
+`file-download.ts` moved here from `features/shared/` in the same migration: it had exactly one
+consumer, `assets-page.tsx`, and the shared layer's own rule is that a primitive belongs in
+`shared/` only with two or more real consumers.
+
+## Deviation from the data-access contract: a read that is not a hook
+
+`findAssetByStoragePath` is exported as a plain `async (database, input)` function instead of a
+`use<Thing>()` hook.
+
+It is called from two places in `upload-file-dialog.tsx`: from the dialog's `close()` (deciding
+whether an unfinished upload's file can be safely removed from storage before the dialog closes)
+and from the upload mutation's `mutationFn` (deciding whether a retried submit already recorded this
+upload's row). Both call sites branch on the result before performing a write; neither renders it.
+This is exactly the shape [rule 2 of the contract](../../../../docs/architecture/data-access.md)
+names — the same `select` a hook would use on render is a plain function when a mutation (or a
+handler that guards a close) branches on it instead — so no restructuring turns it into a hook. The
+reason is also recorded above the function in `asset-data.ts`.
+
+## Test files
+
+`asset-data.test.ts` is the pre-existing regression test for `initialUploadProject` and was left
+unmodified by this migration. The five functions relocated in this migration are tested in
+`asset-data-writes.test.ts` instead, kept separate so the existing file's diff stays empty.
