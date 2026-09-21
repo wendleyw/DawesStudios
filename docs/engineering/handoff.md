@@ -1479,3 +1479,66 @@ The acceptance matrix is unchanged by this session. The `ddl_command_end` event 
 permanent ACL fix is still deferred while the concurrent session writes migrations, and the
 `.env.local` trap re-arms for any third working tree that starts the stack without a credentials
 file — the refusal now names the recovery instead of failing silently an hour later.
+
+## Families A and B evidenced; matrix 98/16 → 108/6 (2026-09-21)
+
+Measured against the repository and the live database only. No browser evidence was gathered and
+none should be read into this section: the container on `3003` was rebuilt at 21:09Z from the
+concurrent `feature/video-designs-and-feedback` branch, so anything it serves describes that tree,
+not `main`.
+
+### What was measured
+
+**A01/A02** from the repository: 31 delegated reports, of which 31 name their changed files, 31
+record a check with its actual result, and 31 declare ownership and its release. Every shared
+primitive has at least two consumers outside `features/shared/`, with `canvas-fit` and `version-row`
+at the floor of exactly two.
+
+**A03/A04** by a delegated sweep, then verified here before acting. A03 is clean across 493 tracked
+files. A04 found seven false claims, all repaired at `37ccd14`: the Realtime list omitted two tables;
+`backend.md` claimed seven media tests against 14 while `apps/media/README.md` said 14, so two
+documents contradicted each other; `operations/README.md` contradicted *itself* on production-image
+counts, having read "22 started projects" as 22 images; three counts and two line citations had
+drifted; and `shared/README.md` listed two files containing no `FormError` while omitting the two
+that do.
+
+**B04–B08** against the live stack. B04 is 7 of 7 with counts summing to all 25 projects. B05 was
+measured against the strict reading — four projects satisfy all three properties *simultaneously*,
+exactly the threshold, so those four are load-bearing fixture and the row now says so. B07
+reconciles exactly for all ten clients, with one debit per project measured rather than inferred.
+
+### The distinction that mattered most
+
+B06 asks whether every client *can inspect* activity. Rows existing in a table do not answer that —
+row-level security sits between the two. All ten client accounts were therefore signed in over REST:
+each reads its own workspace (two projects, seven for SABRE, reproducing 2×9+7=25 from the client
+side) and **all ten read zero `internal_comments`**, a zero that sits beside a non-zero read from the
+same request sequence and therefore shows isolation rather than a failed request.
+
+### Two corrections to this session's own work
+
+**A05's finding was wrong by one.** It reported 11 rows carrying a bare `Unverified`; it was 10. H11
+was miscounted because the check read each row's *status* cell while H11 states its gap in the
+*evidence* cell. A measurement that reads one column and concludes about the row is the same class of
+error the pass existed to find, so it is recorded in the row and the evidence document rather than
+quietly dropped.
+
+**J10 cited a number that had rotted.** It named "roughly 67 rows" as its blocker; the figure was six.
+It now names the rows by ID, so the same drift cannot recur.
+
+### What remains, and what each one waits on
+
+| Row | Waiting on |
+| --- | --- |
+| I01 | The concurrent branch's merge — `main` cannot run `npm run db:start` while the stack holds four migrations `main` has no files for |
+| H11, I02, I04, I05 | A container serving `main`; rebuilding one now would disrupt the concurrent session's final verification |
+| J10 | The five above, by construction |
+
+### Held deliberately, not overlooked
+
+`docs/architecture/data-access.md` and `apps/web/features/projects/README.md` cite two call sites by
+line number. Those were corrected to `:100`/`:114` this morning and the concurrent branch moves them
+to `:147`/`:161`, so correcting either side alone reproduces the defect in the other. **The fix is to
+delete the line numbers and cite the symbols**, applied after the merge; the same for
+`design-system.md`'s selector count, which should point at `stylesheet-boundary.test.ts` rather than
+carry a copy that was corrected from 736 to 730 this morning and is already wrong again.
