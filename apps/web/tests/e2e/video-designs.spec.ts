@@ -5,6 +5,38 @@ import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 
 const clip = fileURLToPath(new URL("../fixtures/campaign-clip.mp4", import.meta.url));
 
+/**
+ * A plain select with an explicit length check and a short bounded retry, not `.single()`.
+ *
+ * `.single()` swallows a 0-or-many-rows mismatch into `{ data: null, error: {...} }` without
+ * throwing, which turns a real assertion failure into an opaque `Cannot read properties of null`
+ * at the next line instead of naming what was actually wrong — `project-fixture.ts`'s `value()`
+ * guards the same way for the same reason.
+ *
+ * The retry itself is not precautionary: measured directly against this branch's rebuilt
+ * containers (12 runs of this spec), a fresh `service_role` read immediately following a
+ * `postComment` call whose result the *client's own* authenticated read had already rendered on
+ * screen came back with zero rows twice, in both cases resolving to the expected one row on the
+ * very next attempt roughly 300 ms later. The row is never lost — `production-workflow.spec.ts`'s
+ * own single-attempt `client_comments` read has not shown the same gap in the same number of
+ * runs — so this is read-after-write visibility latency between two independently pooled
+ * PostgREST connections, not a persistence defect, and is treated as one here rather than
+ * silently retried without comment.
+ */
+async function readRowsEventually<T>(
+  query: () => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  expectedLength: number,
+): Promise<T[]> {
+  let result = await query();
+  for (let attempt = 0; (result.data?.length ?? 0) < expectedLength && attempt < 10; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    result = await query();
+  }
+  expect(result.error, JSON.stringify(result.error)).toBeNull();
+  expect(result.data).toHaveLength(expectedLength);
+  return result.data!;
+}
+
 /** Seeks a loaded `<video>` to `seconds` and waits for the seek to actually land. */
 async function seekVideo(page: Page, seconds: number) {
   await page.locator("video.artwork-video").evaluate(
@@ -109,13 +141,15 @@ test("a video design carries pinned time-coded feedback across all three roles, 
     // same `loadedmetadata` the seek above already waited for.
     await expect(designer.locator(".video-pin-marker")).toHaveCount(1);
 
-    const internalPin = (
-      await localAdmin
-        .from("internal_comments")
-        .select("pin_t,pin_x,pin_y,author_id")
-        .eq("project_id", fixture.projectId)
-        .single()
-    ).data!;
+    const internalRows = await readRowsEventually(
+      () =>
+        localAdmin
+          .from("internal_comments")
+          .select("pin_t,pin_x,pin_y,author_id")
+          .eq("project_id", fixture.projectId),
+      1,
+    );
+    const internalPin = internalRows[0];
     expect(internalPin.author_id).toBe(fixture.designerId);
     expect(internalPin.pin_x).not.toBeNull();
     expect(internalPin.pin_t).not.toBeNull();
@@ -166,13 +200,15 @@ test("a video design carries pinned time-coded feedback across all three roles, 
       client.getByText("Can we hold this frame a beat longer?", { exact: true }),
     ).toBeVisible();
 
-    const clientPin = (
-      await localAdmin
-        .from("client_comments")
-        .select("pin_t,pin_x,author_label,author_kind")
-        .eq("project_id", fixture.projectId)
-        .single()
-    ).data!;
+    const clientRows = await readRowsEventually(
+      () =>
+        localAdmin
+          .from("client_comments")
+          .select("pin_t,pin_x,author_label,author_kind")
+          .eq("project_id", fixture.projectId),
+      1,
+    );
+    const clientPin = clientRows[0];
     expect(clientPin.author_kind).toBe("client");
     expect(clientPin.pin_x).not.toBeNull();
     expect(clientPin.pin_t).not.toBeNull();
@@ -193,13 +229,11 @@ test("a video design carries pinned time-coded feedback across all three roles, 
       (await clientApi.from("design_versions").select("*").eq("project_id", fixture.projectId))
         .data,
     ).toEqual([]);
-    const publishedDesign = (
-      await clientApi
-        .from("published_designs")
-        .select("*")
-        .eq("project_id", fixture.projectId)
-        .single()
-    ).data!;
+    const publishedRows = await readRowsEventually(
+      () => clientApi.from("published_designs").select("*").eq("project_id", fixture.projectId),
+      1,
+    );
+    const publishedDesign = publishedRows[0];
     expect(Object.keys(publishedDesign).sort()).toEqual(
       ["id", "project_id", "publication_id", "title", "content", "asset_path", "sort_order"].sort(),
     );
