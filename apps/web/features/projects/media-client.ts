@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@database";
+import {
+  BUCKET_MAX_BYTES,
+  standardUploadMimes,
+  uploadSizeMessage,
+  uploadTypeMessage,
+} from "@/features/shared/upload-rules";
 
 /*
  * Identifiers are validated as UUID-shaped, not as RFC 4122 version 4.
@@ -94,9 +100,9 @@ export async function prepareDelivery(
   file: File,
   name: string,
 ) {
-  if (!["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(file.type))
-    throw new Error("Choose a PNG, JPG, WebP, or PDF file.");
-  if (file.size > 50 * 1024 * 1024) throw new Error("Choose a file smaller than 50 MB.");
+  if (!(standardUploadMimes as readonly string[]).includes(file.type))
+    throw new Error(uploadTypeMessage(standardUploadMimes));
+  if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   return requestMedia(
     database,
     mediaUrl,

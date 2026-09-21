@@ -1,5 +1,12 @@
 import { z } from "zod";
 import type { Json } from "@database";
+import {
+  BUCKET_MAX_BYTES,
+  brandUploadMimes,
+  uploadExtensionMap,
+  uploadSizeMessage,
+  uploadTypeMessage,
+} from "@/features/shared/upload-rules";
 
 export const brandNavigation = [
   { id: "overview", label: "Overview", group: "Identity" },
@@ -365,16 +372,14 @@ export function matchesBrandSearch(
       .includes(search.trim().toLocaleLowerCase("en-US"))
   );
 }
-export const brandFileTypes: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/svg+xml": "svg",
-  "application/pdf": "pdf",
-};
+/**
+ * Brand assets are the only upload path that accepts SVG, because `brand-assets` is the only
+ * bucket whose `allowed_mime_types` includes it — a logo legitimately ships as a vector.
+ */
+export const brandFileTypes: Record<string, string> = uploadExtensionMap(brandUploadMimes);
 export function validateBrandFile(file: { type: string; size: number }): string {
-  if (!brandFileTypes[file.type]) throw new Error("Choose a PNG, JPG, WebP, SVG, or PDF file.");
+  if (!brandFileTypes[file.type]) throw new Error(uploadTypeMessage(brandUploadMimes));
   if (file.size <= 0) throw new Error("Choose a file that contains content.");
-  if (file.size > 50 * 1024 * 1024) throw new Error("Choose a file no larger than 50 MB.");
+  if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   return brandFileTypes[file.type];
 }

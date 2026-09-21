@@ -28,18 +28,21 @@ export function HomePage() {
   const projects = useProjects();
   const campaigns = useWorkspaceCampaigns();
   const activeProjects = projects.data?.filter((project) => project.status !== "delivered") ?? [];
+  const needsAttentionStatuses = ["internal_review", "client_review", "changes_requested"] as const;
   const reviewProjects = activeProjects.filter((project) =>
-    ["client_review", "internal_review", "changes_requested"].includes(project.status),
+    (needsAttentionStatuses as readonly string[]).includes(project.status),
   );
   const countOf = (status: string) =>
     activeProjects.filter((project) => project.status === status).length;
   // One row of figures that decomposes the work, so "needs attention" says who it is waiting on
-  // rather than only that something is waiting. Its parts sum to the badge beside the table.
+  // rather than only that something is waiting. Its parts sum to the badge beside the table, which
+  // is true only while these three tiles are derived from the same set `reviewProjects` filters on.
   const tiles = [
     { label: "Active projects", value: activeProjects.length },
-    { label: statusLabels.internal_review, value: countOf("internal_review") },
-    { label: statusLabels.client_review, value: countOf("client_review") },
-    { label: statusLabels.changes_requested, value: countOf("changes_requested") },
+    ...needsAttentionStatuses.map((status) => ({
+      label: statusLabels[status],
+      value: countOf(status),
+    })),
     { label: statusLabels.approved, value: countOf("approved") },
     { label: "Clients", value: clients.data?.length ?? 0 },
   ];

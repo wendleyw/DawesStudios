@@ -3,6 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
+import {
+  versionDate,
+  versionNote,
+  versionStatus,
+  type VersionRow,
+} from "@/features/shared/version-row";
 
 export type ReviewRow = {
   id: string;
@@ -14,6 +20,19 @@ export type ReviewRow = {
   date: string;
   note: string | null;
   internal: boolean;
+};
+
+/**
+ * A version row from either channel, with the identifying columns the list needs. The optional
+ * `publication_reviews` is the embedded join the published query adds; the internal query has no
+ * such column, which is what `versionStatus` falls back on.
+ */
+type ReviewVersion = VersionRow & {
+  id: string;
+  project_id: string;
+  deliverable_id: string;
+  version_number: number;
+  publication_reviews?: { status: string } | null;
 };
 
 /**
@@ -61,19 +80,24 @@ export function useReviews(clientId: string) {
           latest.get(version.deliverable_id)!.version_number < version.version_number
         )
           latest.set(version.deliverable_id, version);
-      const rows = [...latest.values()].map((version) => ({
+      // Both blocks below read the same table through the same expressions; the submitted block
+      // differs only in the two values its `status = "submitted"` filter has already decided.
+      const toReviewRow = (
+        version: ReviewVersion,
+        overrides: Partial<Pick<ReviewRow, "status" | "internal">> = {},
+      ): ReviewRow => ({
         id: version.id,
         projectId: version.project_id,
         title: projects.find((project) => project.id === version.project_id)!.title,
         deliverable:
           deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable",
         version: version.version_number,
-        status:
-          "status" in version ? version.status : (version.publication_reviews?.status ?? "pending"),
-        date: "created_at" in version ? version.created_at : version.published_at,
-        note: "notes" in version ? version.notes : version.release_note,
-        internal,
-      }));
+        status: overrides.status ?? versionStatus(version, version.publication_reviews?.status),
+        date: versionDate(version),
+        note: versionNote(version),
+        internal: overrides.internal ?? internal,
+      });
+      const rows = [...latest.values()].map((version) => toReviewRow(version));
       if (profile?.role === "agency") {
         const submitted = assertResult(
           await database
@@ -83,19 +107,9 @@ export function useReviews(clientId: string) {
             .eq("status", "submitted"),
         );
         rows.push(
-          ...submitted.map((version) => ({
-            id: version.id,
-            projectId: version.project_id,
-            title: projects.find((project) => project.id === version.project_id)!.title,
-            deliverable:
-              deliverables.find((item) => item.id === version.deliverable_id)?.name ??
-              "Deliverable",
-            version: version.version_number,
-            status: "submitted",
-            date: version.created_at,
-            note: version.notes,
-            internal: true,
-          })),
+          ...submitted.map((version) =>
+            toReviewRow(version, { status: "submitted", internal: true }),
+          ),
         );
       }
       return rows.toSorted((a, b) => b.date.localeCompare(a.date));

@@ -21,6 +21,7 @@ import {
   type CanvasVersion,
 } from "./project-data";
 import { FormError } from "@/features/shared/form-error";
+import { ARTWORK_MAX_BYTES, uploadLimitMb } from "@/features/shared/upload-rules";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
@@ -216,7 +217,7 @@ export function ProjectActionDialog({
                   disabled={!!stagedArtwork || mutation.isPending}
                   accept="image/png,image/jpeg,image/webp"
                 />
-                <small>PNG, JPG, or WebP. Up to 25 MB.</small>
+                <small>PNG, JPG, or WebP. Up to {uploadLimitMb(ARTWORK_MAX_BYTES)} MB.</small>
               </label>
               <details className="design-text-options">
                 <summary>Or compose a text concept</summary>

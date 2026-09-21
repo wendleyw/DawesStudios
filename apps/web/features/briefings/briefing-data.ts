@@ -3,12 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
-import {
-  decodeAssignedBriefing,
-  decodeBriefing,
-  type BrandSection,
-  type Campaign,
-} from "./briefing-model";
+import { decodeBriefing, type BrandSection, type Campaign } from "./briefing-model";
 import type { Database } from "@database";
 
 /**
@@ -70,7 +65,7 @@ export function useBriefings(clientId: string) {
     queryFn: async () =>
       profile?.role === "designer"
         ? assertResult(await database.rpc("get_assigned_briefings", { p_client_id: clientId })).map(
-            decodeAssignedBriefing,
+            decodeBriefing,
           )
         : assertResult(
             await database

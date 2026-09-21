@@ -13,6 +13,7 @@ import {
   useBrandAssets,
   type BrandAsset,
 } from "./brand-data";
+import { saveBlob } from "@/features/shared/save-blob";
 import { brandFileTypes, matchesBrandSearch, validationMessage } from "./brand-model";
 import { CopyButton } from "@/features/shared/copy-button";
 import { FormError } from "@/features/shared/form-error";
@@ -73,14 +74,9 @@ export function BrandAssets({ clientId }: { clientId: string }) {
     mutationFn: async (asset: BrandAsset) => {
       if (!asset.storage_path) throw new Error("This asset does not have a downloadable file yet.");
       const blob = await downloadBrandAssetFile(database, { path: asset.storage_path });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${asset.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")}.${brandFileTypes[asset.mime_type ?? ""] ?? "bin"}`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      saveBlob(blob, `${asset.name}.${brandFileTypes[asset.mime_type ?? ""] ?? "bin"}`, {
+        revokeAfterMs: 30_000,
+      });
     },
   });
   if (assets.isPending) return <p role="status">Loading brand files…</p>;

@@ -67,9 +67,9 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
         <nav className="briefing-tabs" aria-label="Filter briefings">
           {[
             ["all", "All briefings"],
-            ["draft", "Draft"],
+            ["draft", briefingStatusLabels.draft],
             ["awaiting_review", "With the studio"],
-            ["accepted", "In progress"],
+            ["accepted", briefingStatusLabels.accepted],
           ].map(([value, label]) => (
             <button
               className={tab === value ? "active" : ""}

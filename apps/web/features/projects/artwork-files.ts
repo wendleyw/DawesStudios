@@ -1,4 +1,5 @@
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
+import { ARTWORK_MAX_BYTES, uploadSizeMessage } from "@/features/shared/upload-rules";
 
 /**
  * The lifecycle of an uploaded design artwork: preparing the image, storing it, and removing one
@@ -12,7 +13,9 @@ const allowedImageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 async function sanitizeArtwork(file: Blob): Promise<Blob> {
   if (!allowedImageTypes.has(file.type))
     throw new Error("Choose a PNG, JPG, or WebP image for the design preview.");
-  if (file.size > 25 * 1024 * 1024) throw new Error("Please choose an image smaller than 25 MB.");
+  // `ARTWORK_MAX_BYTES`, not the bucket limit: this check is the only guard in front of the
+  // decode below, and the megapixel guard cannot run until the bitmap has already been allocated.
+  if (file.size > ARTWORK_MAX_BYTES) throw new Error(uploadSizeMessage(ARTWORK_MAX_BYTES));
   const bitmap = await createImageBitmap(file);
   try {
     if (bitmap.width * bitmap.height > 40_000_000)

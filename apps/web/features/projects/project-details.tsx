@@ -223,13 +223,12 @@ export function ProjectDetails({
               <input type="date" name="due" defaultValue={project.due_date ?? ""} />
             </label>
           </div>
-          {save.error && (
-            <FormError>
-              {save.error.message.includes("0 rows")
-                ? "This project changed while you were editing. Close and reopen the details to try again."
-                : save.error.message}
-            </FormError>
-          )}
+          {/*
+            The compare-and-set conflict reads as a sentence because `updateProjectDetails` turns
+            the PGRST116 result into one before it returns; there is no second copy of that message
+            here, as there is none beside `updateWorkingDesign`.
+          */}
+          {save.error && <FormError>{save.error.message}</FormError>}
           <div className="form-actions">
             <button
               className="button"

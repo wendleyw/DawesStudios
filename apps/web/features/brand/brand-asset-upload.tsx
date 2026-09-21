@@ -14,6 +14,7 @@ import {
 } from "./brand-data";
 import { brandFileTypes, validateBrandFile, validationMessage } from "./brand-model";
 import { FormError } from "@/features/shared/form-error";
+import { brandUploadMimes, uploadLimitMb, uploadTypesLabel } from "@/features/shared/upload-rules";
 
 /** The dialog that uploads a new brand asset file and its metadata row. */
 export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: () => void }) {
@@ -124,7 +125,9 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
             disabled={upload.isPending || fileUploaded}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
-          <span className="form-help">PNG, JPG, WebP, SVG, or PDF. Up to 50 MB.</span>
+          <span className="form-help">
+            {uploadTypesLabel(brandUploadMimes)}. Up to {uploadLimitMb()} MB.
+          </span>
         </label>
         <label>
           Asset name

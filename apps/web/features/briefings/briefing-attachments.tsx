@@ -6,6 +6,17 @@ import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { FormError } from "@/features/shared/form-error";
 import { Modal } from "@/features/shared/modal";
+import { saveBlob } from "@/features/shared/save-blob";
+import {
+  BUCKET_MAX_BYTES,
+  acceptedExtensions,
+  standardUploadMimes,
+  uploadExtensionAccept,
+  uploadLimitMb,
+  uploadSizeMessage,
+  uploadTypeMessage,
+  uploadTypesLabel,
+} from "@/features/shared/upload-rules";
 import {
   addBriefingAttachment,
   briefingQueryKeys,
@@ -18,18 +29,16 @@ import {
   type BriefingAttachment,
 } from "./briefing-data";
 
-const fileTypes: Record<string, string[]> = {
-  "image/png": ["png"],
-  "image/jpeg": ["jpg", "jpeg"],
-  "image/webp": ["webp"],
-  "application/pdf": ["pdf"],
-};
-
+/**
+ * Attachments are the one upload path that also checks the filename extension against the
+ * declared type, because the stored object keeps the extension the user supplied. Everything
+ * else about the contract — which types, which ceiling — comes from the shared module.
+ */
 export function validateAttachment(file: Pick<File, "name" | "type" | "size">) {
   const extension = file.name.split(".").at(-1)?.toLowerCase() ?? "";
-  if (!fileTypes[file.type]?.includes(extension))
-    throw new Error("Choose a PNG, JPG, WebP, or PDF file.");
-  if (file.size > 50 * 1024 * 1024) throw new Error("Each file must be 50 MB or smaller.");
+  if (!acceptedExtensions(standardUploadMimes, file.type).includes(extension))
+    throw new Error(uploadTypeMessage(standardUploadMimes));
+  if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   if (file.size === 0) throw new Error("This file is empty. Choose a different file.");
   return extension;
 }
@@ -85,12 +94,7 @@ export function BriefingAttachments({
       const blob = await downloadBriefingAttachmentFile(database, {
         path: attachment.storage_path,
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = attachment.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      saveBlob(blob, attachment.name);
     },
   });
   return (
@@ -141,7 +145,7 @@ export function BriefingAttachments({
             className="visually-hidden"
             aria-label="Choose a briefing attachment"
             type="file"
-            accept=".png,.jpg,.jpeg,.webp,.pdf"
+            accept={uploadExtensionAccept(standardUploadMimes)}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) upload.mutate(file);
@@ -156,7 +160,9 @@ export function BriefingAttachments({
             <Paperclip size={15} />
             {upload.isPending ? "Uploading…" : "Attach a file"}
           </button>
-          <p className="briefing-note">PNG, JPG, WebP or PDF · up to 50 MB each</p>
+          <p className="briefing-note">
+            {uploadTypesLabel(standardUploadMimes)} · up to {uploadLimitMb()} MB each
+          </p>
         </>
       )}
       {(upload.error || remove.error || download.error) && (

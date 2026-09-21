@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Database, Json } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
+import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
 
 /**
  * Supabase access for a project: the canvas the project page draws, its two comment channels, the
@@ -82,13 +83,12 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel) {
         projectId: version.project_id,
         deliverableId: version.deliverable_id,
         number: version.version_number,
-        note: "notes" in version ? version.notes : version.release_note,
-        status:
-          "status" in version
-            ? version.status
-            : (reviewResult.data?.find((review) => review.publication_id === version.id)?.status ??
-              "pending"),
-        date: "created_at" in version ? version.created_at : version.published_at,
+        note: versionNote(version),
+        status: versionStatus(
+          version,
+          reviewResult.data?.find((review) => review.publication_id === version.id)?.status,
+        ),
+        date: versionDate(version),
         feedback: reviewResult.data?.find((review) => review.publication_id === version.id)
           ?.feedback,
       }));
@@ -111,6 +111,37 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel) {
   });
 }
 
+/**
+ * The seven fields a comment has whichever channel it came from. The eighth, `label`, is the one
+ * thing the two channels must not share: a client comment carries the author label the client
+ * wrote it under, while an internal comment resolves to the reader's own name or the anonymous
+ * "Studio team" — never a designer's identity. It is passed in, so the two label rules stay
+ * separate and visible at the two call sites that own them.
+ */
+function toCanvasComment(
+  comment: {
+    id: string;
+    body: string;
+    pin_x: number | null;
+    pin_y: number | null;
+    design_id: string | null;
+    resolved: boolean;
+    created_at: string;
+  },
+  label: string,
+): CanvasComment {
+  return {
+    id: comment.id,
+    body: comment.body,
+    label,
+    pinX: comment.pin_x,
+    pinY: comment.pin_y,
+    designId: comment.design_id,
+    resolved: comment.resolved,
+    createdAt: comment.created_at,
+  };
+}
+
 export function useProjectComments(projectId: string, channel: ProjectChannel, designId?: string) {
   const { database, session, profile } = useAuth();
   return useQuery({
@@ -126,16 +157,7 @@ export function useProjectComments(projectId: string, channel: ProjectChannel, d
         const rows = assertResult(
           await (designId ? query.eq("design_id", designId) : query.is("design_id", null)),
         );
-        return rows.map((comment) => ({
-          id: comment.id,
-          body: comment.body,
-          label: comment.author_label,
-          pinX: comment.pin_x,
-          pinY: comment.pin_y,
-          designId: comment.design_id,
-          resolved: comment.resolved,
-          createdAt: comment.created_at,
-        })) satisfies CanvasComment[];
+        return rows.map((comment) => toCanvasComment(comment, comment.author_label));
       }
       const query = database
         .from("internal_comments")
@@ -145,16 +167,12 @@ export function useProjectComments(projectId: string, channel: ProjectChannel, d
       const rows = assertResult(
         await (designId ? query.eq("design_id", designId) : query.is("design_id", null)),
       );
-      return rows.map((comment) => ({
-        id: comment.id,
-        body: comment.body,
-        label: comment.author_id === profile?.id ? profile.display_name : "Studio team",
-        pinX: comment.pin_x,
-        pinY: comment.pin_y,
-        designId: comment.design_id,
-        resolved: comment.resolved,
-        createdAt: comment.created_at,
-      })) satisfies CanvasComment[];
+      return rows.map((comment) =>
+        toCanvasComment(
+          comment,
+          comment.author_id === profile?.id ? profile.display_name : "Studio team",
+        ),
+      );
     },
     refetchInterval: 15_000,
   });

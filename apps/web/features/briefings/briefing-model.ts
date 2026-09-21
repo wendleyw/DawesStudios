@@ -116,17 +116,17 @@ const directionSchema = z.object({
   questions: z.record(z.string(), z.string()).optional(),
 });
 
-export function decodeBriefing(row: Database["public"]["Tables"]["briefings"]["Row"]): Briefing {
-  return {
-    ...row,
-    direction: directionSchema.parse(row.direction),
-    requested_deliverables: z.array(deliverableSchema).parse(row.requested_deliverables),
-  };
-}
+/**
+ * A briefing row as it arrives from Postgres, from either of the two reads that produce one: the
+ * `briefings` table for an agency or client session, and `get_assigned_briefings` for a designer.
+ * The two row types differ only in which columns a designer is allowed to see — the decoding of
+ * `direction` and `requested_deliverables` out of `Json` is the same work for both.
+ */
+type BriefingRow =
+  | Database["public"]["Tables"]["briefings"]["Row"]
+  | Database["public"]["Functions"]["get_assigned_briefings"]["Returns"][number];
 
-export function decodeAssignedBriefing(
-  row: Database["public"]["Functions"]["get_assigned_briefings"]["Returns"][number],
-): Briefing {
+export function decodeBriefing(row: BriefingRow): Briefing {
   return {
     ...row,
     direction: directionSchema.parse(row.direction),

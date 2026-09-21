@@ -956,6 +956,14 @@ select {
   .page-actions {
     display: contents;
   }
+}
+/*
+ * `.page-bell`'s own threshold, kept separate from the block above: the shell's topbar bell hides
+ * at `min-width: 901px` (workspace.css), so this must clear that boundary rather than meet it at
+ * an integer pixel, or a fractional viewport width (reachable through zoom or device pixel ratio)
+ * would show both bells at once.
+ */
+@media (max-width: 900.98px) {
   .page-bell {
     display: none;
   }

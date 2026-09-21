@@ -42,6 +42,41 @@ export type ProjectAsset = {
   approved: boolean;
 };
 
+/**
+ * `delivery_files` and `project_assets` are two tables with the same seven column names, so the
+ * only thing that distinguishes their rows as assets is which bucket holds them, what the list
+ * calls them and whether they count as approved. `published_designs` is not read this way: it
+ * names its columns differently, carries no mime or size of its own, and takes its approval from
+ * a review, so it keeps its own mapping below.
+ */
+function fromStoredFile(
+  file: {
+    id: string;
+    name: string;
+    project_id: string;
+    storage_path: string;
+    mime_type: string;
+    file_size: number;
+    created_at: string;
+  },
+  bucket: ProjectAsset["bucket"],
+  category: ProjectAsset["category"],
+  approved: boolean,
+): ProjectAsset {
+  return {
+    id: file.id,
+    name: file.name,
+    projectId: file.project_id,
+    path: file.storage_path,
+    bucket,
+    mime: file.mime_type,
+    size: file.file_size,
+    date: file.created_at,
+    category,
+    approved,
+  };
+}
+
 export function useProjectAssets(clientId: string) {
   const { database, profile, session } = useAuth();
   return useQuery({
@@ -81,32 +116,14 @@ export function useProjectAssets(clientId: string) {
           .map((review) => review.publication_id),
       );
       assets.push(
-        ...assertResult(deliveries).map((file) => ({
-          id: file.id,
-          name: file.name,
-          projectId: file.project_id,
-          path: file.storage_path,
-          bucket: "delivery-files" as const,
-          mime: file.mime_type,
-          size: file.file_size,
-          date: file.created_at,
-          category: "Delivery" as const,
-          approved: true,
-        })),
+        ...assertResult(deliveries).map((file) =>
+          fromStoredFile(file, "delivery-files", "Delivery", true),
+        ),
       );
       assets.push(
-        ...assertResult(internal).map((file) => ({
-          id: file.id,
-          name: file.name,
-          projectId: file.project_id,
-          path: file.storage_path,
-          bucket: "internal-assets" as const,
-          mime: file.mime_type,
-          size: file.file_size,
-          date: file.created_at,
-          category: "Working file" as const,
-          approved: false,
-        })),
+        ...assertResult(internal).map((file) =>
+          fromStoredFile(file, "internal-assets", "Working file", false),
+        ),
       );
       assets.push(
         ...assertResult(publications)

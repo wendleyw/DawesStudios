@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@database";
 import { assertResult } from "@/lib/supabase";
+import { saveBlob } from "@/features/shared/save-blob";
 
 export async function downloadPrivateFile(
   database: SupabaseClient<Database>,
@@ -9,10 +10,5 @@ export async function downloadPrivateFile(
   name: string,
 ) {
   const blob = assertResult(await database.storage.from(bucket).download(path));
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(blob, name);
 }

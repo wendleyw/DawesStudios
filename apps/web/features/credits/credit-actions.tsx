@@ -13,6 +13,13 @@ import {
 import type { CreditRequest } from "./credit-model";
 import { FormError } from "@/features/shared/form-error";
 
+/**
+ * The credit packages a request can choose from. Postgres holds the authoritative constraint
+ * (`supabase/migrations/202609200004_requests_and_attachments.sql`, `check(amount in (25,50,100))`);
+ * this is the client's fail-fast copy of it, stated once rather than once per use.
+ */
+const CREDIT_PACKAGES = [25, 50, 100] as const;
+
 export function CreditActionDialog({
   clientId,
   mode,
@@ -33,7 +40,8 @@ export function CreditActionDialog({
       if (!Number.isSafeInteger(quantity) || quantity === 0)
         throw new Error("Enter a non-zero whole number of credits.");
       if (mode === "request") {
-        if (![25, 50, 100].includes(quantity)) throw new Error("Choose a credit package.");
+        if (!CREDIT_PACKAGES.includes(quantity as (typeof CREDIT_PACKAGES)[number]))
+          throw new Error("Choose a credit package.");
         await requestCredits(database, { clientId, amount: quantity, note: note.trim() });
       } else {
         if (!note.trim()) throw new Error("Add a reason for this credit adjustment.");
@@ -72,7 +80,7 @@ export function CreditActionDialog({
         }}
       >
         <div className="credit-packages" role="group" aria-label="Credit packages">
-          {[25, 50, 100].map((value) => (
+          {CREDIT_PACKAGES.map((value) => (
             <button
               type="button"
               className={Number(amount) === value ? "selected" : ""}

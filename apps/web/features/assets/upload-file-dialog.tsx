@@ -7,6 +7,15 @@ import { Modal } from "@/features/shared/modal";
 import { prepareDelivery } from "@/features/projects/media-client";
 import { FormError } from "@/features/shared/form-error";
 import {
+  BUCKET_MAX_BYTES,
+  standardUploadMimes,
+  uploadExtensionMap,
+  uploadLimitMb,
+  uploadSizeMessage,
+  uploadTypeMessage,
+  uploadTypesLabel,
+} from "@/features/shared/upload-rules";
+import {
   findAssetByStoragePath,
   recordProjectAsset,
   removeUnusedUpload,
@@ -14,12 +23,7 @@ import {
   useInvalidateAssets,
 } from "./asset-data";
 
-const formats: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "application/pdf": "pdf",
-};
+const formats = uploadExtensionMap(standardUploadMimes);
 type PreparedFile = { path: string; mime: string; size: number };
 
 export function UploadFileDialog({
@@ -65,8 +69,8 @@ export function UploadFileDialog({
       let asset = prepared;
       if (!asset) {
         if (!(file instanceof File) || !file.size) throw new Error("Choose a file.");
-        if (!(file.type in formats)) throw new Error("Choose a PNG, JPG, WebP, or PDF file.");
-        if (file.size > 50 * 1024 * 1024) throw new Error("Choose a file smaller than 50 MB.");
+        if (!(file.type in formats)) throw new Error(uploadTypeMessage(standardUploadMimes));
+        if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
         if (kind === "delivery") {
           await prepareDelivery(database, mediaUrl, projectId, file, name);
           return;
@@ -147,7 +151,9 @@ export function UploadFileDialog({
             required={!prepared}
             disabled={!!prepared || upload.isPending}
           />
-          <small>PNG, JPG, WebP, or PDF · up to 50 MB</small>
+          <small>
+            {uploadTypesLabel(standardUploadMimes)} · up to {uploadLimitMb()} MB
+          </small>
         </label>
         {(upload.error || closeError) && (
           <FormError>{closeError || upload.error?.message}</FormError>

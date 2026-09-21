@@ -25,6 +25,7 @@ import "./credits.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { saveBlob } from "@/features/shared/save-blob";
 import { statusToneClass } from "@/features/shared/status-tone";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
@@ -129,12 +130,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
         ],
         { type: "text/csv;charset=utf-8;" },
       );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${client!.slug}-credit-report.csv`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      saveBlob(blob, `${client!.slug}-credit-report.csv`);
       setExportError("");
     } catch {
       setExportError("The report could not be downloaded. Please try again.");

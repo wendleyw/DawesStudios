@@ -10,6 +10,9 @@ import { PageStatus } from "@/features/shared/page-status";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import { useReviews } from "./review-data";
 
+/** A version whose review is settled, one way or the other — nothing further is waiting on it. */
+const isFinished = (status: string) => ["approved", "reviewed"].includes(status);
+
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -29,11 +32,10 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
   const rows = data.data ?? [];
   const visible = rows.filter((row) =>
     filter === "approved"
-      ? ["approved", "reviewed"].includes(row.status)
+      ? isFinished(row.status)
       : filter === "studio"
         ? row.internal && row.status === "submitted"
-        : !["approved", "reviewed"].includes(row.status) &&
-          (profile?.role === "designer" || !row.internal),
+        : !isFinished(row.status) && (profile?.role === "designer" || !row.internal),
   );
   return (
     <div className="page-content">
@@ -80,11 +82,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
               className="review-card"
             >
               <span className="review-symbol">
-                {["approved", "reviewed"].includes(row.status) ? (
-                  <CheckCheck size={23} />
-                ) : (
-                  <Clock3 size={23} />
-                )}
+                {isFinished(row.status) ? <CheckCheck size={23} /> : <Clock3 size={23} />}
               </span>
               <div>
                 <span className="eyebrow">

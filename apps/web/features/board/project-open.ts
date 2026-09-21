@@ -10,7 +10,12 @@
  * pointer shortcut; the control is the real affordance.
  */
 
-/** The single place that knows where a project lives. */
+/**
+ * Where a project's own page lives. Used within this feature; other features build the same
+ * `/projects/${id}` path literally rather than reach across the feature boundary for it, since the
+ * route is unlikely to change and importing across features for one template literal is not worth
+ * the coupling.
+ */
 export function projectHref(projectId: string): string {
   return `/projects/${projectId}`;
 }

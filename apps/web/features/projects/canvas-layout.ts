@@ -266,9 +266,11 @@ export const MIN_FIT_ZOOM = ARTWORK_MIN_H / TILE_W;
  * at a zoom that fits the width but never magnifies and never shrinks past the floor.
  *
  * Computed from the frames rather than from a rendered canvas, so a project opens on the same view
- * every time. It follows `boardFit` in `features/board/board-layout.ts`, which answers the same
- * problem for the board's tall stack with its own floor and padding; a shared helper would have to
- * be extracted by whoever owns both, so this one stays local and is reported as a duplicate.
+ * every time. The shared fit maths lives in `features/shared/canvas-fit.ts` (`fitToContent`), used
+ * here and by `boardFit` in `features/board/board-layout.ts`; the two differ only in `MIN_FIT_ZOOM`
+ * (this canvas's zoom floor is derived from its own tile and minimum-height constants, not the
+ * board's) and in `constrainHeight`, which is `false` here — a tall list of version rows scrolls
+ * past the bottom rather than shrinking to fit, unlike the board's stack.
  */
 export function canvasFit(
   content: { width: number; height: number },
