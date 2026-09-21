@@ -815,5 +815,7 @@ test was modified, no migration was written, and the review feature was not rest
 
 **Still open, and deliberately not fixed here:** a designer cannot read `publication_reviews`, so the
 client's feedback *text* has no route to that role except the agency relaying it. Changing that means
-a migration. [Observation F-3](#observation-f-3-the-review-list-does-not-distinguish-a-delivered-project)
-also remains: a delivered project is still labelled `Approved`.
+a migration — and it is not one to make: this is now recorded as an intentional decision, with its
+mechanism and reason, in [permissions.md](../architecture/permissions.md#a-designer-sees-a-clients-decision-not-the-clients-words).
+[Observation F-3](#observation-f-3-the-review-list-does-not-distinguish-a-delivered-project) also
+remains: a delivered project is still labelled `Approved`.

@@ -46,11 +46,17 @@ export function useBrandSections(clientId: string) {
       assertResult(await database.from("brand_sections").select("*").eq("client_id", clientId)),
   });
 }
-export function useBrandAssets(clientId: string) {
+/**
+ * `enabled` defaults to `true` for the assets page itself. A caller that only needs this list to
+ * decide whether a filtered link has anything behind it — the brand sections that link into the
+ * asset library — passes `false` until its own section is one that needs the answer, so switching
+ * between, say, Colors and Messaging never issues an asset fetch neither section uses.
+ */
+export function useBrandAssets(clientId: string, enabled = true) {
   const { database, session } = useAuth();
   return useQuery({
     queryKey: [brandQueryKeys.assets, session?.user.id, clientId],
-    enabled: !!session,
+    enabled: !!session && enabled,
     queryFn: async () =>
       assertResult(
         await database.from("brand_assets").select("*").eq("client_id", clientId).order("name"),

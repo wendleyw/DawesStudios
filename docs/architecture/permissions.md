@@ -71,6 +71,23 @@ A design thread identifies workspace, client, project, version or publication, d
 
 Authors are set from the authenticated identity. Comments cannot carry a forged author, role, tenant, design, or channel. Client-safe author presentation is a server-controlled projection. Text and links are rendered safely; messages and uploaded metadata never become executable HTML.
 
+## Product decisions
+
+Boundaries recorded here are intentional. An undocumented one reads as a defect to the next person who finds it; write it down instead of leaving it to be "fixed."
+
+### A designer sees a client's decision, not the client's words
+
+**Decision.** An assigned designer can see that a client requested changes to a published version — the project heading and the designer's review list both read `Changes requested` — but cannot read the change request's feedback text. The agency relays that feedback, translated and contextualized, through the internal channel instead. This is intentional: the agency is the interface between client and designer in both directions, so client feedback reaches the designer through the agency rather than directly.
+
+**Mechanism.** Three independent things enforce it:
+- `published_versions` carries no internal version id, so a designer reading it has no column to join a review against.
+- The only table joining an internal `design_versions` id to its `published_versions` publication is `private.publication_sources`. `supabase/config.toml` sets `schemas = ["public"]`, so the `private` schema — and that join — is unreachable to any API caller, designer included.
+- `publication_reviews`'s `reviews_read` policy resolves through `private.can_client_channel`, which is true for the agency or a client member of the project's client and false for a designer regardless of assignment. The policy admits agency and client only.
+
+Reversing any one of the three alone would not change the outcome; all three would need to change together, which is why this is a schema and role-boundary decision rather than something a data or UI fix could touch.
+
+**Reference.** Measured while resolving [Defect F-1](../verification/acceptance-family-f.md#defect-f-1-a-designer-never-learns-the-client-requested-changes); recorded against acceptance row **F15** in [acceptance-matrix.md](acceptance-matrix.md), whose "Not covered" note points back here.
+
 ## Atomic commands
 
 | Command | Authorization and invariant |

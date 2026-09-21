@@ -162,6 +162,16 @@ describe("brand resource handling", () => {
     expect(matchesBrandSearch(asset, " approved ", "Logo")).toBe(true);
     expect(matchesBrandSearch(asset, "dark", "Photography")).toBe(false);
   });
+  it("matches on category alone with an empty search, so a section link can tell whether its filtered destination has anything behind it", () => {
+    const asset = {
+      name: "Wordmark",
+      category: "Logo",
+      description: "For dark surfaces",
+      tags: ["Approved"],
+    };
+    expect(matchesBrandSearch(asset, "", "Logo")).toBe(true);
+    expect(matchesBrandSearch(asset, "", "Photography")).toBe(false);
+  });
   it("accepts files at the supported maximum size", () => {
     expect(validateBrandFile({ type: "application/pdf", size: 50 * 1024 * 1024 })).toBe("pdf");
   });
