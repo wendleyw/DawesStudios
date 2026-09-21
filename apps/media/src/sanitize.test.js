@@ -1,7 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import sharp from 'sharp';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { LIMITS, sanitizeDelivery, sanitizePdf, sanitizeRaster } from './sanitize.js';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { LIMITS, MediaError, sanitizeDelivery, sanitizePdf, sanitizeRaster, sanitizeVideo } from './sanitize.js';
+
+const run = promisify(execFile);
+
+async function tagsOf(path) {
+  const { stdout } = await run('ffprobe', ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', path]);
+  return JSON.parse(stdout).format?.tags ?? {};
+}
 
 describe('trusted raster regeneration', () => {
   it('preserves pixels while removing EXIF creator metadata', async () => {
@@ -73,5 +85,42 @@ describe('trusted PDF regeneration', () => {
     const source = await PDFDocument.create(); source.addPage([10000, 10000]);
     await expect(sanitizePdf(Buffer.from(await source.save()))).rejects.toThrow('dimensions');
     await expect(sanitizePdf(Buffer.from('%PDF-invalid'))).rejects.toThrow('rendered');
+  });
+});
+
+describe('sanitizeVideo', () => {
+  let dir;
+  beforeEach(async () => { dir = await mkdtemp(join(tmpdir(), 'video-test-')); });
+  afterEach(async () => { await rm(dir, { recursive: true, force: true }); });
+
+  it('removes every container tag the source carried', async () => {
+    const input = resolve(import.meta.dirname, 'fixtures/tagged.mp4');
+    expect(Object.keys(await tagsOf(input)).length).toBeGreaterThan(0);
+
+    const output = join(dir, 'clean.mp4');
+    const probe = await sanitizeVideo(input, output, 'video/mp4');
+
+    const tags = await tagsOf(output);
+    for (const key of ['title', 'comment', 'artist']) expect(tags[key]).toBeUndefined();
+    expect(probe.width).toBe(320);
+    expect(probe.height).toBe(240);
+    expect(probe.durationSeconds).toBeGreaterThan(1.5);
+  });
+
+  it('refuses a file whose container does not match its declared type', async () => {
+    const input = join(dir, 'liar.mp4');
+    await writeFile(input, Buffer.from('this is not a video'));
+    await expect(sanitizeVideo(input, join(dir, 'out.mp4'), 'video/mp4')).rejects.toThrow(MediaError);
+  });
+
+  it('refuses a file over the video ceiling', async () => {
+    // LIMITS is frozen with Object.freeze, which also makes its properties non-configurable, so
+    // Object.defineProperty cannot redefine videoBytes even with `configurable: true` in the
+    // descriptor (that itself is the property JS refuses to flip on a frozen object). sanitizeVideo
+    // therefore takes the ceiling as an optional fourth argument defaulting to LIMITS.videoBytes,
+    // which this test overrides directly instead of mutating the frozen object.
+    const input = join(dir, 'huge.mp4');
+    await writeFile(input, Buffer.alloc(16));
+    await expect(sanitizeVideo(input, join(dir, 'out.mp4'), 'video/mp4', 8)).rejects.toThrow(/gigabyte|larger/i);
   });
 });

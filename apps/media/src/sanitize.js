@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -7,7 +7,12 @@ import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';
 
 const execFileAsync = promisify(execFile);
-export const LIMITS = Object.freeze({ bytes: 50 * 1024 * 1024, pixels: 40_000_000, pages: 20, pagePixels: 16_000_000, pdfPixels: 100_000_000, processMs: 30_000 });
+export const LIMITS = Object.freeze({
+  bytes: 50 * 1024 * 1024, pixels: 40_000_000, pages: 20, pagePixels: 16_000_000, pdfPixels: 100_000_000, processMs: 30_000,
+  // Video is bounded by remux time and storage cost, not by memory: a stream copy never decodes a
+  // frame. The image `processMs` is far too short for a gigabyte, so video carries its own.
+  videoBytes: 1024 * 1024 * 1024, videoProcessMs: 300_000,
+});
 sharp.cache({ memory: 64, files: 0, items: 20 });
 sharp.concurrency(2);
 
@@ -96,6 +101,70 @@ export async function sanitizePdf(bytes) {
     validateSize(result);
     return { bytes: result, mimeType: 'application/pdf', extension: 'pdf' };
   } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+async function runMediaTool(tool, args, timeoutMs, failure) {
+  try {
+    return await execFileAsync(tool, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024, env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' }, windowsHide: true });
+  } catch { throw new MediaError(failure); }
+}
+
+const videoCodecs = Object.freeze({ 'video/mp4': ['h264'], 'video/webm': ['vp8', 'vp9', 'av1'] });
+
+/**
+ * Strips every container tag from a web-playable video and writes a clean copy.
+ *
+ * This is a **remux, not a transcode**: `-c copy` moves the existing streams into a fresh
+ * container, so it is bounded by disk rather than CPU and a gigabyte takes seconds. The product
+ * accepts only formats a browser plays, which is what makes that possible.
+ *
+ * Metadata removal is the point. Images get it as a side effect of the canvas re-encode in the
+ * browser and again from `sanitizeRaster`; video has no browser-side equivalent, and the client
+ * snapshot is immutable, so whatever rides along cannot be withdrawn later.
+ *
+ * `maxBytes` defaults to `LIMITS.videoBytes` and exists as a parameter — rather than requiring
+ * callers to mutate `LIMITS` — because `LIMITS` is frozen with `Object.freeze`, which also makes
+ * its properties non-configurable: `Object.defineProperty` cannot override a frozen ceiling even
+ * with `configurable: true` in the descriptor, so tests need a seam that does not touch the
+ * shared, frozen object.
+ */
+export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = LIMITS.videoBytes) {
+  const codecs = videoCodecs[mimeType];
+  if (!codecs) throw new MediaError('Upload an MP4 or WebM video.', 415);
+
+  const { size } = await stat(inputPath);
+  if (!size || size > maxBytes)
+    throw new MediaError('Videos must be between 1 byte and 1 gigabyte.', 413);
+
+  // Probe before touching the file: a container that does not hold what its type claims is
+  // refused rather than remuxed into something that still will not play.
+  const { stdout } = await runMediaTool('ffprobe', [
+    '-v', 'error', '-select_streams', 'v:0',
+    '-show_entries', 'stream=codec_name,width,height', '-show_entries', 'format=duration',
+    '-of', 'json', inputPath,
+  ], LIMITS.videoProcessMs, 'The video could not be read.');
+
+  const probe = JSON.parse(stdout);
+  const stream = probe.streams?.[0];
+  if (!stream || !codecs.includes(stream.codec_name))
+    throw new MediaError('The file is not a playable MP4 or WebM video.', 415);
+  const width = Number(stream.width);
+  const height = Number(stream.height);
+  const durationSeconds = Number(probe.format?.duration);
+  if (!width || !height || !Number.isFinite(durationSeconds))
+    throw new MediaError('The video is missing the dimensions or duration a player needs.');
+
+  const args = [
+    '-v', 'error', '-nostdin', '-y', '-i', inputPath,
+    '-map_metadata', '-1', '-map_chapters', '-1', '-c', 'copy',
+  ];
+  // faststart moves the index to the front so playback can begin before the whole file arrives.
+  // It is an MP4 container feature; WebM is already streamable.
+  if (mimeType === 'video/mp4') args.push('-movflags', '+faststart');
+  args.push(outputPath);
+
+  await runMediaTool('ffmpeg', args, LIMITS.videoProcessMs, 'The video could not be safely regenerated.');
+  return { durationSeconds, width, height };
 }
 
 export async function sanitizeDelivery(bytes, mimeType) {
