@@ -175,6 +175,13 @@ export function createMediaServer(config) {
             await backend.discard('internal-assets', path).catch(() => {});
             throw error;
           }
+          // Final whole-branch review, Critical 2: attest the clean object before this route
+          // ever hands its path back to a caller. Without this row, `register_sanitized_asset`
+          // refuses to copy it into `published-assets` at publish time — see
+          // `202609210007_video_provenance_attestation.sql`. `registerSanitizedVideo` discards
+          // the object it failed to attest, the same way the `uploadFile` failure above does, so
+          // an unattested object is never left reachable under a path this response returns.
+          await backend.registerSanitizedVideo(projectId, path, output, mimeType, userId);
           try {
             // The raw object has served its purpose now that the clean one is durably stored.
             await backend.discard('internal-assets', rawPath);
@@ -205,6 +212,11 @@ export function createMediaServer(config) {
       } catch (error) { await backend.discard('delivery-files', path); throw error; }
     } catch (error) {
       request.resume();
+      // An unexpected (non-`MediaError`) failure is deliberately never described to the caller —
+      // its message could carry an upstream detail this service exists to keep private — but
+      // swallowing it with no server-side trace at all made every such failure indistinguishable
+      // from a deliberate refusal, to an operator as much as to the caller. Logged, not sent.
+      if (!(error instanceof MediaError)) process.stderr.write(`Unexpected media processing failure: ${error?.stack ?? error}\n`);
       send(error instanceof MediaError ? error.status : 500, { error: error instanceof MediaError ? error.message : 'Media processing could not be completed.' });
     } finally { if (acquired) active--; }
   });
@@ -219,7 +231,15 @@ export function createMediaServer(config) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = { supabaseUrl: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY, serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY, appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:3003', additionalOrigins: process.env.MEDIA_ALLOWED_ORIGINS ?? '' };
   if (['supabaseUrl', 'anonKey', 'serviceKey', 'appOrigin'].some(key => !config[key])) throw new Error('Supabase and app-origin configuration is required.');
+  // Fail fast at boot rather than on the first request. Before this, an image built without
+  // `ffmpeg`/`ffprobe` (for example, a base image bump that dropped the `apt-get install` line in
+  // `apps/media/Dockerfile`) would still pass this check, start, answer `/health` as ready, and
+  // only fail every video with a `MediaError` that names the uploaded file rather than the actual
+  // cause — a missing binary in the deployment. `-version` is the flag both tools use to print
+  // their version and exit 0 with no input required; it is deliberately not `-v`, which for
+  // `ffmpeg`/`ffprobe` sets a log-level and expects a value, not "print version".
   for (const tool of ['pdfinfo', 'pdftoppm']) execFileSync(tool, ['-v'], { stdio: 'ignore', timeout: 5000 });
+  for (const tool of ['ffmpeg', 'ffprobe']) execFileSync(tool, ['-version'], { stdio: 'ignore', timeout: 5000 });
   const port = Number(process.env.MEDIA_PORT ?? 55430);
   createMediaServer(config).listen(port, process.env.MEDIA_HOST ?? '127.0.0.1', () => process.stdout.write(`Media service listening on port ${port}.\n`));
 }

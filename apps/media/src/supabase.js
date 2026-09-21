@@ -148,6 +148,35 @@ export function createBackend(config) {
       return path;
     } catch (error) { await discard(bucket, path); throw error; }
   }
+
+  // The provenance write for a freshly sanitised internal video (final whole-branch review,
+  // Critical 2). `uploadFile` above already wrote the clean object to `internal-assets`; this
+  // attests to it in `private.sanitized_assets` so that later, when `/publications/prepare`
+  // copies it into `published-assets`, `register_sanitized_asset`'s video branch can refuse the
+  // copy if this row is missing rather than trusting the design's own claim about its asset path.
+  //
+  // Deliberately calls `register_sanitized_video`, not `register_sanitized_asset`: the latter
+  // requires `p_prepared_by` to be an agency profile, which is wrong for a route a designer is
+  // expected to reach (`canProduce` above already authorized this exact caller for this exact
+  // project). Same streamed-hash reasoning as `registerCopied`: the file may be a gigabyte, so
+  // the checksum comes from `filePath` on disk rather than a buffer already held for the upload.
+  //
+  // On failure the object this attests to is discarded, mirroring `registerCopied` and
+  // `saveSanitized`: an unattested object left behind in `internal-assets` is not merely wasted
+  // storage here, it is exactly the gap this migration exists to close, so it must not survive a
+  // failed registration either.
+  async function registerSanitizedVideo(projectId, path, filePath, mimeType, userId) {
+    try {
+      const { size } = await stat(filePath);
+      const hash = createHash('sha256');
+      await pipeline(createReadStream(filePath), hash);
+      await rpc('register_sanitized_video', {
+        p_project_id: projectId, p_storage_path: path, p_sha256: hash.digest('hex'),
+        p_mime_type: mimeType, p_file_size: size, p_prepared_by: userId,
+      }, config.serviceKey);
+      return path;
+    } catch (error) { await discard('internal-assets', path); throw error; }
+  }
   async function discard(bucket, path) {
     // Refuse to remove bytes if a publication or delivery already references them.
     await rpc('discard_sanitized_asset', { p_bucket_id: bucket, p_storage_path: path }, config.serviceKey);
@@ -163,5 +192,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, discard, discardPrepared, cleanStaleAssets };
 }

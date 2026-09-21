@@ -5,6 +5,7 @@ import type { Database, Json } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
+import { isVideoAsset } from "./video-pins";
 
 /**
  * Supabase access for a project: the canvas the project page draws, its two comment channels, the
@@ -241,18 +242,41 @@ export function useProjectAssignments(projectId: string) {
  * The bucket is chosen by channel rather than by role, so a client channel never signs a path in
  * the internal bucket. The URL outlives a look at the artwork and is refreshed before it expires.
  */
+/**
+ * The one-hour expiry and refetch cadence a video design's signed URL uses.
+ *
+ * Final whole-branch review, Important 2: `artwork.tsx` binds this query's data straight to
+ * `<video src>`. A refetch that resolves with a new signed URL is a new string even for the same
+ * object — Supabase signs a fresh token each time — so every refetch rebinds `src` and restarts
+ * playback from zero. The 120 s/240 s/300 s pairing below (still used for an image) was sized for
+ * an `<img>`, where a mid-viewing re-render is invisible; for a `<video>` it is not, and at the
+ * old 300 s expiry a video longer than four minutes would outlive its own signed URL mid-playback
+ * and the viewer would see "Preview unavailable" instead of a restart.
+ *
+ * The fix is not "make the token last forever" — a signed URL that outlives any real viewing
+ * session is a needless standing credential. One hour is sized to comfortably cover a single
+ * review session (scrubbing, pausing, re-watching a clip well under the product's ten-minute
+ * ceiling), not to survive a tab left open indefinitely: `staleTime`/`refetchInterval` refresh
+ * the token shortly before it would actually expire, so a long-lived tab still gets a working URL
+ * eventually, just not one that rebinds `<video src>` mid-viewing.
+ */
+const VIDEO_ASSET_URL_EXPIRES_IN_SECONDS = 3600;
+const VIDEO_ASSET_URL_REFRESH_MS = 55 * 60_000;
+
 export function useDesignAssetUrl(assetPath: string | null, channel: ProjectChannel) {
   const { database, session } = useAuth();
+  const video = isVideoAsset(assetPath);
+  const expiresIn = video ? VIDEO_ASSET_URL_EXPIRES_IN_SECONDS : 300;
   return useQuery({
-    queryKey: ["asset-url", session?.user.id, channel, assetPath],
+    queryKey: ["asset-url", session?.user.id, channel, assetPath, expiresIn],
     enabled: !!assetPath,
-    staleTime: 120_000,
-    refetchInterval: 240_000,
+    staleTime: video ? VIDEO_ASSET_URL_REFRESH_MS : 120_000,
+    refetchInterval: video ? VIDEO_ASSET_URL_REFRESH_MS : 240_000,
     queryFn: async () =>
       assertResult(
         await database.storage
           .from(channel === "internal" ? "internal-assets" : "published-assets")
-          .createSignedUrl(assetPath!, 300),
+          .createSignedUrl(assetPath!, expiresIn),
       ).signedUrl,
   });
 }

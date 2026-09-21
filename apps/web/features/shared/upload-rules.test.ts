@@ -115,6 +115,37 @@ function effectiveBucketLimits(sources: string[]): Map<string, number> {
   return limits;
 }
 
+/**
+ * A `file_size` CHECK constraint's effective ceiling: the value it was created with, with any
+ * later `drop constraint` + `add constraint ... check(file_size between 1 and N)` applied over
+ * it, in source order — the same effective-value technique `effectiveBucketLimits` above already
+ * applies to `storage.buckets`.
+ *
+ * Final whole-branch review, Important 5 (I5): the drift guard below used to read only the
+ * inline `check(...)` a table was originally created with, so it never saw
+ * `202609210004_video_storage.sql`'s `alter table private.sanitized_assets ... add constraint
+ * ... check(file_size between 1 and 1073741824)` — the same failure class Task 3 built
+ * `effectiveBucketLimits` to close for `storage.buckets`, one migration away, in the same file
+ * this test lives in. The test kept passing throughout because it happened to compare against
+ * the *original* 52428800, which was still textually present in `202609200008_trusted_media.sql`
+ * — it was asserting a value that was true once, not the constraint's current effective one.
+ *
+ * The inline form (`file_size bigint not null check(file_size between 1 and N)`) and the ALTER
+ * form (`check(file_size between 1 and N)` alone, following a same-table `add constraint`) both
+ * end in the same `check(file_size between 1 and N)` shape, so one pattern reads either; sources
+ * are still passed in per assertion, one table's migrations at a time, the same way
+ * `effectiveBucketLimits` is always called with a scoped list rather than every migration file at
+ * once.
+ */
+function effectiveFileSizeCheckMax(sources: string[]): number {
+  let value: number | undefined;
+  for (const sql of sources)
+    for (const m of sql.matchAll(/check\(file_size between 1 and (\d+)\)/gi)) value = Number(m[1]);
+  if (value === undefined)
+    throw new Error("no file_size check constraint found in the given sources");
+  return value;
+}
+
 describe("the client upload ceiling mirrors the bucket limit", () => {
   it("matches the effective file_size_limit on every bucket the migrations create", () => {
     const limits = effectiveBucketLimits([
@@ -130,17 +161,25 @@ describe("the client upload ceiling mirrors the bucket limit", () => {
       expect(limit).toBe(designBuckets.includes(id) ? VIDEO_MAX_BYTES : BUCKET_MAX_BYTES);
   });
 
-  it("matches the `file_size` check constraints that guard the attachment tables", () => {
-    const checks = [
-      ...migration("202609200004_requests_and_attachments.sql").matchAll(
-        /file_size bigint not null check\(file_size between 1 and (\d+)\)/g,
-      ),
-      ...migration("202609200008_trusted_media.sql").matchAll(
-        /file_size bigint not null check\(file_size between 1 and (\d+)\)/g,
-      ),
-    ].map((match) => Number(match[1]));
-    expect(checks.length).toBeGreaterThan(0);
-    for (const limit of checks) expect(limit).toBe(BUCKET_MAX_BYTES);
+  it("matches the `file_size` check constraint that guards briefing attachments", () => {
+    // Untouched by the video work: briefing attachments were never widened, so this stays at the
+    // effective value it has always had.
+    expect(
+      effectiveFileSizeCheckMax([migration("202609200004_requests_and_attachments.sql")]),
+    ).toBe(BUCKET_MAX_BYTES);
+  });
+
+  it("matches the `file_size` check constraint's EFFECTIVE ceiling on the sanitized-asset attestation table", () => {
+    // `private.sanitized_assets.file_size` was created at BUCKET_MAX_BYTES in
+    // `202609200008_trusted_media.sql` and raised to VIDEO_MAX_BYTES by
+    // `202609210004_video_storage.sql`'s `drop constraint` + `add constraint`. Asserting against
+    // only the first source would silently re-introduce the drift this test exists to catch.
+    const sources = [
+      migration("202609200008_trusted_media.sql"),
+      migration("202609210004_video_storage.sql"),
+    ];
+    expect(effectiveFileSizeCheckMax([sources[0]])).toBe(BUCKET_MAX_BYTES);
+    expect(effectiveFileSizeCheckMax(sources)).toBe(VIDEO_MAX_BYTES);
   });
 
   it("keeps the design-artwork ceiling deliberately below the bucket limit", () => {

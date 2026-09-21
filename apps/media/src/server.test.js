@@ -213,6 +213,7 @@ describe('POST /designs/sanitize-video', () => {
     it('downloads the raw upload, sanitizes it, stores the clean copy and discards the raw object', async () => {
       const routes = baseRoutes();
       let uploadPath;
+      let registration;
       // The upload path is a fresh random uuid, unknown ahead of time, so it is matched by prefix
       // rather than registered as an exact key.
       stubSupabase(new Proxy(routes, {
@@ -222,6 +223,10 @@ describe('POST /designs/sanitize-video', () => {
             uploadPath = key.slice('POST /storage/v1/object/internal-assets/'.length);
             return () => jsonResponse(200, { Key: uploadPath });
           }
+          // Captured separately from the generic RPC handler below so the attestation call's own
+          // body -- not merely that some RPC fired -- can be asserted against.
+          if (key === 'POST /rest/v1/rpc/register_sanitized_video')
+            return (url, init) => { registration = JSON.parse(init.body); return jsonResponse(200, null); };
           if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
           if (typeof key === 'string' && key.startsWith(`DELETE /storage/v1/object/internal-assets`)) return () => jsonResponse(200, {});
           return undefined;
@@ -244,6 +249,58 @@ describe('POST /designs/sanitize-video', () => {
       expect(calls.some(call => call.method === 'POST' && call.path === '/rest/v1/rpc/finalize_asset_discard')).toBe(true);
       expect(calls.some(call => call.method === 'POST' && call.path === `/storage/v1/object/internal-assets/${body.path}`)).toBe(true);
       expect(body.path).not.toBe(rawPath);
+
+      // Final whole-branch review, Critical 2: the clean object is attested before this response
+      // is ever sent, under the exact identity and path the caller receives -- not a stand-in.
+      expect(registration).toMatchObject({
+        p_project_id: projectId, p_storage_path: body.path, p_mime_type: 'video/mp4',
+        p_file_size: expect.any(Number), p_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_prepared_by: agencyUserId,
+      });
+      // The attestation call happens strictly after the clean object is durably uploaded, and
+      // strictly before the raw object's discard: registering an object nobody has stored yet
+      // would raise (the RPC checks `storage.objects` for a matching size), and discarding the
+      // raw upload before attesting the clean copy would leave a window where a crash mid-request
+      // loses both the raw bytes and any record that the clean ones were ever sanitised.
+      const uploadIndex = calls.findIndex(call => call.method === 'POST' && call.path === `/storage/v1/object/internal-assets/${body.path}`);
+      const registerIndex = calls.findIndex(call => call.method === 'POST' && call.path === '/rest/v1/rpc/register_sanitized_video');
+      const rawDiscardIndex = calls.findIndex(call => call.method === 'POST' && call.path === '/rest/v1/rpc/discard_sanitized_asset');
+      expect(uploadIndex).toBeGreaterThanOrEqual(0);
+      expect(registerIndex).toBeGreaterThan(uploadIndex);
+      expect(rawDiscardIndex).toBeGreaterThan(registerIndex);
+    });
+
+    it('discards the clean object and fails the request when attestation registration fails', async () => {
+      const routes = baseRoutes();
+      let uploadPath;
+      let discardedPaths = [];
+      stubSupabase(new Proxy(routes, {
+        get(target, key) {
+          if (key in target) return target[key];
+          if (typeof key === 'string' && key.startsWith(`POST /storage/v1/object/internal-assets/${projectId}/`)) {
+            uploadPath = key.slice('POST /storage/v1/object/internal-assets/'.length);
+            return () => jsonResponse(200, { Key: uploadPath });
+          }
+          if (key === 'POST /rest/v1/rpc/register_sanitized_video') return () => jsonResponse(500, { message: 'boom' });
+          if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
+          if (typeof key === 'string' && key.startsWith(`DELETE /storage/v1/object/internal-assets`)) {
+            return (url, init) => { discardedPaths.push(JSON.parse(init.body).prefixes); return jsonResponse(200, {}); };
+          }
+          return undefined;
+        },
+      }));
+
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      // A non-2xx upstream response is remapped to 502 by `supabase.js`'s own `request()` helper
+      // (401/403 are the only statuses it passes through); the point under test is the discard,
+      // not this status code, which is already covered by that helper's own tests.
+      expect(response.status).toBe(502);
+      // The clean object this response would otherwise have named is discarded rather than left
+      // reachable-but-unattested -- exactly the gap this attestation exists to close.
+      expect(discardedPaths.flat()).toContain(uploadPath);
+      // The raw upload is untouched: this failure is the media service's own, not something the
+      // caller should have to re-upload for.
+      expect(discardedPaths.flat()).not.toContain(rawPath);
     });
 
     it('still returns the sanitized asset when discarding the raw object fails', async () => {

@@ -42,12 +42,15 @@ export function mediaErrorMessage(status: number, payload: unknown): string {
   return reported || "The file could not be prepared. Please try again.";
 }
 
-// 120 seconds fits every call through here except the video-sanitise one, which passes its own
-// `timeoutMs` (see `VIDEO_SANITIZE_TIMEOUT_MS` below). Every other route this client calls is a
-// small JSON round trip (or, for `prepareDelivery`, a single POST bounded by `BUCKET_MAX_BYTES`,
-// 50 MB) that the media service answers quickly; a longer default here would let one of those
-// hang instead of failing fast. Mirrors the same reasoning `apps/media/src/supabase.js` states for
-// its own 30-second default.
+// 120 seconds fits every call through here except the two that pass their own `timeoutMs`:
+// video-sanitise (`VIDEO_SANITIZE_TIMEOUT_MS` below) and publication preparation
+// (`PUBLICATION_TIMEOUT_MS` below), the two routes whose server-side work is bounded by file
+// transfer time rather than a small JSON round trip. `prepareDelivery` is the one exception that
+// still uses this default despite sending a real file: it is bounded by `BUCKET_MAX_BYTES`
+// (50 MB), two orders of magnitude below the video ceiling, and the media service answers it
+// quickly. A longer default here for every other route would let one of those hang instead of
+// failing fast. Mirrors the same reasoning `apps/media/src/supabase.js` states for its own
+// 30-second default.
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 async function requestMedia<T>(
@@ -150,6 +153,37 @@ export async function sanitizeVideoAsset(
   );
 }
 
+/**
+ * The deadline for `preparePublicationAssets` alone.
+ *
+ * Final whole-branch review, Important 1: this call used to fall through to `DEFAULT_TIMEOUT_MS`
+ * (120 s), which was correct when every design was an image -- `sanitizeRaster` is in-memory and
+ * fast -- and became wrong the moment Task 10 added a video branch to the same server route
+ * without anyone carrying the deadline rule Task 7 had already established for
+ * `sanitizeVideoAsset`. `/publications/prepare` (`apps/media/src/server.js`) loops over up to 20
+ * designs in one request (a separately deferred concurrency question, not addressed here), and
+ * for each video design it runs two network legs against Storage, not zero: `downloadToFile`
+ * (`apps/media/src/supabase.js`) and `uploadFile`, each bounded by `LIMITS.videoProcessMs`
+ * (300 s) — publication does not re-run `ffmpeg`, it copies the object `/designs/sanitize-video`
+ * already sanitised, so there is no remux leg here the way there is in
+ * `VIDEO_SANITIZE_TIMEOUT_MS`. `registerCopied`'s own attestation RPC is a third, much smaller
+ * leg, bounded by `apps/media/src/supabase.js`'s generic 30-second request default.
+ *
+ * The throughput assumption behind `videoProcessMs` itself (a separately deferred item this
+ * closes for free while already here): 300 s for a file up to `VIDEO_MAX_BYTES` (1 GiB) assumes
+ * roughly 3.4 MiB/s of sustained throughput is enough headroom for a Storage read or write over
+ * the deployment's own network, not the person's upload link -- this leg moves bytes the media
+ * service already holds, between itself and Storage, not bytes coming from a browser.
+ *
+ * Worst case, treating every one of the 20 designs as video (the bound has to hold for that case
+ * even though a typical publish mixes image and video): `20 × (2 × 300_000 + 30_000)` =
+ * `20 × 630_000` = `12_600_000` ms (210 minutes). Restated here rather than imported, for the
+ * same reason `VIDEO_SANITIZE_TIMEOUT_MS` is: `apps/media` is a separate deployable with no
+ * shared module boundary with this app, so raising `videoProcessMs` is a signal to reconsider
+ * this arithmetic too, not an automatic fix.
+ */
+const PUBLICATION_TIMEOUT_MS = 20 * (2 * 300_000 + 30_000);
+
 export async function preparePublicationAssets(
   database: SupabaseClient<Database>,
   mediaUrl: string,
@@ -163,6 +197,7 @@ export async function preparePublicationAssets(
       JSON.stringify({ versionId }),
       "application/json",
       publicationSchema,
+      { timeoutMs: PUBLICATION_TIMEOUT_MS },
     )
   ).assets;
 }
