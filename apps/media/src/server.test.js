@@ -130,6 +130,25 @@ describe('POST /designs/sanitize-video', () => {
     expect(response.status).toBe(415);
   });
 
+  // `RAW_VIDEO_PATH` (server.js) is deliberately narrower than `downloadToFile`'s own path check
+  // in supabase.js, which also accepts `.mp4`/`.webm` because it is reused to fetch an
+  // already-sanitized design asset during publication. If this route's own `.raw`-only check were
+  // ever removed as apparently redundant with that one, a caller could name an already-extensioned
+  // `rawPath` and have it copied into `internal-assets` without ever passing through
+  // `sanitizeVideo` — bypassing the metadata-stripping guarantee this whole feature rests on.
+  // These two cases are what would start passing (wrongly) if that happened, so they're what
+  // stops the refactor: a valid, project-scoped path, a valid mime type, and only the extension
+  // is wrong.
+  it.each(['mp4', 'webm'])('refuses a rawPath already carrying a .%s extension instead of .raw', async extension => {
+    stubSupabase({ ...authRoutes });
+    const response = await post('/designs/sanitize-video', {
+      projectId,
+      rawPath: `${projectId}/${md5Uuid('already-sanitized-looking')}.${extension}`,
+      mimeType: extension === 'mp4' ? 'video/mp4' : 'video/webm',
+    });
+    expect(response.status).toBe(400);
+  });
+
   describe('production access mirrors private.can_produce for a designer', () => {
     // Matches the real fixture pairing verified against the local database: `designer@dawes.local`
     // (Alex Morgan) is assigned to `e3347e2f-fd33-a8c0-800a-a4af0c224ff0` and NOT to
@@ -473,5 +492,60 @@ describe('POST /publications/prepare', () => {
     expect(response.status).toBe(502);
     // The bytes `uploadFile` copied in are removed, rather than left unreferenced and unattested.
     expect(discardedPaths.flat()).toContain(uploadedPath);
+  });
+
+  // The realistic publication is not "all video" or "all raster" — it's a version whose designs
+  // mix both, which is what actually exercises the per-design branch inside the loop rather than
+  // just proving each branch works in isolation.
+  it('publishes a version containing both an image design and a video design in one request', async () => {
+    const videoDesignId = md5Uuid('dawes:mixed-video-design');
+    const videoAssetId = md5Uuid('dawes:mixed-video-asset');
+    const videoInternalPath = `${projectId}/${videoAssetId}.mp4`;
+    const imageDesignId = md5Uuid('dawes:mixed-image-design');
+    const imageAssetId = md5Uuid('dawes:mixed-image-asset');
+    const imageInternalPath = `${projectId}/${imageAssetId}.png`;
+    const videoBytes = await readFile(resolve(import.meta.dirname, 'fixtures/tagged.mp4'));
+    const onePixelPng = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001' +
+      '0d0a2db40000000049454e44ae426082', 'hex',
+    );
+    const uploads = [];
+
+    const baseRoutes = {
+      ...authRoutes,
+      ...versionRoutes([
+        { id: videoDesignId, internal_asset_path: videoInternalPath },
+        { id: imageDesignId, internal_asset_path: imageInternalPath },
+      ]),
+      [`GET /storage/v1/object/authenticated/internal-assets/${videoInternalPath}`]: () =>
+        new Response(videoBytes, { status: 200, headers: { 'content-length': String(videoBytes.length) } }),
+      [`GET /storage/v1/object/authenticated/internal-assets/${imageInternalPath}`]: () =>
+        new Response(onePixelPng, { status: 200, headers: { 'content-length': String(onePixelPng.length) } }),
+      'POST /rest/v1/rpc/register_sanitized_asset': () => jsonResponse(200, null),
+    };
+    const routes = new Proxy(baseRoutes, {
+      get(target, key) {
+        if (key in target) return target[key];
+        if (typeof key === 'string' && key.startsWith(`POST /storage/v1/object/published-assets/${projectId}/`)) {
+          const path = key.slice('POST /storage/v1/object/published-assets/'.length);
+          return (url, init) => { uploads.push({ path, mimeType: init.headers['Content-Type'] }); return jsonResponse(200, {}); };
+        }
+        return undefined;
+      },
+    });
+    stubSupabase(routes);
+
+    const response = await post('/publications/prepare', { versionId });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.assets[videoDesignId]).toMatch(/\.mp4$/);
+    expect(body.assets[imageDesignId]).toMatch(/\.png$/);
+    expect(uploads).toHaveLength(2);
+    expect(uploads.find(upload => upload.path.endsWith('.mp4'))?.mimeType).toBe('video/mp4');
+    expect(uploads.find(upload => upload.path.endsWith('.png'))?.mimeType).toBe('image/png');
+
+    const registrations = calls.filter(call => call.method === 'POST' && call.path === '/rest/v1/rpc/register_sanitized_asset');
+    expect(registrations).toHaveLength(2);
   });
 });

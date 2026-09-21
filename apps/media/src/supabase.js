@@ -10,9 +10,14 @@ import { LIMITS, MediaError } from './sanitize.js';
 // design's `internal_asset_path` — both are shapes `private.opaque_storage_path` accepts, but
 // that check runs on every bucket's insert policy, not only internal-assets, and the insert
 // policies on the client-served buckets were dropped long ago in favour of service_role writes.
-// This route (and `downloadToFile` below) is the only place either object's fate is decided, so
-// both validate the full shape and the project prefix themselves rather than leaning on that
+// `downloadToFile` below is the only place either object's fate is decided at this layer, so it
+// validates the full shape and the project prefix itself rather than leaning on that
 // database-level check.
+//
+// This is deliberately WIDER than `server.js`'s `RAW_VIDEO_PATH`, which accepts `.raw` only. That
+// is not redundant with this regex: `RAW_VIDEO_PATH` is what stops a caller-supplied `rawPath` in
+// `/designs/sanitize-video`'s request body from naming an already-"sanitized"-looking `.mp4`/
+// `.webm` and skipping `sanitizeVideo` entirely. Do not collapse the two into one.
 const VIDEO_ASSET_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(mp4|webm|raw)$/;
 
 export function createBackend(config) {

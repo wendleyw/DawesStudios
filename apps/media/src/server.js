@@ -9,6 +9,15 @@ import { createBackend } from './supabase.js';
 import { LIMITS, MediaError, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// `.raw` only, deliberately narrower than `supabase.js`'s `VIDEO_ASSET_PATH`. This is the shape a
+// browser's own raw upload must have before it has been through `sanitizeVideo` at all, and it is
+// the only thing standing between an attacker-supplied `rawPath` and `downloadToFile` — that
+// helper's own regex also accepts `.mp4`/`.webm`, because it is reused below (in the video branch
+// of `/publications/prepare`) to fetch a design's *already-sanitized* internal asset. Do not treat
+// this check as redundant with `downloadToFile`'s: removing it would let a caller name an `.mp4`
+// or `.webm` `rawPath` and have it copied into `internal-assets` without ever passing through
+// `sanitizeVideo` — silently bypassing this feature's entire metadata-stripping guarantee. See the
+// `.mp4`/`.webm` refusal tests in `server.test.js` for `/designs/sanitize-video`.
 const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
 function validId(value) { if (typeof value !== 'string' || !UUID.test(value)) throw new MediaError('A valid resource identifier is required.'); return value; }
 async function readBody(request, maxBytes) {
