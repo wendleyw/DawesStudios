@@ -157,7 +157,12 @@ site_url = "http://localhost:3003"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["http://localhost:3003", "http://127.0.0.1:3003", "http://localhost:3003/auth/recovery", "http://localhost:3003/auth/invite**", "http://127.0.0.1:3003/auth/recovery", "http://127.0.0.1:3003/auth/invite**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-jwt_expiry = 3600
+# Fifteen minutes, not the default hour: PostgREST validates an access token's signature and expiry
+# alone and never asks GoTrue whether the session still exists, so signing out cannot revoke a token
+# that has already been issued. Acceptance family C measured a comment written through PostgREST with
+# a token that had been signed out globally. The expiry is therefore the whole revocation window, and
+# this is what shrinks it from sixty minutes to fifteen. See docs/architecture/permissions.md.
+jwt_expiry = 900
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { moveProjectPosition } from "./board-data";
+import { THUMBNAIL_TTL, moveProjectPosition } from "./board-data";
 
 function stubDatabase(result: { data: unknown; error: { message: string } | null }) {
   const single = vi.fn().mockResolvedValue(result);
@@ -28,5 +28,14 @@ describe("moveProjectPosition", () => {
     await expect(
       moveProjectPosition(database as never, { id: "project-1", position: { x: 0, y: 0 } }),
     ).rejects.toThrow("row not found");
+  });
+});
+
+describe("THUMBNAIL_TTL", () => {
+  // A signed storage URL outlives the assignment it was minted under, because the signature carries
+  // no subject and no session. The TTL is the whole revocation window, so it is pinned here: the
+  // board's thumbnails must not drift back above the longest expiry any other signing site uses.
+  it("stays within the longest expiry the rest of the product signs with", () => {
+    expect(THUMBNAIL_TTL).toBe(600);
   });
 });

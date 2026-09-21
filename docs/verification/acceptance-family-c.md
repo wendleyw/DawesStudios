@@ -15,7 +15,7 @@ while producing it.
 | Disposable backend | `127.0.0.1:55521` (`supabase_db_dawes-studios-restore-drill`), used for the two checks that require a real state change — assignment revocation and signature reuse |
 | Drivers | Seven throwaway Node HTTP probes and three rolled-back psql scripts in the session scratchpad, plus one throwaway Playwright spec, `apps/web/tests/e2e/evidence-probe-family-c.spec.ts`, five tests. **All deleted after the run.** Every measurement below is a line one of them printed. |
 | Accounts | `studio@dawes.local` (the only agency user), `designer@dawes.local` / `designer2@dawes.local`, `sabre@client.dawes.local` and `acme@client.dawes.local` (two tenants), plus two disposable sign-ups |
-| Result | **Nine of the ten Verified. C07 is not**, because one clause of it fails: see [Defect C-2](#defect-c-2-a-signed-storage-url-outlives-the-authorisation-that-minted-it). [Defect C-1](#defect-c-1-an-access-token-keeps-working-after-sign-out) is recorded against C01 without changing its verdict, for the reason given there. |
+| Result | **Nine of the ten Verified at the time of the pass. C07 was not**, because one clause of it failed: see [Defect C-2](#defect-c-2-a-signed-storage-url-outlives-the-authorisation-that-minted-it). [Defect C-1](#defect-c-1-an-access-token-keeps-working-after-sign-out) is recorded against C01 without changing its verdict, for the reason given there. **Both defects were closed on 2026-09-21** — each has a Resolution note under its heading — and **C07 is now Verified**. |
 
 ## How a refusal is read in this installation
 
@@ -546,8 +546,13 @@ another project's path yields `400 InvalidSignature`. The claim body is
 `{"url":"internal-assets/<project>/<object>.png","iat":…,"exp":…}` — no caller identity, which is the
 root of the next finding.
 
-**Verdict: Unverified.** The clause *"stale authorization cannot expose internal or other-client
-files"* fails; see [Defect C-2](#defect-c-2-a-signed-storage-url-outlives-the-authorisation-that-minted-it).
+**Verdict: Verified (2026-09-21).** The clause *"stale authorization cannot expose internal or
+other-client files"* originally failed; see
+[Defect C-2](#defect-c-2-a-signed-storage-url-outlives-the-authorisation-that-minted-it) and its
+resolution. A signature still cannot be revoked — nothing in `{url, iat, exp}` can be — but the
+board's TTL is now 600 and the revocation scenario was re-run at that value: the URL served through
+t+570s and answered `400` at t+600s. The clause holds within a bounded ten-minute window rather than
+an hour, and every other clause of the row passed unchanged.
 
 ## C09 — Realtime, search and notifications obey the same scope as a plain read
 
@@ -784,6 +789,14 @@ Supabase's documented default rather than a bug this codebase introduced, and cl
 shortening `JWT_EXPIRY` or having PostgREST check `session_id`. It is recorded so that "sign-out
 works" is never read as "the token stops working".
 
+**Resolution (2026-09-21).** The first of the two was taken: `supabase/config.toml` now sets
+`jwt_expiry = 900`, and the local stack was restarted — not reset — for it to take effect. A token
+issued afterwards decodes to `exp - iat = 900` and GoTrue reports `expires_in: 900`, so the running
+stack, not only the file, issues fifteen-minute tokens. The post-sign-out window is a quarter of what
+was measured above. The mechanism is unchanged and unfixable at this layer, so the number is the
+control; its reason is recorded in
+[permissions.md](../architecture/permissions.md#revocation-cannot-reach-a-credential-that-was-already-issued).
+
 ## Defect C-2 — A signed storage URL outlives the authorisation that minted it
 
 **Severity: Medium.** This is why **C07 is Unverified**: its assertion names *stale authorization*
@@ -815,6 +828,27 @@ The exposure is bounded by the chosen TTL, and the product's own call sites are 
 but `features/board/board-data.ts` mints **3600-second** thumbnail URLs, and `expiresIn` is a caller
 argument that any authenticated session can set for itself. Every other clause of C07 passes; this
 one does not, and the row stays open until it does.
+
+**Resolution (2026-09-21).** `THUMBNAIL_TTL` is now **600**, matching the nearest sibling call site;
+the other three were already short and were left alone. The scenario was re-run on the same
+disposable backend at the new value:
+
+```
+designer@ : POST /storage/v1/object/sign/internal-assets/<project>/<object>.png {"expiresIn":600}
+            -> 200, signedURL
+agency    : POST /rest/v1/rpc/revoke_design_assignment                          -> 204
+designer@ : GET  /rest/v1/projects?id=eq.<project>                              -> 0 rows
+designer@ : GET  /storage/v1/object/authenticated/internal-assets/<…>           -> 400
+anonymous : GET  /storage/v1<signedURL>   at t+0s … t+570s (20 probes, 30s apart) -> 200, 2,730 bytes
+anonymous : GET  /storage/v1<signedURL>   at t+600s                             -> 400
+```
+
+The URL served for exactly the ten minutes it was signed for and then stopped, and the assignment was
+restored afterwards (10 per designer, as before). The signature still outlives the revocation — nothing in a
+`{url, iat, exp}` claim body can be revoked — but the exposure is now bounded at ten minutes rather
+than an hour, and the board re-mints on render so nothing observable was traded for it. `600` is
+pinned by `apps/web/features/board/board-data.test.ts` and its reason is recorded in
+[permissions.md](../architecture/permissions.md#revocation-cannot-reach-a-credential-that-was-already-issued).
 
 ## Observation C-3 — the seed makes the designer/client boundary untestable by inspection
 

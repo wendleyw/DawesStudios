@@ -88,6 +88,56 @@ Reversing any one of the three alone would not change the outcome; all three wou
 
 **Reference.** Measured while resolving [Defect F-1](../verification/acceptance-family-f.md#defect-f-1-a-designer-never-learns-the-client-requested-changes); recorded against acceptance row **F15** in [acceptance-matrix.md](acceptance-matrix.md), whose "Not covered" note points back here.
 
+### Revocation cannot reach a credential that was already issued
+
+**Decision.** Two credentials in this installation survive the act that revokes the access behind
+them, because neither is checked against live authorization once it exists. Neither is repairable
+without replacing the mechanism, so each is bounded by an expiry instead, and both expiries are
+deliberate numbers rather than defaults.
+
+**Mechanism — the access token.** PostgREST validates an access token's signature and expiry and
+nothing else. It never asks GoTrue whether the session still exists, and GoTrue holds no revocation
+list a resource server could consult. Signing out destroys the refresh token and the browser's copy,
+so the session cannot be continued — but a token already in someone else's hands keeps reading and
+writing until it expires on its own.
+
+**Measurement.** Acceptance family C signed a client in, called `logout?scope=global`, and then used
+the same access token: `/auth/v1/user` answered `403` and the refresh token was gone, while
+`/rest/v1/clients`, `projects`, `published_designs`, `client_comments`, `credit_accounts`,
+`notifications` and `brand_sections` all answered `200`, and `rpc/post_comment` created a row. The
+access token's expiry is therefore the entire post-sign-out exposure window.
+
+**Number.** `supabase/config.toml` sets `jwt_expiry = 900` — fifteen minutes, not the Supabase
+default of 3600. That is the window, and it is the only thing that shortens it short of putting a
+session check in front of PostgREST. `supabase-js` refreshes transparently in the background, so the
+cost is four times as many refresh calls and nothing a user can observe. A freshly issued token was
+decoded after the change: `exp - iat = 900`.
+
+**Mechanism — the signed storage URL.** A Storage signature's claim body is `{url, iat, exp}`. It
+carries no subject and no session, so there is nothing in it to check against the caller's current
+grants and nothing to revoke. Storage verifies the signature and the path and serves the bytes to
+whoever presents the link, authenticated or not.
+
+**Measurement.** A designer minted a signed URL for an internal object under an assignment they held.
+`revoke_design_assignment` then removed every other route to it — the project disappeared from the
+designer's reads, the direct object request answered `400`, and re-signing answered `400 Object not
+found` — while the already-minted URL kept serving the file anonymously at `200`, 2,726 bytes, for
+its full TTL.
+
+**Number.** `THUMBNAIL_TTL` in `apps/web/features/board/board-data.ts` is **600** seconds, reduced
+from 3600. Every other signing site in the product is already short — `project-data.ts` 300,
+`brand-data.ts` 300 and 600 — and the board was the outlier by six to twelve fold. 600 matches the
+nearest sibling and is the shortest value the board can take without a second cost: the board's React
+Query `staleTime` is derived as `THUMBNAIL_TTL - 300`, a margin that re-mints the URLs before they go
+blank, and 300 would flatten that margin to zero and re-sign on every render. The board re-mints on
+render, so a board left open longer than ten minutes simply signs again.
+
+**Reference.** Measured as [Defect C-1](../verification/acceptance-family-c.md#defect-c-1--an-access-token-keeps-working-after-sign-out)
+and [Defect C-2](../verification/acceptance-family-c.md#defect-c-2--a-signed-storage-url-outlives-the-authorisation-that-minted-it);
+recorded against acceptance rows **C01** and **C07** in [acceptance-matrix.md](acceptance-matrix.md).
+Both numbers are load-bearing: raising either one widens a revocation window, and neither is a tuning
+knob.
+
 ## Atomic commands
 
 | Command | Authorization and invariant |

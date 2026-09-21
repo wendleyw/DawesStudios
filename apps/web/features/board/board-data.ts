@@ -17,8 +17,19 @@ import {
  * on each project's card, and moving a card to a stored canvas position.
  */
 
-/** Long enough to outlive a board session, short enough that a copied URL stops working. */
-const THUMBNAIL_TTL = 3600;
+/**
+ * Ten minutes, and the number is a security boundary rather than a convenience.
+ *
+ * A storage signature carries only `{url, iat, exp}` — no subject and no session — so Storage serves
+ * whatever it signed to whoever holds the link, and revoking the assignment the link was minted
+ * under cannot reach it. Acceptance family C measured exactly that: a designer's thumbnail URL still
+ * answered 200 anonymously after `revoke_design_assignment`. The expiry is therefore the whole
+ * revocation window for an internal asset, and this was the product's longest at 3600 while every
+ * other signing site sits at 300 or 600. Ten matches the nearest sibling and still leaves
+ * `THUMBNAIL_STALE` a real five-minute cache — 300 would flatten it to zero and re-sign on every
+ * render. See docs/architecture/permissions.md.
+ */
+export const THUMBNAIL_TTL = 600;
 /** Refetch a little before the URLs expire rather than after a card has already gone blank. */
 const THUMBNAIL_STALE = (THUMBNAIL_TTL - 300) * 1000;
 
