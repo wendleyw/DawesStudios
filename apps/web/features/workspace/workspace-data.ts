@@ -68,11 +68,8 @@ export function useProjectClient(projectId?: string) {
 // Projects: the workspace-wide project list read by the home overview, the global search page and
 // several board/project components. No write in this module touches the `projects` table, but this
 // is still the key's owning module: `board/board-data.ts`'s `moveProjectPosition` invalidates
-// `projects` inline (`board-page.tsx`'s `onSuccess`) with a comment recording that it should call
-// this feature's invalidation helper once one exists, rather than adding a board-owned key set to
-// describe a cache entry board does not own. `useInvalidateWorkspace()` below is that helper. Wiring
-// `board-page.tsx`'s mutation to call it is outside this feature's write scope (`board-data.ts` and
-// `board-page.tsx` are not touched here) and is left for whoever owns that call site next.
+// `projects` through `useInvalidateWorkspace()` below, called from `board-page.tsx`'s `onSuccess`,
+// rather than through a board-owned key set describing a cache entry board does not own.
 // ---------------------------------------------------------------------------------------------
 
 export type ProjectStatus =

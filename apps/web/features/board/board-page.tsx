@@ -8,7 +8,7 @@ import {
   type Node,
   type NodeChange,
 } from "@xyflow/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Plus, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +18,7 @@ import {
   formatDate,
   statusLabels,
   useClients,
+  useInvalidateWorkspace,
   useProjects,
   type Project,
 } from "@/features/workspace/workspace-data";
@@ -51,7 +52,7 @@ const GUTTER = 24;
 
 export function BoardPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const router = useRouter();
   const clients = useClients();
   const projects = useProjects(clientId);
@@ -118,7 +119,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
   const moveProject = useMutation({
     mutationFn: async ({ id, position }: { id: string; position: { x: number; y: number } }) =>
       moveProjectPosition(database, { id, position }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    onSuccess: () => invalidateWorkspace(),
     onError: (_error, variables) =>
       setPositions((current) => {
         const next = { ...current };
