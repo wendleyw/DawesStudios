@@ -294,6 +294,16 @@ API, and two of the product's editors carry a real compare-and-set. A third does
 data without saying so. The row stays open on
 [Defect I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save).
 
+**Re-assessed 2026-09-21, still not verified.** The client-settings failure was reproduced a second
+time on the rebuilt `:3003` container, unchanged, and the repair was stopped before any code was
+written: `public.clients` has no `updated_at` column, so the compare-and-set both working editors use
+cannot be expressed against it without a migration, and that migration is being sequenced behind the
+video-designs one rather than merged alongside it. The same audit found two further unguarded
+settings writes (`update_workspace_settings`, `save_service_preset`) whose tables *do* carry a
+revision but whose RPCs never check one. The row stays open until that migration and the four guards
+land; the detail, the pattern the repair should follow and the surface-by-surface audit are under
+[Defect I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save).
+
 ## I07 — responsiveness and context isolation on the canonical dataset
 
 **Requirement.** The twenty-project dataset remains responsive in board, search, reviewer and
@@ -662,6 +672,80 @@ project-details path was exercised in this pass and behaved correctly:
 the newer data intact and the losing form's text preserved. The client editor is the same kind of
 form without the same guard.
 
+### Repair attempt, 2026-09-21 — stopped at a schema change
+
+**Reproduced before anything was touched**, against the container on `:3003` — rebuilt from the
+current `main` for this attempt, so it no longer carries the stale build the header above describes —
+with two
+Chromium contexts, both signed in as `studio@dawes.local`, both with SABRE open in
+Settings → Clients, driving the real form rather than the API:
+
+```
+client-before: {"industry":"Personal safety","website":"https://sabre.example"}
+after-A:       {"industry":"Editor A industry","website":"https://sabre.example"}
+B alerts:      [""]            <- the empty live region only; no conflict message
+B dialog open: false           <- B's save was reported as a success and the editor closed
+after-B:       {"industry":"Personal safety","website":"https://editor-b.example.com"}
+```
+
+Identical to the original measurement: B's stale copy reverted `industry`, B was told it had
+succeeded, and neither session saw anything. The SABRE row was written back verbatim in the probe's
+`finally` and re-read equal to `client-before`.
+
+**The repair was not written, because `public.clients` has no `updated_at` column.** On the live
+stack, exactly seven tables in `public` carry one — `brand_sections`, `briefings`,
+`credit_accounts`, `projects`, `service_presets`, `template_drafts`, `workspace_settings`.
+`clients` is not among them: migration `202609200001_foundation.sql` gives it `created_at` only, and
+the `private.touch_project()` / `project_updated_at` trigger pair in
+`202609200015_designer_brief_and_project_integrity.sql` exists for `projects` alone. The guard both
+working implementations use — `.eq("updated_at", revision)` against a value the form was opened on —
+cannot be expressed against `clients` without first adding the column and its touch trigger, which
+is a migration. A concurrent session is landing a migration for video designs, so this one was
+stopped here to be sequenced rather than merged alongside it. `supabase/migrations/` was not
+touched, and no product code was changed.
+
+**Which of the two existing patterns the repair should follow: `updateProjectDetails`.**
+
+- It leaves the timestamp to the table's own `before update` trigger, while `saveTemplateDraft`
+  writes `updated_at: new Date().toISOString()` from the browser clock. A column added to `clients`
+  should be trigger-driven for the same reason `projects` is, so the client editor should match
+  project details rather than the draft path.
+- Its refusal is the one measured end to end in this family. The sentence is raised inside the data
+  function, so there is exactly one copy of it; the modal stays open; `onError` invalidates the
+  cache only; and the revision snapshot the form is keyed on (`editRevision`) is deliberately not
+  refreshed — so the losing session keeps every character it typed and can copy it out before
+  reopening.
+- `ClientEditor` already preserves its text on a failed save: its fields are `useState`, `Modal`
+  stays mounted, and `save.error` renders through `FormError`, which is `role="alert"`. Only the
+  revision snapshot and the refusal sentence are missing, so the conflict would be actionable
+  without any other change to the form.
+
+**Sibling surfaces carrying the same gap.** Audited across `features/settings/` and the two writes
+named in this defect:
+
+| Surface | Write | Revision column | Exposure |
+|---|---|---|---|
+| Client settings | `saveClient` mode `update` (`features/settings/settings-data.ts:112`) | **none** | Measured above: four fields in one form, two agency sessions. Needs a migration. |
+| Campaign settings | `saveCampaign` mode `update` (`:172`) | **none** | Same shape, same four-field blast radius, same agency audience. By inspection. Needs a migration. |
+| Workspace settings | `update_workspace_settings` RPC (`:229`) | `workspace_settings.updated_at` exists | The RPC accepts no expected revision, so the singleton studio row is last-write-wins for two agency editors; both fields are on screen, so the loss is visible rather than silent, but it is the same failure. Guarding it changes the function signature — also a migration. |
+| Service presets | `save_service_preset` RPC (`:196`) | `service_presets.updated_at` **and** `revision` | The function increments `revision` but never checks an expected one, so a stale save rewrites all three numbers and appends a history row as if it were an intentional revision. Also an RPC signature change. |
+| Account settings | `updateProfile` (`:268`) | none | A caller's own row and a single field, so a stale save can only rewrite the field being edited. No cross-field loss; the lowest exposure here. |
+| Team settings | `revoke_invitation` and the invite RPCs | — | No shared editor: nothing on this tab reads a record into a form and writes the whole record back. |
+| Brand sections (outside `features/settings/`) | `saveBrandSection` upsert (`features/brand/brand-data.ts:289`) | `brand_sections.updated_at` **exists** | The only same-shape surface repairable with no schema change. The upsert writes a whole section blob, so a stale save discards the other editor's entire section. Left untouched as outside this task's scope, and recorded here because it can be repaired independently of the migration. |
+
+**Sequencing.** One migration covers all four unguarded writes: `updated_at timestamptz not null
+default now()` plus a `before update` touch trigger on `clients` and `campaigns`, and an expected-
+revision argument on `update_workspace_settings` and `save_service_preset`. That is one migration
+rather than four, and it should land after the video-designs migration so the two do not collide.
+
+**Checks run in this attempt, on unmodified product code**, as the baseline the repair has to keep:
+`npm run check` → typecheck, lint, format and **33 files / 449 tests** all pass;
+`npm run test:e2e` → **25/25 in 2.1 m**. The browser suite rewrote its thirty evidence artefacts
+under `docs/verification/`; they were restored with `git checkout -- docs/verification/` and the
+working tree carries nothing from this attempt but this section. The dataset is unchanged either
+side of the run — **10 clients, 25 projects, 12 campaigns, 30 briefings, 70 brand assets** — and the
+SABRE client row is back to its fixture values.
+
 ---
 
 ## Summary
@@ -672,7 +756,7 @@ form without the same guard.
 | I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
 | I04 | Unverified | [I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message): the offline state of every form is a raw `TypeError` |
 | I05 | Unverified | [I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) and I-3 |
-| I06 | Unverified | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save): a stale client-settings form silently reverts a newer save |
+| I06 | Unverified | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save): a stale client-settings form silently reverts a newer save. Re-measured 2026-09-21 and unchanged; the repair is blocked on adding `updated_at` to `clients`, and the audit added `campaigns`, `update_workspace_settings` and `save_service_preset` to the same gap |
 | I07 | **Verified** | ≤ 700 ms everywhere on the full dataset, 0 long tasks, flat heap, 0 leaks over 30 client switches, clean role change |
 
 I03 and I08 were not re-examined; they remain Verified against the backend evidence ledger. No
