@@ -8,13 +8,33 @@ import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
   postComment,
   resolveComment,
-  useInvalidateProject,
+  useInvalidateComments,
   useProjectComments,
   type ProjectChannel,
 } from "./project-data";
 
 import { useCommentDraft, type PendingPin } from "./comment-draft";
 import { FormError } from "@/features/shared/form-error";
+
+export type CommentAttempt = { payload: string; key: string };
+
+/**
+ * Decides whether an attempt reuses its idempotency key or mints a fresh one.
+ *
+ * Kept as a plain function, exported and unit-tested on its own, rather than folded straight into
+ * the mutation: the requirement it exists to satisfy — same payload replays the same key, a
+ * changed payload (an edited comment, a moved pin) mints a new one — is exactly what a ref keyed on
+ * the component's lifetime instead of on the payload would get silently wrong. Keying it wrong is
+ * invisible in manual testing (nothing errors until a real retry happens against the server) and
+ * only a test that inspects the returned key across two differing payloads can catch it.
+ */
+export function nextCommentAttempt(
+  current: CommentAttempt | null,
+  payload: string,
+): CommentAttempt {
+  if (current?.payload === payload) return current;
+  return { payload, key: `comment:${crypto.randomUUID()}` };
+}
 
 export function CommentPanel({
   projectId,
@@ -38,10 +58,15 @@ export function CommentPanel({
   const { database } = useAuth();
   const { formatDate } = useDateFormat();
   const comments = useProjectComments(projectId, channel, designId);
-  const invalidate = useInvalidateProject();
+  const invalidate = useInvalidateComments();
   const { draft, update, clear } = useCommentDraft(projectId, channel, designId);
   const body = draft.body;
   const panel = useRef<HTMLElement>(null);
+  // Keyed on the attempt's payload rather than the component's lifetime: a retry of the same
+  // comment must resend the same key (matching the server's replay), but a person editing the
+  // text or pin between retries has to mint a new one, or `post_comment` raises a conflict it
+  // cannot recover from. See `credits/credit-actions.tsx`'s `attempt` ref for the same shape.
+  const attempt = useRef<CommentAttempt | null>(null);
   useEffect(() => {
     if (selectedComment)
       panel.current
@@ -50,16 +75,21 @@ export function CommentPanel({
   }, [selectedComment]);
   const [showResolved, setShowResolved] = useState(false);
   const post = useMutation({
-    mutationFn: async () =>
-      postComment(database, {
+    mutationFn: async () => {
+      const payload = JSON.stringify({ body: body.trim(), designId, pin: pendingPin });
+      attempt.current = nextCommentAttempt(attempt.current, payload);
+      return postComment(database, {
         projectId,
         channel,
         body: body.trim(),
         versionId,
         designId,
         pin: pendingPin,
-      }),
+        idempotencyKey: attempt.current.key,
+      });
+    },
     onSuccess: async () => {
+      attempt.current = null;
       clear();
       onClearPin?.();
       await invalidate();

@@ -277,6 +277,25 @@ export function useInvalidateProject() {
   };
 }
 
+/**
+ * The one key a comment write dirties. `comment-panel.tsx` posts and resolves comments far more
+ * often than the project's other writes fire, and neither touches `project-detail`, `projects` or
+ * `notifications` — routing them through `useInvalidateProject()` would refetch the whole project
+ * list and the notification feed for every message sent. Kept as its own single-key set, in the
+ * same shape as `assetQueryKeys`, rather than folded into `projectQueryKeys`, precisely so the two
+ * call sites can invalidate only what they dirty.
+ */
+export const commentsQueryKeys = ["comments"] as const;
+
+export function useInvalidateComments() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all(
+      commentsQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
+  };
+}
+
 /** Saves the project's own details, refusing a save that would overwrite a concurrent edit. */
 export async function updateProjectDetails(
   database: SupabaseDatabase,
@@ -343,7 +362,9 @@ export async function postComment(
     body: string;
     versionId?: string;
     designId?: string;
-    pin?: { x: number; y: number } | null;
+    pin?: { x: number; y: number; t?: number } | null;
+    /** The attempt's replay key (`comment-panel.tsx` mints and reuses it across retries). */
+    idempotencyKey?: string;
   },
 ) {
   return assertResult(
@@ -353,7 +374,14 @@ export async function postComment(
       p_body: input.body,
       ...(input.versionId ? { p_version_id: input.versionId } : {}),
       ...(input.designId ? { p_design_id: input.designId } : {}),
-      ...(input.pin ? { p_pin_x: input.pin.x, p_pin_y: input.pin.y } : {}),
+      // `p_pin_t` is typed `number | undefined` (no `null`) by the generated RPC args, matching the
+      // Postgres default of `null` for an unpassed argument — an explicit `undefined` here has the
+      // same effect on the wire as omitting the key, since the client strips undefined properties
+      // before sending the request body.
+      ...(input.pin
+        ? { p_pin_x: input.pin.x, p_pin_y: input.pin.y, p_pin_t: input.pin.t ?? undefined }
+        : {}),
+      ...(input.idempotencyKey ? { p_idempotency_key: input.idempotencyKey } : {}),
     }),
   );
 }
