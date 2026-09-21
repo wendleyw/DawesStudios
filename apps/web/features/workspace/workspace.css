@@ -555,3 +555,33 @@
     font-size: 10px;
   }
 }
+
+/*
+ * Relocated verbatim from `app/globals.css` (final structural-refactor fix wave): both classes'
+ * only consumer in the whole tree is `home-page.tsx`, so `globals.css`'s "unexplained" flag on them
+ * is resolved by moving them here rather than leaving them global. Relative order to each other is
+ * preserved from their prior position in `globals.css` so the cascade resolves identically.
+ */
+.project-origin small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.project-symbol {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #f7f7f3;
+  color: #77776f;
+}
+@media (max-width: 1200px) {
+  .project-symbol {
+    display: none;
+  }
+}

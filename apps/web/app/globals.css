@@ -473,23 +473,6 @@ select {
   letter-spacing: -0.25px;
   text-transform: uppercase;
 }
-.workspace-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 14px;
-  padding-left: 18px;
-  border-left: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.workspace-status i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #73736c;
-}
 .main-content {
   min-width: 0;
 }
@@ -553,12 +536,6 @@ select {
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
-.project-origin small {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 10px;
-}
 .project-table {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -611,18 +588,6 @@ select {
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.project-symbol {
-  display: inline-flex;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: #f7f7f3;
-  color: #77776f;
 }
 .status-badge {
   display: inline-flex;
@@ -902,14 +867,8 @@ select {
     gap: 14px;
     padding-inline: 16px;
   }
-  .project-symbol {
-    display: none;
-  }
 }
 @media (max-width: 1000px) {
-  .workspace-status {
-    display: none;
-  }
   .table-head,
   .project-row {
     grid-template-columns: minmax(135px, 1.6fr) minmax(100px, 1fr) minmax(108px, 1fr) 16px;
