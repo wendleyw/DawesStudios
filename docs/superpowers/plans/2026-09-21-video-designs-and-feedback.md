@@ -1474,6 +1474,8 @@ git commit -m "feat(projects): play video designs and pin comments in time"
 ### Task 10: Publish a video to the client
 
 **Files:**
+- Create: `supabase/migrations/202609210006_video_asset_registration.sql`
+- Test: `supabase/tests/database/video_asset_registration.test.sql`
 - Modify: `apps/media/src/server.js` (the `/publications/prepare` branch)
 - Modify: `apps/media/src/supabase.js`
 - Test: `apps/media/src/server.test.js`
@@ -1484,8 +1486,44 @@ git commit -m "feat(projects): play video designs and pin comments in time"
 - Produces: no new route. `/publications/prepare` handles a video design by copying rather
   than re-processing.
 
-**Why this task exists.** `/publications/prepare` currently calls `sanitizeRaster(input)`
-on **every** design in the version, unconditionally. `sanitizeRaster` is `sharp`, which
+**A migration comes first, because the database refuses video today.**
+`register_sanitized_asset` (`202609200017_repeatable_asset_registration.sql:6`) gates
+registration on the MIME type:
+
+```sql
+if p_bucket_id='published-assets' and (p_mime_type<>'image/png' or p_source_design_id is null
+   or not exists(select 1 from public.designs where id=p_source_design_id
+                 and project_id=p_project_id and internal_asset_path=p_source_path))
+then raise exception 'Publication source does not match the design'; end if;
+```
+
+So a `video/mp4` registration raises, and every capacity Task 2 opened is inert for video
+until this widens. Create `supabase/migrations/202609210006_video_asset_registration.sql`
+that `create or replace`s the function with **only** the published-assets MIME test
+widened:
+
+```sql
+-- Published designs may now be video as well as a sanitised PNG. Everything else about the
+-- gate is unchanged and deliberately so: the registration still requires a source design
+-- whose `internal_asset_path` is the object being published, which is what stops an
+-- arbitrary object entering a client publication.
+--
+-- `delivery-files` is NOT widened. A delivery is a final file, its bucket keeps its 50 MiB
+-- ceiling, and video was never part of that path.
+... and p_mime_type not in ('image/png','video/mp4','video/webm') ...
+```
+
+Two things to get right:
+
+- The signature is unchanged, so `create or replace` preserves the ACL and no revoke/grant
+  is needed. **Verify that afterwards** rather than assuming — compare against
+  `adjust_credits` — because Task 1 shipped a function that silently reverted to PUBLIC
+  and anon EXECUTE when its signature changed.
+- Add a pgTAP case asserting a `video/mp4` registration for `published-assets` succeeds
+  and that a `video/mp4` registration for `delivery-files` still raises.
+
+**Why the rest of this task exists.** `/publications/prepare` currently calls
+`sanitizeRaster(input)` on **every** design in the version, unconditionally. `sanitizeRaster` is `sharp`, which
 cannot decode an MP4 — so without this task, publishing any version containing a video
 fails outright and the client never receives it. This is the task that makes the spec's
 "publication copies the already-clean object" true rather than aspirational.
