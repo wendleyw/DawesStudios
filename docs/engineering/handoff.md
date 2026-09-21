@@ -61,7 +61,7 @@ These are historical claims from the linked files, not checks rerun during this 
 
 Steps 1 to 4 of the previous list are complete; the detail is in [the baseline reconciliation report](handoffs/2026-09-20-claude-baseline-reconciliation.md) and the [implementation plan](../architecture/implementation-plan.md).
 
-Every documented suite now passes on the current tree, including **24 of 24 browser tests**, and the dataset holds exactly 10 clients and 20 projects with no orphaned parents or leftover fixtures. Two defects were found and fixed: the invitation endpoint rejected every browser request in the container because it derived its origin from the server bind address, and earlier browser evidence had been measured against a container image older than the source. Codex's topbar/identity refactor was preserved and integrated, not reverted.
+Every documented suite now passes on the current tree, including **25 of 25 browser tests** (24 of 24 at the time this section was first written; the suite gained a test and the figure is corrected here to match today's tree — see "Repository structural refactor: Phase C closed" at the end of this file for the count as of the refactor's close), and the dataset holds exactly 10 clients and 20 projects with no orphaned parents or leftover fixtures. Two defects were found and fixed: the invitation endpoint rejected every browser request in the container because it derived its origin from the server bind address, and earlier browser evidence had been measured against a container image older than the source. Codex's topbar/identity refactor was preserved and integrated, not reverted.
 
 A passing gate is not a finished product. **75 acceptance rows remain Unverified**, and deployment, TLS and outbound SMTP remain unconfigured.
 
@@ -99,13 +99,25 @@ Documentation validation confirmed identical root instruction files, resolving r
 
 ## Workspace topbar consolidation (2026-09-20)
 
+**Superseded — read this before acting on anything below.** This entry describes a portal slot at
+`features/workspace/topbar-tools.tsx`, a `--workspace-chrome` custom property, and a second tool row
+below 1100 px, all as implemented. They are not: see "Board identity header; the topbar stands down;
+Planning sized for its Kanban" at line 599 below, whose "Changed" section records both
+`topbar-tools.tsx` and `--workspace-chrome` as **deleted**, deliberately, later the same day.
+`client-identity.tsx` from this entry is also gone — it is now `client-mark.tsx`. The board carries
+the client mark in its own header; the topbar carries only global chrome (notifications, and the
+studio name outside a client workspace). This exact contradiction already cost one agent a full
+wasted round hunting through the tree for a file this entry implies still exists. Read the later,
+correct section first if you need current topbar/board structure; treat everything below this marker
+as historical intent, not the current tree.
+
 Owner: Claude Code, as orchestrator, implementing directly rather than delegating; no worker reports were produced for this task.
 
 Implemented: the client workspace topbar now carries the client's brand mark and name in place of the studio/client breadcrumb, and the board's header and toolbar rows were folded into it. Pages contribute controls through a portal slot (`features/workspace/topbar-tools.tsx`); the board contributes search, a filter popover, the result count, the view selector and the primary action. The duplicated client name was removed from the board, briefings and credits headings. `--workspace-chrome` now derives the canvas height from the measured chrome, and the topbar reserves a second tool row below 1100 px.
 
 Changed: `apps/web/features/workspace/{app-shell,topbar-tools,client-identity}.tsx`, `apps/web/features/board/board-page.tsx`, `apps/web/features/brand/brand-data.ts`, `apps/web/features/{briefings/briefings-page,credits/credits-page}.tsx`, `apps/web/app/globals.css`, and [the design system](../architecture/design-system.md).
 
-Verified in this session: `npx tsc --noEmit`, `npm run lint` and `npm test` (109 unit tests — historical count for this 2026-09-20 session; stale as a current figure, see the "Repository structural refactor" entry below for the count as of Phase A) pass. The Playwright suite ran against a development server on port 3010: 23 passed, and `production-workflow.spec.ts` failed at the share-version dialog with `Failed to fetch`. That failure is environmental — the media service allows only `APP_ORIGIN=http://localhost:3003`, and a request carrying the port 3010 origin returns 403 while the same request from port 3003 returns 200. The spec passes against the container on port 3003. Re-run it from an allowed origin before treating any production-workflow row as evidence. Layout was measured at 1440, 1200, 1100, 1000, 900, 700 and 390 px with no horizontal or vertical overflow, and the `design-audit` accessibility spec passes.
+Verified in this session: `npx tsc --noEmit`, `npm run lint` and `npm test` (109 unit tests — historical count for this 2026-09-20 session; stale as a current figure. It is **391 tests across 25 files** as of the refactor's close — see "Repository structural refactor: Phase C closed" at the end of this file) pass. The Playwright suite ran against a development server on port 3010: 23 passed, and `production-workflow.spec.ts` failed at the share-version dialog with `Failed to fetch`. That failure is environmental — the media service allows only `APP_ORIGIN=http://localhost:3003`, and a request carrying the port 3010 origin returns 403 while the same request from port 3003 returns 200. The spec passes against the container on port 3003. Re-run it from an allowed origin before treating any production-workflow row as evidence. Layout was measured at 1440, 1200, 1100, 1000, 900, 700 and 390 px with no horizontal or vertical overflow, and the `design-audit` accessibility spec passes.
 
 Not done: the acceptance matrix rows remain as they were; no fixture, container or deployment state was changed.
 
@@ -1066,7 +1078,9 @@ baseline") — the reference point every later diff in this refactor is measured
 (274/15 immediately after Task 3, +5 tests in `credit-data.test.ts`). Any earlier figure recorded
 elsewhere in this file (for example "109 unit tests" in the 2026-09-20 workspace-topbar entry above)
 is historical evidence of that session's own state, not a claim about the tree today — treat this
-paragraph as the current count.
+paragraph as the current count *as of Phase A's close*. It is superseded in turn: Phase B and Phase C
+followed this same day, and the final count is **391 tests across 25 files** — see "Repository
+structural refactor: Phase C closed" at the end of this file.
 
 **Standing rule: rebuild before browser verification, every time.** `dawes-studios-app-web-1` has
 **zero bind mounts** and runs a baked `node apps/web/server.js`; it does not see source changes. This
@@ -1113,3 +1127,127 @@ this refactor. The rule going forward, unconditionally:
   (`docs/architecture/acceptance-matrix.md`). This refactor is a structural change under a
   behavior-preservation constraint; it does not advance acceptance-matrix coverage, and nothing in
   Phase A or this entry should be read as evidence toward those rows.
+
+## Repository structural refactor: Phase C closed (2026-09-20/21)
+
+Owner: Claude Code, as orchestrator. This entry closes the refactor Phase A opened above: Phase B's
+seven feature migrations landed, the closing pass covered the shared infrastructure no feature agent
+owned, and full verification ran against a rebuilt container. **The 75 Unverified acceptance-matrix
+rows were NOT addressed by this refactor** — restated here plainly because it is the single most
+important scope boundary for whoever reads this next.
+
+**Baseline commit:** `31a2f7a` — the reference point every diff in this refactor is measured against.
+**The three foundations**, established in Phase A and held through every later wave:
+
+1. **The data-access contract** (`docs/architecture/data-access.md`): Supabase queries live only in
+   `features/<feature>/<feature>-data.ts`; reads are `use<Thing>()` hooks, writes are plain
+   `async (database, input)` functions; validation, trimming, idempotency and retry state stay in the
+   component.
+2. **The shared primitive layer** (`apps/web/features/shared/README.md`): a component moves to
+   `features/shared/` only once it has two or more real consumers today, not on anticipated reuse.
+3. **The styling boundary** (`docs/architecture/design-system.md#styling-boundary`): feature-specific
+   CSS moves into `<feature>.css`; `globals.css` keeps only genuinely cross-feature rules, each one
+   individually justified rather than assumed.
+
+**The seven Phase B feature migrations**, each confined to its owned path, each filing its own report
+under `docs/engineering/handoffs/`:
+
+| Feature | Report |
+| --- | --- |
+| board | `handoffs/2026-09-20-refactor-board.md` |
+| projects | `handoffs/2026-09-20-refactor-projects.md` |
+| brand | `handoffs/2026-09-20-refactor-brand.md` |
+| briefings | `handoffs/2026-09-20-refactor-briefings.md` |
+| settings | `handoffs/2026-09-20-refactor-settings.md` |
+| workspace | `handoffs/2026-09-20-refactor-workspace.md` |
+| assets, auth, campaigns, reviews (small features) | `handoffs/2026-09-20-refactor-small-features.md` |
+
+**The closing pass** (Task 16, `handoffs/2026-09-20-refactor-closing-pass.md`): wired the board's
+`moveProjectPosition` invalidation onto workspace's `useInvalidateWorkspace()` helper (previously the
+board called `useQueryClient()` directly with an inline, identical query key — non-widening, just
+de-duplicated); reviewed `apps/web/app`'s three non-page files and all of `apps/media/src` (no
+changes needed in either); and deduplicated one PNG "Author" marker chunk that `supabase/scripts`'
+`fixture_media.py` and `demo_artwork.py` each built independently (`fixture_media.AUTHOR_TEXT_CHUNK`,
+commit `7236def`). A concurrent session (`dawesstudios-70`) committed `9c38bd0` ("hide the React Flow
+attribution badge", `proOptions={{ hideAttribution: true }}`) during this same window; its edits were
+carried through intact and are not this refactor's work.
+
+### Verification results, run against a rebuilt container
+
+The web container image was rebuilt and restarted before the browser suite, so this evidence is
+production-shaped rather than dev-mode. Image built `2026-09-21T03:12:27Z`; branch head
+`2026-09-20T23:10:13-04:00` — the image is newer than the code, which is the condition that makes
+browser evidence trustworthy here (see the standing rebuild-before-verify rule in the Phase A entry
+above).
+
+| Command | Result |
+| --- | --- |
+| `npm run check` | **PASS** — 391 tests across 25 files |
+| `npm run build` | **PASS** — compiled successfully |
+| `npm --prefix apps/media test` | **PASS** — 14 tests |
+| `npm run test:e2e` | **PASS — 25 of 25** in 2.0 min, against the rebuilt container |
+| `npm run db:test` | **FAIL — and it is not this refactor's doing.** See below. |
+
+### Definition of done — all verified
+
+- Inline Supabase queries in components: **0** (was 85). The grep excludes `Array.from(`, which the
+  naive pattern falsely matches.
+- Feature-named rules remaining in `globals.css`: **20**, all documented deliberate exceptions (see
+  the Phase A table above and `design-system.md#styling-boundary`).
+- **No existing test file was modified or deleted** across the entire refactor:
+  `git diff --diff-filter=MD` over `apps/web/features`, `apps/web/tests`, `apps/media` and `supabase`
+  returns nothing for `.test.`/`.spec.` files. This is the proof that behavior was preserved.
+- Test files **added**: 10, roughly 1,841 lines of new coverage — `asset-data-writes` (167),
+  `board-data` (32), `brand-data` (308), `briefing-data` (299), `campaign-data` (72), `credit-data`
+  (67), `artwork-files` (55), `project-data` (477), `settings-data` (292), `workspace-data` (72).
+- `AGENTS.md` and `CLAUDE.md`: **identical**.
+
+### Measured before / after
+
+- `app/globals.css`: **2,223 → 1,099 lines** (this supersedes the Phase A table's 2,221 → 1,105
+  figure, which was measured mid-refactor before the later feature waves touched the stylesheet
+  further).
+- Unit suite: **274 tests / 15 files → 391 / 25** (this is the final figure; it supersedes every
+  earlier count in this file, including the Phase A section's own 279/16).
+- Largest components, before: `briefing-editor.tsx` 664, `board-page.tsx` 659, `project-page.tsx`
+  504, `credits-page.tsx` 433, `app-shell.tsx` 415.
+- Largest components, after: `board-page.tsx` 433, `credits-page.tsx` 424, `app-shell.tsx` 416,
+  `briefing-editor-details.tsx` 344, `project-action-dialog.tsx` 333. **`briefing-editor.tsx` is now
+  100 lines.**
+- The largest files in `features/` are now data modules and their tests (`project-data.ts` 476,
+  `project-data.test.ts` 477), not components.
+- Feature data modules: **11** (`asset-data.ts`, `auth-data.ts`, `board-data.ts`, `brand-data.ts`,
+  `briefing-data.ts`, `campaign-data.ts`, `credit-data.ts`, `project-data.ts`, `review-data.ts`,
+  `settings-data.ts`, `workspace-data.ts`).
+- Commits on the branch: **35**.
+
+### The `db:test` failure: a pre-existing defect on another track, deliberately left alone
+
+`npm run db:test` fails, and **this refactor did not cause it and did not fix it.**
+
+Root cause: `supabase/scripts/build_seed.py` and `supabase/seed.sql` were rewritten (+382/−163 lines)
+with mtime 16:44 on 2026-09-20 — about an hour before this refactor's baseline commit (`31a2f7a`) —
+and the pgTAP suite in `supabase/tests/` was never updated to match. The tests reference fixture keys
+`dawes:version-16-2` and `dawes:version-3-1`; `grep -c "dawes:version-16-2" supabase/seed.sql`
+returns **0**, so `public.publish_version` raises `P0001: Version not found`. Failures: 11 of 53 in
+`access_and_workflows`, 1 of 1 in `production_integrity`, 3 of 14 in `trusted_media_and_catalog`.
+
+This refactor touched **zero** SQL files: `git diff --name-only 31a2f7a HEAD -- '*.sql'
+supabase/migrations/` is empty. The seeded dataset itself is healthy — 10 clients, 25 projects, no
+orphaned parents. Fixing this would mean editing test files (`supabase/tests/*.test.sql`) or the seed
+(`supabase/seed.sql`), both explicitly out of scope for a behavior-preservation refactor and outside
+every owned path in the Phase B table above. **This is a pre-existing defect belonging to another
+track** (whichever session rewrote the seed builder an hour before this refactor started), and it was
+deliberately left alone rather than patched incidentally by an agent who does not own the seed.
+
+### Open question for the design-system.md owner — not resolved here
+
+`.react-flow__attribution` at `globals.css:769-777` is a grouped selector
+(`.board-canvas .react-flow__attribution, .project-canvas .react-flow__attribution,
+.design-viewport .react-flow__attribution`) currently recorded in `design-system.md` as a deliberate,
+verified multi-feature keep-it-global exception. The concurrent session's `9c38bd0` set
+`proOptions={{ hideAttribution: true }}` on all three ReactFlow instances the same rule targets,
+which may have made the rule dead — styling an element that `hideAttribution` now prevents from
+rendering. This refactor did not check whether the badge is still ever mounted (e.g., during load, or
+by a code path `hideAttribution` doesn't cover) and did not touch the rule or `design-system.md`.
+Flagging it as an open question for that session's owner to resolve, not resolving it here.

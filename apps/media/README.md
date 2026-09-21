@@ -29,7 +29,7 @@ Video and ZIP files are not accepted by this trusted client-visible pipeline. No
 
 ## Tests and image
 
-- `npm --prefix apps/media test` runs seven behavior tests covering metadata stripping, invalid formats, pixel limits, PDF attachments/scripts and page preservation.
+- `npm --prefix apps/media test` runs 14 tests across two files: `sanitize.test.js` covers metadata stripping, invalid formats, pixel limits, PDF attachments/scripts and page preservation; `server.test.js` covers the origin allowlist.
 - `npm --prefix apps/media run test:integration` requires the running local service and provisioned fixture credentials; it exercises real Auth, worker, Storage and SQL-attestation boundaries, then removes its temporary objects and restores the source design.
 - `docker build -t dawes-media:local apps/media` builds the production image with Poppler and production dependencies only. Inject environment variables at runtime, publish the chosen port, and keep Supabase service access within the deployment's trusted network.
 - `MEDIA_TEST_URL=http://127.0.0.1:55431 npm --prefix apps/media run test:integration` runs the same real pipeline checks against an isolated Docker image mapped to test port 55431.
