@@ -66,7 +66,13 @@ export function createMediaServer(config) {
     let acquired = false;
     try {
       const token = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]+)$/)?.[1];
-      const userId = await backend.authenticate(token);
+      // Publishing and delivery stay agency-only: those are not a designer's action, so
+      // `authenticate` keeps enforcing that on its own. Sanitising a video is one step in
+      // producing a design, so it identifies the caller here and defers the actual authorization
+      // decision to the route below, once the target project is known from the body.
+      let userId, callerRole;
+      if (url.pathname === '/designs/sanitize-video') ({ id: userId, role: callerRole } = await backend.identify(token));
+      else userId = await backend.authenticate(token);
       if (active >= 2) throw new MediaError('Media processing is busy. Try again shortly.', 429);
       active++; acquired = true;
       if (url.pathname === '/assets/discard') {
@@ -109,8 +115,13 @@ export function createMediaServer(config) {
         if (!RAW_VIDEO_PATH.test(rawPath) || rawPath.split('/')[0] !== projectId)
           throw new MediaError('Asset path must belong to the project.');
 
-        // Production access is the same gate `add_design` applies, checked here so the service
-        // never processes a file for someone who could not attach it to a design anyway.
+        // Production access is the same gate `add_design` applies (`private.can_produce`:
+        // agency, or a designer assigned to this project) — checked here, against this project,
+        // so the service never processes a file for someone who could not attach it to a design
+        // anyway. Publishing and delivery stay agency-only above; this is the one route a
+        // designer is expected to reach.
+        if (!(await backend.canProduce(token, userId, callerRole, projectId)))
+          throw new MediaError('Production access required.', 403);
         const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id`, { token });
         if (projects.length !== 1) throw new MediaError('Project not found.', 404);
 

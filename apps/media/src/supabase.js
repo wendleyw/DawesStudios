@@ -14,9 +14,12 @@ const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
 
 export function createBackend(config) {
   const root = config.supabaseUrl.replace(/\/$/, '');
-  async function request(path, { token, method = 'GET', data, binary, mimeType, duplex } = {}) {
+  // 30 seconds fits every call in this file except the two video-streaming ones below, which set
+  // their own `timeoutMs` — every other call here is a small JSON request (auth, REST, an RPC),
+  // and a longer default would let one of those hang instead of failing fast.
+  async function request(path, { token, method = 'GET', data, binary, mimeType, duplex, timeoutMs = 30_000 } = {}) {
     const response = await fetch(root + path, {
-      method, signal: AbortSignal.timeout(30_000), redirect: 'error',
+      method, signal: AbortSignal.timeout(timeoutMs), redirect: 'error',
       headers: { apikey: config.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': mimeType ?? 'application/json' },
       body: binary ?? (data === undefined ? undefined : JSON.stringify(data)),
       ...(duplex ? { duplex } : {}),
@@ -30,12 +33,30 @@ export function createBackend(config) {
   }
   async function json(path, options) { const response = await request(path, options); const text = await response.text(); return text ? JSON.parse(text) : null; }
   async function rpc(name, data, token) { return json(`/rest/v1/rpc/${name}`, { method: 'POST', data, token }); }
-  async function authenticate(token) {
+  // Establishes who the caller is without deciding what they may do — `authenticate` below stays
+  // the agency-only gate every route used until sanitising a video, which a designer must also be
+  // able to reach, needed a caller identity it could authorize per-project instead.
+  async function identify(token) {
     if (!token) throw new MediaError('Authentication required.', 401);
     const user = await json('/auth/v1/user', { token });
     const profiles = await json(`/rest/v1/profiles?id=eq.${user.id}&select=id,role`, { token });
-    if (profiles.length !== 1 || profiles[0].role !== 'agency') throw new MediaError('Agency access required.', 403);
-    return user.id;
+    if (profiles.length !== 1) throw new MediaError('Access denied.', 403);
+    return { id: user.id, role: profiles[0].role };
+  }
+  async function authenticate(token) {
+    const { id, role } = await identify(token);
+    if (role !== 'agency') throw new MediaError('Agency access required.', 403);
+    return id;
+  }
+  // Mirrors `private.can_produce` (`supabase/migrations/202609200001_foundation.sql:218-220`)
+  // exactly: agency, or a designer with a standing assignment on this specific project. Reads the
+  // assignment with the caller's own token — `assignments_read` already lets a designer see their
+  // own rows — rather than the service key, so this can never see more than the caller could.
+  async function canProduce(token, userId, role, projectId) {
+    if (role === 'agency') return true;
+    if (role !== 'designer') return false;
+    const assignments = await json(`/rest/v1/project_assignments?project_id=eq.${projectId}&designer_id=eq.${userId}&select=project_id`, { token });
+    return assignments.length === 1;
   }
   async function downloadInternal(path, projectId, token) {
     if (!path.startsWith(projectId + '/') || !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpg|jpeg|webp|pdf)$/.test(path)) throw new MediaError('Invalid internal asset path.');
@@ -53,7 +74,14 @@ export function createBackend(config) {
   // which is right for a 40-megapixel image and wrong for a gigabyte of video.
   async function downloadToFile(path, projectId, token, destination) {
     if (!RAW_VIDEO_PATH.test(path) || path.split('/')[0] !== projectId) throw new MediaError('Asset path must belong to the project.');
-    const response = await request(`/storage/v1/object/authenticated/internal-assets/${path}`, { token });
+    // `request()`'s AbortSignal covers the whole fetch lifecycle, including streaming the body —
+    // not just getting a response header — so the default 30 seconds would abort a realistic
+    // transfer mid-stream. Reusing `LIMITS.videoProcessMs` (five minutes) rather than inventing a
+    // second number: it is already the budget Task 4 gave a gigabyte of video precisely because
+    // it is bounded by disk/network cost rather than CPU, and a network leg moving the same bytes
+    // deserves the same order of magnitude, not an independently-chosen constant that could drift
+    // out of sync with it.
+    const response = await request(`/storage/v1/object/authenticated/internal-assets/${path}`, { token, timeoutMs: LIMITS.videoProcessMs });
     const contentLength = Number(response.headers.get('content-length'));
     if (!contentLength || contentLength > LIMITS.videoBytes) { await response.body?.cancel().catch(() => {}); throw new MediaError('Source exceeds the file-size limit.', 413); }
     await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
@@ -65,7 +93,8 @@ export function createBackend(config) {
   // depending on them.
   async function uploadFile(bucket, path, filePath, mimeType) {
     const body = Readable.toWeb(createReadStream(filePath));
-    await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half' });
+    // Same reasoning as `downloadToFile`'s `timeoutMs`: this streams up to a gigabyte too.
+    await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half', timeoutMs: LIMITS.videoProcessMs });
   }
 
   async function saveSanitized(projectId, bucket, sanitized, userId, source = {}) {
@@ -96,5 +125,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, authenticate, downloadInternal, downloadToFile, uploadFile, saveSanitized, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, discard, discardPrepared, cleanStaleAssets };
 }

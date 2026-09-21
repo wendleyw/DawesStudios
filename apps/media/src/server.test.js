@@ -94,10 +94,13 @@ describe('POST /designs/sanitize-video', () => {
     return new Response(body === undefined ? '' : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const authRoutes = {
-    'GET /auth/v1/user': () => jsonResponse(200, { id: agencyUserId }),
-    'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: agencyUserId, role: 'agency' }]),
-  };
+  function identityRoutes(userId, role) {
+    return {
+      'GET /auth/v1/user': () => jsonResponse(200, { id: userId }),
+      'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: userId, role }]),
+    };
+  }
+  const authRoutes = identityRoutes(agencyUserId, 'agency');
 
   function post(path, body) {
     return fetch(`${baseUrl}${path}`, {
@@ -125,6 +128,42 @@ describe('POST /designs/sanitize-video', () => {
       mimeType: 'video/quicktime',
     });
     expect(response.status).toBe(415);
+  });
+
+  describe('production access mirrors private.can_produce for a designer', () => {
+    // Matches the real fixture pairing verified against the local database: `designer@dawes.local`
+    // (Alex Morgan) is assigned to `e3347e2f-fd33-a8c0-800a-a4af0c224ff0` and NOT to
+    // `19b68267-ec9c-7a9f-926c-828b7f882f22`, which belongs to the other seeded designer. `canProduce`
+    // was exercised directly against the running local Supabase stack for both cases before writing
+    // these stubbed equivalents; see the task report for that transcript.
+    const designerUserId = md5Uuid('dawes:designer-1');
+    const designerRoutes = identityRoutes(designerUserId, 'designer');
+    const designerRawPath = `${projectId}/${md5Uuid('designer-raw')}.raw`;
+
+    it('lets an assigned designer past the authorization check', async () => {
+      stubSupabase({
+        ...designerRoutes,
+        'GET /rest/v1/project_assignments': () => jsonResponse(200, [{ project_id: projectId }]),
+        // The project lookup itself is left unstubbed on purpose: reaching a 404 here (rather than
+        // 403) is the proof that `canProduce` let the request through, without needing the full
+        // download/sanitize/upload pipeline the happy-path test already covers.
+        'GET /rest/v1/projects': () => jsonResponse(200, []),
+      });
+      const response = await post('/designs/sanitize-video', { projectId, rawPath: designerRawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(404);
+      expect(calls.some(call => call.method === 'GET' && call.path === '/rest/v1/project_assignments')).toBe(true);
+    });
+
+    it('refuses a designer with no assignment on the project', async () => {
+      stubSupabase({
+        ...designerRoutes,
+        'GET /rest/v1/project_assignments': () => jsonResponse(200, []),
+      });
+      const response = await post('/designs/sanitize-video', { projectId, rawPath: designerRawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(403);
+      // Refused before ever asking whether the project exists.
+      expect(calls.some(call => call.path === '/rest/v1/projects')).toBe(false);
+    });
   });
 
   describe('once the project and the raw upload are accepted', () => {
