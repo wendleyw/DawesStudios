@@ -96,6 +96,8 @@ function CampaignForm({
   const [description, setDescription] = useState(campaign?.description ?? "");
   const [start, setStart] = useState(campaign?.start_date ?? "");
   const [end, setEnd] = useState(campaign?.end_date ?? "");
+  // As in `ClientEditor`: the revision the form opened on, never refreshed while it stays open.
+  const [revision] = useState(campaign?.updated_at);
   const save = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Give the campaign a name.");
@@ -108,7 +110,8 @@ function CampaignForm({
         startDate: start || null,
         endDate: end || null,
       };
-      if (campaign) await saveCampaign(database, { mode: "update", id: campaign.id, ...fields });
+      if (campaign)
+        await saveCampaign(database, { mode: "update", id: campaign.id, revision, ...fields });
       else await saveCampaign(database, { mode: "create", ...fields });
     },
     onSuccess: async () => {

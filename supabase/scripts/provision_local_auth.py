@@ -24,7 +24,8 @@ env_path = workdir/'supabase/.env.local'
 existing = {}
 if env_path.exists():
     existing = dict(line.split('=', 1) for line in env_path.read_text().splitlines() if '=' in line and not line.startswith('#'))
-password = existing.get('DEMO_PASSWORD') or 'Dawes!'+secrets.token_urlsafe(24)+'9aA'
+password = existing.get('DEMO_PASSWORD')
+agency=next(user for user in fixtures['users'] if user['role']=='agency')
 
 def request(path, data=None, method='POST', token=None, content_type='application/json'):
     body = data if isinstance(data, bytes) else json.dumps(data).encode() if data is not None else None
@@ -39,11 +40,26 @@ def request(path, data=None, method='POST', token=None, content_type='applicatio
         except Exception: reason=str(exc.code)
         raise RuntimeError(f'Local provisioning request failed ({reason})') from None
 
+if not password:
+    # `supabase/.env.local` is gitignored, so a linked worktree starts without one while still
+    # pointing at the single stack on 55421 that every worktree shares. Minting a password here would
+    # rotate the fixture accounts out from under whichever tree provisioned them, and that tree would
+    # only find out when every sign-in started returning `invalid_credentials`. The seed inserts each
+    # account with `created_at` equal to `updated_at`, so an account whose timestamps still match has
+    # never been given a password and there is nothing to invalidate.
+    seeded = request('/auth/v1/admin/users/'+agency['id'], method='GET')
+    if seeded['updated_at'] != seeded['created_at']:
+        raise SystemExit(
+            'This Supabase stack already holds fixture passwords that this working tree cannot read. '
+            'Copy supabase/.env.local from the working tree that provisioned the stack, or run '
+            'npm run db:reset -- --confirm-local-data-loss to provision it from scratch.'
+        )
+    password = 'Dawes!'+secrets.token_urlsafe(24)+'9aA'
+
 if not arguments.files_only:
     for user in fixtures['users']:
         request('/auth/v1/admin/users/'+user['id'], {'password':password,'email_confirm':True}, method='PUT')
 
-agency=next(user for user in fixtures['users'] if user['role']=='agency')
 session=request('/auth/v1/token?grant_type=password',{'email':agency['email'],'password':password})
 agency_token=session['access_token']
 def fixture_object(bucket,path,content,mime):

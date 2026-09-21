@@ -256,6 +256,7 @@ export type Database = {
           id: string
           start_date: string | null
           title: string
+          updated_at: string
         }
         Insert: {
           client_id: string
@@ -265,6 +266,7 @@ export type Database = {
           id?: string
           start_date?: string | null
           title: string
+          updated_at?: string
         }
         Update: {
           client_id?: string
@@ -274,6 +276,7 @@ export type Database = {
           id?: string
           start_date?: string | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -395,6 +398,7 @@ export type Database = {
           initials: string
           name: string
           slug: string
+          updated_at: string
           website: string
         }
         Insert: {
@@ -406,6 +410,7 @@ export type Database = {
           initials?: string
           name: string
           slug: string
+          updated_at?: string
           website?: string
         }
         Update: {
@@ -417,6 +422,7 @@ export type Database = {
           initials?: string
           name?: string
           slug?: string
+          updated_at?: string
           website?: string
         }
         Relationships: []
@@ -1641,6 +1647,7 @@ export type Database = {
       save_service_preset: {
         Args: {
           p_due_days: number
+          p_expected_revision?: number
           p_max_credits: number
           p_min_credits: number
           p_service_type: string
@@ -1653,8 +1660,12 @@ export type Database = {
         Returns: undefined
       }
       update_workspace_settings: {
-        Args: { p_studio_name: string; p_timezone: string }
-        Returns: undefined
+        Args: {
+          p_expected_updated_at?: string
+          p_studio_name: string
+          p_timezone: string
+        }
+        Returns: string
       }
     }
     Enums: {

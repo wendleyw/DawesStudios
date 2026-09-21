@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
-import { credentials, localAgency, localCaller, signIn } from "./test-support";
+import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 import { cleanupIntakeFixture, createIntakeFixture } from "./intake-fixture";
 
 test.use({ reducedMotion: "reduce" });
@@ -153,15 +153,29 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
     }
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
+    // Only "Product 1" gets a matching brand asset, so its reference link should render with the
+    // correctly-encoded filtered search, while "Product 2" and "Product 3" — with nothing to link
+    // to — should render no link at all. That proves both halves of the filtered-link behaviour
+    // fixed by defect G-1 (54645f1): a real match still resolves, and an empty result is omitted.
+    const matchingAsset = await localAdmin.from("brand_assets").insert({
+      client_id: fixture.clientId,
+      name: "Product 1 field kit",
+      category: "Reference",
+    });
+    expect(matchingAsset.error).toBeNull();
     await page.reload();
-    for (let index = 0; index < 3; index++) {
+    const productWithMatch = page.locator(".brand-product").nth(0);
+    await expect(productWithMatch).toContainText("Product 1");
+    await expect(productWithMatch).toContainText("Specification 1");
+    await expect(productWithMatch.getByRole("link")).toHaveAttribute(
+      "href",
+      base + "/assets?search=Product%201",
+    );
+    for (let index = 1; index < 3; index++) {
       const product = page.locator(".brand-product").nth(index);
       await expect(product).toContainText("Product " + (index + 1));
       await expect(product).toContainText("Specification " + (index + 1));
-      await expect(product.getByRole("link")).toHaveAttribute(
-        "href",
-        base + "/assets?search=Product%20" + (index + 1),
-      );
+      await expect(product.getByRole("link")).toHaveCount(0);
     }
     const client = await localCaller(fixture.email);
     try {

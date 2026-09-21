@@ -86,6 +86,8 @@ export type Campaign = {
   description: string;
   start_date: string | null;
   end_date: string | null;
+  /** The revision the campaign editor opens on, so a stale save can be refused. */
+  updated_at: string;
 };
 export type BrandSection = { section: string; content: Record<string, unknown> };
 

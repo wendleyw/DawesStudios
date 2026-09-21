@@ -117,6 +117,9 @@ function ClientEditor({
   const [website, setWebsite] = useState(client?.website ?? "");
   const [description, setDescription] = useState(client?.description ?? "");
   const [initialCredits, setInitialCredits] = useState("0");
+  // The revision this form was opened on. Held in state and never refreshed, so a refused save
+  // keeps refusing rather than quietly becoming valid, and the text typed here is never discarded.
+  const [revision] = useState(client?.updated_at);
   const save = useMutation({
     mutationFn: async () => {
       if (!name.trim() || name.trim().length > 120)
@@ -127,6 +130,7 @@ function ClientEditor({
         await saveClient(database, {
           mode: "update",
           id: client.id,
+          revision,
           name: name.trim(),
           industry: industry.trim(),
           website: website.trim(),

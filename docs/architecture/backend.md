@@ -12,6 +12,7 @@ The isolated CLI project is `dawes-studios`: API `http://127.0.0.1:55421`, Postg
 - Generate types: `supabase gen types typescript --local > supabase/database.types.ts`.
 - Provision local Auth fixtures after a reset: `python3 supabase/scripts/provision_local_auth.py`.
 - Credentials live only in ignored `supabase/.env.local`; never copy service credentials into browser environment variables.
+- One stack serves every working tree. `supabase/.env.local` is ignored, so a git worktree starts without one, and provisioning reads `DEMO_PASSWORD` from the tree it was invoked from. Provisioning a stack whose fixture accounts already carry passwords this tree cannot read is refused rather than rotating them, because rotating locks every other tree out of the shared stack with `invalid_credentials`. Copy `supabase/.env.local` into the new tree, or reset the stack to provision it from scratch.
 
 The CLI environment is for local development and production simulation. Deployment requires a separate production Supabase installation, HTTPS, configured email delivery, backup/restore verification, monitoring and production secrets. No hosted production deployment is implied by local tests.
 
@@ -72,14 +73,14 @@ All arguments use the `p_` prefix. Functions return a UUID unless marked void or
 | `create_invitation` (JSON) | `p_email`, `p_role`, `p_client_id=null`; returns `{id,token}` once |
 | `accept_invitation` (void) | `p_token` |
 | `revoke_invitation` (void) | `p_invitation_id` |
-| `update_workspace_settings` (void) | `p_studio_name`, `p_timezone` (valid IANA name) |
-| `save_service_preset` (integer revision) | `p_service_type`, `p_min_credits`, `p_max_credits`, `p_due_days` |
+| `update_workspace_settings` (timestamptz revision) | `p_studio_name`, `p_timezone` (valid IANA name), `p_expected_updated_at=null` (the revision the form was read on; a mismatch is `PT409`) |
+| `save_service_preset` (integer revision) | `p_service_type`, `p_min_credits`, `p_max_credits`, `p_due_days`, `p_expected_revision=null` (the revision the editor opened on; a mismatch is `PT409`) |
 
 Deliverable payloads: `{name,format,width?,height?,quantity:1,scope:'original'|'adaptation'}`. Design content supports `headline`, `subheading`, `body`, `background`, `foreground`, `accent`, `eyebrow`, `layout`; only those fields enter publications. In the client comment channel `p_version_id` means the **published** version UUID and `p_design_id` means the **published** design UUID. Never submit internal IDs to the client channel.
 
 Safe direct writes: own profile `display_name/avatar_url`; agency client descriptive fields; client/agency campaign creation/edit; agency project title/description/dates/board position; assigned designer/agency design content; agency shared brand data; personal template drafts; production project assets; own notification `read_at`. Security-sensitive transitions always use RPCs.
 
-Existing draft edits require the revision loaded with the text. A mismatch returns HTTP 409 (`PT409`) without replacing newer content. The editor uses the atomic revision-returning RPC to avoid a write/read race. Project updates have an automatic `updated_at` trigger for optimistic filters, trimmed nonempty titles, valid date order and bounded numeric canvas positions. Workspace settings and immutable preset history are persisted; preset changes affect future estimates, leaving accepted quotes untouched. The `other` preset retains null estimate/timing until an agency quote exists. Invitations have serialized per-actor/hour and pending-workspace limits and reject expired, reused, wrong-email and existing-member role changes.
+Existing draft edits require the revision loaded with the text. A mismatch returns HTTP 409 (`PT409`) without replacing newer content. The editor uses the atomic revision-returning RPC to avoid a write/read race. The same guard now covers every settings editor: `clients` and `campaigns` carry an `updated_at` maintained by a `before update` trigger and are written with `.eq("updated_at", <revision>)`, while `update_workspace_settings` and `save_service_preset` take the revision their form was opened on. Each expected revision is optional so a caller with no open form (fixtures, restore paths) still writes; every editor in the product supplies one. Project updates have an automatic `updated_at` trigger for optimistic filters, trimmed nonempty titles, valid date order and bounded numeric canvas positions. Workspace settings and immutable preset history are persisted; preset changes affect future estimates, leaving accepted quotes untouched. The `other` preset retains null estimate/timing until an agency quote exists. Invitations have serialized per-actor/hour and pending-workspace limits and reject expired, reused, wrong-email and existing-member role changes.
 
 ## Sources
 

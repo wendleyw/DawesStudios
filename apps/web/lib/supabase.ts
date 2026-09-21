@@ -29,7 +29,24 @@ export function createBrowserDatabase(configuration: PublicConfiguration) {
   return client;
 }
 
+/**
+ * A request that never reached the server. Both Chromium/Firefox (`TypeError: Failed to fetch`)
+ * and Safari (`TypeError: Load failed`) throw this at the `fetch` call itself, before anything
+ * resembling a Supabase or Postgres error exists; supabase-js catches that rejection and carries
+ * the raw exception text — name and all — into `result.error.message` unchanged. Left alone, that
+ * is what a person reads when their connection drops mid-save.
+ */
+function isTransportFailure(message: string): boolean {
+  return /(?:^|:\s)(failed to fetch|load failed)$/i.test(message.trim());
+}
+
+const TRANSPORT_FAILURE_MESSAGE =
+  "The connection failed and your changes were not saved — try again.";
+
 export function assertResult<T>(result: { data: T | null; error: { message: string } | null }): T {
-  if (result.error) throw new Error(result.error.message);
+  if (result.error)
+    throw new Error(
+      isTransportFailure(result.error.message) ? TRANSPORT_FAILURE_MESSAGE : result.error.message,
+    );
   return result.data as T;
 }
