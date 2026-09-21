@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { discardUnreferencedArtwork, uploadArtwork } from "./artwork-files";
+import { discardUnreferencedArtwork, uploadDesignAsset } from "./artwork-files";
 import { discardPreparedAssets, preparePublicationAssets } from "./media-client";
 import {
   addDesign,
@@ -21,7 +21,13 @@ import {
   type CanvasVersion,
 } from "./project-data";
 import { FormError } from "@/features/shared/form-error";
-import { ARTWORK_MAX_BYTES, uploadLimitMb } from "@/features/shared/upload-rules";
+import {
+  ARTWORK_MAX_BYTES,
+  designUploadMimes,
+  uploadLimitMb,
+  uploadTypesLabel,
+  VIDEO_MAX_BYTES,
+} from "@/features/shared/upload-rules";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
@@ -50,12 +56,28 @@ export function ProjectActionDialog({
   const [stagedArtwork, setStagedArtwork] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
+  // `null` means no upload is in flight (or none was ever started for this attempt); once an
+  // upload begins it's set to 0 and tracks `uploadDesignAsset`'s `onProgress` fraction up to 1.
+  // A video's own resumable transfer can run for many minutes, so this is what turns "Saving…"
+  // into an honest, moving number instead of a hang.
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   async function close() {
+    // `mutation.isPending` covers the whole upload, not just the initial request: `mutationFn`
+    // does not resolve until `uploadDesignAsset` does, so this guard — and the disabled Cancel
+    // button and disabled Modal close control below — already refuse to close the dialog while a
+    // video is mid-transfer. `uploadResumable` (in `artwork-files.ts`) does not currently expose
+    // the `tus.Upload` handle needed to abort a transfer server-side, so "closing" today could
+    // only ever hide the request, not stop it, while still leaving the raw object it's writing to
+    // `internal-assets` behind. Real cancellation (threading an abort handle out through
+    // `uploadDesignAsset` and a new branch here) is a deliberate follow-up, not something ruled
+    // out — until it lands, blocking the close keeps the visible state honest about what's
+    // actually still happening.
     if (mutation.isPending || closing) return;
     setClosing(true);
     setCloseError("");
     try {
       if (stagedArtwork) await discardUnreferencedArtwork(database, stagedArtwork);
+      setUploadProgress(null);
       onClose();
     } catch {
       setCloseError("The unfinished upload could not be removed. Please try closing again.");
@@ -63,6 +85,19 @@ export function ProjectActionDialog({
       setClosing(false);
     }
   }
+  // A video upload can run for many minutes, unattended, with nothing on screen to catch outside
+  // this tab. Mirrors the `beforeunload` guard in `features/brand/draft-editor.tsx`: it can only
+  // warn, not stop the navigation, but a silent tab close abandoning a half-finished upload with
+  // no warning at all is worse than a confirmation prompt.
+  useEffect(() => {
+    if (uploadProgress === null) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [uploadProgress]);
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       if (!action) return;
@@ -77,11 +112,23 @@ export function ProjectActionDialog({
       } else if (action.kind === "design" || action.kind === "edit-design") {
         if (!value("title")) throw new Error("Add a design name.");
         const file = form.get("artwork");
-        const path =
-          stagedArtwork ??
-          (file instanceof File && file.size
-            ? await uploadArtwork(database, projectId, file)
-            : null);
+        let path = stagedArtwork;
+        if (!path && file instanceof File && file.size) {
+          // Mirrors the branch `uploadDesignAsset` takes internally: an image goes down the
+          // canvas path (`uploadArtwork`), which never calls `onProgress`, so a bar or a
+          // percentage tied to that path would sit frozen at 0% for the ~second an image takes —
+          // reading as a stall for an operation that is in fact completing normally. Progress is
+          // only meaningful, and only shown, for the video path.
+          const isVideo = file.type.startsWith("video/");
+          if (isVideo) setUploadProgress(0);
+          path = await uploadDesignAsset(
+            database,
+            mediaUrl,
+            projectId,
+            file,
+            isVideo ? setUploadProgress : undefined,
+          );
+        }
         if (path) setStagedArtwork(path);
         const designContent = {
           ...(action.kind === "edit-design" ? Object(action.design.content) : {}),
@@ -155,6 +202,7 @@ export function ProjectActionDialog({
       }
     },
     onSuccess: async () => {
+      setUploadProgress(null);
       await invalidate();
       onClose();
     },
@@ -168,11 +216,21 @@ export function ProjectActionDialog({
   const field = (name: string, fallback = "") =>
     typeof content[name] === "string" ? (content[name] as string) : fallback;
 
+  // The resumable transfer reports its own fraction up to exactly 1 (tus's `onProgress` fires
+  // with `sent === total` on the last chunk); reaching 1 while the mutation is still pending
+  // means the bytes are on `internal-assets` and control has moved into `sanitizeVideoAsset`,
+  // which can run for several more minutes with no progress channel of its own. `uploadProgress`
+  // is only ever set for the video branch (see the round-1 fix in `mutationFn`), so this can
+  // never be true for an image upload. Once the mutation settles — success or failure —
+  // `mutation.isPending` goes false and this reverts on its own; nothing here needs its own reset.
+  const sanitizing = mutation.isPending && uploadProgress === 1;
+
   return (
     <Modal
       open={!!action}
       onClose={() => void close()}
       title={action ? titles[action.kind] : "Project action"}
+      closeDisabled={mutation.isPending || closing}
     >
       {action && (
         <form
@@ -215,10 +273,28 @@ export function ProjectActionDialog({
                   name="artwork"
                   type="file"
                   disabled={!!stagedArtwork || mutation.isPending}
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={designUploadMimes.join(",")}
                 />
-                <small>PNG, JPG, or WebP. Up to {uploadLimitMb(ARTWORK_MAX_BYTES)} MB.</small>
+                <small>
+                  {uploadTypesLabel(designUploadMimes)}. Images up to{" "}
+                  {uploadLimitMb(ARTWORK_MAX_BYTES)} MB, video up to{" "}
+                  {uploadLimitMb(VIDEO_MAX_BYTES)} MB.
+                </small>
               </label>
+              {uploadProgress !== null && (
+                <p className="upload-progress" aria-live="polite">
+                  {sanitizing ? (
+                    // No `value`: an indeterminate `<progress>` renders as an animated bar in
+                    // every evergreen browser, which is the honest signal here — the transfer is
+                    // done, the server is remuxing, and there is no percentage to report for that
+                    // step. A bar pinned at 100% would say "done" for an operation that is not.
+                    <progress max={1} aria-label="Processing video" />
+                  ) : (
+                    <progress value={uploadProgress} max={1} aria-label="Upload progress" />
+                  )}
+                  <span>{sanitizing ? "Processing…" : `${Math.round(uploadProgress * 100)}%`}</span>
+                </p>
+              )}
               <details className="design-text-options">
                 <summary>Or compose a text concept</summary>
                 <label>
@@ -316,7 +392,11 @@ export function ProjectActionDialog({
             </button>
             <button className="button primary" type="submit" disabled={mutation.isPending}>
               {mutation.isPending
-                ? "Saving…"
+                ? sanitizing
+                  ? "Processing…"
+                  : uploadProgress !== null
+                    ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+                    : "Saving…"
                 : {
                     version: "Create version",
                     design: "Add design",

@@ -71,13 +71,13 @@ The diagram omits repeated workspace/client keys and auxiliary file relations fo
 | Assignment | Project, designer identity, assigned/revoked timestamps, agency actor; separate internal relation. |
 | Deliverable | Project, source briefing deliverable, format snapshot, custom name, dimensions/size rule, positive quantity, scope and order. |
 | ProductionVersion | Project, deliverable, monotonically ordered revision number within that deliverable, internal notes, creator, change/review state; contains one or more alternative designs. |
-| Design | Version, deliverable, stable ID, optional lineage to prior design, name/order, immutable source/preview file revision; multiple designs per version/deliverable allowed. |
+| Design | Version, deliverable, stable ID, optional lineage to prior design, name/order, immutable source/preview file revision; multiple designs per version/deliverable allowed. The revision may be an image or a web-playable video (MP4/WebM); the kind is read from the stored object's extension, not a column, because that extension names the container `apps/media` actually verified rather than what a browser claimed at upload. |
 | FileAsset | Workspace/client/project or brand owner, immutable object identity/content digest, safe filename, media type, size, upload state, permitted visibility. |
 | Publication / PublishedDesign | Project, source version retained internally, publisher/time, client-safe version label, frozen public design/file metadata and immutable file content. Client reads this projection only. |
 | Review | Project, exact internal version or publication, audience (`agency` or `client`), requester, pending/approved/changes_requested state, decision actor/time and feedback. |
 | Delivery | Project/publication, immutable authorized file manifest, agency actor/time, delivered status; requires appropriate approval. |
 | Conversation / Comment | Project, channel, optional internal design or published design anchor, authenticated author, safe text, timestamps; client presentation maps agency to Studio. |
-| Pin | Comment, normalized `x` and `y` in `[0, 1]`, design reference inherited from conversation; pending UI pins are not durable comments. |
+| Pin | Comment, normalized `x` and `y` in `[0, 1]`, design reference inherited from conversation, optional `pin_t` (`internal_comments.pin_t` / `client_comments.pin_t`); pending UI pins are not durable comments. |
 | BrandProfile | Client, identity/direction fields and version; owns ten section records and reusable resources. |
 | BrandResource / BrandProduct | Client brand owner, category, type, metadata, immutable asset references, use/avoid rules; products contain Assets/Specs/Rules. |
 | BrandTemplate | Client, category, format/dimensions, editable content schema, preview/asset references, revision; seven reference template types. |

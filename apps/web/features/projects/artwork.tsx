@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { useDesignAssetUrl, type CanvasDesign, type ProjectChannel } from "./project-data";
+import { isVideoAsset } from "./video-pins";
 
 export function Artwork({
   design,
   channel,
   thumbnail = false,
+  videoRef,
+  onTimeUpdate,
+  onDurationChange,
 }: {
   design: CanvasDesign;
   channel: ProjectChannel;
   thumbnail?: boolean;
+  /** Only meaningful for a video design: the element the viewer pauses, reads and seeks. */
+  videoRef?: RefObject<HTMLVideoElement | null>;
+  onTimeUpdate?: (seconds: number) => void;
+  onDurationChange?: (seconds: number) => void;
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const asset = useDesignAssetUrl(design.assetPath, channel);
@@ -22,8 +30,54 @@ export function Artwork({
     typeof content[name] === "string" ? (content[name] as string) : fallback;
   const color = (name: string, fallback: string) =>
     /^#[a-f\d]{3,8}$/i.test(field(name)) ? field(name) : fallback;
-  if (design.assetPath)
-    return asset.data && failedSource !== asset.data ? (
+  if (design.assetPath) {
+    if (!(asset.data && failedSource !== asset.data)) {
+      return (
+        <div className="artwork-loading" role="status">
+          {asset.error || failedSource ? (
+            <>
+              <span>Preview unavailable</span>
+              {!thumbnail && (
+                <button
+                  className="button quiet nodrag"
+                  type="button"
+                  disabled={asset.isFetching}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setFailedSource(null);
+                    void asset.refetch();
+                  }}
+                >
+                  Retry preview
+                </button>
+              )}
+            </>
+          ) : (
+            "Loading artwork…"
+          )}
+        </div>
+      );
+    }
+    if (isVideoAsset(design.assetPath)) {
+      return (
+        <video
+          ref={videoRef}
+          className="artwork-video"
+          src={asset.data}
+          // A thumbnail is a passive preview in a list: it plays silently and offers no
+          // transport controls, the same role an <img> plays there. The full viewer always
+          // shows controls so a person can play, pause and scrub without the pin tool.
+          controls={!thumbnail}
+          muted={thumbnail}
+          preload="metadata"
+          playsInline
+          onTimeUpdate={(event) => onTimeUpdate?.(event.currentTarget.currentTime)}
+          onLoadedMetadata={(event) => onDurationChange?.(event.currentTarget.duration)}
+          onError={() => setFailedSource(asset.data!)}
+        />
+      );
+    }
+    return (
       // Private signed URLs must bypass the public image optimization cache.
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -36,31 +90,8 @@ export function Artwork({
         draggable={false}
         onError={() => setFailedSource(asset.data!)}
       />
-    ) : (
-      <div className="artwork-loading" role="status">
-        {asset.error || failedSource ? (
-          <>
-            <span>Preview unavailable</span>
-            {!thumbnail && (
-              <button
-                className="button quiet nodrag"
-                type="button"
-                disabled={asset.isFetching}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setFailedSource(null);
-                  void asset.refetch();
-                }}
-              >
-                Retry preview
-              </button>
-            )}
-          </>
-        ) : (
-          "Loading artwork…"
-        )}
-      </div>
     );
+  }
   return (
     <div
       className={`artwork ${thumbnail ? "artwork-thumbnail" : ""}`}

@@ -2,7 +2,7 @@
 
 import { Background, Controls, ReactFlow, type Node, type NodeProps } from "@xyflow/react";
 import { ArrowLeft, ChevronLeft, ChevronRight, MapPin, MousePointer2, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Artwork } from "./artwork";
 import { CommentPanel } from "./comment-panel";
 import {
@@ -13,6 +13,7 @@ import {
   type ProjectChannel,
   type TableRow,
 } from "./project-data";
+import { formatTimecode, isVideoAsset, visiblePins } from "./video-pins";
 
 import { useCommentDraft, type PendingPin } from "./comment-draft";
 
@@ -27,6 +28,10 @@ type ArtworkNode = Node<
     selectedComment: string | null;
     onSelect: (id: string) => void;
     ratio: number;
+    isVideo: boolean;
+    videoRef: RefObject<HTMLVideoElement | null>;
+    onTimeUpdate: (seconds: number) => void;
+    onDurationChange: (seconds: number) => void;
   },
   "artwork"
 >;
@@ -39,7 +44,11 @@ function ArtworkCanvasNode({ data }: NodeProps<ArtworkNode>) {
       tabIndex={data.pinMode ? 0 : undefined}
       role={data.pinMode ? "button" : undefined}
       aria-label={
-        data.pinMode ? "Place a pin on this artwork. Press Enter for the center." : undefined
+        data.pinMode
+          ? data.isVideo
+            ? "Place a pin on this frame at the current time. Press Enter to pin the frame's center."
+            : "Place a pin on this artwork. Press Enter for the center."
+          : undefined
       }
       onKeyDown={(event) => {
         if (data.pinMode && ["Enter", " "].includes(event.key)) {
@@ -57,7 +66,13 @@ function ArtworkCanvasNode({ data }: NodeProps<ArtworkNode>) {
         });
       }}
     >
-      <Artwork design={data.design} channel={data.channel} />
+      <Artwork
+        design={data.design}
+        channel={data.channel}
+        videoRef={data.videoRef}
+        onTimeUpdate={data.onTimeUpdate}
+        onDurationChange={data.onDurationChange}
+      />
       {data.comments
         .filter((comment) => !comment.resolved && comment.pinX !== null && comment.pinY !== null)
         .map((comment, index) => (
@@ -107,6 +122,12 @@ export function DesignViewer({
   const [designId, setDesignId] = useState(initialDesignId);
   const [pinMode, setPinMode] = useState(false);
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
+  // The playhead and the <video> element itself. Both are read by `placePin` below, which is why
+  // they live here rather than inside `Artwork`: pausing on pin placement is this component's
+  // decision, not the player's.
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const design = designs.find((item) => item.id === designId) ?? designs[0];
   const index = designs.findIndex((item) => item.id === design?.id);
   const { draft, update } = useCommentDraft(projectId, channel, design?.id);
@@ -116,8 +137,21 @@ export function DesignViewer({
   }
   const comments = useProjectComments(projectId, channel, design?.id);
   if (!design) return null;
+  const isVideo = isVideoAsset(design.assetPath);
+  const commentList = comments.data ?? [];
+  // On a still image every pin is drawn; on video only the ones near the current frame are, so a
+  // long recording with dozens of comments does not paint them all over the same frame at once.
+  const frameComments = isVideo ? visiblePins(commentList, currentTime) : commentList;
+  const timedComments = commentList.filter((comment) => comment.pinT !== null);
   const ratio =
     deliverable.width && deliverable.height ? deliverable.width / deliverable.height : 0.8;
+  function placePin(pin: PendingPin) {
+    if (!isVideo) return setPendingPin(pin);
+    // Pausing first is not a nicety. On a playing video the frame under the click is gone by the
+    // time the pin is stored, so the coordinate would describe a frame nobody chose.
+    videoRef.current?.pause();
+    setPendingPin({ ...pin, t: videoRef.current?.currentTime ?? 0 });
+  }
   const nodes: ArtworkNode[] = [
     {
       id: design.id,
@@ -128,14 +162,18 @@ export function DesignViewer({
         channel,
         pinMode,
         pendingPin,
-        comments: comments.data ?? [],
+        comments: frameComments,
         selectedComment,
         onSelect: setSelectedComment,
         onPin: (pin) => {
-          setPendingPin(pin);
+          placePin(pin);
           setPinMode(false);
         },
         ratio,
+        isVideo,
+        videoRef,
+        onTimeUpdate: setCurrentTime,
+        onDurationChange: setDuration,
       },
       style: { width: ratio < 1 ? 440 : 620, pointerEvents: "all" },
       draggable: false,
@@ -146,6 +184,8 @@ export function DesignViewer({
     setDesignId(designs[nextIndex].id);
     setSelectedComment(null);
     setPinMode(false);
+    setCurrentTime(0);
+    setDuration(0);
   }
 
   return (
@@ -191,46 +231,69 @@ export function DesignViewer({
       </header>
       <div className="design-viewer-body">
         <div className="design-viewport">
-          <ReactFlow
-            key={design.id}
-            nodes={nodes}
-            edges={[]}
-            nodeTypes={nodeTypes}
-            proOptions={{ hideAttribution: true }}
-            fitView
-            fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
-            minZoom={0.15}
-            maxZoom={3}
-            nodesConnectable={false}
-            deleteKeyCode={null}
-            panOnDrag={!pinMode}
-            panOnScroll
-          >
-            <Background color="#d4d4d0" gap={20} />
-            <Controls showInteractive={false} />
-          </ReactFlow>
-          <div className="design-carousel">
-            <button
-              className="icon-button"
-              aria-label="Previous design"
-              disabled={index <= 0}
-              onClick={() => changeDesign(index - 1)}
+          <div className="design-canvas">
+            <ReactFlow
+              key={design.id}
+              nodes={nodes}
+              edges={[]}
+              nodeTypes={nodeTypes}
+              proOptions={{ hideAttribution: true }}
+              fitView
+              fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
+              minZoom={0.15}
+              maxZoom={3}
+              nodesConnectable={false}
+              deleteKeyCode={null}
+              panOnDrag={!pinMode}
+              panOnScroll
             >
-              <ChevronLeft size={17} />
-            </button>
-            <span>
-              {index + 1} of {designs.length} · V{version.number}
-            </span>
-            <button
-              className="icon-button"
-              aria-label="Next design"
-              disabled={index >= designs.length - 1}
-              onClick={() => changeDesign(index + 1)}
-            >
-              <ChevronRight size={17} />
-            </button>
+              <Background color="#d4d4d0" gap={20} />
+              <Controls showInteractive={false} />
+            </ReactFlow>
+            <div className="design-carousel">
+              <button
+                className="icon-button"
+                aria-label="Previous design"
+                disabled={index <= 0}
+                onClick={() => changeDesign(index - 1)}
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <span>
+                {index + 1} of {designs.length} · V{version.number}
+              </span>
+              <button
+                className="icon-button"
+                aria-label="Next design"
+                disabled={index >= designs.length - 1}
+                onClick={() => changeDesign(index + 1)}
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
+            {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
           </div>
-          {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
+          {isVideo && duration > 0 && (
+            // `role="group"`, not `role="list"`/`role="listitem"`: these are actionable seek
+            // controls, not list items containing content, and `<button>`'s permitted-roles list
+            // doesn't include `listitem` — a browser would just ignore that override and fall
+            // back to the button's implicit role anyway.
+            <div className="video-pin-track" role="group" aria-label="Comments in time">
+              {timedComments.map((comment) => (
+                <button
+                  key={comment.id}
+                  type="button"
+                  className={`video-pin-marker ${selectedComment === comment.id ? "selected" : ""}`}
+                  style={{ left: `${(comment.pinT! / duration) * 100}%` }}
+                  aria-label={`Comment at ${formatTimecode(comment.pinT!)}: ${comment.body.slice(0, 60)}`}
+                  onClick={() => {
+                    if (videoRef.current) videoRef.current.currentTime = comment.pinT!;
+                    setSelectedComment(comment.id);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
         <CommentPanel
           key={`${channel}:${design.id}`}

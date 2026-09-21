@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import type { ProjectChannel } from "./project-data";
 
-export type PendingPin = { x: number; y: number };
+/** A pin is a point on the artwork, and on video also a moment in it, in seconds. */
+export type PendingPin = { x: number; y: number; t?: number };
 type CommentDraft = { body: string; pin: PendingPin | null };
 const emptyDraft: CommentDraft = { body: "", pin: null };
 

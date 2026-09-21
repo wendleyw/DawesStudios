@@ -31,7 +31,25 @@ opaque `<project UUID>/<random UUID>.png` path in the private `internal-assets` 
 after checking that no `designs` row points at it, so a retried submit does not delete the file the
 stored design now uses. The signed URL that displays a stored artwork is a read and lives with the
 other read hooks in `project-data.ts`. `media-client.ts` talks to the media service for publication
-snapshots and delivery files; `comment-draft.ts` keeps an unsent comment and its pending pin.
+snapshots, delivery files, and the video-sanitisation round trip; `comment-draft.ts` keeps an unsent
+comment and its pending pin.
+
+`uploadDesignAsset` is the single entry point `project-action-dialog.tsx` calls for a design file,
+and it takes one of two paths depending on the file's declared type — the two paths differ because
+the browser can prepare one of them and not the other. An **image** goes through `sanitizeArtwork`:
+a canvas decode-and-re-encode that strips metadata as a side effect, enforces `ARTWORK_MAX_BYTES`
+and a 40-megapixel guard, and finishes in about a second, so `uploadArtwork` stores the result with
+one `PUT`. A canvas cannot decode **video**, so there is no browser-side sanitisation step to run;
+the file goes to `internal-assets` as-is, under a `.raw` name, through `uploadResumable` — a TUS
+transfer chunked at 6 MB so a dropped connection loses one chunk instead of the whole file, which
+matters at the `VIDEO_MAX_BYTES` gigabyte ceiling `sanitizeVideoAsset` then asks `apps/media` to
+remux the raw upload with a metadata-stripping `-c copy` pass and delete the raw object, which is
+why the caller reports upload progress only on this branch: the transfer itself is the part with a
+progress signal, and the remux that follows it can run for several more minutes with none.
+`isVideoAsset` (`video-pins.ts`) reads a stored design's kind back from the returned path's
+extension rather than a database column, for the same reason `apps/media` names every object after
+the container it verified: what a browser claims about a file at upload time is not what the file
+actually is.
 
 Publishing is the agency's alone and produces an immutable snapshot. `publishVersion` passes no
 submission key, which makes one internal version map to exactly one client publication: reopening

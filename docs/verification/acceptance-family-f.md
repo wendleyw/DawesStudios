@@ -661,6 +661,54 @@ error. Every negative check in this record therefore verifies the **stored value
 code. This is correct behaviour (no information is leaked and nothing is written), but any future
 evidence pass that reads only the status code will record a false "ALLOWED".
 
+## Observation F-5: an intermittent read-after-write gap of unestablished cause
+
+**Status: open, tracked, not reproduced in a dedicated attempt.** Found stress-testing
+`apps/web/tests/e2e/video-designs.spec.ts` (F18) against the containers rebuilt 2026-09-21 21:09
+UTC from `a24d26b`, on `feature/video-designs-and-feedback`.
+
+**What was observed.** A `service_role`-credentialed read of `client_comments`, issued immediately
+after `post_comment` returned and after the **client's own** authenticated read (`useProjectComments`,
+which is what put the comment on screen) had already rendered that exact row, twice returned zero
+rows with no PostgREST error. In both observed cases, the identical query repeated roughly 300 ms
+later returned the expected single row. The row was never lost — only briefly not visible to that
+one read. This happened twice across roughly 47 exploratory runs of the spec.
+
+**What this is not.** The first draft of this evidence attributed the gap to "read-after-write
+visibility latency between two independently pooled PostgREST connections." That explanation does
+not fit this stack: `supabase/config.toml` has `db.pooler.enabled = false`, there is no Supavisor or
+pgbouncer in front of local Postgres, and `compose.yaml` defines no read replica. On a single-node
+Postgres with no pooler and no replica, a transaction committed on one connection is visible to a
+fresh query on any other connection immediately — there is no architectural seam here for a
+few-hundred-millisecond visibility delay to live in. The pooling explanation is withdrawn as
+incorrect, not merely unconfirmed; **the actual mechanism is not established.**
+
+**The retry, and what it is and is not.** `readRowsEventually` in `video-designs.spec.ts` retries
+an empty read up to ten times, 300 ms apart. It resolves the two observed cases and is left in
+place because it is cheap and does not change what the test proves — the row's existence and
+content are still asserted exactly, just after a short wait if the first read is empty. It is not
+a fix for whatever produces the gap, because that mechanism is unknown.
+
+**Reproduction attempt (2026-09-21, this session).** A dedicated pass of 40 separate-process
+invocations (`npx playwright test tests/e2e/video-designs.spec.ts --reporter=line`, run
+individually so each gets its own fresh Node process, artifacts preserved after every invocation
+by copying `test-results/` out before the next run could clear it) against the same containers:
+**40 passed, 0 failed.** The two-zero-rows behavior did not recur, and — separately — a third,
+unrelated failure seen once during earlier stress-testing (after the retry was already in place,
+with its own diagnostics lost when the next invocation cleared `test-results/` before they could
+be inspected) also did not recur. Full log:
+`/private/tmp/claude-501/-Users-wendleywilson-DawesStudios/b3d27922-ee49-4ef8-bb81-cec56aebe13e/scratchpad/video-repro/log.txt`
+(scratchpad, not part of the repository).
+
+**Disposition.** F18 is recorded as "Verified with a tracked open flake" rather than plain
+"Verified" for exactly this reason: the mechanism behind the two observed zero-row reads is real,
+unexplained, and only mitigated (by the retry), not fixed; and the third failure, while it did not
+reproduce in a 40-run dedicated attempt, was never explained either. Neither is currently blocking
+— both are rare (2 and 1 occurrences respectively, across roughly 90 combined runs of this spec
+this session), the retry keeps the common case passing without weakening any assertion, and no
+data loss was ever observed — but they are tracked here rather than folded into a plain "Verified"
+claim.
+
 ---
 
 # Defect F-1: resolution

@@ -1,5 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
-import { discardUnreferencedArtwork } from "./artwork-files";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { VIDEO_MAX_BYTES, isVideoUpload } from "@/features/shared/upload-rules";
+
+const tusUploadMock = vi.hoisted(() => vi.fn());
+vi.mock("tus-js-client", () => ({ Upload: tusUploadMock }));
+
+const { discardUnreferencedArtwork, uploadDesignAsset } = await import("./artwork-files");
+type MockUploadOptions = {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+  onProgress?: (sent: number, total: number) => void;
+  onBeforeRequest?: (request: {
+    setHeader: (name: string, value: string) => void;
+  }) => Promise<void>;
+  headers?: Record<string, string>;
+  metadata?: Record<string, string>;
+  endpoint?: string;
+  chunkSize?: number;
+};
 
 type Result = { data: unknown; error: { message: string } | null };
 
@@ -51,5 +68,220 @@ describe("discardUnreferencedArtwork", () => {
     await expect(
       discardUnreferencedArtwork(stub.database, "project-1/artwork.png"),
     ).rejects.toThrow("object not found");
+  });
+});
+
+const projectId = "11111111-1111-4111-8111-111111111111";
+
+/**
+ * `uploadDesignAsset`'s video branch touches two boundaries this suite does not otherwise cover:
+ * the TUS client (mocked above, at the module level) and the media service's HTTP response
+ * (mocked here via `fetch`). Neither mock proves the real upload or the real service works — only
+ * a browser against a live Supabase stack and a live `apps/media` can prove that. What this does
+ * prove, at the seam this module owns: the raw path is shaped and reused correctly, the video
+ * branch is only taken for a video, and a failure from either boundary reaches the caller instead
+ * of being swallowed.
+ */
+function stubSessionDatabase(token: string | null = "token-abc") {
+  const getSession = vi
+    .fn()
+    .mockResolvedValue({ data: { session: token ? { access_token: token } : null }, error: null });
+  const remove = vi.fn().mockResolvedValue({ data: [], error: null });
+  const bucket = vi.fn().mockReturnValue({ remove });
+  return {
+    database: { auth: { getSession }, storage: { from: bucket } } as never,
+    getSession,
+    bucket,
+    remove,
+  };
+}
+
+describe("uploadDesignAsset", () => {
+  beforeEach(() => {
+    tusUploadMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("refuses a video over the ceiling before any network call", async () => {
+    const database = {
+      storage: {
+        from: () => {
+          throw new Error("must not upload");
+        },
+      },
+    };
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    Object.defineProperty(file, "size", { value: VIDEO_MAX_BYTES + 1 });
+    await expect(
+      uploadDesignAsset(database as never, "http://media.test", projectId, file),
+    ).rejects.toThrow(/no larger than/);
+    expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a video format a browser cannot play", async () => {
+    const database = {
+      storage: {
+        from: () => {
+          throw new Error("must not upload");
+        },
+      },
+    };
+    const file = new File([new Uint8Array(4)], "clip.mov", { type: "video/quicktime" });
+    await expect(
+      uploadDesignAsset(database as never, "http://media.test", projectId, file),
+    ).rejects.toThrow(/MP4|WebM/);
+    expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("sends an image down the canvas path, untouched by the video branch", () => {
+    // The existing image test in this file already covers the happy path; this one only asserts
+    // that adding video did not divert it.
+    const file = new File([new Uint8Array(4)], "art.png", { type: "image/png" });
+    expect(isVideoUpload(file.type)).toBe(false);
+  });
+
+  it("refuses a video upload when the session has no access token, before starting any transfer", async () => {
+    const stub = stubSessionDatabase(null);
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await expect(
+      uploadDesignAsset(stub.database, "http://media.test", projectId, file),
+    ).rejects.toThrow(/sign-in is no longer valid/);
+    expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a genuine session-lookup failure instead of implying the sign-in itself is invalid", async () => {
+    const getSession = vi.fn().mockResolvedValue({
+      data: { session: null },
+      error: { message: "network error contacting the auth server" },
+    });
+    const database = { auth: { getSession } } as never;
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await expect(uploadDesignAsset(database, "http://media.test", projectId, file)).rejects.toThrow(
+      "network error contacting the auth server",
+    );
+    expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches a fresh token for every request instead of baking one static header into the transfer", async () => {
+    // `jwt_expiry` is short enough that a large upload can outlive the token captured at the
+    // start; a static `headers.authorization` would then 401 on a later chunk with no retry
+    // (tus-js-client never retries a 401). Each call to `getSession` here returns a different
+    // token, so asserting that `onBeforeRequest` sees a new one on every invocation is what
+    // proves the header is not fixed at construction time.
+    let calls = 0;
+    const getSession = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      return { data: { session: { access_token: `token-${calls}` } }, error: null };
+    });
+    const database = { auth: { getSession } } as never;
+    let capturedOptions: MockUploadOptions | undefined;
+    tusUploadMock.mockImplementation(function (_file: File, options: MockUploadOptions) {
+      capturedOptions = options;
+      return { start: () => options.onSuccess?.() };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ path: "clean/path.mp4", durationSeconds: 1, width: 1, height: 1 }),
+      }),
+    );
+
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await uploadDesignAsset(database, "http://media.test", projectId, file);
+
+    // No static token lives in `headers` at all — `getSession` was already called once (the
+    // fail-fast check) before the constructor even ran, so a static header here would already
+    // be one call stale by construction.
+    expect(capturedOptions?.headers?.authorization).toBeUndefined();
+
+    // `uploadDesignAsset` already consumed some number of `getSession` calls of its own (the
+    // fail-fast check, plus one inside `sanitizeVideoAsset`'s own auth lookup); what matters is
+    // only that two further, back-to-back `onBeforeRequest` invocations each see a token newer
+    // than the last, not any particular absolute count.
+    const before = calls;
+    const setHeader = vi.fn();
+    await capturedOptions?.onBeforeRequest?.({ setHeader });
+    await capturedOptions?.onBeforeRequest?.({ setHeader });
+    expect(setHeader).toHaveBeenNthCalledWith(1, "authorization", `Bearer token-${before + 1}`);
+    expect(setHeader).toHaveBeenNthCalledWith(2, "authorization", `Bearer token-${before + 2}`);
+  });
+
+  it("builds the raw path as `${projectId}/<uuid>.raw` and sends it unchanged to the sanitiser", async () => {
+    const stub = stubSessionDatabase();
+    let capturedOptions: MockUploadOptions | undefined;
+    tusUploadMock.mockImplementation(function (_file: File, options: MockUploadOptions) {
+      capturedOptions = options;
+      return { start: () => options.onSuccess?.() };
+    });
+    let sanitizeBody: { projectId: string; rawPath: string; mimeType: string } | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (_url: string, init: { body: string }) => {
+        sanitizeBody = JSON.parse(init.body);
+        return {
+          ok: true,
+          json: async () => ({
+            path: "clean-project/clean.mp4",
+            durationSeconds: 12,
+            width: 1920,
+            height: 1080,
+          }),
+        };
+      }),
+    );
+
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    const path = await uploadDesignAsset(stub.database, "http://media.test", projectId, file);
+
+    expect(path).toBe("clean-project/clean.mp4");
+    expect(capturedOptions?.metadata?.objectName).toMatch(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/);
+    const rawPath = capturedOptions?.metadata?.objectName ?? "";
+    expect(rawPath.split("/")[0]).toBe(projectId);
+    expect(capturedOptions?.metadata?.bucketName).toBe("internal-assets");
+    expect(capturedOptions?.chunkSize).toBe(6 * 1024 * 1024);
+    expect(sanitizeBody).toEqual({ projectId, rawPath, mimeType: "video/mp4" });
+  });
+
+  it("rejects when the resumable upload itself fails, without ever calling the sanitiser", async () => {
+    const stub = stubSessionDatabase();
+    tusUploadMock.mockImplementation(function (_file: File, options: MockUploadOptions) {
+      return { start: () => options.onError?.(new Error("connection reset")) };
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await expect(
+      uploadDesignAsset(stub.database, "http://media.test", projectId, file),
+    ).rejects.toThrow("connection reset");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the sanitiser's failure and leaves the raw object in place, uncleaned", async () => {
+    const stub = stubSessionDatabase();
+    tusUploadMock.mockImplementation(function (_file: File, options: MockUploadOptions) {
+      return { start: () => options.onSuccess?.() };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 415,
+        json: async () => ({ error: "The file is not a playable MP4 or WebM video." }),
+      }),
+    );
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await expect(
+      uploadDesignAsset(stub.database, "http://media.test", projectId, file),
+    ).rejects.toThrow("The file is not a playable MP4 or WebM video.");
+
+    // Nothing in the browser calls storage to remove the raw object on this failure: there is no
+    // equivalent of `discardUnreferencedArtwork` for video, by design (see the brief and the
+    // function's own doc comment). The failure is at least made visible instead of swallowed.
+    expect(stub.remove).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalled();
   });
 });

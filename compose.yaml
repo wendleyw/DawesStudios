@@ -28,6 +28,40 @@ services:
     image: dawes-studios-media:local
     build:
       context: apps/media
+    ports:
+      - "127.0.0.1:${MEDIA_PORT:-55430}:55430"
+    restart: unless-stopped
+    read_only: true
+    # `/tmp` stays a small RAM tmpfs for whatever incidental thing still hardcodes that path;
+    # it is deliberately NOT where the big writes go. Every real scratch write in this service
+    # goes through `os.tmpdir()` (Node reads `TMPDIR` before falling back to `/tmp`), which
+    # `TMPDIR` below redirects to the disk-backed `media-scratch` volume.
+    #
+    # Before this, `/tmp` WAS the scratch space, RAM-backed at 512 MiB. Both video paths write
+    # full-size temp files there: `/designs/sanitize-video` writes `in.<ext>` AND `out.<ext>`
+    # (apps/media/src/server.js) — roughly 2x the file — and `/publications/prepare`'s video
+    # branch downloads one full copy before re-uploading it. With nothing setting `TMPDIR`,
+    # `mkdtemp(tmpdir())` landed in that same 512 MiB tmpfs, capping a "1 GiB" video at roughly
+    # 250 MB to sanitise and 500 MB to publish — a RAM-backed temp file is a Buffer in a costume,
+    # which is exactly what this service's design (nothing streams through a Buffer) rules out.
+    #
+    # `media-scratch` is a named volume, i.e. disk on the Docker host, not RAM: sizing a bigger
+    # tmpfs would "fix" the number while keeping the file charged to container memory. It must
+    # hold at least 2x the largest single video (`in.<ext>` + `out.<ext>` open at once during the
+    # sanitise remux) plus headroom, i.e. at least 2 GiB, verified with `docker compose exec media
+    # df -h /scratch`. This is the fifth site that must agree with the other four on the video
+    # ceiling — none of the other four can see this one, so read them if you change either:
+    #   - apps/web/features/shared/upload-rules.ts:67   (VIDEO_MAX_BYTES)
+    #   - apps/media/src/sanitize.js:23                 (LIMITS.videoBytes)
+    #   - supabase/migrations/202609210004_video_storage.sql:9,24  (bucket + attestation CHECK)
+    #   - supabase/config.toml:114                      (global storage.file_size_limit)
+    # `apps/web/features/shared/media-scratch.test.ts` asserts this file keeps TMPDIR pointed at
+    # a real volume rather than reverting to a tmpfs-backed `/tmp`; it cannot see the volume's
+    # actual free disk, which is why the `df -h` check above is still a manual release step.
+    tmpfs:
+      - /tmp:rw,nosuid,size=16m,mode=1777
+    volumes:
+      - media-scratch:/scratch
     environment:
       SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?Set the server-accessible Supabase URL}
       SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set the public Supabase key}
@@ -37,13 +71,13 @@ services:
       MEDIA_ALLOWED_ORIGINS: ${MEDIA_ALLOWED_ORIGINS:-}
       MEDIA_HOST: 0.0.0.0
       MEDIA_PORT: 55430
-    ports:
-      - "127.0.0.1:${MEDIA_PORT:-55430}:55430"
-    restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp:rw,nosuid,size=512m,mode=1777
+      # Redirects Node's `os.tmpdir()` (and therefore every `mkdtemp(tmpdir())` call in
+      # `apps/media/src`) off the small RAM `/tmp` tmpfs above and onto the disk-backed
+      # `media-scratch` volume. See the long comment on that volume mount for why.
+      TMPDIR: /scratch
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+volumes:
+  media-scratch: {}

@@ -189,6 +189,63 @@ describe("project procedures", () => {
       p_design_id: "design-1",
       p_pin_x: 0.25,
       p_pin_y: 0.75,
+      p_pin_t: undefined,
+    });
+  });
+
+  it("passes the pin's time when the design carrying it is a video", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await postComment(database, {
+      projectId: "project-1",
+      channel: "internal",
+      body: "Logo lands too late",
+      designId: "design-1",
+      pin: { x: 0.4, y: 0.6, t: 12.5 },
+    });
+    expect(rpc).toHaveBeenCalledWith("post_comment", {
+      p_project_id: "project-1",
+      p_channel: "internal",
+      p_body: "Logo lands too late",
+      p_design_id: "design-1",
+      p_pin_x: 0.4,
+      p_pin_y: 0.6,
+      p_pin_t: 12.5,
+    });
+  });
+
+  it("leaves the pin time unset for a still image", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await postComment(database, {
+      projectId: "project-1",
+      channel: "internal",
+      body: "Crop tighter",
+      designId: "design-1",
+      pin: { x: 0.4, y: 0.6 },
+    });
+    expect(rpc).toHaveBeenCalledWith("post_comment", {
+      p_project_id: "project-1",
+      p_channel: "internal",
+      p_body: "Crop tighter",
+      p_design_id: "design-1",
+      p_pin_x: 0.4,
+      p_pin_y: 0.6,
+      p_pin_t: undefined,
+    });
+  });
+
+  it("passes an idempotency key when the attempt carries one", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await postComment(database, {
+      projectId: "project-1",
+      channel: "internal",
+      body: "Same text",
+      idempotencyKey: "comment:fixed",
+    });
+    expect(rpc).toHaveBeenCalledWith("post_comment", {
+      p_project_id: "project-1",
+      p_channel: "internal",
+      p_body: "Same text",
+      p_idempotency_key: "comment:fixed",
     });
   });
 
