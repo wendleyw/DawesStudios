@@ -324,16 +324,66 @@ git commit -m "feat(storage): accept web video up to a gigabyte on the design bu
 
 Append to `apps/web/features/shared/upload-rules.test.ts`:
 
+**First, repair the guard that is supposed to catch this.** The existing test at
+`upload-rules.test.ts:56-64` asserts that every bucket's `file_size_limit` equals
+`BUCKET_MAX_BYTES`, and its header comment claims the file fails if someone raises a
+bucket limit. **That claim is false for this change, for two independent reasons:**
+
+1. `bucketSizeLimits()` matches only `\('bucket','bucket',bool,(\d+),array\[` — the shape of
+   an `insert into storage.buckets`. Task 2's migration uses `update storage.buckets set
+   file_size_limit`, which that pattern cannot match.
+2. The migration list is hardcoded to `202609200003_storage.sql` and
+   `202609200004_requests_and_attachments.sql`. Task 2's file is not in it.
+
+So the guard would stay green and prove nothing. Leaving it that way is worse than having
+no guard, because the comment asserts a protection that is not there.
+
+Replace `bucketSizeLimits` with a function that computes each bucket's **effective** limit
+— the inserted value, then any later `update` applied over it — and assert per bucket id
+rather than against one scalar:
+
+```ts
+/** Each bucket's effective `file_size_limit`: the inserted value with later updates applied. */
+function effectiveBucketLimits(sources: string[]): Map<string, number> {
+  const limits = new Map<string, number>();
+  for (const sql of sources) {
+    for (const m of sql.matchAll(/\('([a-z-]+)','[a-z-]+',(?:true|false),(\d+),array\[/g))
+      limits.set(m[1], Number(m[2]));
+    // `update storage.buckets set file_size_limit = N ... where id in ('a','b')`
+    for (const m of sql.matchAll(
+      /update storage\.buckets\s+set\s+file_size_limit\s*=\s*(\d+)[\s\S]*?where id in \(([^)]*)\)/gi,
+    ))
+      for (const id of m[2].split(",").map((v) => v.trim().replace(/^'|'$/g, "")))
+        limits.set(id, Number(m[1]));
+  }
+  return limits;
+}
+```
+
+Then the assertion becomes per bucket, with the design buckets expected to differ:
+
+```ts
+it("matches the effective file_size_limit on every bucket the migrations create", () => {
+  const limits = effectiveBucketLimits([
+    migration("202609200003_storage.sql"),
+    migration("202609200004_requests_and_attachments.sql"),
+    migration("202609210004_video_storage.sql"),
+  ]);
+  expect(limits.size).toBeGreaterThan(0);
+  // The two design buckets carry video and are deliberately larger. Every other bucket
+  // holds images, PDFs and delivery archives, and stays where it was.
+  const designBuckets = ["internal-assets", "published-assets"];
+  for (const [id, limit] of limits)
+    expect(limit).toBe(designBuckets.includes(id) ? VIDEO_MAX_BYTES : BUCKET_MAX_BYTES);
+});
+```
+
+Update the file's header comment so it describes what the guard now actually does.
+
+**Then the video-specific cases:**
+
 ```ts
 describe("video", () => {
-  it("matches the design buckets' raised ceiling in the migration", () => {
-    const sql = readFileSync(
-      resolve(import.meta.dirname, "../../../../supabase/migrations/202609210004_video_storage.sql"),
-      "utf8",
-    );
-    const limit = sql.match(/file_size_limit = (\d+)/)?.[1];
-    expect(Number(limit)).toBe(VIDEO_MAX_BYTES);
-  });
 
   it("keeps the artwork ceiling far below the video one", () => {
     expect(ARTWORK_MAX_BYTES).toBeLessThan(VIDEO_MAX_BYTES);
