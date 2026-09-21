@@ -100,6 +100,12 @@ export async function saveClient(
     | {
         mode: "update";
         id: string;
+        /**
+         * The `updated_at` the form was opened on, which turns the save into a compare-and-set.
+         * Optional only because a caller without an opened form has no revision to quote; every
+         * editor in the product passes one, and a save without it is last-write-wins as before.
+         */
+        revision?: string;
         name: string;
         industry: string;
         website: string;
@@ -108,19 +114,25 @@ export async function saveClient(
     | { mode: "create"; name: string; slug: string; industry: string; initialCredits: number },
 ) {
   if (input.mode === "update") {
-    assertResult(
-      await database
-        .from("clients")
-        .update({
-          name: input.name,
-          industry: input.industry,
-          website: input.website,
-          description: input.description,
-        })
-        .eq("id", input.id)
-        .select("id")
-        .single(),
-    );
+    const update = database
+      .from("clients")
+      .update({
+        name: input.name,
+        industry: input.industry,
+        website: input.website,
+        description: input.description,
+      })
+      .eq("id", input.id);
+    const result = await (input.revision ? update.eq("updated_at", input.revision) : update)
+      .select("id")
+      .single();
+    // Same reading as `updateProjectDetails`: only the revision filter can turn a live client row
+    // into a no-rows result, so that result is the conflict and the sentence belongs here.
+    if (result.error?.code === "PGRST116")
+      throw new Error(
+        "This client changed while you were editing. Close and reopen the client to try again.",
+      );
+    assertResult(result);
     return;
   }
   assertResult(
@@ -161,7 +173,11 @@ type CampaignFields = {
 /** Saves an edited campaign, or creates a new one for the client. Same shape as `saveClient` above. */
 export async function saveCampaign(
   database: SupabaseDatabase,
-  input: ({ mode: "update"; id: string } | { mode: "create" }) & CampaignFields,
+  input: (
+    | { mode: "update"; id: string; /** As `saveClient`'s `revision`. */ revision?: string }
+    | { mode: "create" }
+  ) &
+    CampaignFields,
 ) {
   const payload = {
     title: input.title,
@@ -170,15 +186,19 @@ export async function saveCampaign(
     end_date: input.endDate,
   };
   if (input.mode === "update") {
-    assertResult(
-      await database
-        .from("campaigns")
-        .update(payload)
-        .eq("id", input.id)
-        .eq("client_id", input.clientId)
-        .select("id")
-        .single(),
-    );
+    const update = database
+      .from("campaigns")
+      .update(payload)
+      .eq("id", input.id)
+      .eq("client_id", input.clientId);
+    const result = await (input.revision ? update.eq("updated_at", input.revision) : update)
+      .select("id")
+      .single();
+    if (result.error?.code === "PGRST116")
+      throw new Error(
+        "This campaign changed while you were editing. Close and reopen the campaign to try again.",
+      );
+    assertResult(result);
     return;
   }
   assertResult(
@@ -207,9 +227,20 @@ export function useInvalidatePresets() {
   };
 }
 
+/**
+ * Saves a preset as a new revision. `expectedRevision` is the revision the editor was opened on;
+ * the procedure refuses the save when the stored one has moved, and raises the sentence itself so
+ * there is one copy of it. Optional for the same reason as `saveClient`'s `revision`.
+ */
 export async function saveServicePreset(
   database: SupabaseDatabase,
-  input: { serviceType: string; minCredits: number; maxCredits: number; dueDays: number },
+  input: {
+    serviceType: string;
+    minCredits: number;
+    maxCredits: number;
+    dueDays: number;
+    expectedRevision?: number;
+  },
 ) {
   return assertResult(
     await database.rpc("save_service_preset", {
@@ -217,6 +248,9 @@ export async function saveServicePreset(
       p_min_credits: input.minCredits,
       p_max_credits: input.maxCredits,
       p_due_days: input.dueDays,
+      ...(input.expectedRevision === undefined
+        ? {}
+        : { p_expected_revision: input.expectedRevision }),
     }),
   );
 }
@@ -243,14 +277,19 @@ export function useInvalidateWorkspaceSettings() {
   };
 }
 
+/**
+ * `revision` is the `updated_at` the form was read on; the procedure raises its own refusal and
+ * returns the revision the save produced, which the studio form adopts for its next save.
+ */
 export async function saveWorkspaceSettings(
   database: SupabaseDatabase,
-  input: { studioName: string; timezone: string },
+  input: { studioName: string; timezone: string; revision?: string },
 ) {
-  assertResult(
+  return assertResult(
     await database.rpc("update_workspace_settings", {
       p_studio_name: input.studioName,
       p_timezone: input.timezone,
+      ...(input.revision ? { p_expected_updated_at: input.revision } : {}),
     }),
   );
 }

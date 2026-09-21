@@ -290,3 +290,139 @@ describe("settings write failures", () => {
     await expect(run(database)).rejects.toThrow("permission denied");
   });
 });
+
+/**
+ * The compare-and-set every settings editor now issues. Two agency sessions with the same record
+ * open used to end with the second silently reverting the first; these assert the filter that makes
+ * the stale save fail, the sentence that explains it, and the expected revision each procedure gets.
+ */
+describe("concurrent edit guards", () => {
+  it("filters a client update by the revision the form was opened on", async () => {
+    const { database, calls } = stubDatabase(row);
+    await saveClient(database, {
+      mode: "update",
+      id: "client-1",
+      revision: "2026-09-21T10:00:00Z",
+      name: "Harbor & Pine",
+      industry: "Retail",
+      website: "https://example.test",
+      description: "A studio partner.",
+    });
+    expect(calls).toContainEqual({ method: "eq", args: ["updated_at", "2026-09-21T10:00:00Z"] });
+  });
+
+  it("reports a concurrent edit when the client revision no longer matches", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" },
+    });
+    await expect(
+      saveClient(database, {
+        mode: "update",
+        id: "client-1",
+        revision: "stale",
+        name: "Harbor & Pine",
+        industry: "Retail",
+        website: "https://example.test",
+        description: "A studio partner.",
+      }),
+    ).rejects.toThrow("This client changed while you were editing");
+  });
+
+  it("filters a campaign update by the revision the form was opened on", async () => {
+    const { database, calls } = stubDatabase(row);
+    await saveCampaign(database, {
+      mode: "update",
+      id: "campaign-1",
+      revision: "2026-09-21T10:00:00Z",
+      clientId: "client-1",
+      title: "Autumn launch",
+      description: "Seasonal push",
+      startDate: null,
+      endDate: null,
+    });
+    expect(calls).toContainEqual({ method: "eq", args: ["updated_at", "2026-09-21T10:00:00Z"] });
+  });
+
+  it("reports a concurrent edit when the campaign revision no longer matches", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" },
+    });
+    await expect(
+      saveCampaign(database, {
+        mode: "update",
+        id: "campaign-1",
+        revision: "stale",
+        clientId: "client-1",
+        title: "Autumn launch",
+        description: "",
+        startDate: null,
+        endDate: null,
+      }),
+    ).rejects.toThrow("This campaign changed while you were editing");
+  });
+
+  it("sends the preset revision the editor was opened on", async () => {
+    const { database, rpc } = stubDatabase({ data: 4, error: null });
+    await saveServicePreset(database, {
+      serviceType: "reel",
+      minCredits: 10,
+      maxCredits: 20,
+      dueDays: 14,
+      expectedRevision: 3,
+    });
+    expect(rpc).toHaveBeenCalledWith("save_service_preset", {
+      p_service_type: "reel",
+      p_min_credits: 10,
+      p_max_credits: 20,
+      p_due_days: 14,
+      p_expected_revision: 3,
+    });
+  });
+
+  it("carries the preset conflict raised by the procedure", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "This service preset changed while you were editing.", code: "PT409" },
+    });
+    await expect(
+      saveServicePreset(database, {
+        serviceType: "reel",
+        minCredits: 10,
+        maxCredits: 20,
+        dueDays: 14,
+        expectedRevision: 3,
+      }),
+    ).rejects.toThrow("This service preset changed while you were editing");
+  });
+
+  it("sends the studio revision the form was read on and returns the one the save produced", async () => {
+    const { database, rpc } = stubDatabase({ data: "2026-09-21T11:00:00Z", error: null });
+    const saved = await saveWorkspaceSettings(database, {
+      studioName: "Dawes Studio",
+      timezone: "UTC",
+      revision: "2026-09-21T10:00:00Z",
+    });
+    expect(rpc).toHaveBeenCalledWith("update_workspace_settings", {
+      p_studio_name: "Dawes Studio",
+      p_timezone: "UTC",
+      p_expected_updated_at: "2026-09-21T10:00:00Z",
+    });
+    expect(saved).toBe("2026-09-21T11:00:00Z");
+  });
+
+  it("carries the studio conflict raised by the procedure", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "These studio settings changed while you were editing.", code: "PT409" },
+    });
+    await expect(
+      saveWorkspaceSettings(database, {
+        studioName: "Dawes Studio",
+        timezone: "UTC",
+        revision: "stale",
+      }),
+    ).rejects.toThrow("These studio settings changed while you were editing");
+  });
+});

@@ -40,6 +40,30 @@ Every `.select()` column list, filter, order clause and `assertResult(...)` erro
 unchanged; only the call site moved. Validation, trimming and `clientSlug`/date-range checks stay in
 the components exactly as before, per rule 4 of the contract.
 
+The table above records that relocation. Every editing write in it has since gained a
+concurrent-edit guard; see below.
+
+### Refusing a stale save
+
+Two agency sessions could open the same record and the second save would silently revert the first.
+Each editing write now quotes the revision its form was opened on, the way
+`features/projects/project-data.ts` `updateProjectDetails` does:
+
+| Editor                   | Revision it quotes                                                    | Where the refusal is raised                                                                  |
+| ------------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `client-settings.tsx`    | `clients.updated_at`, held in state from the row the dialog opened on | `saveClient`, on the no-rows result only the `.eq("updated_at", ...)` filter can produce     |
+| `campaign-settings.tsx`  | `campaigns.updated_at`, same                                          | `saveCampaign`, same                                                                         |
+| `preset-settings.tsx`    | `service_presets.revision`                                            | `save_service_preset`, which raises `PT409` itself                                           |
+| `workspace-settings.tsx` | `workspace_settings.updated_at`                                       | `update_workspace_settings`, which raises `PT409` and returns the revision its save produced |
+
+`clients` and `campaigns` gained `updated_at` and a `before update` trigger in
+`supabase/migrations/202609210003_concurrent_edit_guards.sql`; the timestamp is always the
+database's, never a browser's. The revision a dialog opened on is never refreshed while it stays
+open, so a refused save keeps refusing and the text that was typed survives to be copied out. The
+studio form is the exception: it stays on screen after a save, so it adopts the revision its own
+save returned. `account-settings.tsx` needs no guard — it writes one field of the caller's own row,
+so no neighbouring field can be lost.
+
 ### Why six domains instead of one shared module
 
 `settings-data.ts` groups its exports by the domain the underlying component serves — team, clients,

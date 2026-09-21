@@ -5,7 +5,8 @@ Measurement pass for the six open rows **I01, I02, I04, I05, I06, I07** of
 already Verified against the backend evidence ledger and were not re-opened.
 
 This is evidence, not repair: no application code, script, migration or existing test was changed
-while producing it.
+while producing it. Repairs made afterwards are appended to the defect they close, each dated and
+carrying its own before-and-after measurement.
 
 | Field | Value |
 |---|---|
@@ -16,7 +17,7 @@ while producing it.
 | Driver | A throwaway Playwright probe, `apps/web/tests/e2e/zz-evidence-probe-family-i.spec.ts`, run seven times as it was narrowed, deleted afterwards. Every browser measurement below is a line it printed with the `FI\|` prefix. |
 | Accounts | `studio@dawes.local`, `designer@dawes.local`, `sabre@client.dawes.local` |
 | Fixtures | `createProductionFixture` / `cleanupTestProject` (`tests/e2e/project-fixture.ts`) for every write-heavy case; two canonical rows (the SABRE client record, one SABRE assignment) were mutated and restored inside the test's own `finally` |
-| Result | **One of the six Verified (I07).** Five stay open, each against a measured failure: [Defect I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset) (I01), [Defect I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) (I02), [Defect I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message) (I04 and I05), [Defect I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) (I05), [Defect I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) (I06). |
+| Result | **One of the six Verified (I07).** Five stay open, each against a measured failure: [Defect I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset) (I01), [Defect I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) (I02), [Defect I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message) (I04 and I05), [Defect I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) (I05), [Defect I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) (I06). That was this pass's verdict; repairs made since are recorded in each defect's dated section and the current verdicts are in [Summary](#summary). |
 
 ## Dataset integrity
 
@@ -746,6 +747,100 @@ working tree carries nothing from this attempt but this section. The dataset is 
 side of the run — **10 clients, 25 projects, 12 campaigns, 30 briefings, 70 brand assets** — and the
 SABRE client row is back to its fixture values.
 
+### Repair, 2026-09-21 — all four settings surfaces guarded
+
+**Reproduced first, before anything was written**, against the `:3003` container serving current
+head, with two Chromium contexts signed in as the agency and both holding the SABRE client editor
+open:
+
+```
+client-before: {"industry":"Personal safety","website":"https://sabre.example"}
+after-A:       {"industry":"Editor A industry","website":"https://sabre.example"}
+B alerts:      [""]            <- the empty live region only
+B dialog open: false           <- reported as a success
+B typed text:  <form gone>
+after-B:       {"industry":"Personal safety","website":"https://editor-b.example.com"}
+```
+
+Identical to both earlier measurements. The SABRE row was written back verbatim afterwards.
+
+**The migration.** `supabase/migrations/202609210003_concurrent_edit_guards.sql` adds
+`updated_at timestamptz not null default now()` and a `before update` trigger
+(`private.touch_updated_at()`, `clock_timestamp()`) to `clients` and `campaigns`, and gives
+`update_workspace_settings` and `save_service_preset` an expected-revision argument. It follows
+`updateProjectDetails`: the timestamp is the database's, never the browser's. It was **applied, not
+reset** — statement by statement into the live stack with its `supabase_migrations` row recorded by
+hand, because `supabase migration up` refuses to run while the concurrent session's
+`202609210001_video_pins` is applied without its file on this branch. No reseed, no reset.
+
+Each expected revision is **optional**: passing none skips the guard. That is not a preference —
+`apps/web/tests/e2e/intake-admin.spec.ts` restores both records through these procedures with no
+form to quote, and `settings-data.test.ts` asserts the exact call chain of the unguarded writes.
+Neither test may be modified, so the guard had to stay additive. Every editor in the product passes
+a revision; only a caller with nothing to quote is last-write-wins.
+
+**The four surfaces, measured against a `next dev` build of the repaired code.** Session A saves,
+session B saves from the form it opened before that:
+
+| Surface | B's `role="alert"` | B's form | B's typed text | A's save |
+|---|---|---|---|---|
+| Client settings | *"This client changed while you were editing. Close and reopen the client to try again."* | stays open | `https://editor-b.example.com` kept | `industry` intact |
+| Campaign settings | *"This campaign changed while you were editing. Close and reopen the campaign to try again."* | stays open | `Session B title` kept | goal intact |
+| Workspace settings | *"These studio settings changed while you were editing. Reload the page to try again."* | stays on screen | name and the `UTC` selection both kept | studio name intact |
+| Service presets | *"This service preset changed while you were editing. Close and reopen the preset to try again."* | stays open | `8` days kept | revision 2 intact, no history row for the refused save |
+
+**No surface lost typed text.** The audit the previous attempt asked for was carried out on all
+four: each already held its fields in `useState`, kept its container mounted on failure and rendered
+`FormError` with `role="alert"`; none unmounted its form on error, so only the revision snapshot and
+the sentence were missing. The studio form is the one that stays on screen after a success, so it
+adopts the revision its own save returns — `update_workspace_settings` now returns the `updated_at`
+it wrote, the way `save_service_preset` already returned its revision. A second save by the winning
+session was exercised and succeeded, confirming the adoption.
+
+**Function privileges after the signature changes.** Recreating a function under a new signature
+creates a new object, and a new object in `public` is created with EXECUTE for PUBLIC; the one-time
+sweep in `202609200002_workflows.sql` does not reach it. Measured after this migration applied:
+
+```
+update_workspace_settings(text,text,timestamptz)            | postgres=X, authenticated=X, service_role=X
+save_service_preset(text,integer,integer,integer,integer)   | postgres=X, authenticated=X, service_role=X
+security definer functions in public executable by anon     | 0
+```
+
+`post_comment`, recreated by the concurrent session's migration, *was* exposed (`=X/postgres`,
+`anon=X`) and was the only one; this migration repeats the sweep, which restored it to
+`authenticated` only without touching that session's file. **`alter default privileges in schema
+public revoke execute on functions from public` is not the permanent fix it appears to be**: on this
+stack (PostgreSQL 17.6, running as `postgres`) the stored default ACL never records the revocation
+and a function created afterwards still carries `=X/postgres`. The same statement against `anon`
+does take effect, but anon keeps EXECUTE through PUBLIC, so nothing changes. Closing it for every
+future migration needs a `ddl_command_end` event trigger — which `postgres` can create here, but
+which is a repository-wide decision, not part of this defect. Until it is taken, the pgTAP suite
+asserts the invariant across the whole class.
+
+**Tests added; none modified.** `supabase/tests/database/concurrent_edit_guards.test.sql` (22
+assertions) proves a stale update is refused on all four surfaces, that the refused save reaches
+neither the column it meant to write nor the history table, that a caller with nothing to quote
+still writes, and that no security definer function in `public` is executable anonymously. Eight
+unit tests in `apps/web/features/settings/settings-data.test.ts` cover each client-side guard and
+its sentence. Every one of them fails against the code before this repair — three of the four
+surfaces had no column or argument to quote at all, and the ACL assertion listed `post_comment`.
+
+**Checks executed.** `npm run check` → typecheck, lint, format and **33 files / 457 tests** pass
+(449 before; the two lint warnings are pre-existing in `features/board/`). `npm run db:test` →
+**6 files / 155 assertions, PASS** (5 files / 133 before). `npx playwright test` against the
+repaired build on `:3010` → **25/25 in 2.6 m**, run again after the privilege sweep with the same
+result. The suite's evidence artefacts were restored with `git checkout -- docs/verification/`.
+Dataset unchanged throughout: **10 clients, 25 projects, 12 campaigns, 30 briefings, 70 brand
+assets**.
+
+**Two environment facts worth recording.** The shared local stack was reset and reseeded by another
+session at 16:30Z while this work was in progress, which removed this migration and required
+re-applying it; the dataset came back identical. That reseed also rotated the demo password away
+from the value in `supabase/.env.local`, so the browser suite could not sign in; the demo users'
+password hashes were snapshotted, aligned with the repository's env file for the length of each
+browser run, and restored byte for byte afterwards.
+
 ---
 
 ## Summary
@@ -756,7 +851,7 @@ SABRE client row is back to its fixture values.
 | I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
 | I04 | Unverified | [I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message): the offline state of every form is a raw `TypeError` |
 | I05 | Unverified | [I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) and I-3 |
-| I06 | Unverified | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save): a stale client-settings form silently reverts a newer save. Re-measured 2026-09-21 and unchanged; the repair is blocked on adding `updated_at` to `clients`, and the audit added `campaigns`, `update_workspace_settings` and `save_service_preset` to the same gap |
+| I06 | **Verified** | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) repaired this pass: reproduced first, then all four settings surfaces refuse a stale save with a visible sentence and keep the text that was typed; 25/25 browser tests, 457 unit tests and 155 pgTAP assertions pass |
 | I07 | **Verified** | ≤ 700 ms everywhere on the full dataset, 0 long tasks, flat heap, 0 leaks over 30 client switches, clean role change |
 
 I03 and I08 were not re-examined; they remain Verified against the backend evidence ledger. No

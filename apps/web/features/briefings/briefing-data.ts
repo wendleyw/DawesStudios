@@ -86,7 +86,7 @@ export function useCampaigns(clientId: string) {
       assertResult(
         await database
           .from("campaigns")
-          .select("id,title,description,start_date,end_date")
+          .select("id,title,description,start_date,end_date,updated_at")
           .eq("client_id", clientId)
           .order("title"),
       ) as Campaign[],

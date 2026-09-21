@@ -24,6 +24,7 @@ export function WorkspaceSettings() {
     <WorkspaceForm
       initialName={settings.data.studio_name}
       initialTimezone={settings.data.timezone}
+      initialRevision={settings.data.updated_at}
     />
   );
 }
@@ -31,14 +32,20 @@ export function WorkspaceSettings() {
 function WorkspaceForm({
   initialName,
   initialTimezone,
+  initialRevision,
 }: {
   initialName: string;
   initialTimezone: string;
+  initialRevision: string;
 }) {
   const { database } = useAuth();
   const invalidateWorkspaceSettings = useInvalidateWorkspaceSettings();
   const [name, setName] = useState(initialName);
   const [timezone, setTimezone] = useState(initialTimezone);
+  // This form stays on screen after a save, so unlike the dialogs it has to adopt the revision its
+  // own save produced. A refused save leaves it alone, which is what keeps the refusal standing and
+  // the typed name and timezone intact.
+  const [revision, setRevision] = useState(initialRevision);
   const timezones = [
     ...new Set(["UTC", initialTimezone, ...Intl.supportedValuesOf("timeZone")]),
   ].sort();
@@ -46,9 +53,12 @@ function WorkspaceForm({
     mutationFn: async () => {
       if (!name.trim() || name.trim().length > 120)
         throw new Error("Use a studio name between 1 and 120 characters.");
-      await saveWorkspaceSettings(database, { studioName: name.trim(), timezone });
+      return saveWorkspaceSettings(database, { studioName: name.trim(), timezone, revision });
     },
-    onSuccess: () => invalidateWorkspaceSettings(),
+    onSuccess: async (saved) => {
+      setRevision(saved);
+      await invalidateWorkspaceSettings();
+    },
   });
   return (
     <section className="settings-section">

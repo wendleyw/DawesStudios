@@ -102,6 +102,9 @@ function PresetEditor({
   const [minimum, setMinimum] = useState(String(preset.min_credits ?? ""));
   const [maximum, setMaximum] = useState(String(preset.max_credits ?? ""));
   const [days, setDays] = useState(String(preset.due_days ?? ""));
+  // The revision this editor opened on, never refreshed while it stays open: a refused save keeps
+  // the numbers that were typed instead of silently becoming a valid overwrite of someone else's.
+  const [expectedRevision] = useState(preset.revision);
   const save = useMutation({
     mutationFn: async () => {
       const min = Number(minimum);
@@ -122,6 +125,7 @@ function PresetEditor({
         minCredits: min,
         maxCredits: max,
         dueDays: duration,
+        expectedRevision,
       });
     },
     onSuccess: async (revision) => {
