@@ -76,6 +76,37 @@ async function requestMedia<T>(
   return validated.data;
 }
 
+export const sanitizedVideoSchema = z.object({
+  path: z.string().min(1),
+  durationSeconds: z.number().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
+/**
+ * Asks `apps/media` to remux a raw video upload into a clean object and delete the raw one.
+ *
+ * The raw object at `input.rawPath` is not removed by this function on failure: the service
+ * only deletes it once the clean copy has been written, so a rejection here — network, auth,
+ * or the video itself being unplayable — leaves the raw object in `internal-assets` with no
+ * client-side equivalent of `discardUnreferencedArtwork` to clean it up. Callers decide what
+ * that means for the person waiting on the upload; this function only reports the failure.
+ */
+export async function sanitizeVideoAsset(
+  database: SupabaseClient<Database>,
+  mediaUrl: string,
+  input: { projectId: string; rawPath: string; mimeType: string },
+) {
+  return requestMedia(
+    database,
+    mediaUrl,
+    "/designs/sanitize-video",
+    JSON.stringify(input),
+    "application/json",
+    sanitizedVideoSchema,
+  );
+}
+
 export async function preparePublicationAssets(
   database: SupabaseClient<Database>,
   mediaUrl: string,
