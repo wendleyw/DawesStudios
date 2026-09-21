@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -112,7 +112,8 @@ async function runMediaTool(tool, args, timeoutMs, failure) {
 const videoCodecs = Object.freeze({ 'video/mp4': ['h264'], 'video/webm': ['vp8', 'vp9', 'av1'] });
 
 /**
- * Strips every container tag from a web-playable video and writes a clean copy.
+ * Strips every container tag, per-stream tag, chapter and timecode/attachment track from a
+ * web-playable video and writes a clean copy.
  *
  * This is a **remux, not a transcode**: `-c copy` moves the existing streams into a fresh
  * container, so it is bounded by disk rather than CPU and a gigabyte takes seconds. The product
@@ -120,13 +121,28 @@ const videoCodecs = Object.freeze({ 'video/mp4': ['h264'], 'video/webm': ['vp8',
  *
  * Metadata removal is the point. Images get it as a side effect of the canvas re-encode in the
  * browser and again from `sanitizeRaster`; video has no browser-side equivalent, and the client
- * snapshot is immutable, so whatever rides along cannot be withdrawn later.
+ * snapshot is immutable, so whatever rides along cannot be withdrawn later. Both `-map_metadata
+ * -1` (container/format tags) and `-map_metadata:s -1` (per-stream tags — handler names,
+ * language, GPS, device fields some cameras attach to the video stream itself, not just the
+ * format) are passed explicitly: specifying either one alone still happens to suppress the other
+ * as an ffmpeg side effect, but that is emergent behaviour, not a documented guarantee, and a
+ * future ffmpeg base-image bump could silently reintroduce stream-level leakage if only one flag
+ * were present.
  *
  * `maxBytes` defaults to `LIMITS.videoBytes` and exists as a parameter — rather than requiring
  * callers to mutate `LIMITS` — because `LIMITS` is frozen with `Object.freeze`, which also makes
  * its properties non-configurable: `Object.defineProperty` cannot override a frozen ceiling even
  * with `configurable: true` in the descriptor, so tests need a seam that does not touch the
  * shared, frozen object.
+ *
+ * **Contract for callers.** `inputPath` and `outputPath` are trusted as given — this function
+ * does not create, own or clean up a working directory the way `sanitizePdf` does. The only
+ * cleanup it performs is removing a partial `outputPath` if the ffmpeg step itself fails (for
+ * example because its timeout fires mid-remux, which can otherwise leave a truncated but
+ * structurally valid, playable video behind); a failed probe step never writes to `outputPath` at
+ * all, so nothing is unlinked for it. On success the file at `outputPath` is left in place for the
+ * caller to move, upload or delete; on any other failure (bad size, bad mime, unreadable input)
+ * the caller's `inputPath` is left untouched and `outputPath` is never created.
  */
 export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = LIMITS.videoBytes) {
   const codecs = videoCodecs[mimeType];
@@ -156,14 +172,23 @@ export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = 
 
   const args = [
     '-v', 'error', '-nostdin', '-y', '-i', inputPath,
-    '-map_metadata', '-1', '-map_chapters', '-1', '-c', 'copy',
+    '-map_metadata', '-1', '-map_metadata:s', '-1', '-map_chapters', '-1', '-c', 'copy',
   ];
   // faststart moves the index to the front so playback can begin before the whole file arrives.
   // It is an MP4 container feature; WebM is already streamable.
   if (mimeType === 'video/mp4') args.push('-movflags', '+faststart');
   args.push(outputPath);
 
-  await runMediaTool('ffmpeg', args, LIMITS.videoProcessMs, 'The video could not be safely regenerated.');
+  try {
+    await runMediaTool('ffmpeg', args, LIMITS.videoProcessMs, 'The video could not be safely regenerated.');
+  } catch (error) {
+    // A timeout (or any other ffmpeg failure) can still leave a truncated but structurally valid,
+    // playable file at outputPath — the process is killed mid-write, not before it starts writing.
+    // A caller that checks for the file's existence rather than catching this rejection would
+    // otherwise treat that fragment as a successfully sanitised artifact.
+    await unlink(outputPath).catch(unlinkError => { if (unlinkError.code !== 'ENOENT') throw unlinkError; });
+    throw error;
+  }
   return { durationSeconds, width, height };
 }
 

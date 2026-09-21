@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import sharp from 'sharp';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -13,6 +13,20 @@ const run = promisify(execFile);
 async function tagsOf(path) {
   const { stdout } = await run('ffprobe', ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', path]);
   return JSON.parse(stdout).format?.tags ?? {};
+}
+
+async function streamTagsOf(path) {
+  const { stdout } = await run('ffprobe', ['-v', 'error', '-show_entries', 'stream_tags', '-of', 'json', path]);
+  return (JSON.parse(stdout).streams ?? []).map(stream => stream.tags ?? {});
+}
+
+async function chaptersOf(path) {
+  const { stdout } = await run('ffprobe', ['-v', 'error', '-show_chapters', '-of', 'json', path]);
+  return JSON.parse(stdout).chapters ?? [];
+}
+
+async function exists(path) {
+  return stat(path).then(() => true, () => false);
 }
 
 describe('trusted raster regeneration', () => {
@@ -93,15 +107,30 @@ describe('sanitizeVideo', () => {
   beforeEach(async () => { dir = await mkdtemp(join(tmpdir(), 'video-test-')); });
   afterEach(async () => { await rm(dir, { recursive: true, force: true }); });
 
-  it('removes every container tag the source carried', async () => {
+  it('removes every container tag, stream tag and chapter the source carried', async () => {
+    // fixtures/tagged.mp4 carries metadata at three levels — format tags (title/comment/artist),
+    // per-stream tags on the video stream (handler_name/language) and a chapter — each verified
+    // present here with ffprobe before trusting any assertion about the output's absence of them.
     const input = resolve(import.meta.dirname, 'fixtures/tagged.mp4');
     expect(Object.keys(await tagsOf(input)).length).toBeGreaterThan(0);
+    const inputStreamTags = await streamTagsOf(input);
+    expect(inputStreamTags.some(tags => tags.handler_name === 'Custom Handler' && tags.language === 'eng')).toBe(true);
+    expect((await chaptersOf(input)).length).toBeGreaterThan(0);
 
     const output = join(dir, 'clean.mp4');
     const probe = await sanitizeVideo(input, output, 'video/mp4');
 
     const tags = await tagsOf(output);
     for (const key of ['title', 'comment', 'artist']) expect(tags[key]).toBeUndefined();
+    // The mp4 muxer always writes its own default handler_name ("VideoHandler") and language
+    // ("und") on remux, the same way it always writes major_brand/encoder format tags — that is
+    // an infrastructure fingerprint of ffmpeg itself, not source metadata, and is accepted for the
+    // same reason the `encoder` format tag is. What must be gone is the source's own values.
+    for (const streamTags of await streamTagsOf(output)) {
+      expect(streamTags.handler_name).not.toBe('Custom Handler');
+      expect(streamTags.language).not.toBe('eng');
+    }
+    expect(await chaptersOf(output)).toEqual([]);
     expect(probe.width).toBe(320);
     expect(probe.height).toBe(240);
     expect(probe.durationSeconds).toBeGreaterThan(1.5);
@@ -122,5 +151,26 @@ describe('sanitizeVideo', () => {
     const input = join(dir, 'huge.mp4');
     await writeFile(input, Buffer.alloc(16));
     await expect(sanitizeVideo(input, join(dir, 'out.mp4'), 'video/mp4', 8)).rejects.toThrow(/gigabyte|larger/i);
+  });
+
+  it('removes a stale or partial output file when the remux step itself fails', async () => {
+    // A killed or otherwise failed ffmpeg process can leave a truncated but structurally valid,
+    // playable file at outputPath — the process dies mid-write, not before it starts writing. A
+    // caller that checks for the file's existence rather than catching the rejection would
+    // otherwise treat that fragment as a successfully sanitised artifact reaching the client.
+    //
+    // This reproduces a real ffmpeg-step failure (not the earlier probe/size checks, which never
+    // reach the ffmpeg invocation at all) deterministically and fast: an output extension ffmpeg
+    // cannot pick a muxer for causes ffmpeg to exit non-zero without ever writing outputPath, so a
+    // file pre-existing at that path — standing in for a real truncated remnant — proves the catch
+    // path actually unlinks it rather than leaving it behind.
+    const input = resolve(import.meta.dirname, 'fixtures/tagged.mp4');
+    const output = join(dir, 'clean.unrecognized-extension');
+    await writeFile(output, Buffer.from('a truncated remnant from an earlier, killed remux'));
+    expect(await exists(output)).toBe(true);
+
+    await expect(sanitizeVideo(input, output, 'video/mp4')).rejects.toThrow(MediaError);
+
+    expect(await exists(output)).toBe(false);
   });
 });
