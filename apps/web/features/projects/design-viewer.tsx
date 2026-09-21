@@ -274,12 +274,15 @@ export function DesignViewer({
             {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
           </div>
           {isVideo && duration > 0 && (
-            <div className="video-pin-track" role="list" aria-label="Comments in time">
+            // `role="group"`, not `role="list"`/`role="listitem"`: these are actionable seek
+            // controls, not list items containing content, and `<button>`'s permitted-roles list
+            // doesn't include `listitem` — a browser would just ignore that override and fall
+            // back to the button's implicit role anyway.
+            <div className="video-pin-track" role="group" aria-label="Comments in time">
               {timedComments.map((comment) => (
                 <button
                   key={comment.id}
                   type="button"
-                  role="listitem"
                   className={`video-pin-marker ${selectedComment === comment.id ? "selected" : ""}`}
                   style={{ left: `${(comment.pinT! / duration) * 100}%` }}
                   aria-label={`Comment at ${formatTimecode(comment.pinT!)}: ${comment.body.slice(0, 60)}`}
