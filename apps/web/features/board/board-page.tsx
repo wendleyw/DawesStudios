@@ -408,7 +408,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
           )}
           {filteredProjects.map((project: Project) => (
             <Link key={project.id} href={`/projects/${project.id}`} className="project-row">
-              <strong>{project.title}</strong>
+              <strong title={project.title}>{project.title}</strong>
               <span>{campaignName(project.campaign_id)}</span>
               <span>
                 <span className={`status-badge ${project.status}`}>

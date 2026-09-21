@@ -19,6 +19,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
 import { Modal } from "@/features/shared/modal";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { NotificationsBell } from "./notifications-bell";
@@ -41,6 +42,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLDivElement>(null);
   const activeEntry = useRef<HTMLDivElement>(null);
+  const mainContent = useRef<HTMLElement>(null);
+  const focusHandled = useRef(false);
+
+  // Only the redirect out of /login sets the flag this reads, so a direct reload or an in-app
+  // navigation (the shell persists across those, re-rendering only `children`) leaves focus alone.
+  // Waiting on `!loading && session` also waits for `<main>` itself: the shell renders a
+  // loading/redirect placeholder without it until auth resolves.
+  useEffect(() => {
+    if (focusHandled.current || loading || !session) return;
+    focusHandled.current = true;
+    if (consumePostSignInFocus()) mainContent.current?.focus();
+  }, [loading, session]);
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -389,7 +402,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <NotificationsBell />
           </div>
         </header>
-        <main id="main-content" className="main-content" tabIndex={-1}>
+        <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
           {children}
         </main>
       </div>

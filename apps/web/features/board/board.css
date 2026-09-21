@@ -343,6 +343,15 @@
   }
   .board-tools {
     gap: 8px;
+    row-gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* Below this width the row can no longer hold the field beside the view switcher and the primary
+     action without squeezing it past use; let it claim the row and push those controls to a second
+     line instead. */
+  .board-tools .search-field {
+    min-width: 140px;
+    flex: 1 1 auto;
   }
   .board-tools select {
     width: 116px;

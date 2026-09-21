@@ -35,6 +35,7 @@
   font-size: 16px;
   line-height: 1.4;
   margin: 8px 0;
+  overflow-wrap: anywhere;
 }
 .briefing-list-row p,
 .briefing-list-date {
@@ -285,6 +286,7 @@
   line-height: 1.25;
   letter-spacing: -0.035em;
   margin: 12px 0;
+  overflow-wrap: anywhere;
 }
 .briefing-summary h3 {
   font-size: 15px;

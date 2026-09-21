@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { safeReturnPath } from "./return-path";
 import { FormError } from "@/features/shared/form-error";
+import { markPostSignInFocus } from "./post-sign-in-focus";
 import "./auth.css";
 
 export function LoginPage() {
@@ -18,7 +19,10 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (session && !loading) router.replace(destination);
+    if (session && !loading) {
+      markPostSignInFocus();
+      router.replace(destination);
+    }
   }, [session, loading, router, destination]);
 
   async function signIn(event: React.FormEvent<HTMLFormElement>) {
@@ -32,7 +36,10 @@ export function LoginPage() {
     });
     setPending(false);
     if (result.error) setError(result.error.message);
-    else router.replace(destination);
+    else {
+      markPostSignInFocus();
+      router.replace(destination);
+    }
   }
 
   return (
