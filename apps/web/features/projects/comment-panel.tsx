@@ -66,6 +66,13 @@ export function CommentPanel({
   // comment must resend the same key (matching the server's replay), but a person editing the
   // text or pin between retries has to mint a new one, or `post_comment` raises a conflict it
   // cannot recover from. See `credits/credit-actions.tsx`'s `attempt` ref for the same shape.
+  //
+  // The payload identity below must include every field `post_comment`'s replay guard compares
+  // (`supabase/migrations/202609210002_post_comment_replay_hardening.sql`: version_id/
+  // publication_id, design_id, body, pin_x, pin_y, pin_t) — a field the server compares but the
+  // client's identity omits can vary underneath an unchanged key, and the retry either replays
+  // against the wrong content or gets an unrecoverable "Idempotency key conflicts" error the
+  // person cannot act on. If the server starts comparing another field, mirror it here too.
   const attempt = useRef<CommentAttempt | null>(null);
   useEffect(() => {
     if (selectedComment)
@@ -76,7 +83,7 @@ export function CommentPanel({
   const [showResolved, setShowResolved] = useState(false);
   const post = useMutation({
     mutationFn: async () => {
-      const payload = JSON.stringify({ body: body.trim(), designId, pin: pendingPin });
+      const payload = JSON.stringify({ body: body.trim(), versionId, designId, pin: pendingPin });
       attempt.current = nextCommentAttempt(attempt.current, payload);
       return postComment(database, {
         projectId,

@@ -375,12 +375,10 @@ export async function postComment(
       ...(input.versionId ? { p_version_id: input.versionId } : {}),
       ...(input.designId ? { p_design_id: input.designId } : {}),
       // `p_pin_t` is typed `number | undefined` (no `null`) by the generated RPC args, matching the
-      // Postgres default of `null` for an unpassed argument — an explicit `undefined` here has the
-      // same effect on the wire as omitting the key, since the client strips undefined properties
-      // before sending the request body.
-      ...(input.pin
-        ? { p_pin_x: input.pin.x, p_pin_y: input.pin.y, p_pin_t: input.pin.t ?? undefined }
-        : {}),
+      // Postgres default of `null` for an unpassed argument — `PendingPin.t` is already
+      // `number | undefined`, so passing it straight through has the same effect on the wire as
+      // omitting the key, since the client strips undefined properties before sending the request.
+      ...(input.pin ? { p_pin_x: input.pin.x, p_pin_y: input.pin.y, p_pin_t: input.pin.t } : {}),
       ...(input.idempotencyKey ? { p_idempotency_key: input.idempotencyKey } : {}),
     }),
   );
