@@ -31,7 +31,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fixture_media import chunk, png_pixel_size
+from fixture_media import AUTHOR_TEXT_CHUNK, png_pixel_size
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = 'https://picsum.photos/id/{photo}/{width}/{height}'
@@ -42,9 +42,6 @@ PHOTO_IDS = [
     1043, 1044, 1047, 1050, 1059, 1060, 1062, 1067, 1069, 1074,
     1080, 111, 145, 163, 180, 201, 225,
 ]
-# The marker `fixture_media.png_card` writes into the private copy, kept identical here so the
-# internal and published copies still differ in exactly the way the fixtures assert they do.
-AUTHOR_CHUNK = chunk(b'tEXt', b'Author\x00Private production designer')
 
 
 def environment():
@@ -96,7 +93,7 @@ def photograph(photo, width, height):
 def with_author(content):
     """The private copy, carrying producer identity immediately after the header."""
     end_of_header = 8 + 8 + 13 + 4
-    return content[:end_of_header] + AUTHOR_CHUNK + content[end_of_header:]
+    return content[:end_of_header] + AUTHOR_TEXT_CHUNK + content[end_of_header:]
 
 
 def main():

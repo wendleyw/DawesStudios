@@ -42,6 +42,13 @@ def chunk(kind, data):
     return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
 
 
+# The producer-identity marker a private working file carries and a sanitizer strips. Shared with
+# `demo_artwork.py`, which stamps the same marker onto photographs it substitutes for these cards, so
+# the two sources of internal artwork carry identical bytes for the same claim rather than two
+# literals that could drift apart.
+AUTHOR_TEXT_CHUNK = chunk(b'tEXt', b'Author\x00Private production designer')
+
+
 def png_card(index, width, height, *, internal=False):
     """A deterministic card drawn at an explicit pixel size; the index keeps every card distinguishable.
 
@@ -68,7 +75,7 @@ def png_card(index, width, height, *, internal=False):
             row = rows[key] = b'\x00' + bytes(pixels)
         body += compressor.compress(row)
     body += compressor.flush()
-    metadata = chunk(b'tEXt', b'Author\x00Private production designer') if internal else b''
+    metadata = AUTHOR_TEXT_CHUNK if internal else b''
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)) + metadata + chunk(b'IDAT', bytes(body)) + chunk(b'IEND', b'')
 
 
