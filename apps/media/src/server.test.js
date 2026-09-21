@@ -141,12 +141,21 @@ describe('POST /designs/sanitize-video', () => {
   // is wrong.
   it.each(['mp4', 'webm'])('refuses a rawPath already carrying a .%s extension instead of .raw', async extension => {
     stubSupabase({ ...authRoutes });
+    const rawPath = `${projectId}/${md5Uuid('already-sanitized-looking')}.${extension}`;
     const response = await post('/designs/sanitize-video', {
       projectId,
-      rawPath: `${projectId}/${md5Uuid('already-sanitized-looking')}.${extension}`,
+      rawPath,
       mimeType: extension === 'mp4' ? 'video/mp4' : 'video/webm',
     });
     expect(response.status).toBe(400);
+    // The property under test is not "this returns 400" but "an unsanitised, caller-supplied
+    // video never reaches internal-assets" — a reimplementation that refused with the right
+    // status after already downloading or uploading would still be a live bypass, and a status-
+    // only assertion would not catch it. `calls` records every Supabase call attempted, whether
+    // or not it was stubbed to succeed, so its absence here is proof nothing was fetched or
+    // written, not just that the response looked right.
+    expect(calls.some(call => call.method === 'GET' && call.path === `/storage/v1/object/authenticated/internal-assets/${rawPath}`)).toBe(false);
+    expect(calls.some(call => call.method === 'POST' && call.path.startsWith('/storage/v1/object/internal-assets/'))).toBe(false);
   });
 
   describe('production access mirrors private.can_produce for a designer', () => {
