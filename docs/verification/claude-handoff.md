@@ -38,7 +38,7 @@ Finish the Creative Canvas application for Dawes Studios as a real, production-o
 1. Next.js App Router + Node.js server in `apps/web`; xyflow for board/project canvases; Supabase in Docker for Auth/Postgres/Storage/realtime; no hosting-provider integrations.
 2. Backend-enforced tenant and role isolation. Client payloads exclude designer identity, assignment, internal comments, source metadata and unpublished artifacts. Only the agency publishes immutable snapshots; client and internal channels stay separate.
 3. Briefing submission free; budget acceptance atomic and idempotent — exactly one project and one debit, rejecting insufficient balance. Explicit campaign selection; owner-scoped private template drafts.
-4. Deterministic acceptance baseline of exactly 10 clients and 20 projects, with the full functional, security, accessibility and visual audit. A passing build proves nothing on its own.
+4. Deterministic acceptance baseline of exactly 10 clients and 25 projects, with the full functional, security, accessibility and visual audit. A passing build proves nothing on its own.
 5. English for all project content and artifacts; pt-BR only in direct chat. Preserve `docs/ref` and `brand`. Keep `AGENTS.md` and `CLAUDE.md` synchronized. Evidence goes in `docs/verification`; untested requirements stay marked unverified.
 
 ## First three actions when I later take over

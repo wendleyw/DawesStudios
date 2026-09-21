@@ -53,7 +53,7 @@ The root instructions and linked architecture/setup guides establish these decis
 - Standard Next.js App Router and Node.js server in `apps/web`; xyflow for board/project canvases; Supabase in Docker for Auth, PostgreSQL, Storage and realtime; trusted publication/delivery processing in `apps/media`.
 - Backend-enforced tenant and role isolation. Client payloads exclude designer identity, assignments, internal comments, source metadata and unpublished artifacts. Only the agency publishes immutable client snapshots.
 - Free briefing submission; atomic, idempotent budget acceptance creates one project and one debit, rejecting insufficient balance. Explicit campaign selection and private owner-scoped template drafts remain required.
-- Deterministic acceptance baseline: exactly 10 clients and 20 projects, realistic related data, all required workflows and final visual/accessibility review. A successful build is insufficient.
+- Deterministic acceptance baseline: exactly 10 clients and 25 projects, realistic related data, all required workflows and final visual/accessibility review. A successful build is insufficient.
 - English for project content and artifacts; Brazilian Portuguese only for direct user chat. Preserve `docs/ref` and `brand`. Keep `AGENTS.md` and `CLAUDE.md` synchronized.
 
 ## Read in this order
@@ -94,7 +94,7 @@ These are historical claims from the linked files, not checks rerun during this 
 
 Steps 1 to 4 of the previous list are complete; the detail is in [the baseline reconciliation report](handoffs/2026-09-20-claude-baseline-reconciliation.md) and the [implementation plan](../architecture/implementation-plan.md).
 
-Every documented suite now passes on the current tree, including **25 of 25 browser tests** (24 of 24 at the time this section was first written; the suite gained a test and the figure is corrected here to match today's tree — see "Repository structural refactor: Phase C closed" at the end of this file for the count as of the refactor's close), and the dataset holds exactly 10 clients and 20 projects with no orphaned parents or leftover fixtures. Two defects were found and fixed: the invitation endpoint rejected every browser request in the container because it derived its origin from the server bind address, and earlier browser evidence had been measured against a container image older than the source. Codex's topbar/identity refactor was preserved and integrated, not reverted.
+Every documented suite now passes on the current tree, including **25 of 25 browser tests** (24 of 24 at the time this section was first written; the suite gained a test and the figure is corrected here to match today's tree — see "Repository structural refactor: Phase C closed" at the end of this file for the count as of the refactor's close), and the dataset holds exactly 10 clients and 25 projects (20 at the time this section was first written; the seed generator was later rewritten to expand SABRE from two projects to seven) with no orphaned parents or leftover fixtures. Two defects were found and fixed: the invitation endpoint rejected every browser request in the container because it derived its origin from the server bind address, and earlier browser evidence had been measured against a container image older than the source. Codex's topbar/identity refactor was preserved and integrated, not reverted.
 
 A passing gate is not a finished product. **75 acceptance rows remain Unverified**, and deployment, TLS and outbound SMTP remain unconfigured.
 
@@ -380,8 +380,10 @@ further drift**, which proves the suite creates and removes its own fixtures; th
 briefing titled `T` (service `guidelines`, accepted) and its project on the seeded Acme workspace,
 created manually in a browser during the earlier run's window. They are left in place pending the
 owner's decision, because deleting work someone created is not a cleanup the orchestrator makes on
-its own. While they exist, `canonical-workspaces.spec.ts` fails — correctly, since it asserts
-exactly ten clients and twenty projects.
+its own. While they exist, `canonical-workspaces.spec.ts` fails — correctly, since it asserted
+exactly ten clients and twenty projects at the time (the seed generator was later rewritten to
+expand SABRE from two projects to seven; the same guard now enforces ten clients and twenty-five
+projects).
 
 ### Why the calendar carried no information (2026-09-20)
 

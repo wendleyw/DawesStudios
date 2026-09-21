@@ -125,12 +125,15 @@ The local stack was neither restarted, reset nor re-seeded, and Docker was not t
 
 ## Remaining risks and next action
 
-- The dataset baseline is stated as "10 clients and 20 projects" in two live documents the
+- The dataset baseline was stated as "10 clients and 20 projects" in two live documents the
   orchestrator owns — `docs/engineering/handoff.md:56` and `docs/verification/claude-handoff.md:41` —
-  while the current requirement and the current seed are 25. Those were outside this task's write
-  scope and were left unchanged; the orchestrator should correct them. Historical reports under
-  `docs/engineering/handoffs/` that quote 20 are evidence of their own moment and should stay as they
-  are.
+  while the current requirement and the current seed are 25. These were outside this task's write
+  scope; a later orchestrator pass corrected both, plus two further present-tense occurrences found
+  in the same review (`docs/engineering/handoff.md:97` and `:384`, the latter kept in past tense with
+  a parenthetical rather than rewritten, since it describes what a specific test assertion was on
+  2026-09-20). Historical reports under `docs/engineering/handoffs/` that quote 20, and
+  `docs/engineering/handoff.md:494`'s description of the 2026-09-20 artwork-coverage measurement, are
+  evidence of their own moment and were left unchanged.
 - These tests remain coupled to fixture labels, so the next reshaping of the seed will break them the
   same way. A shared SQL helper resolving a project by slug, or a generated fixture-id header, would
   make the coupling explicit. Not attempted here.
