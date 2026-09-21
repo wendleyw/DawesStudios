@@ -293,6 +293,8 @@ export type Database = {
           created_at: string
           design_id: string | null
           id: string
+          idempotency_key: string | null
+          pin_t: number | null
           pin_x: number | null
           pin_y: number | null
           project_id: string
@@ -306,6 +308,8 @@ export type Database = {
           created_at?: string
           design_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          pin_t?: number | null
           pin_x?: number | null
           pin_y?: number | null
           project_id: string
@@ -319,6 +323,8 @@ export type Database = {
           created_at?: string
           design_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          pin_t?: number | null
           pin_x?: number | null
           pin_y?: number | null
           project_id?: string
@@ -777,6 +783,8 @@ export type Database = {
           created_at: string
           design_id: string | null
           id: string
+          idempotency_key: string | null
+          pin_t: number | null
           pin_x: number | null
           pin_y: number | null
           project_id: string
@@ -789,6 +797,8 @@ export type Database = {
           created_at?: string
           design_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          pin_t?: number | null
           pin_x?: number | null
           pin_y?: number | null
           project_id: string
@@ -801,6 +811,8 @@ export type Database = {
           created_at?: string
           design_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          pin_t?: number | null
           pin_x?: number | null
           pin_y?: number | null
           project_id?: string
@@ -1528,6 +1540,8 @@ export type Database = {
           p_body: string
           p_channel: string
           p_design_id?: string
+          p_idempotency_key?: string
+          p_pin_t?: number
           p_pin_x?: number
           p_pin_y?: number
           p_project_id: string
