@@ -9,6 +9,10 @@ type MockUploadOptions = {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
   onProgress?: (sent: number, total: number) => void;
+  onBeforeRequest?: (request: {
+    setHeader: (name: string, value: string) => void;
+  }) => Promise<void>;
+  headers?: Record<string, string>;
   metadata?: Record<string, string>;
   endpoint?: string;
   chunkSize?: number;
@@ -143,6 +147,64 @@ describe("uploadDesignAsset", () => {
       uploadDesignAsset(stub.database, "http://media.test", projectId, file),
     ).rejects.toThrow(/sign-in is no longer valid/);
     expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a genuine session-lookup failure instead of implying the sign-in itself is invalid", async () => {
+    const getSession = vi.fn().mockResolvedValue({
+      data: { session: null },
+      error: { message: "network error contacting the auth server" },
+    });
+    const database = { auth: { getSession } } as never;
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await expect(uploadDesignAsset(database, "http://media.test", projectId, file)).rejects.toThrow(
+      "network error contacting the auth server",
+    );
+    expect(tusUploadMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches a fresh token for every request instead of baking one static header into the transfer", async () => {
+    // `jwt_expiry` is short enough that a large upload can outlive the token captured at the
+    // start; a static `headers.authorization` would then 401 on a later chunk with no retry
+    // (tus-js-client never retries a 401). Each call to `getSession` here returns a different
+    // token, so asserting that `onBeforeRequest` sees a new one on every invocation is what
+    // proves the header is not fixed at construction time.
+    let calls = 0;
+    const getSession = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      return { data: { session: { access_token: `token-${calls}` } }, error: null };
+    });
+    const database = { auth: { getSession } } as never;
+    let capturedOptions: MockUploadOptions | undefined;
+    tusUploadMock.mockImplementation(function (_file: File, options: MockUploadOptions) {
+      capturedOptions = options;
+      return { start: () => options.onSuccess?.() };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ path: "clean/path.mp4", durationSeconds: 1, width: 1, height: 1 }),
+      }),
+    );
+
+    const file = new File([new Uint8Array(4)], "clip.mp4", { type: "video/mp4" });
+    await uploadDesignAsset(database, "http://media.test", projectId, file);
+
+    // No static token lives in `headers` at all — `getSession` was already called once (the
+    // fail-fast check) before the constructor even ran, so a static header here would already
+    // be one call stale by construction.
+    expect(capturedOptions?.headers?.authorization).toBeUndefined();
+
+    // `uploadDesignAsset` already consumed some number of `getSession` calls of its own (the
+    // fail-fast check, plus one inside `sanitizeVideoAsset`'s own auth lookup); what matters is
+    // only that two further, back-to-back `onBeforeRequest` invocations each see a token newer
+    // than the last, not any particular absolute count.
+    const before = calls;
+    const setHeader = vi.fn();
+    await capturedOptions?.onBeforeRequest?.({ setHeader });
+    await capturedOptions?.onBeforeRequest?.({ setHeader });
+    expect(setHeader).toHaveBeenNthCalledWith(1, "authorization", `Bearer token-${before + 1}`);
+    expect(setHeader).toHaveBeenNthCalledWith(2, "authorization", `Bearer token-${before + 2}`);
   });
 
   it("builds the raw path as `${projectId}/<uuid>.raw` and sends it unchanged to the sanitiser", async () => {

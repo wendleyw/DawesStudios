@@ -72,9 +72,17 @@ export async function discardUnreferencedArtwork(database: SupabaseDatabase, pat
 }
 
 /**
- * Uploads through Supabase's TUS endpoint, which resumes after a dropped connection.
+ * Uploads through Supabase's TUS endpoint, which retries a failed chunk mid-transfer without
+ * restarting the whole file.
  *
- * A gigabyte over a single POST has no recovery: one network blip discards a ten-minute
+ * That resumption is scoped to one in-memory attempt. `tus-js-client`'s `findPreviousUploads` and
+ * its URL-based resumption across page loads are not wired up here, so closing the tab or
+ * reloading the page loses the upload URL this attempt created and the next call starts a new
+ * upload from byte zero — it does not pick up where the closed tab left off. What this does
+ * survive is the kind of transient failure `retryDelays` covers: a dropped packet, a brief
+ * disconnect, a 5xx from the storage service.
+ *
+ * A gigabyte over a single POST has no recovery at all: one network blip discards a ten-minute
  * transfer with nothing to show for it. Chunks are 6 MB because the storage service requires
  * exactly that size for every chunk but the last, and it must not be made configurable.
  *
@@ -88,15 +96,36 @@ async function uploadResumable(
   file: File,
   onProgress?: (fraction: number) => void,
 ): Promise<void> {
-  const { data } = await database.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token)
-    throw new Error("Your sign-in is no longer valid. Sign out, sign in again, and retry.");
+  async function currentAccessToken(): Promise<string> {
+    const { data, error } = await database.auth.getSession();
+    if (error) throw new Error(error.message);
+    const token = data.session?.access_token;
+    if (!token)
+      throw new Error("Your sign-in is no longer valid. Sign out, sign in again, and retry.");
+    return token;
+  }
+
+  // Fail before starting a transfer at all if there is no session to begin one with.
+  await currentAccessToken();
 
   await new Promise<void>((resolve, reject) => {
     const upload = new tus.Upload(file, {
       endpoint: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`,
-      headers: { authorization: `Bearer ${token}`, "x-upsert": "false" },
+      headers: { "x-upsert": "false" },
+      // A token is fetched fresh for every request tus-js-client makes, rather than captured
+      // once and baked into a static `headers` entry: `jwt_expiry` is 900 seconds, and a
+      // gigabyte at a realistic connection speed takes far longer than that, so a token
+      // captured at the start of the upload is expected to expire before the last chunk. A 401
+      // from a stale token is also never retried — `tus-js-client`'s own
+      // `defaultOnShouldRetry` (`node_modules/tus-js-client/lib/upload.js`) retries every
+      // status except 4xx, with only 409 and 423 as exceptions — so a static header would turn
+      // a routine token refresh into a hard failure partway through the transfer.
+      // `onBeforeRequest` runs, and is awaited, before every request the library sends
+      // (confirmed against `sendRequest` in the library's own source), which is what makes
+      // fetching the token here instead of once up front actually work.
+      onBeforeRequest: async (request) => {
+        request.setHeader("authorization", `Bearer ${await currentAccessToken()}`);
+      },
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
       chunkSize: 6 * 1024 * 1024,
@@ -129,8 +158,12 @@ async function uploadResumable(
  * briefly unavailable) and should be answered by letting the person retry, not by discarding the
  * bytes they already sent. There is no equivalent of `discardUnreferencedArtwork` for video, so a
  * permanently failing sanitisation (for example, a container whose declared type does not match
- * its actual codec) leaves a real orphan in `internal-assets` that only an operator can remove.
- * That is recorded, not hidden: the failure is logged with the raw path before it is rethrown.
+ * its actual codec) leaves a real orphan in `internal-assets` with nothing here that removes it.
+ * The failure is logged with the raw path before it is rethrown, but `console.error` is exactly
+ * that and no more: this codebase has no logging or error-tracking sink, so that line is visible
+ * only in the browser devtools of whoever was uploading, for as long as that tab stays open. It
+ * does not reach an operator. Recording it here is honest about a gap, not a fix for it — the
+ * actual fix is a server-side sweep, which does not exist yet either (see the task report).
  */
 export async function uploadDesignAsset(
   database: SupabaseDatabase,
