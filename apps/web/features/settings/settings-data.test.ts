@@ -168,12 +168,14 @@ describe("preset writes", () => {
       minCredits: 10,
       maxCredits: 20,
       dueDays: 14,
+      expectedRevision: 1,
     });
     expect(rpc).toHaveBeenCalledWith("save_service_preset", {
       p_service_type: "brand-identity",
       p_min_credits: 10,
       p_max_credits: 20,
       p_due_days: 14,
+      p_expected_revision: 1,
     });
     expect(revision).toBe(3);
   });
@@ -182,10 +184,15 @@ describe("preset writes", () => {
 describe("workspace writes", () => {
   it("saves the studio name and timezone", async () => {
     const { database, rpc } = stubDatabase(ok);
-    await saveWorkspaceSettings(database, { studioName: "Dawes Studio", timezone: "UTC" });
+    await saveWorkspaceSettings(database, {
+      studioName: "Dawes Studio",
+      timezone: "UTC",
+      revision: "2026-09-21T09:00:00Z",
+    });
     expect(rpc).toHaveBeenCalledWith("update_workspace_settings", {
       p_studio_name: "Dawes Studio",
       p_timezone: "UTC",
+      p_expected_updated_at: "2026-09-21T09:00:00Z",
     });
   });
 });
@@ -272,11 +279,17 @@ describe("settings write failures", () => {
           minCredits: 1,
           maxCredits: 2,
           dueDays: 5,
+          expectedRevision: 1,
         }),
     ],
     [
       "saveWorkspaceSettings",
-      (database) => saveWorkspaceSettings(database, { studioName: "s", timezone: "UTC" }),
+      (database) =>
+        saveWorkspaceSettings(database, {
+          studioName: "s",
+          timezone: "UTC",
+          revision: "2026-09-21T09:00:00Z",
+        }),
     ],
     [
       "updateProfile",

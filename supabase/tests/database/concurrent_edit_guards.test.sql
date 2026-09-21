@@ -27,7 +27,8 @@ select set_config('test.workspace_revision',(select updated_at::text from public
 select lives_ok($$select public.update_workspace_settings('Session A Studio','UTC',current_setting('test.workspace_revision')::timestamptz)$$,'A studio save quoting the revision it opened on is applied');
 select throws_ok($$select public.update_workspace_settings('Stale Studio','America/New_York',current_setting('test.workspace_revision')::timestamptz)$$,'PT409','These studio settings changed while you were editing. Reload the page to try again.','A studio save quoting a superseded revision is refused');
 select is((select studio_name from public.workspace_settings where id=1),'Session A Studio','The refused studio save leaves the newer name intact');
-select lives_ok($$select public.update_workspace_settings('Fixture Studio','UTC')$$,'A caller with no form to quote still writes, unguarded as before');
+select throws_ok($$select public.update_workspace_settings('Fixture Studio','UTC')$$,'PT409','These studio settings changed while you were editing. Reload the page to try again.','A caller that quotes no revision at all is refused, not unguarded');
+select is((select studio_name from public.workspace_settings where id=1),'Session A Studio','The refused no-revision studio save leaves the newer name intact');
 
 -- Service presets: the procedure incremented the revision without ever checking one.
 select set_config('test.preset_revision',(select revision::text from public.service_presets where service_type='reel'),true);
@@ -36,6 +37,8 @@ select throws_ok($$select public.save_service_preset('reel',99,99,99,current_set
 select is((select min_credits from public.service_presets where service_type='reel'),11,'The refused preset save leaves the newer numbers intact');
 select is((select count(*)::int from public.service_preset_history where service_type='reel' and min_credits=99),0,'The refused preset save appends no history row');
 select throws_ok($$select public.save_service_preset('not-a-service',1,2,3)$$,'P0001','Service preset not found','A missing preset is still reported as missing rather than as a conflict');
+select throws_ok($$select public.save_service_preset('reel',50,60,20)$$,'PT409','This service preset changed while you were editing. Close and reopen the preset to try again.','A caller that quotes no revision at all is refused, not unguarded');
+select is((select min_credits from public.service_presets where service_type='reel'),11,'The refused no-revision preset save leaves the newer numbers intact');
 
 -- Recreating a function under a new signature creates a new object, which is created with EXECUTE
 -- for PUBLIC. Both functions this migration recreated are security definer writes on tenant data,

@@ -230,7 +230,9 @@ export function useInvalidatePresets() {
 /**
  * Saves a preset as a new revision. `expectedRevision` is the revision the editor was opened on;
  * the procedure refuses the save when the stored one has moved, and raises the sentence itself so
- * there is one copy of it. Optional for the same reason as `saveClient`'s `revision`.
+ * there is one copy of it. Required: the procedure's own compare-and-set now refuses a save that
+ * quotes no revision exactly as it refuses a stale one, so a caller with none to quote has nothing
+ * useful to send.
  */
 export async function saveServicePreset(
   database: SupabaseDatabase,
@@ -239,7 +241,7 @@ export async function saveServicePreset(
     minCredits: number;
     maxCredits: number;
     dueDays: number;
-    expectedRevision?: number;
+    expectedRevision: number;
   },
 ) {
   return assertResult(
@@ -248,9 +250,7 @@ export async function saveServicePreset(
       p_min_credits: input.minCredits,
       p_max_credits: input.maxCredits,
       p_due_days: input.dueDays,
-      ...(input.expectedRevision === undefined
-        ? {}
-        : { p_expected_revision: input.expectedRevision }),
+      p_expected_revision: input.expectedRevision,
     }),
   );
 }
@@ -280,16 +280,18 @@ export function useInvalidateWorkspaceSettings() {
 /**
  * `revision` is the `updated_at` the form was read on; the procedure raises its own refusal and
  * returns the revision the save produced, which the studio form adopts for its next save.
+ * Required: the procedure's own compare-and-set now refuses a save that quotes no revision exactly
+ * as it refuses a stale one, so a caller with none to quote has nothing useful to send.
  */
 export async function saveWorkspaceSettings(
   database: SupabaseDatabase,
-  input: { studioName: string; timezone: string; revision?: string },
+  input: { studioName: string; timezone: string; revision: string },
 ) {
   return assertResult(
     await database.rpc("update_workspace_settings", {
       p_studio_name: input.studioName,
       p_timezone: input.timezone,
-      ...(input.revision ? { p_expected_updated_at: input.revision } : {}),
+      p_expected_updated_at: input.revision,
     }),
   );
 }
