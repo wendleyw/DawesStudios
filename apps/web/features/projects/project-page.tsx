@@ -18,6 +18,7 @@ import { useProjectDetail, type ProjectChannel } from "./project-data";
 import { useProjectEvents } from "./project-events";
 import "./projects.css";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
@@ -50,7 +51,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     return () => observer.disconnect();
   }, [pane]);
   const canProduce = profile?.role !== "client" && channel === "internal";
-  if (data.isPending) return <PageStatus>Opening the project…</PageStatus>;
+  if (data.isPending) return <PageStatus>Loading the project…</PageStatus>;
   if (data.error || !data.data)
     return (
       <div className="page-content">
@@ -196,6 +197,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             </button>
           </div>
         )}
+        <NotificationsBell className="page-bell" />
       </header>
       {selected && chosenVersion && chosenDeliverable ? (
         <DesignViewer

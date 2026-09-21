@@ -25,6 +25,7 @@ import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
 import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
   const { profile } = useAuth();
@@ -51,9 +52,12 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
           <ArrowLeft size={16} />
           All briefings
         </Link>
-        <span className={`status-badge ${briefing.status}`}>
-          {briefingStatusLabels[briefing.status]}
-        </span>
+        <div className="page-actions">
+          <span className={`status-badge ${briefing.status}`}>
+            {briefingStatusLabels[briefing.status]}
+          </span>
+          <NotificationsBell className="page-bell" />
+        </div>
       </header>
       <div className="briefing-detail-layout">
         <div>

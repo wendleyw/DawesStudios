@@ -8,8 +8,8 @@ import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
 import { briefingStatusLabels, services } from "./briefing-model";
 import "./briefings.css";
-import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -25,7 +25,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Briefings unavailable.</h1>
-        <FormError>We could not load this client. Please try again.</FormError>
+        <p>These briefings are unavailable or you do not have access.</p>
         <button
           className="button"
           onClick={() => {
@@ -52,12 +52,15 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
           <h1>Briefings</h1>
           <p>A clear starting point for your next project.</p>
         </div>
-        {profile?.role !== "designer" && (
-          <Link href={`/clients/${clientId}/briefings/new`} className="button primary">
-            <Plus size={16} />
-            New briefing
-          </Link>
-        )}
+        <div className="page-actions">
+          {profile?.role !== "designer" && (
+            <Link href={`/clients/${clientId}/briefings/new`} className="button primary">
+              <Plus size={16} />
+              New briefing
+            </Link>
+          )}
+          <NotificationsBell className="page-bell" />
+        </div>
       </header>
       {profile?.role !== "designer" && (
         <nav className="briefing-tabs" aria-label="Filter briefings">

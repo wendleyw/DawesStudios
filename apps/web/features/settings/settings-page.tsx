@@ -21,7 +21,7 @@ const labels: Record<SettingsTab, string> = {
 
 export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
   const { profile } = useAuth();
-  if (!profile) return <PageStatus>Opening settings…</PageStatus>;
+  if (!profile) return <PageStatus>Loading settings…</PageStatus>;
   if (profile.role !== "agency" && tab !== "account")
     return (
       <div className="page-content">
@@ -40,9 +40,6 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
     <div className="page-content settings-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">
-            {tab === "account" ? "YOUR ACCOUNT" : "STUDIO ADMINISTRATION"}
-          </span>
           <h1>{tab === "account" ? "Your account" : "Settings"}</h1>
           <p>
             {tab === "account"

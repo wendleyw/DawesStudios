@@ -149,10 +149,10 @@
   transition: margin-left 180ms ease;
 }
 @media (min-width: 901px) {
-  .workspace:has(.board-page) {
+  .workspace.client-workspace {
     --topbar-height: 0px;
   }
-  .workspace:has(.board-page) > .topbar {
+  .workspace.client-workspace > .topbar {
     display: none;
   }
 }

@@ -44,7 +44,7 @@ export function BriefingEditorPage({
     presets.isPending ||
     (briefingId && briefings.isPending)
   )
-    return <PageStatus>Preparing your briefing…</PageStatus>;
+    return <PageStatus>Loading your briefing…</PageStatus>;
   const client = clients.data?.find((item) => item.id === clientId);
   const briefing = briefings.data?.find((item) => item.id === briefingId);
   if (

@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
+import { useState } from "react";
 import {
   directionFields,
   formatSize,
@@ -14,6 +15,7 @@ import {
   type ServiceDefinition,
 } from "./briefing-model";
 import { BriefingAttachments } from "./briefing-attachments";
+import { Modal } from "@/features/shared/modal";
 
 /**
  * The "Details" step (step 1) of the briefing editor: campaign selection, deliverables, the
@@ -49,6 +51,8 @@ export function BriefingEditorDetails({
   defaults: BriefingDirection;
   savedId: string | null;
 }) {
+  const [removing, setRemoving] = useState<number | null>(null);
+  const removingDeliverable = removing === null ? undefined : draft.deliverables[removing];
   return (
     <div className="briefing-form">
       <div className="briefing-service-summary">
@@ -145,11 +149,7 @@ export function BriefingEditorDetails({
                 <button
                   className="button quiet"
                   aria-label={`Remove ${item.name}`}
-                  onClick={() =>
-                    onUpdate({
-                      deliverables: draft.deliverables.filter((_, position) => position !== index),
-                    })
-                  }
+                  onClick={() => setRemoving(index)}
                 >
                   <X size={15} />
                 </button>
@@ -339,6 +339,34 @@ export function BriefingEditorDetails({
           </p>
         )}
       </section>
+      {/* Removing a deliverable discards everything typed into it, so it asks first. */}
+      <Modal
+        open={removing !== null}
+        title="Remove this deliverable?"
+        description={
+          removingDeliverable
+            ? `${removingDeliverable.name || "This deliverable"} and its details will be removed from the briefing.`
+            : undefined
+        }
+        onClose={() => setRemoving(null)}
+      >
+        <div className="form-actions">
+          <button className="button" onClick={() => setRemoving(null)}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            onClick={() => {
+              onUpdate({
+                deliverables: draft.deliverables.filter((_, position) => position !== removing),
+              });
+              setRemoving(null);
+            }}
+          >
+            Remove deliverable
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

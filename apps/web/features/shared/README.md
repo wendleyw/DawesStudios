@@ -88,7 +88,9 @@ today.
 ### `PageStatus` — `page-status.tsx`
 
 `<div className="page-content" role="status">{children}</div>`. The full-page
-status message shown while a route loads its data.
+status message shown while a route loads its data, and the one appearance that
+wait has anywhere inside the workspace shell. Its copy opens with `Loading`;
+softer verbs are kept only where the wait is a check rather than a fetch.
 
 | Prop       | Type        | Default |
 | ---------- | ----------- | ------- |
@@ -97,7 +99,8 @@ status message shown while a route loads its data.
 Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-page`,
 `brand/draft-editor`, `briefings/briefing-detail`, `briefings/briefing-editor`,
 `briefings/briefings-page`, `credits/credits-page`, `projects/project-page`,
-`reviews/reviews-page`, `settings/settings-page`, `workspace/home-page`.
+`reviews/reviews-page`, `settings/settings-page`, `workspace/app-shell`,
+`workspace/home-page`.
 
 ### `SearchField` — `search-field.tsx`
 
@@ -155,8 +158,13 @@ Recorded so they are not re-proposed:
   whether there is an action button. Reproducing them needs five
   content-injection props, at which point the component contributes one class
   name.
-- **`centered-state`** (3 call sites) — a `<main>` wrapper around arbitrary
-  children, one of which also carries `role="status"`.
+- **`centered-state`** (7 call sites) — a `<main>` wrapper around arbitrary
+  children, three of which also carry `role="status"`. It answers only for the
+  surfaces that render outside the workspace shell (`app/login`,
+  `app/auth/invite`, `app/auth/recovery`, `app/error`, `app/not-found`,
+  `auth/auth-provider`) and for the shell's own failure state; the shell's
+  loading state uses `PageStatus`, so "this route is loading" has one
+  appearance rather than two.
 - **`form-actions`** (6 call sites) — a `<div>` wrapper; the button rows differ
   in count, in `type="submit"` versus `onClick`, and in every label and disabled
   expression.

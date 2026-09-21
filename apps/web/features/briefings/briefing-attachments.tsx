@@ -2,9 +2,10 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Paperclip, X } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { FormError } from "@/features/shared/form-error";
+import { Modal } from "@/features/shared/modal";
 import {
   addBriefingAttachment,
   briefingQueryKeys,
@@ -43,6 +44,7 @@ export function BriefingAttachments({
   const { database } = useAuth();
   const queryClient = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
+  const [removing, setRemoving] = useState<BriefingAttachment | null>(null);
   const attachments = useBriefingAttachments(briefingId);
   const upload = useMutation({
     mutationKey: ["briefing-file", briefingId],
@@ -75,6 +77,7 @@ export function BriefingAttachments({
       const path = await removeBriefingAttachment(database, { id });
       await removeBriefingAttachmentFile(database, { path });
     },
+    onSuccess: () => setRemoving(null),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.attachments] }),
   });
   const download = useMutation({
@@ -118,7 +121,10 @@ export function BriefingAttachments({
               className="button quiet"
               aria-label={`Remove ${file.name}`}
               disabled={remove.isPending || upload.isPending}
-              onClick={() => remove.mutate(file.id)}
+              onClick={() => {
+                remove.reset();
+                setRemoving(file);
+              }}
             >
               <X size={15} />
             </button>
@@ -158,6 +164,28 @@ export function BriefingAttachments({
           {upload.error?.message ?? remove.error?.message ?? download.error?.message}
         </FormError>
       )}
+      {/* The file leaves both the briefing and storage, and nothing brings it back. */}
+      <Modal
+        open={!!removing}
+        title="Remove this attachment?"
+        description={removing ? `${removing.name} will be deleted from this briefing.` : undefined}
+        onClose={() => {
+          if (!remove.isPending) setRemoving(null);
+        }}
+      >
+        <div className="form-actions">
+          <button className="button" onClick={() => setRemoving(null)} disabled={remove.isPending}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            onClick={() => removing && remove.mutate(removing.id)}
+            disabled={remove.isPending}
+          >
+            {remove.isPending ? "Removing…" : "Remove file"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

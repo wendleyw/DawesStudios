@@ -26,6 +26,7 @@ import { BriefingEditorDetails } from "./briefing-editor-details";
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import { FormError } from "@/features/shared/form-error";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 /**
  * The three-step briefing editor: choosing a service, filling in details (delegated to
@@ -158,13 +159,16 @@ export function BriefingEditor({
           Briefings
         </Link>
         <span className="eyebrow">{clientName}</span>
-        <button
-          className="button"
-          disabled={save.isPending || !!fileWrites || !service}
-          onClick={() => save.mutate(false)}
-        >
-          {save.isPending ? "Saving…" : "Save draft"}
-        </button>
+        <div className="page-actions">
+          <button
+            className="button"
+            disabled={save.isPending || !!fileWrites || !service}
+            onClick={() => save.mutate(false)}
+          >
+            {save.isPending ? "Saving…" : "Save draft"}
+          </button>
+          <NotificationsBell className="page-bell" />
+        </div>
       </header>
       <h1 className="briefing-editor-title">{briefing ? "Edit briefing" : "New briefing"}</h1>
       <nav className="briefing-progress" aria-label="Briefing steps">

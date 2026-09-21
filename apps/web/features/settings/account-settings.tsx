@@ -117,7 +117,7 @@ export function AccountSettings() {
           </label>
           {changePassword.error && <FormError>{changePassword.error.message}</FormError>}
           {changePassword.isSuccess && <SettingsSuccess>Password updated.</SettingsSuccess>}
-          <button className="button primary" disabled={changePassword.isPending}>
+          <button className="button" disabled={changePassword.isPending}>
             {changePassword.isPending ? "Updating…" : "Update password"}
           </button>
         </form>

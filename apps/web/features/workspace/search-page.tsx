@@ -22,7 +22,6 @@ export function SearchPage() {
     <div className="page-content">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">A CLEAR PATH</span>
           <h1>Search</h1>
           <p>Projects, briefings, and brand resources, in one search.</p>
         </div>

@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import { useReviews } from "./review-data";
 
 export function ReviewsPage({ clientId }: { clientId: string }) {
@@ -15,7 +16,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
   const { formatDate } = useDateFormat();
   const [filter, setFilter] = useState("waiting");
   const data = useReviews(clientId);
-  if (data.isPending || clients.isPending) return <PageStatus>Gathering reviews…</PageStatus>;
+  if (data.isPending || clients.isPending) return <PageStatus>Loading reviews…</PageStatus>;
   if (data.error || !clients.data?.some((client) => client.id === clientId))
     return (
       <div className="page-content">
@@ -38,7 +39,6 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
     <div className="page-content">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">A FRESH PAIR OF EYES</span>
           <h1>Reviews.</h1>
           <p>
             {profile?.role === "designer"
@@ -46,6 +46,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
               : "Thoughtful feedback keeps good work moving."}
           </p>
         </div>
+        <NotificationsBell className="page-bell" />
       </header>
       <div className="review-filters segmented-control">
         {[

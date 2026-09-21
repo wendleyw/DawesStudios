@@ -5,6 +5,19 @@ This feature holds the application chrome (`app-shell.tsx`), the home overview
 (`notifications-page.tsx`, `notifications-bell.tsx`). `client-mark.tsx` renders a client's approved
 brand mark and is used by both this feature's shell and `features/board`.
 
+## The topbar stands down inside a client workspace
+
+`app-shell.tsx` adds `client-workspace` to `.workspace` whenever the route resolves to a client
+(`/clients/:id/*`, and `/projects/:id` through `useProjectClient`). Every page in that set carries a
+header row of its own — the board's identity header, the project's title row, the briefing editor and
+detail headers, the draft editor's toolbar, and `page-heading` everywhere else — so at ≥901px
+`workspace.css` hides the bar and zeroes `--topbar-height` rather than leaving a 64px strip holding
+nothing but the bell. Those pages render `NotificationsBell` themselves, as the last item in their own
+header row, with `className="page-bell"`; `app/globals.css` hides `page-bell` below 901px, where the
+topbar returns and carries the bell again (it also holds the only way to open the navigation drawer).
+`page-actions` is the shared wrapper for a header row that has other actions beside the bell; it
+becomes `display: contents` below 901px so the heading stacks as it always did.
+
 ## Data access
 
 `workspace-data.ts` owns every Supabase read and write this feature's own components issue, as

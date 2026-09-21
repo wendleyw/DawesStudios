@@ -69,7 +69,6 @@ export function InvitationAcceptance() {
           </>
         ) : !session ? (
           <>
-            <span className="eyebrow">YOU ARE INVITED</span>
             <h1>Good work starts here.</h1>
             <p>
               Open your invitation email to confirm your address. If you already have an account,
@@ -110,7 +109,6 @@ export function InvitationAcceptance() {
           </>
         ) : (
           <>
-            <span className="eyebrow">YOUR NEW WORKSPACE</span>
             <h1>Welcome to the studio.</h1>
             <p>Joining as {session.user.email}. Set your password to complete your invitation.</p>
             <form

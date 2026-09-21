@@ -69,7 +69,6 @@ export function BrandSectionContent({
     return (
       <div className="brand-content-stack">
         <section className="brand-overview-hero">
-          <span className="eyebrow">THE BRAND AT A GLANCE</span>
           <h2>{textValue(content, "name", clientName)}</h2>
           <p className="brand-tagline">{textValue(content, "tagline")}</p>
           <p>
@@ -217,7 +216,6 @@ export function BrandSectionContent({
     return (
       <div className="brand-content-stack">
         <section className="brand-panel">
-          <span className="eyebrow">PHOTOGRAPHY & COMPOSITION</span>
           <h3>Photography direction</h3>
           <p>
             {textValue(content, "photography", "Photography direction has not been added yet.")}
@@ -300,10 +298,7 @@ export function BrandSectionContent({
     <div className="brand-content-stack">
       <section className="brand-panel">
         <div className="brand-inline-heading">
-          <div>
-            <span className="eyebrow">A CONSISTENT POINT OF VIEW</span>
-            <h3>Take your brand context with you.</h3>
-          </div>
+          <h3>Take your brand context with you.</h3>
           <CopyButton text={makeBrandContext(clientName, sections)} label="Copy brand context" />
         </div>
         <p>Bring the voice, audience, and brand guidance into your next creative task.</p>

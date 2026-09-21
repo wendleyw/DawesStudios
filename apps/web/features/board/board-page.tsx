@@ -246,7 +246,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
     });
   }
 
-  if (clients.isPending || projects.isPending) return <PageStatus>Opening the board…</PageStatus>;
+  if (clients.isPending || projects.isPending) return <PageStatus>Loading the board…</PageStatus>;
   if (!client || projects.error)
     return (
       <div className="page-content">
@@ -345,7 +345,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
           )}
           {/* The board takes the top of the workspace, so it also carries the global marker the
               topbar would have held. Below 901px the topbar is still there and hides this one. */}
-          <NotificationsBell />
+          <NotificationsBell className="page-bell" />
         </div>
       </header>
       {/* A click selects and a double click leaves the board, so selection is the only outcome
@@ -398,13 +398,18 @@ export function BoardPage({ clientId }: { clientId: string }) {
           {/* The head stays put when nothing matches, so a filtered table still reads as the same
               table rather than as a different screen. */}
           {filteredProjects.length === 0 && (
-            <div className="board-list-empty">
+            <div className="empty-state board-list-empty">
               <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
               <p>
                 {filtered
                   ? "Try a different search or clear your filters."
                   : "Start with a briefing. We’ll take it from there."}
               </p>
+              {filtered && (
+                <button className="button" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              )}
             </div>
           )}
           {filteredProjects.map((project: Project) => (

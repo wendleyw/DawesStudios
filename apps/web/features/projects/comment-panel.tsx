@@ -136,7 +136,7 @@ export function CommentPanel({
             </article>
           ))
         ) : (
-          <div className="comment-empty">
+          <div className="empty-state comment-empty">
             <MessageSquare size={25} />
             <h3>A conversation starts here.</h3>
             <p>

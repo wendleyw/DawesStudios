@@ -492,9 +492,6 @@ select {
 .page-heading > div {
   min-width: 0;
 }
-.page-heading .eyebrow {
-  margin-bottom: 12px;
-}
 .page-heading p {
   margin-top: 12px;
   color: var(--muted);
@@ -503,6 +500,19 @@ select {
 }
 .page-heading > .button {
   flex-shrink: 0;
+}
+/*
+ * Inside a client workspace the bar above the page stands down (see
+ * `features/workspace/workspace.css`), so the page's own header row carries the global actions
+ * that bar would have held. Below 901px the bar is back — it holds the only way to open the
+ * navigation drawer — so the page's copy of the bell stands down instead of showing a second
+ * marker, and this wrapper gets out of the way of the heading's own stacking.
+ */
+.page-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
 }
 .section-heading {
   display: flex;
@@ -659,6 +669,20 @@ select {
 }
 .empty-state .button {
   margin-top: 8px;
+}
+/*
+ * Slots that are too small for the full treatment — a kanban column, a version row on the project
+ * canvas — take the same language at a smaller scale. The slot's own size stays with the slot;
+ * only the appearance comes from here, so the two of them cannot drift apart again.
+ */
+.empty-state-compact {
+  min-height: 0;
+  gap: 8px;
+  padding: 16px;
+  font-size: 11px;
+}
+.empty-state-compact p {
+  font-size: 12px;
 }
 .panel {
   padding: 24px;
@@ -892,6 +916,12 @@ select {
   }
   .page-content {
     padding-top: 32px;
+  }
+  .page-actions {
+    display: contents;
+  }
+  .page-bell {
+    display: none;
   }
 }
 @media (max-width: 640px) {

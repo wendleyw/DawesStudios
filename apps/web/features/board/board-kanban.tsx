@@ -81,7 +81,7 @@ export function BoardKanban({
                 </article>
               ))
             ) : (
-              <p className="kanban-empty">No projects</p>
+              <p className="empty-state empty-state-compact kanban-empty">No projects</p>
             )}
           </section>
         );

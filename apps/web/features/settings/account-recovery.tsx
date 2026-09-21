@@ -62,7 +62,6 @@ export function AccountRecovery() {
           </>
         ) : updating ? (
           <>
-            <span className="eyebrow">YOUR ACCOUNT</span>
             <h1>A fresh start.</h1>
             <p>Choose a unique password with at least 12 characters.</p>
             {reset.isSuccess ? (
@@ -111,7 +110,6 @@ export function AccountRecovery() {
           </>
         ) : (
           <>
-            <span className="eyebrow">YOUR ACCOUNT</span>
             <h1>Forgot your password?</h1>
             <p>We will email you a link to set a new one.</p>
             {send.isSuccess ? (

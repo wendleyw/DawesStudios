@@ -91,9 +91,6 @@
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
-.brand-overview-hero > .eyebrow {
-  margin-bottom: 22px;
-}
 .brand-overview-hero h2 {
   font-size: clamp(34px, 4vw, 52px);
   font-weight: 450;

@@ -26,7 +26,6 @@ export function NotificationsPage() {
     <div className="page-content">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">IN THE LOOP</span>
           <h1>Notifications</h1>
           <p>
             {unread

@@ -25,6 +25,7 @@ import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
@@ -61,7 +62,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       setDeliverProject(null);
     },
   });
-  if (data.isPending || clients.isPending) return <PageStatus>Gathering files…</PageStatus>;
+  if (data.isPending || clients.isPending) return <PageStatus>Loading files…</PageStatus>;
   if (data.error || !data.data || !clients.data?.some((client) => client.id === clientId))
     return (
       <div className="page-content">
@@ -91,7 +92,6 @@ export function AssetsPage({ clientId }: { clientId: string }) {
     <div className="page-content files-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">THE FILES THAT MATTER</span>
           <h1>Files.</h1>
           <p>
             {profile?.role === "client"
@@ -99,25 +99,33 @@ export function AssetsPage({ clientId }: { clientId: string }) {
               : "Working files, shared designs, and final deliveries."}
           </p>
         </div>
-        {projects.length > 0 && profile?.role !== "client" && (
-          <div className="file-actions">
-            {profile?.role === "agency" && (
+        <div className="page-actions">
+          {projects.length > 0 && profile?.role !== "client" && (
+            <div className="file-actions">
+              {profile?.role === "agency" && (
+                <button
+                  className="button"
+                  disabled={!deliverable.length}
+                  title="Available when a project is approved"
+                  onClick={() => setUpload("delivery")}
+                >
+                  <Plus size={15} />
+                  Delivery file
+                </button>
+              )}
+              {/* While the delivery callout is up, completing the delivery is the one action that
+                  matters, so this one steps back rather than competing with it. */}
               <button
-                className="button"
-                disabled={!deliverable.length}
-                title="Available when a project is approved"
-                onClick={() => setUpload("delivery")}
+                className={canDeliver ? "button" : "button primary"}
+                onClick={() => setUpload("working")}
               >
                 <Plus size={15} />
-                Delivery file
+                Working file
               </button>
-            )}
-            <button className="button primary" onClick={() => setUpload("working")}>
-              <Plus size={15} />
-              Working file
-            </button>
-          </div>
-        )}
+            </div>
+          )}
+          <NotificationsBell className="page-bell" />
+        </div>
       </header>
       <div className="files-toolbar">
         <SearchField

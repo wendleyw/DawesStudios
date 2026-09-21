@@ -84,7 +84,7 @@ the message varying, exactly the shape that justified `FormError` in `features/s
 
 `app/globals.css` holds no selector used only by this feature. Every class this feature's
 components and `settings.css` reference from `globals.css` — `button`, `primary`, `quiet`,
-`form-error` (via the shared `FormError` component), `page-content`, `page-heading`, `eyebrow` and
+`form-error` (via the shared `FormError` component), `page-content`, `page-heading` and
 `status-badge` — is consumed by at least one other feature as well:
 
 ```sh

@@ -317,12 +317,6 @@
     flex: 1;
   }
 }
-@media (max-width: 900px) {
-  /* The bar is still overhead here, so the board does not show a second marker of its own. */
-  .board-tools .notifications-bell {
-    display: none;
-  }
-}
 @media (max-width: 640px) {
   .board-identity {
     padding-block: 18px 14px;
@@ -548,13 +542,7 @@
 }
 
 .kanban-empty {
-  display: grid;
   min-height: 84px;
-  place-items: center;
-  border: 1px dashed var(--border-strong);
-  border-radius: 10px;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 .board-planning-body .project-timeline {
@@ -700,18 +688,11 @@
   flex: 0 0 auto;
 }
 
+/* The table draws its own frame around this row, so the shared dashed one would read as a box
+   inside a box. Everything else is the empty state the canvas view shows for the same state. */
 .board-list-empty {
-  padding: 40px 24px 44px;
-  color: var(--muted);
-  text-align: center;
-}
-.board-list-empty h2 {
-  margin-bottom: 6px;
-  color: var(--foreground);
-  font-size: 15px;
-}
-.board-list-empty p {
-  font-size: 12px;
+  border: 0;
+  background: transparent;
 }
 
 /* The version names the artwork above it and the type names the deliverable; a separator keeps the

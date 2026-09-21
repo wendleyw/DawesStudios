@@ -110,7 +110,7 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
             </button>
           ))
         ) : (
-          <div className="version-empty">
+          <div className="empty-state empty-state-compact version-empty">
             <p>A space for your first design.</p>
             {data.canProduce && (
               <button

@@ -24,6 +24,7 @@ import "./credits.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -79,7 +80,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Credits unavailable.</h1>
-        <FormError>Your credit report could not be loaded. Please try again.</FormError>
+        <p>Your credit report could not be loaded. Please try again.</p>
         <button
           className="button"
           onClick={() => {
@@ -144,13 +145,16 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           <h1>Credits</h1>
           <p>A clear view of your creative investment.</p>
         </div>
-        <button
-          className="button primary"
-          onClick={() => setAction(profile?.role === "agency" ? "adjust" : "request")}
-        >
-          <Plus size={16} />
-          {profile?.role === "agency" ? "Adjust credits" : "Request credits"}
-        </button>
+        <div className="page-actions">
+          <button
+            className="button primary"
+            onClick={() => setAction(profile?.role === "agency" ? "adjust" : "request")}
+          >
+            <Plus size={16} />
+            {profile?.role === "agency" ? "Adjust credits" : "Request credits"}
+          </button>
+          <NotificationsBell className="page-bell" />
+        </div>
       </header>
       <div className="credit-overview">
         <section>
@@ -368,7 +372,10 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             </div>
           ))
         ) : (
-          <p className="credit-note">No credit requests yet.</p>
+          <div className="empty-state">
+            <h2>No credit requests yet.</h2>
+            <p>Requests for more credits will appear here.</p>
+          </div>
         )}
       </section>
       {action && (

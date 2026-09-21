@@ -83,7 +83,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
       window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     },
   });
-  if (assets.isPending) return <p role="status">Finding your brand files…</p>;
+  if (assets.isPending) return <p role="status">Loading brand files…</p>;
   if (assets.error)
     return (
       <div className="empty-state">

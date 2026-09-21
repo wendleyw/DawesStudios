@@ -1,7 +1,7 @@
 .project-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - var(--topbar-height));
   min-height: 560px;
 }
 .project-header {
@@ -222,12 +222,6 @@
   flex: 0 0 408px;
   align-self: stretch;
   min-height: 144px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  color: var(--muted);
-  font-size: 12px;
 }
 .canvas-empty-hint {
   position: absolute;
@@ -514,20 +508,10 @@
   flex: 1;
   padding: 0 22px;
 }
+/* The panel is narrow, so the shared empty state gives up its side padding here and nothing
+   else. */
 .comment-empty {
-  color: var(--muted);
-  text-align: center;
-  padding: 50px 5px;
-  font-size: 12px;
-  line-height: 1.6;
-}
-.comment-empty svg {
-  margin: 0 auto 14px;
-}
-.comment-empty h3 {
-  font-size: 13px;
-  color: #666;
-  font-weight: 500;
+  padding-inline: 12px;
 }
 .comment {
   padding: 18px 0;
@@ -658,7 +642,7 @@
 @media (max-width: 720px) {
   .project-page {
     height: auto;
-    min-height: calc(100dvh - 64px);
+    min-height: calc(100dvh - var(--topbar-height));
   }
   .project-header {
     gap: 9px;

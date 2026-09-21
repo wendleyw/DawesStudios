@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
@@ -22,12 +23,14 @@ import {
 import { TemplatePreview } from "./template-preview";
 import "./brand.css";
 import { FormError } from "@/features/shared/form-error";
+import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: string }) {
   const templates = useBrandTemplates(clientId);
   const draft = useTemplateDraft(clientId, draftId);
-  if (draft.isPending || templates.isPending) return <PageStatus>Opening your draft…</PageStatus>;
+  if (draft.isPending || templates.isPending) return <PageStatus>Loading your draft…</PageStatus>;
   const template = templates.data?.find((item) => item.id === draft.data?.template_id);
   if (!draft.data || !template || draft.error || templates.error)
     return (
@@ -57,6 +60,9 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   );
   const [revision, setRevision] = useState(draft.updated_at);
   const [zoom, setZoom] = useState(100);
+  const [leaving, setLeaving] = useState(false);
+  const router = useRouter();
+  const templatesHref = `/clients/${draft.client_id}/brand/templates`;
   const dirty = JSON.stringify({ name, content }) !== saved;
   useEffect(() => {
     if (!dirty) return;
@@ -97,12 +103,15 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   return (
     <div className="page-content brand-draft-editor">
       <div className="brand-draft-topbar">
+        {/* Leaving with unsaved work is the one thing this screen can lose, so it asks in the
+            product's own dialog rather than in the browser's. */}
         <Link
-          href={`/clients/${draft.client_id}/brand/templates`}
+          href={templatesHref}
           className="button quiet"
           onClick={(event) => {
-            if (dirty && !window.confirm("Leave this draft without saving your changes?"))
-              event.preventDefault();
+            if (!dirty) return;
+            event.preventDefault();
+            setLeaving(true);
           }}
         >
           <ArrowLeft size={16} />
@@ -120,6 +129,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
           <Save size={15} />
           Save draft
         </button>
+        <NotificationsBell className="page-bell" />
       </div>
       <div className="brand-draft-layout">
         <form
@@ -246,6 +256,21 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
           </div>
         </section>
       </div>
+      <Modal
+        open={leaving}
+        title="Leave without saving?"
+        description="Your unsaved changes to this draft will be lost."
+        onClose={() => setLeaving(false)}
+      >
+        <div className="form-actions">
+          <button className="button" onClick={() => setLeaving(false)}>
+            Keep editing
+          </button>
+          <button className="button primary" onClick={() => router.push(templatesHref)}>
+            Leave without saving
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

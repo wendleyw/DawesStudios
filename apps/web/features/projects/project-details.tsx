@@ -34,6 +34,7 @@ export function ProjectDetails({
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
+  const [revoking, setRevoking] = useState<{ id: string; name: string } | null>(null);
   const assignments = useProjectAssignments(project.id);
   const save = useMutation({
     mutationFn: async (form: FormData) => {
@@ -73,6 +74,7 @@ export function ProjectDetails({
       revokeDesignAssignment(database, { projectId: project.id, designerId }),
     onSuccess: async () => {
       await assignments.refetch();
+      setRevoking(null);
     },
   });
   const shareLink =
@@ -82,7 +84,6 @@ export function ProjectDetails({
 
   return (
     <aside className="project-details">
-      <span className="eyebrow">THE BIG PICTURE</span>
       <div className="details-heading">
         <h2>Project details</h2>
         {profile?.role === "agency" && (
@@ -126,7 +127,10 @@ export function ProjectDetails({
                       className="button quiet"
                       aria-label={`Remove ${member.display_name} from project`}
                       disabled={revoke.isPending}
-                      onClick={() => revoke.mutate(member.id)}
+                      onClick={() => {
+                        revoke.reset();
+                        setRevoking({ id: member.id, name: member.display_name });
+                      }}
                     >
                       Remove
                     </button>
@@ -135,7 +139,6 @@ export function ProjectDetails({
               {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
             </div>
           )}
-          {revoke.error && <FormError>{revoke.error.message}</FormError>}
           <button className="button quiet" onClick={() => setAssigning(true)}>
             Assign a designer
           </button>
@@ -241,6 +244,30 @@ export function ProjectDetails({
             </button>
           </div>
         </form>
+      </Modal>
+      {/* Removing an assignment takes the designer's access to the project with it, so it asks
+          first, like every other action in the product that destroys something. */}
+      <Modal
+        open={!!revoking}
+        title="Remove this designer?"
+        description="They will lose access to the working files and the studio conversation for this project."
+        onClose={() => {
+          if (!revoke.isPending) setRevoking(null);
+        }}
+      >
+        <div className="form-actions">
+          <button className="button" onClick={() => setRevoking(null)} disabled={revoke.isPending}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            onClick={() => revoking && revoke.mutate(revoking.id)}
+            disabled={revoke.isPending}
+          >
+            {revoke.isPending ? "Removing…" : "Remove designer"}
+          </button>
+        </div>
+        {revoke.error && <FormError>{revoke.error.message}</FormError>}
       </Modal>
       <Modal
         open={assigning}

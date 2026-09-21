@@ -13,6 +13,7 @@ import { BrandTemplates } from "./brand-templates";
 import { SectionEditor } from "./section-editor";
 import "./brand.css";
 import { PageStatus } from "@/features/shared/page-status";
+import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BrandPage({ clientId, section }: { clientId: string; section: string }) {
   const { profile } = useAuth();
@@ -21,7 +22,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const [editing, setEditing] = useState(false);
   const client = clients.data?.find((item) => item.id === clientId);
   if (clients.isPending || sections.isPending)
-    return <PageStatus>Opening the Brand Hub…</PageStatus>;
+    return <PageStatus>Loading the Brand Hub…</PageStatus>;
   if (!client || sections.error || !isBrandSection(section))
     return (
       <div className="page-content">
@@ -39,10 +40,10 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
     <div className="page-content brand-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">BRAND RESOURCES</span>
           <h1>Brand Hub</h1>
           <p>Identity, resources, and guidance for consistent work.</p>
         </div>
+        <NotificationsBell className="page-bell" />
       </div>
       {/*
         The ten sections read as one row rather than hiding inside a select: where you are and what

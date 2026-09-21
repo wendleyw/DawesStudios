@@ -47,7 +47,7 @@ export function HomePage() {
     projects.isPending ||
     (profile?.role === "client" && clients.data?.length === 1)
   )
-    return <PageStatus>Gathering your workspace…</PageStatus>;
+    return <PageStatus>Loading your workspace…</PageStatus>;
   if (clients.error || projects.error)
     return (
       <div className="page-content">
@@ -67,7 +67,6 @@ export function HomePage() {
     <div className="page-content home-content">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">YOUR CREATIVE WORKSPACE</span>
           <h1>
             {profile?.role === "agency"
               ? "Overview"

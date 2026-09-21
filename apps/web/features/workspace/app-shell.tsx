@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
 import { Modal } from "@/features/shared/modal";
+import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { NotificationsBell } from "./notifications-bell";
 import { useClients, useProjectClient } from "./workspace-data";
@@ -160,10 +161,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!loading && !session)
       router.replace(`/login?returnTo=${encodeURIComponent(pathname + window.location.search)}`);
   }, [session, loading, router, pathname]);
+  // The shell's wait and the first route's wait are the same navigation, so they render the same
+  // component in the same layout rather than two descriptions of one wait in two frames.
+  // `centered-state` stays for the pre-shell routes and for the app-level failure below.
   if (loading || !session)
     return (
-      <main className="centered-state" role="status">
-        Opening your workspace…
+      <main className="main-content">
+        <PageStatus>Loading your workspace…</PageStatus>
       </main>
     );
   if (error || !profile)
@@ -378,7 +382,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </div>
-      <div className="workspace" inert={mobileOpen || undefined}>
+      {/* Inside a client workspace every page carries its own header row, so the bar above it
+          would be an empty strip; the class lets `workspace.css` stand it down at ≥901px. */}
+      <div
+        className={`workspace ${activeClient ? "client-workspace" : ""}`}
+        inert={mobileOpen || undefined}
+      >
         <header className="topbar">
           <button
             ref={menuButton}
