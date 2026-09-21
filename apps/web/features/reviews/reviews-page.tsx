@@ -10,8 +10,17 @@ import { PageStatus } from "@/features/shared/page-status";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import { useReviews } from "./review-data";
 
-/** A version whose review is settled, one way or the other — nothing further is waiting on it. */
-const isFinished = (status: string) => ["approved", "reviewed"].includes(status);
+/**
+ * A version that is finished: it has been through review and nothing further is waiting on anyone.
+ *
+ * Of the six statuses `versionStatusLabels` names, only `approved` qualifies. `reviewed` reads
+ * "Shared with client" — it is `design_versions.status` recording that a version was published, not
+ * that the client accepted it, and a version the client then rejected keeps it. Treating it as
+ * finished filed rejected work under Approved for the designer who had to revise it. `pending` and
+ * `draft`/`submitted` are waiting on the client and on the studio, and `changes_requested` is
+ * waiting on the designer.
+ */
+export const isFinished = (status: string) => status === "approved";
 
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();

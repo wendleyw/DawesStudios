@@ -47,16 +47,63 @@ export type CanvasComment = {
   createdAt: string;
 };
 
+/** A canvas version row, from whichever of the two channel tables the canvas was read from. */
+type CanvasVersionRow = TableRow<"design_versions"> | TableRow<"published_versions">;
+/** The three columns of a publication review the canvas reads. */
+type CanvasReviewRow = Pick<
+  TableRow<"publication_reviews">,
+  "publication_id" | "status" | "feedback"
+>;
+
+/**
+ * The canvas' versions, each carrying its client review when — and only when — one can be matched.
+ *
+ * `publication_reviews.publication_id` references `published_versions.id`, so on the **client**
+ * channel the review is matched by `publication_id === version.id`: the canvas' versions *are*
+ * those publication rows, and the two ids are the same id.
+ *
+ * On the **internal** channel the versions are `design_versions` rows, a different entity in a
+ * different id space, and comparing the two could never be true. The only record joining an
+ * internal version to its publication is `private.publication_sources(publication_id,
+ * internal_version_id)`, which lives in the `private` schema — `supabase/config.toml` exposes
+ * `public` alone, so no API caller can read it — and `publication_reviews` itself is readable only
+ * by the agency and the client (`reviews_read` → `private.can_client_channel`). An internal version
+ * therefore has no review this query can reach, and the channel, not an id comparison, decides
+ * whether a review applies at all.
+ */
+export function toCanvasVersions(
+  versions: CanvasVersionRow[],
+  reviews: CanvasReviewRow[],
+  clientChannel: boolean,
+): CanvasVersion[] {
+  return versions.map((version) => {
+    const review = clientChannel
+      ? reviews.find((entry) => entry.publication_id === version.id)
+      : undefined;
+    return {
+      id: version.id,
+      projectId: version.project_id,
+      deliverableId: version.deliverable_id,
+      number: version.version_number,
+      note: versionNote(version),
+      status: versionStatus(version, review?.status),
+      date: versionDate(version),
+      feedback: review?.feedback,
+    };
+  });
+}
+
 export function useProjectDetail(projectId: string, channel: ProjectChannel) {
   const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["project-detail", session?.user.id, projectId, channel],
     enabled: !!session,
     queryFn: async () => {
+      const clientChannel = channel === "client" || profile?.role === "client";
       const [project, deliverables, versionResult, designResult, reviewResult] = await Promise.all([
         database.from("projects").select("*").eq("id", projectId).single(),
         database.from("deliverables").select("*").eq("project_id", projectId).order("sort_order"),
-        channel === "client" || profile?.role === "client"
+        clientChannel
           ? database
               .from("published_versions")
               .select("*")
@@ -67,7 +114,7 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel) {
               .select("*")
               .eq("project_id", projectId)
               .order("version_number"),
-        channel === "client" || profile?.role === "client"
+        clientChannel
           ? database
               .from("published_designs")
               .select("*")
@@ -78,20 +125,7 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel) {
       ]);
       if (versionResult.error) throw new Error(versionResult.error.message);
       if (designResult.error) throw new Error(designResult.error.message);
-      const versions: CanvasVersion[] = versionResult.data.map((version) => ({
-        id: version.id,
-        projectId: version.project_id,
-        deliverableId: version.deliverable_id,
-        number: version.version_number,
-        note: versionNote(version),
-        status: versionStatus(
-          version,
-          reviewResult.data?.find((review) => review.publication_id === version.id)?.status,
-        ),
-        date: versionDate(version),
-        feedback: reviewResult.data?.find((review) => review.publication_id === version.id)
-          ?.feedback,
-      }));
+      const versions = toCanvasVersions(versionResult.data, reviewResult.data ?? [], clientChannel);
       const designs: CanvasDesign[] = designResult.data.map((design) => ({
         id: design.id,
         versionId: "version_id" in design ? design.version_id : design.publication_id,

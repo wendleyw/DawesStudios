@@ -14,7 +14,7 @@ changed while producing it.
 | Driver | A throwaway Playwright probe, `apps/web/tests/e2e/evidence-probe-family-f.spec.ts`, four tests, deleted after the run. Every measurement below is a line it printed with the `FF|` prefix. |
 | Accounts | `studio@dawes.local` (agency), `designer@dawes.local` / `designer2@dawes.local` (designer), `sabre@client.dawes.local` (client), `acme@client.dawes.local` (a second tenant's client), from `tests/e2e/test-support.ts` |
 | Fixtures | `createProductionFixture` / `cleanupTestProject` (`tests/e2e/project-fixture.ts`), plus a two-deliverable variant built in the probe from the same RPC chain and cleaned by the same helper |
-| Result | **16 of 17 Verified. F15 fails — see [Defect F-1](#defect-f-1-a-designer-never-learns-the-client-requested-changes).** |
+| Result | **16 of 17 Verified. F15 failed — see [Defect F-1](#defect-f-1-a-designer-never-learns-the-client-requested-changes), fixed the same day; the measurements below are the pre-fix state, and [Defect F-1: resolution](#defect-f-1-resolution) records the repair and the three-role re-check.** |
 | Artefacts | [`screenshots/family-f-project-canvas.png`](screenshots/family-f-project-canvas.png), [`screenshots/family-f-pin-alignment.png`](screenshots/family-f-pin-alignment.png) |
 
 ## Dataset integrity
@@ -502,8 +502,9 @@ The **designer's** list is not. At the third row the client has just rejected V1
 the person who has to act on it — sees an empty `In progress` bucket and the rejected version filed
 under **Approved**. See [Defect F-1](#defect-f-1-a-designer-never-learns-the-client-requested-changes).
 
-**Verdict: Unverified.** The row asserts the correct records *for the role*, and one of the three
-roles is shown the opposite of what happened.
+**Verdict at the time of measurement: Unverified.** The row asserts the correct records *for the
+role*, and one of the three roles was shown the opposite of what happened. **Now Verified** — see
+[Defect F-1: resolution](#defect-f-1-resolution), whose three-role journey re-reads every bucket.
 
 ## F16 — Delivery of approved work, and what cannot corrupt it
 
@@ -573,7 +574,10 @@ by `projects_read` before any channel question arises.
 
 ## Defect F-1: a designer never learns the client requested changes
 
-**Severity: High.** It breaks the revision loop for the role that has to perform the revision.
+**Severity: High. Fixed 2026-09-21 — see [the resolution](#defect-f-1-resolution).** This section
+records the defect as it was measured; it is not the current behaviour.
+
+It breaks the revision loop for the role that has to perform the revision.
 
 **What happens.** When a client requests changes on a published version, the assigned designer's
 review list moves that project **out of `In progress` and into `Approved`**, labelled
@@ -656,3 +660,160 @@ update is refused by RLS row matching rather than by privilege, and PostgREST an
 error. Every negative check in this record therefore verifies the **stored value**, not the response
 code. This is correct behaviour (no information is leaked and nothing is written), but any future
 evidence pass that reads only the status code will record a false "ALLOWED".
+
+---
+
+# Defect F-1: resolution
+
+**Date:** 2026-09-21 · **Branch:** `main` · **Application under test:** a `next dev` server on
+`http://localhost:3010`, started from the working tree with the fix applied and stopped afterwards.
+The container on `http://localhost:3003` was left untouched and still predates the fix. Port 3010 was
+chosen because it is one of the origins `dawes-studios-app-media-1` already answers
+(`MEDIA_ALLOWED_ORIGINS`); a dev server on any other port cannot reach the media service, so
+publishing fails in the browser with `Failed to fetch`.
+
+**Result:** fixed. Both causes carry a unit test that fails against the previous code and passes
+against the fix, and the three-role journey that defines the defect was driven through the browser.
+`npm run check` passes at **442 tests across 32 files** (was 432 across 30).
+
+## The relationship between an internal version and a client review
+
+This was established from `supabase/migrations/**` and `supabase/config.toml`, not assumed.
+
+| Record | Established from |
+|---|---|
+| `publication_reviews.publication_id` → `published_versions.id`, unique | `202609200001_foundation.sql:108-113` |
+| `published_versions` carries **no** internal id — the comment above it states the intent: "Client publications intentionally contain no internal version/design IDs or authorship fields" | `202609200001_foundation.sql:88-95` |
+| The one record joining the two channels is `private.publication_sources(publication_id, internal_version_id)` | `202609200001_foundation.sql:96-100`, written by `publish_version` (`202609200018_review_serialization.sql:46`) |
+| PostgREST exposes `public` alone (`schemas = ["public"]`), so nothing can read `private.publication_sources` | `supabase/config.toml:13` |
+| `publication_reviews` is readable only by the agency and the client (`reviews_read` → `private.can_client_channel`, which is `is_agency() or is_client_member(...)`) | `202609200001_foundation.sql:224-226, 268` |
+
+**The join therefore exists, and the API cannot reach it.** `published_versions.version_number` is
+sequenced independently of the internal one — `publish_version` computes
+`max(published_versions.version_number for the deliverable) + 1` — so the two numbers diverge as soon
+as one internal version is not published, and `(deliverable_id, version_number)` is **not** a sound
+substitute. No join was invented.
+
+The consequence is recorded rather than worked around: **the client's feedback *text* is not
+readable by a designer at all**, and making it so would mean exposing `private.publication_sources`
+or relaxing `reviews_read` — a schema and role-boundary decision above this task, so no migration was
+written. What a designer *can* read is `projects.status`, which `review_publication` updates in the
+same transaction as the review (`202609200018_review_serialization.sql`), and which `projects_read` →
+`private.can_access_project` opens to an assigned designer. That is the route the fix uses, and it
+matches the product's own intent: F14 records the agency relaying the request in the internal
+conversation.
+
+## Cause 1 — a comparison that can never be true
+
+`features/projects/project-data.ts`. The version mapping moved into an exported pure function,
+`toCanvasVersions(versions, reviews, clientChannel)`, and the review is now matched **only on the
+client channel**, where the canvas' versions *are* `published_versions` rows and `version.id` *is*
+the `publication_id`. On the internal channel the versions are `design_versions` rows in a different
+id space, there is no reachable review, and no lookup is attempted. The channel decides, not an id
+comparison. The header of the new function records the whole chain above so the next reader does not
+have to re-derive it.
+
+This is behaviour-preserving for every real input — the `find` never matched — which is exactly why
+it survived. The regression test therefore forges the collision the old expression silently relied
+on: a `publication_reviews` row whose `publication_id` is an internal `design_versions` id. Against
+the previous code the internal version picked up the client's feedback; against the fix it picks up
+nothing.
+
+## Cause 2 — a status that means "reviewed", read as "approved"
+
+`features/reviews/reviews-page.tsx`. `versionStatusLabels` names six statuses, and each was read
+against the question the bucket actually asks — *is anything still waiting on anyone?*
+
+| Status | Label | Waiting on | Finished |
+|---|---|---|---|
+| `draft` | In progress | the designer | no |
+| `submitted` | Studio review | the agency | no |
+| `reviewed` | Shared with client | the client | no |
+| `pending` | In review | the client | no |
+| `changes_requested` | Changes requested | the designer | no |
+| `approved` | Approved | nobody | **yes** |
+
+`isFinished` is now `status === "approved"`. `reviewed` is `design_versions.status` recording that a
+version was *published*, not that it was accepted, and a rejected version keeps it — which is how
+rejected work was filed under Approved. The test asserts the table above over
+`Object.keys(versionStatusLabels)` rather than a hand-written list, so a status added to the enum
+cannot quietly default into a bucket.
+
+**A second, dependent correction.** Fixing `isFinished` alone would have left a designer's version
+stuck in `In progress` for ever, because `design_versions.status` never leaves `reviewed`. The new
+`publishedVersionStatus` in `features/reviews/review-data.ts` reads a published version's outcome
+from the project it belongs to — `changes_requested` → `changes_requested`, `approved`/`delivered` →
+`approved`, anything else → still `reviewed` ("Shared with client") while the client is deciding. It
+only ever rewrites `reviewed`, so the agency's and the client's rows, which take their status from
+`publication_reviews`, are untouched.
+
+## Why the duplication pass is the reason this was found
+
+`isFinished` was created the day before by a duplication pass that extracted `["approved",
+"reviewed"]` — written three times — into one helper. That extraction was behaviour-preserving and
+correct, and it **faithfully preserved the bug**. Collapsing three copies into one is what gave the
+rule a name, a docstring and a single place to be read, and that is what made a wrong rule visible.
+The argument for consolidation here is not tidiness: three copies of a rule are three places where
+nobody has to state what the rule means.
+
+## Three-role browser evidence
+
+One throwaway Playwright probe, `tests/e2e/evidence-probe-f1.spec.ts`, deleted after the run; three
+independent browser contexts, one per role, live for the whole journey. Every line below was printed
+by it with an `F1|` prefix. Fixture `Acceptance production …` from `createProductionFixture`, the
+designer `designer@dawes.local` (Alex Morgan) assigned by `assign_designer`; removed by
+`cleanupTestProject`.
+
+The designer's list, `/clients/<clientId>/reviews`, at each point of the journey. The parenthesised
+number is how many cards the bucket held in total, so an empty result is a filtered-out card rather
+than an empty page.
+
+| Lifecycle point | `In progress` | `Approved` |
+|---|---|---|
+| Designer created V1 and added a design | the project, **"In progress"** (4) | — (0) |
+| Agency shared V1; review pending | the project, **"Shared with client"** (4) | — (0) |
+| **Client requested changes** | the project, **"Changes requested"**, `channel=internal` (4) | — (0) |
+| Designer created V2 | the project, **"In progress"** (4) | — (0) |
+| Agency shared V2; client approved | — (3) | the project, **"Approved"** (1) |
+
+The third row is the defect, and it is now the opposite of what was recorded above: the rejected
+version is in the bucket of the role that has to act on it, carrying the client's decision. The other
+two roles were read at the same instant and are unchanged — agency `In review`: the project,
+"Changes requested", `channel=client` (5 cards); client `Waiting for you`: the project, "Changes
+requested", `channel=client` (5 cards).
+
+**The decision is reachable from the project too.** With the client's rejection recorded, the
+designer opened `/projects/<id>` in its own channel and the heading badge read **"Changes
+requested"**. The version card itself still reads `Shared with client`, which is what
+`design_versions.status` says and is true: the canvas is not rewritten, because the *text* of the
+feedback remains outside a designer's reach by RLS and the agency relays it in the internal
+conversation (F14).
+
+No page error was raised in any of the three contexts.
+
+Artefact: [`screenshots/family-f-designer-review-list.png`](screenshots/family-f-designer-review-list.png)
+— the designer's `In progress` bucket with the rejected project reading `Sep 21 · Changes requested`.
+
+## Dataset integrity
+
+Counted immediately before and after the run, identical on both sides, and equal to the counts this
+record opens with:
+
+| clients | projects | campaigns | design_versions | designs | published_versions | publication_reviews | notifications | briefings |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 25 | 12 | 44 | 47 | 18 | 18 | 15 | 30 |
+
+`design_versions` 44 and `designs` 47 remain the known pre-existing drift against the 41/46 baseline,
+untouched by this work. No `Acceptance %` project remains.
+
+## Scope
+
+Changed: `features/projects/project-data.ts`, `features/reviews/reviews-page.tsx`,
+`features/reviews/review-data.ts`, plus two new test files
+(`features/projects/canvas-versions.test.ts`, `features/reviews/review-status.test.ts`). No existing
+test was modified, no migration was written, and the review feature was not restructured.
+
+**Still open, and deliberately not fixed here:** a designer cannot read `publication_reviews`, so the
+client's feedback *text* has no route to that role except the agency relaying it. Changing that means
+a migration. [Observation F-3](#observation-f-3-the-review-list-does-not-distinguish-a-delivered-project)
+also remains: a delivered project is still labelled `Approved`.

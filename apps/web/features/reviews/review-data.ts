@@ -36,6 +36,25 @@ type ReviewVersion = VersionRow & {
 };
 
 /**
+ * What a version already shared with the client means, now that the client has had its turn.
+ *
+ * `design_versions.status` stops at `reviewed` — "Shared with client" — and never records the
+ * decision that followed, which lives in `publication_reviews`. A designer cannot read that table
+ * (`reviews_read` admits the agency and the client alone) and cannot reach it from an internal
+ * version either, because the record joining the two is `private.publication_sources` in the
+ * unexposed `private` schema. The one projection of the client's decision a designer *can* read is
+ * the project's own status, which `review_publication` writes in the same transaction as the
+ * review. A published version therefore takes its outcome from the project it belongs to, and stays
+ * "Shared with client" while the client is still deciding.
+ */
+export function publishedVersionStatus(versionStatus: string, projectStatus: string): string {
+  if (versionStatus !== "reviewed") return versionStatus;
+  if (projectStatus === "changes_requested") return "changes_requested";
+  if (projectStatus === "approved" || projectStatus === "delivered") return "approved";
+  return "reviewed";
+}
+
+/**
  * All Supabase access for the reviews list: a designer's own in-progress design versions, or (for
  * an agency/client session) the published versions awaiting client review, plus — for an agency
  * session — the versions a designer has submitted to the studio for internal review.
@@ -85,18 +104,24 @@ export function useReviews(clientId: string) {
       const toReviewRow = (
         version: ReviewVersion,
         overrides: Partial<Pick<ReviewRow, "status" | "internal">> = {},
-      ): ReviewRow => ({
-        id: version.id,
-        projectId: version.project_id,
-        title: projects.find((project) => project.id === version.project_id)!.title,
-        deliverable:
-          deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable",
-        version: version.version_number,
-        status: overrides.status ?? versionStatus(version, version.publication_reviews?.status),
-        date: versionDate(version),
-        note: versionNote(version),
-        internal: overrides.internal ?? internal,
-      });
+      ): ReviewRow => {
+        const project = projects.find((item) => item.id === version.project_id)!;
+        return {
+          id: version.id,
+          projectId: version.project_id,
+          title: project.title,
+          deliverable:
+            deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable",
+          version: version.version_number,
+          status: publishedVersionStatus(
+            overrides.status ?? versionStatus(version, version.publication_reviews?.status),
+            project.status,
+          ),
+          date: versionDate(version),
+          note: versionNote(version),
+          internal: overrides.internal ?? internal,
+        };
+      };
       const rows = [...latest.values()].map((version) => toReviewRow(version));
       if (profile?.role === "agency") {
         const submitted = assertResult(
