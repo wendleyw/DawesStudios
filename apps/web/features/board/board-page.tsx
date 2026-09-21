@@ -217,6 +217,8 @@ export function BoardPage({ clientId }: { clientId: string }) {
     canCreate,
     canMove,
     filtered,
+    selectedCampaignId: campaign || undefined,
+    hasSearch: Boolean(search),
     positions,
     campaignName,
     clearFilters,
@@ -404,7 +406,9 @@ export function BoardPage({ clientId }: { clientId: string }) {
               <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
               <p>
                 {filtered
-                  ? "Try a different search or clear your filters."
+                  ? search
+                    ? "Try a different search or clear your filters."
+                    : "Try a different filter or clear your filters."
                   : "Start with a briefing. We’ll take it from there."}
               </p>
               {filtered && (

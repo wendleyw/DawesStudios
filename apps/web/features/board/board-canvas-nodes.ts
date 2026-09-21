@@ -64,6 +64,10 @@ export function useBoardCanvasNodes(input: {
   canCreate: boolean;
   canMove: boolean;
   filtered: boolean;
+  /** The campaign chosen from the filter, so its own frame survives even while it is empty. */
+  selectedCampaignId?: string;
+  /** Whether a search term is what is filtering, as opposed to only a campaign or status. */
+  hasSearch: boolean;
   positions: Record<string, { x: number; y: number }>;
   campaignName: (id: string | null) => string;
   clearFilters: () => void;
@@ -91,6 +95,8 @@ export function useBoardCanvasNodes(input: {
     canCreate,
     canMove,
     filtered,
+    selectedCampaignId,
+    hasSearch,
     positions,
     campaignName,
     clearFilters,
@@ -117,6 +123,7 @@ export function useBoardCanvasNodes(input: {
       canCreate,
       keepEmptyCampaigns: canCreate,
       filtered,
+      selectedCampaignId,
       overrides: positions,
     });
     const built: Node[] = [];
@@ -160,7 +167,7 @@ export function useBoardCanvasNodes(input: {
           id: frame.id,
           type: "notice",
           ariaLabel: "No matching projects",
-          data: { filtered, onClear: clearFilters },
+          data: { filtered, hasSearch, onClear: clearFilters },
         });
       else if (frame.kind === "addCampaign")
         built.push({
@@ -243,6 +250,8 @@ export function useBoardCanvasNodes(input: {
     canCreate,
     canMove,
     filtered,
+    selectedCampaignId,
+    hasSearch,
     positions,
     campaignName,
     clearFilters,

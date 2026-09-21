@@ -235,6 +235,32 @@ describe("stack assembly", () => {
     expect(frames.map((frame) => frame.id)).toContain("campaign:c2");
   });
 
+  it("keeps the just-selected campaign visible even though selecting it is what filtered the board", () => {
+    // Reproduces defect D-1: `CampaignDialog`'s `onCreated` sets the campaign filter to the
+    // campaign just made, which is what turns `filtered` on. Its own frame must survive that.
+    const frames = buildStack({
+      ...base,
+      projects: [project("p1", "c1")],
+      campaigns: [campaign("c1", "First", "2026-09-01"), campaign("c2", "Second", "2026-10-01")],
+      filtered: true,
+      selectedCampaignId: "c2",
+    });
+    expect(frames.map((frame) => frame.id)).toContain("campaign:c2");
+  });
+
+  it("still collapses an unselected empty campaign when a search matches nothing", () => {
+    // The selected-campaign escape hatch must not blunt the existing search/status behaviour: a
+    // search that narrows the board to nothing still hides every empty frame it does not name.
+    const frames = buildStack({
+      ...base,
+      projects: [],
+      campaigns: [campaign("c1", "First", "2026-09-01"), campaign("c2", "Second", "2026-10-01")],
+      filtered: true,
+      selectedCampaignId: "c2",
+    });
+    expect(frames.map((frame) => frame.id)).toEqual(["planning", "campaign:c2"]);
+  });
+
   it("gives a designer no briefing slot, no add-campaign frame and no empty campaigns", () => {
     const frames = buildStack({
       ...base,

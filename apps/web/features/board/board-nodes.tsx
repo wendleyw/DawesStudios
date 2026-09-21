@@ -49,7 +49,10 @@ export type PlanningNode = Node<
   },
   "planning"
 >;
-export type NoticeNode = Node<{ filtered: boolean; onClear: () => void }, "notice">;
+export type NoticeNode = Node<
+  { filtered: boolean; hasSearch: boolean; onClear: () => void },
+  "notice"
+>;
 export type CampaignNode = Node<{ campaign: BoardCampaign; count: number }, "campaign">;
 export type ProjectCardNode = Node<
   {
@@ -139,7 +142,9 @@ const NoticeFrame = memo(function NoticeFrame({ data }: NodeProps<NoticeNode>) {
       <h2>{data.filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
       <p>
         {data.filtered
-          ? "Try a different search or clear your filters."
+          ? data.hasSearch
+            ? "Try a different search or clear your filters."
+            : "Try a different filter or clear your filters."
           : "Start with a briefing. We’ll take it from there."}
       </p>
       {data.filtered && (

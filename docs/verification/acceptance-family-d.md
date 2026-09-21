@@ -13,7 +13,7 @@ changed while producing it.
 | Driver | A throwaway Playwright probe, `apps/web/tests/e2e/evidence-probe-family-d.spec.ts`, deleted after the run. Every measurement below is a line it printed. |
 | Accounts | `studio@dawes.local` (agency), `designer@dawes.local` and `designer2@dawes.local` (designer), `sabre@client.dawes.local` (client), from `tests/e2e/test-support.ts` |
 | Fixtures | `createProductionFixture` / `cleanupTestProject` (`tests/e2e/project-fixture.ts`) for every mutation |
-| Result | **9 of 10 Verified. D08 stays Unverified** — see [Defect D-1](#defect-d-1). |
+| Result | **10 of 10 Verified.** D08 was initially Unverified — see [Defect D-1](#defect-d-1), fixed and re-verified in the same pass. |
 
 Reference identifiers used throughout: SABRE `e4401a17-cbe2-1d70-400d-d40f9e6b8632` (7 projects),
 Acme `f69a2150-613b-3883-906c-738e84007117` (2 projects).
@@ -267,8 +267,10 @@ be reopened between a select and a search edit.
 **What failed.** The row also asserts the creator *"sees an empty campaign"*. They do not — see
 [Defect D-1](#defect-d-1) below.
 
-**Verdict: Unverified.** Validation, persistence and cross-client rejection are all proven; the
-"sees an empty campaign" clause is contradicted by the measurement and must not be marked off.
+**Verdict at the time of this measurement: Unverified.** Validation, persistence and cross-client
+rejection are all proven; the "sees an empty campaign" clause is contradicted by the measurement and
+must not be marked off. Defect D-1 was subsequently fixed and re-verified in browser — see the
+[Fix](#fix) subsection under Defect D-1. **Current verdict: Verified.**
 
 ## D09 — Campaign context is confirmed, never inherited
 
@@ -382,6 +384,72 @@ searched and no project *should* match a brand-new campaign, so "No projects mat
 search" describes a failure the viewer did not cause.
 
 No fix was applied. This belongs to whoever owns `features/board`.
+
+### Fix
+
+**Shape chosen.** `StackInput` (`apps/web/features/board/board-layout.ts`) gains one new, optional
+field: `selectedCampaignId?: string`. `buildStack`'s campaign filter becomes
+
+```ts
+const ordered = orderCampaigns(input.campaigns).filter(
+  (campaign) =>
+    (grouped.get(campaign.id)?.length ?? 0) > 0 ||
+    (!input.filtered && input.keepEmptyCampaigns) ||
+    campaign.id === input.selectedCampaignId,
+);
+```
+
+`useBoardCanvasNodes` (`board-canvas-nodes.ts`) takes the same field and passes it straight through;
+`BoardPage` (`board-page.tsx`) supplies it as `campaign || undefined` — the board's own campaign-filter
+state, the same value `CampaignDialog`'s `onCreated={setCampaign}` already writes.
+
+**Why a campaign id rather than a narrower boolean.** The task description offered a choice between
+threading the id or a narrower flag. A boolean such as `justCreated` would only cover the creation
+path this defect was found on; it would still hide the frame if the viewer manually picked an
+existing empty campaign from the filter dropdown, which is the same bug by a different door. The
+board already carries exactly one piece of state that names "the campaign the viewer is looking at"
+— the filter's own value — so passing that id through is not new state, only a new use of state that
+already existed. It also composes correctly with the constraint that must not regress: a search or
+status filter narrows `filteredProjects` before `buildStack` ever sees them, so an empty campaign that
+was **not** named by the selection still fails every clause in the `ordered` filter and still
+collapses. The id only ever rescues the one frame the viewer explicitly named.
+
+**Copy fix.** `board-nodes.tsx`'s `NoticeFrame` and `board-page.tsx`'s list-mode empty state both
+gained a second input — `hasSearch` (canvas) / the existing `search` string (list) — and now read:
+
+```
+filtered
+  ? hasSearch
+    ? "Try a different search or clear your filters."
+    : "Try a different filter or clear your filters."
+  : "Start with a briefing. We’ll take it from there."
+```
+
+One word changes (`search` → `filter`) when the active filter is a campaign or a status rather than
+typed text; the heading, the button and the unfiltered copy are untouched. No new strings were added.
+With the `selectedCampaignId` fix in place this particular notice no longer fires for a freshly
+created campaign at all — the campaign's own (now-empty) frame renders instead — but the corrected
+copy still matters for a status filter that matches nothing, which never went through search either.
+
+**Test added.** `board-layout.test.ts`, immediately after the existing "keeps a freshly created empty
+campaign visible while unfiltered" case: `"keeps the just-selected campaign visible even though
+selecting it is what filtered the board"` (`filtered: true, selectedCampaignId: "c2"`, campaign `c2`
+holds no projects, its frame is still present) and `"still collapses an unselected empty campaign
+when a search matches nothing"` (`filtered: true, selectedCampaignId: "c2"`, `projects: []` — campaign
+`c1`, which was not selected, is dropped; only `planning` and `campaign:c2` remain). Both are new
+cases; no existing test in the file was touched.
+
+**Browser verification.** `next dev --port 3011` was started against the same local Supabase stack
+the container at `:3003` uses (`apps/web/.env.local`, unchanged). Signed in as `studio@dawes.local`,
+opened SABRE's board (`7 projects`, 3 campaign frames — the pre-fix baseline), pressed `Add a
+campaign`, and created "D-1 fix verification campaign" (`2026-11-30` → `2026-12-15`). The dialog
+closed and the board rendered — without a reload — the new campaign's own frame: heading "D-1 fix
+verification campaign", count `0`, dates `Nov 30 – Dec 15`, and its `New briefing` slot; the header
+read `0 projects`; there was no `No projects match` notice anywhere on the canvas. Screenshot:
+[`screenshots/acceptance-d08-fix-empty-campaign-visible.png`](screenshots/acceptance-d08-fix-empty-campaign-visible.png).
+The campaign (`f8091f59-5097-4ffd-b6ea-d3d9db6476a7`) was deleted directly from `public.campaigns`
+immediately afterwards. `npm run check` was green at 432 tests across 30 files (430 before this pass,
+plus the two new cases above). The dev server was stopped and port 3011 confirmed free.
 
 ## Observation O-1 — pre-existing drift in `designs` and `design_versions`
 

@@ -198,6 +198,13 @@ export type StackInput = {
   /** Designers see only campaigns they hold work in, so empty frames are dropped for them. */
   keepEmptyCampaigns: boolean;
   filtered: boolean;
+  /**
+   * The campaign the viewer picked from the filter, if any. Selecting a campaign is what makes
+   * `filtered` true, so without this its own frame would be the one thing the filter is guaranteed
+   * to hide — the viewer asked to see it and it disappeared. A search or status filter that
+   * narrows to nothing is unaffected: they name no campaign, so this never rescues their frames.
+   */
+  selectedCampaignId?: string;
   /** Unsaved drag positions, which must size the frame exactly like persisted ones. */
   overrides?: Record<string, { x: number; y: number }>;
 };
@@ -225,7 +232,9 @@ export function buildStack(input: StackInput): StackFrame[] {
   }
   const ordered = orderCampaigns(input.campaigns).filter(
     (campaign) =>
-      (grouped.get(campaign.id)?.length ?? 0) > 0 || (!input.filtered && input.keepEmptyCampaigns),
+      (grouped.get(campaign.id)?.length ?? 0) > 0 ||
+      (!input.filtered && input.keepEmptyCampaigns) ||
+      campaign.id === input.selectedCampaignId,
   );
   const ungrouped = grouped.get("none") ?? [];
 
