@@ -239,7 +239,7 @@ system do I use here", established by the [repository structural refactor](../su
   `:root` token, not a hardcoded value, whenever a color, radius or the shared shell geometry is
   needed. Beyond that bridge, the application is hand-authored CSS, not a Tailwind component
   system — there is no utility-first componentry to adopt here.
-- **`apps/web/app/globals.css`** (1,105 lines after the Task 5 split, down from 2,221) holds the
+- **`apps/web/app/globals.css`** (1,132 lines: 1,105 after the Task 5 split, down from 2,221, plus later shared-token work) holds the
   `:root` tokens and `@theme` block above, the reset and base element styles (`*`, `html`, `body`,
   headings, links, focus states), and the styles of the shared primitives in
   `apps/web/features/shared/` — `Modal`, `FormError`, `PageStatus`, `SearchField` — plus the older
@@ -337,7 +337,7 @@ fair question: without `@layer` or a pinned import order in `app/layout.tsx`, wh
 added to one feature's stylesheet from silently winning or losing against another feature's rule
 of the same name? The answer is that the boundary rule above — a namespace with consumers in two
 or more features stays in `globals.css` — makes the feature stylesheets' selectors disjoint by
-construction: at the time this was checked, the 13 feature stylesheets declared 736 distinct
+construction: at the time this was checked, the 13 feature stylesheets declared 730 distinct
 selectors between them and shared none. With disjoint selectors, the relative load order of
 feature stylesheets cannot matter, because nothing in them can conflict; pinning an import order
 would only order a conflict that does not exist. The two deliberate exceptions are `board.css`'s

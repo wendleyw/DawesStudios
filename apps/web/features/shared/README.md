@@ -64,12 +64,13 @@ paragraph used by forms, dialogs and data-loading failures. It pairs the
 | ---------- | ----------- | ------- |
 | `children` | `ReactNode` | —       |
 
-Consumers (46 call sites in 27 files): `assets/assets-page`,
+Consumers (44 call sites in 27 files): `assets/assets-page`,
 `assets/upload-file-dialog`, `auth/login-page`, `board/board-page`,
-`brand/brand-assets`, `brand/brand-templates`, `brand/draft-editor`,
+`brand/brand-asset-upload`, `brand/brand-assets`, `brand/brand-templates`,
+`brand/draft-editor`,
 `brand/section-editor`, `briefings/briefing-attachments`,
-`briefings/briefing-detail`, `briefings/briefing-editor`,
-`briefings/briefings-page`, `campaigns/campaign-dialog`,
+`briefings/briefing-detail`, `briefings/briefing-editor-form`,
+`campaigns/campaign-dialog`,
 `credits/credit-actions`, `credits/credits-page`, `projects/comment-panel`,
 `projects/project-action-dialog`, `projects/project-details`,
 `settings/account-recovery`, `settings/account-settings`,

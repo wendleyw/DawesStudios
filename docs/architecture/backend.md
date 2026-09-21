@@ -96,7 +96,7 @@ Existing draft edits require the revision loaded with the text. A mismatch retur
 
 ## Realtime
 
-The `supabase_realtime` publication includes `projects`, `internal_comments`, `client_comments`, `notifications`, `publication_reviews` and `published_versions`, with **insert/update only**. Subscribers use their own authenticated session; SELECT RLS is evaluated for those events. Deleted-row events are disabled because they do not provide the same RLS filtering. Client comments never share a stream/table with internal comments. Project/recipient filters improve efficiency but are not the authorization boundary. Four simultaneous real subscriptions verify channel isolation, zero cross-client events and absence of deleted private row identifiers.
+The `supabase_realtime` publication includes `projects`, `internal_comments`, `client_comments`, `notifications`, `publication_reviews`, `published_versions`, `design_versions` and `designs`, with **insert/update only**. Subscribers use their own authenticated session; SELECT RLS is evaluated for those events. Deleted-row events are disabled because they do not provide the same RLS filtering. Client comments never share a stream/table with internal comments. Project/recipient filters improve efficiency but are not the authorization boundary. Four simultaneous real subscriptions verify channel isolation, zero cross-client events and absence of deleted private row identifiers.
 
 ## Verification evidence
 
@@ -117,7 +117,7 @@ PDF delivery is flattened to newly rendered page images and rebuilt as a new PDF
 ## Additional verification commands
 
 - `python3 supabase/tests/http_auth_storage_test.py`: nine real Auth/PostgREST/Storage integration tests.
-- `npm --prefix apps/media test`: seven raster/PDF regeneration tests.
+- `npm --prefix apps/media test`: 14 raster/PDF regeneration tests across two files.
 - `npm --prefix apps/media run test:integration`: 15 real worker pipeline checks, with temporary-object cleanup.
 - `npm --prefix apps/media audit --omit=dev`: production dependency advisory check.
 - `node supabase/tests/realtime_boundary_test.mjs`: real four-role subscription and deleted-event boundary check.

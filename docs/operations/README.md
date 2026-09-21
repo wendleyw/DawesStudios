@@ -29,7 +29,7 @@ Auth redirect URLs include the configured app origin, `/auth/recovery` and `/aut
 
 ## Canonical fixture reset and acceptance
 
-Stop all browser mutation suites before resetting. This command deletes only the local `dawes-studios` database and Storage volumes, recreates them and loads the deterministic fixture dataset. The 22 private production images and their 15 published copies are rendered at the true pixel size of the format each deliverable was ordered in — print formats at 150 DPI, and deliverables whose format carries no dimensions at 1080x1080 — so the fixtures show work at the shape it would really be delivered in:
+Stop all browser mutation suites before resetting. This command deletes only the local `dawes-studios` database and Storage volumes, recreates them and loads the deterministic fixture dataset. The 27 private production images and their 18 published copies are rendered at the true pixel size of the format each deliverable was ordered in — print formats at 150 DPI, and deliverables whose format carries no dimensions at 1080x1080 — so the fixtures show work at the shape it would really be delivered in:
 
 ```sh
 python3 supabase/scripts/local_stack.py reset --confirm-local-data-loss
