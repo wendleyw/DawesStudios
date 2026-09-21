@@ -1,9 +1,10 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
+import { createCampaign, useInvalidateCampaigns } from "./campaign-data";
 
 export function CampaignDialog({
   clientId,
@@ -15,7 +16,7 @@ export function CampaignDialog({
   onCreated: (id: string) => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateCampaigns = useInvalidateCampaigns();
   const create = useMutation({
     mutationFn: async (form: FormData) => {
       const start = String(form.get("start")) || null;
@@ -24,22 +25,16 @@ export function CampaignDialog({
       if (!title) throw new Error("Add a campaign name.");
       if (start && end && end < start)
         throw new Error("The end date must be on or after the start date.");
-      return assertResult<{ id: string }>(
-        await database
-          .from("campaigns")
-          .insert({
-            client_id: clientId,
-            title,
-            description: String(form.get("description") ?? "").trim(),
-            start_date: start,
-            end_date: end,
-          })
-          .select("id")
-          .single(),
-      );
+      return createCampaign(database, {
+        clientId,
+        title,
+        description: String(form.get("description") ?? "").trim(),
+        startDate: start,
+        endDate: end,
+      });
     },
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      await invalidateCampaigns();
       onCreated(result.id);
       onClose();
     },
@@ -78,11 +73,7 @@ export function CampaignDialog({
             <input name="end" type="date" />
           </label>
         </div>
-        {create.error && (
-          <p className="form-error" role="alert">
-            {create.error.message}
-          </p>
-        )}
+        {create.error && <FormError>{create.error.message}</FormError>}
         <div className="form-actions">
           <button className="button" type="button" disabled={create.isPending} onClick={onClose}>
             Cancel

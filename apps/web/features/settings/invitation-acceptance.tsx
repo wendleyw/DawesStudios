@@ -6,9 +6,10 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
+import { acceptInvitation } from "./settings-data";
 import "./settings.css";
+import { FormError } from "@/features/shared/form-error";
 
 export function InvitationAcceptance() {
   const { database, session, loading } = useAuth();
@@ -35,7 +36,7 @@ export function InvitationAcceptance() {
       if (error) throw new Error(error);
       const result = await database.auth.updateUser({ password });
       if (result.error) throw result.error;
-      assertResult(await database.rpc("accept_invitation", { p_token: token }));
+      await acceptInvitation(database, { token });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries();
@@ -101,11 +102,7 @@ export function InvitationAcceptance() {
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </label>
-              {signIn.error && (
-                <p className="form-error" role="alert">
-                  {signIn.error.message}
-                </p>
-              )}
+              {signIn.error && <FormError>{signIn.error.message}</FormError>}
               <button className="button primary" disabled={signIn.isPending}>
                 {signIn.isPending ? "Signing in…" : "Sign in to accept"}
               </button>
@@ -145,11 +142,7 @@ export function InvitationAcceptance() {
                   onChange={(event) => setConfirmation(event.target.value)}
                 />
               </label>
-              {accept.error && (
-                <p className="form-error" role="alert">
-                  {accept.error.message}
-                </p>
-              )}
+              {accept.error && <FormError>{accept.error.message}</FormError>}
               <button className="button primary" disabled={accept.isPending}>
                 {accept.isPending ? "Joining…" : "Accept invitation"}
               </button>

@@ -18,7 +18,9 @@ Numeric values below have one of three meanings:
 
 Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`.
 
-The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, status chrome, charts, and canvas controls remain monochrome. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
+The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
+
+**Decision**: status chrome differentiates by shape and tone, not hue, wherever a badge has room to do so. `.status-badge` therefore carries a dashed border for changes requested, a hollow dot for internal review, a square dot for delivered, and tonal greys elsewhere. The board calendar is the documented exception: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
 
 ## Shared tokens
 
@@ -62,8 +64,8 @@ The following measurements explain the source hierarchy. They are not pixel-leve
 | Navigation row | 36 px high; 12 px outer inset | Measured home selection is x=12 to x=236 |
 | Nested client navigation | Indented under active client; thin vertical guide | Shared board captures; use a single expanded client context |
 | Topbar | 56 px high | Measured boundary y=56 |
-| Board/project action bar | Approximately 56 px high | Measured breadcrumb/action row below topbar; the board now folds this row into the topbar |
-| Board filter strip | Approximately 58 px high | Measured board canvas starts at y=170; the board now opens these filters from the topbar |
+| Board/project action bar | Approximately 56 px high | Measured breadcrumb/action row below topbar; the board now folds this row into its identity header |
+| Board filter strip | Approximately 58 px high | Measured board canvas starts at y=170; the board now opens these filters from a popover in that header |
 | Canvas bottom toolbar | 42 px high | Measured y=958–1000; never cover actionable content |
 | Home and credits content | Approximately 1052 px maximum width, centered in main region | Measured x=398–1450 on home/credits |
 | Home top content inset | 40 px below topbar | Inferred page eyebrow y≈100 |
@@ -77,25 +79,47 @@ The following measurements explain the source hierarchy. They are not pixel-leve
 
 Agency Home summarizes only authorized studio data and provides one attention queue. Client Home opens that client's board. Designer My work lists assigned production work. Counts must derive from the same scoped data used by the corresponding list; the screenshot's fixture counts are not production values. Navigation must not imply access to unassigned client work.
 
-Keep one primary page title, one active context marker, and one action cluster per screen. Show the current task's primary action directly; place secondary actions in a labeled menu or contextual inspector. Account, search, and notifications are global controls without repeated sidebar/topbar copies. Use one client switcher or a compact expandable client list, not ten permanently expanded navigation trees. The active client belongs in navigation and in the topbar; avoid repeating it as a large decorative heading on every nested panel. Place settings and client creation in the agency workspace controls for members with the required permission.
+Controls people look for by name carry that name. Signing out was an unlabelled icon wedged beside the account block and could not be found at all; it is a full row in the sidebar footer now, and its accessible name comes from the visible text rather than an attribute. A page that already exists but sits three clicks inside another one is, in practice, missing: Team is reached from the sidebar as well as from Studio settings, one destination with two ways in.
+
+Keep one primary page title, one active context marker, and one action cluster per screen. Show the current task's primary action directly; place secondary actions in a labeled menu or contextual inspector. Account, search, and notifications are global controls without repeated sidebar/topbar copies. Use one client switcher or a compact expandable client list, not ten permanently expanded navigation trees. The active client is named once per screen: the board titles itself with the client's identity header, and every other page inside the workspace titles the work itself rather than repeating the client name as a decorative heading. Place settings and client creation in the agency workspace controls for members with the required permission.
 
 ### Workspace topbar
 
-The topbar carries the active context on the left, the current page's controls on the right, and the global actions last. Inside a client workspace the context is that client's approved brand mark with its name, falling back to an initials mark when the workspace has no logo asset; outside one it is the studio name. The client name is not repeated as a page heading below it, so pages inside a client workspace title the work itself.
+The topbar is global chrome, not a page toolbar. It names the studio on the left and carries the notifications control on the right, and nothing else: a page that needs controls renders them in its own header, where they sit beside the title they act on.
 
-Pages contribute their controls through the topbar tool slot in [`topbar-tools.tsx`](../../apps/web/features/workspace/topbar-tools.tsx), which portals them into the topbar while the page keeps their state. The board uses it for search, the filter menu, the result count, the view selector, and the primary action, so no separate header or toolbar row sits above the canvas. Disclosure panels belong to their trigger: the board filter menu opens as a popover under its button and closes on Escape or an outside click.
+Where a page brings a header of its own, the bar would be an empty strip, so it stands down — `.workspace:has(.board-page)` hides it and zeroes `--topbar-height`, and that page carries the notifications control itself. Below 901 px the bar stays whatever the page is, because it holds the only way to open the navigation drawer; the board's own copy of the control hides at that width rather than showing a second one.
 
-Below 1100 px the tools take their own row and `--topbar-height` grows to match, so `--workspace-chrome` keeps the canvas height derived from the measured chrome rather than a fixed number. Below 640 px the tool labels collapse to icons that keep their accessible names.
+Disclosure panels belong to their trigger: the board filter menu opens as a popover under its button and closes on Escape or an outside click.
+
+### Brand Hub sections
+
+The ten sections are a row of links under the title, in the order of their groups, with the current one carrying `aria-current="page"`. Where you are and what else there is are the same glance; a select hid the second half of that. They are links rather than buttons because they are routes — a section opens in a new tab and has its own address, which the select it replaced could never offer, and browser tests drive them the way a viewer does instead of calling `selectOption`. The row scrolls sideways rather than wrapping, so the group order survives every width: at 390 px it holds one row of 882 px inside 350 px and the page itself does not overflow.
+
+### Board identity header
+
+The board opens on whose work it is. Above the canvas — and above the list view — an identity header carries the client's brand mark at 58 px beside their name as the page's `h1`, with a quiet `PROJECT BOARD` caption below it, and the board's own controls on the same row: search, the filter menu, the result count, the view selector, the primary action, and last the notifications control the topbar would otherwise have held. It renders [`client-mark.tsx`](../../apps/web/features/workspace/client-mark.tsx)'s `ClientMark`, which takes its size from the `--client-mark-size` custom property, so any other surface showing the mark scales one component rather than keeping a copy.
+
+The header is page chrome, not a canvas node: it stays in place while the board pans, and it is the board's only visible client name. Its height is free to change rather than being restated in a token — showing the canvas, `.board-page` takes the viewport exactly and the canvas takes whatever the header leaves. That has to be a `height`, not a `min-height`: React Flow sizes itself with an inline `height: 100%`, which resolves to zero against an indefinite one. A floor of 568 px keeps the canvas usable on a short window. The list view scrolls with the page instead, so it keeps the flexible box.
+
+Below 1100 px the controls take their own row under the client's name. Below 1200 px the result count is dropped, and below 640 px the control labels collapse to icons that keep their accessible names.
 
 ## Board and project canvas
 
 The board and project canvases use XYFlow/React Flow. Use a shared canvas frame with a subtle dot background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
 
-Board composition groups project previews inside campaign frames. Make the canvas the primary workspace; provide a compact list alternative where it improves scanning and accessibility. The reference's Timeline and Kanban are optional planning patterns to adopt only if they solve a distinct user task; recreating both is not required merely because screenshots exist. Avoid showing a full planning dashboard and duplicate project cards simultaneously. An empty campaign remains visible with a clear way to create a briefing. Search and status filters operate consistently across implemented views and show a reset action when no matches remain.
+Every `ReactFlow` instance sets `proOptions={{ hideAttribution: true }}`, so the library's attribution badge does not sit over the bottom-right corner of the work surface. The package is MIT licensed and its licence carries no interface attribution clause, so hiding the badge is permitted; xyflow asks that projects removing it subscribe to React Flow Pro to support the library, which is a request rather than a condition. Restoring the badge means dropping the prop from all three canvases: the board, the project canvas, and the design viewer.
 
-If a timeline is implemented, show an understandable date interval, previous/next interval navigation, Today, date columns, and project bars. Use the current application date; do not copy “Sample today.” Any card dragging and status menus must invoke the same authorized transition. Preserve a keyboard-accessible status action. The workflow labels are Brief, Designing, Agency review, Client review, Revision, Approved, and Delivered; a visible label and shape accompany every monochrome status marker. Reuse these semantic states across views without rendering every possible state as persistent chrome.
+Planning is sized by the widest thing it holds, which is the Kanban rather than the calendar: seven stage columns at 176 px with their gaps and padding, computed by `kanbanWidth()` in [`board-layout.ts`](../../apps/web/features/board/board-layout.ts) and held as `PLANNING_MIN_W`. Sizing the frame to the calendar instead left the last stages scrolled out of reach behind the frame's edge and broke every card title across three lines. The calendar then has width to spare, so its identity column holds a title of about thirty characters without an ellipsis; below 840 px the grid scrolls sideways inside the frame rather than crushing the dates together. Widening the frame lowers the zoom a full board is fitted at — that is the trade being made, and it is made for legible titles and reachable stages.
 
-Project canvases group **deliverable format → version → design**, with multiple designs allowed within one version. The reference shows approximately 308 px-wide version columns with a 32 px gap and a compact format heading. Formats remain metadata/badges; the deliverable also has a custom name, dimensions, quantity, and Original/Adaptation scope. Do not flatten distinct formats into unrelated projects or charge each badge as a separate project.
+The seeded workspaces are not uniform, and the board is judged on the busy one. Nine clients carry two projects under a single campaign; SABRE carries the workspace the reference package documents — three campaigns, seven projects across four statuses, and two briefings that have not become projects yet — so Planning's calendar shows seven contending lanes and its Kanban fills four of its seven stages. A layout decision that only reads well on a two-project board has not been tested.
+
+Board composition groups project previews inside campaign frames, stacked in one column below a collapsible Planning frame, and this stack is the canvas itself rather than one of several sibling views. Canvas and List are the only top-level board layouts; Timeline, Kanban and one opened project are the three states of the Planning frame, which is what keeps one set of records from being reachable through several competing destinations. The Planning frame is bounded in height and scrolls internally, so campaign frames are never pushed off screen. Because Planning and the campaign frames are visible together, the same project can appear in both: connect the two through selection, never by rebuilding the canvas on hover, and never let the duplicate reading turn into two competing sets of actions. An empty campaign remains visible with a clear way to create a briefing. Search and status filters operate consistently across both layouts and show a reset action when no matches remain.
+
+A project card on the canvas answers to the pointer in two steps and leaves the board in both: one click selects the card, which is carried visually and as `aria-current` on the node and announced in a live region; two clicks open that project in the Planning frame, alongside an explicit open control on the card for the keyboard and for discoverability. The opened state is the project view itself rather than a summary of it, so the channel a role reads, what a client is never sent, and who may produce, publish or review are decided in one place; the frame header carries the way back to Timeline or Kanban and a link to the full page. Dragging stays confined to the card's grip, so moving a card is never read as selecting or opening it. Each card carries the leading artwork the viewer is allowed to see — working designs for the agency and the assigned designer, published designs for a client — through a short-lived signed URL; most projects have none, so the empty band is a quiet, deliberate tile rather than a broken image.
+
+The timeline shows an understandable date interval, previous/next interval navigation, Today, date columns, and project bars. Use the current application date; do not copy “Sample today.” The Kanban regroups the same scoped records by status and navigates only: `status` is absent from the single column grant on `public.projects` and no RPC accepts an arbitrary target status, so a drag-to-transition or status menu would fail against the database. Do not ship one until an authorized transition exists; when it does, dragging and the menu must both invoke it and a keyboard-accessible status action must accompany them. The workflow labels are Brief, Designing, Agency review, Client review, Revision, Approved, and Delivered; a visible label and shape accompany every monochrome status marker. Reuse these semantic states across views without rendering every possible state as persistent chrome.
+
+Project canvases group **deliverable format → version → design**, with multiple designs allowed within one version. Each deliverable is a stacked section, and each version inside it is a single horizontal line: a fixed label column on the left carries the version number, its status, its release note, client feedback, the design count and the version's one action, and the version's designs sit in a row beside that column, with the next version as the line below. The label column is one tile wide and every section starts on the same left edge, so the labels form one rail down the canvas — the calendar's sticky label column, applied to versions. A line is as wide as the designs it actually holds, so the right edge is deliberately ragged; past five tiles it stops widening and the rest stay behind a trailing “+N more designs” slot on the same line. The deliverable header stops at the label column plus two tile slots so its “new version” control stays beside the name. Each tile shows the deliverable's own proportions — 1080 × 1080 square, 1080 × 1920 tall — and the geometry is computed in [`canvas-layout.ts`](../../apps/web/features/projects/canvas-layout.ts) rather than measured after paint, so the canvas never reflows once it is drawn; the fixed part sizes in `projects.css` mirror that module and change with it. The canvas opens pinned to the top of the list at a zoom that fits the widest line, never magnified past natural size and never shrunk past the point where a preview stops being readable — a tall project scrolls rather than shrinking, and Fit View remains for anyone who wants the whole project at once. Formats remain metadata/badges; the deliverable also has a custom name, dimensions, quantity, and Original/Adaptation scope. Do not flatten distinct formats into unrelated projects or charge each badge as a separate project.
 
 Opening a design presents the artwork on the canvas and comments to its right. The artwork preserves its real dimensions and aspect ratio, scales to available space, and can be zoomed. A bottom carousel moves between designs within the selected version; selecting another version is a separate action. Preserve the selected design and version when opening the inspector or switching comment channels.
 
@@ -145,13 +169,119 @@ Follow feature colocation: briefings own their wizard and service-driven fields;
 
 The same project entity drives Home, Board, Reviews, Credits links, and notifications. Use shared display rules for project names, statuses, dates, quantities, and credit amounts. Role-specific visibility does not justify duplicated mutable state or parallel business logic. Derived counts must have one authoritative definition.
 
+## Styling boundary
+
+Three systems share the frontend, and each has exactly one job. This is the answer to "which
+system do I use here", established by the [repository structural refactor](../superpowers/specs/2026-09-20-repository-structural-refactor-design.md) and enforced by every feature agent that follows it.
+
+- **Tailwind v4** supplies the design-token bridge and utility classes. `apps/web/app/globals.css`
+  opens with `@import "tailwindcss"`, followed by a `:root` block of 14 custom properties (colors,
+  radii, and the sidebar/topbar geometry) and an `@theme inline` block that maps four of them —
+  `--color-background`, `--color-foreground`, `--font-sans`, `--font-mono` — into Tailwind's theme,
+  so a utility class such as `bg-background` resolves to the same token the hand-authored CSS
+  reads. Reach for a Tailwind utility for one-off layout or spacing on new markup; reach for the
+  `:root` token, not a hardcoded value, whenever a color, radius or the shared shell geometry is
+  needed. Beyond that bridge, the application is hand-authored CSS, not a Tailwind component
+  system — there is no utility-first componentry to adopt here.
+- **`apps/web/app/globals.css`** (1,105 lines after the Task 5 split, down from 2,221) holds the
+  `:root` tokens and `@theme` block above, the reset and base element styles (`*`, `html`, `body`,
+  headings, links, focus states), and the styles of the shared primitives in
+  `apps/web/features/shared/` — `Modal`, `FormError`, `PageStatus`, `SearchField` — plus the older
+  base classes every feature composes with (`button`, `icon-button`, `panel`, `toolbar`,
+  `empty-state`, `page-heading`/`section-heading`, the `form-*` classes). Nothing feature-specific
+  belongs here.
+- **`apps/web/features/<feature>/<feature>.css`** holds every rule specific to that one feature —
+  `board/board.css`, `board/timeline.css`, `workspace/workspace.css`, `workspace/activity.css`,
+  `auth/auth.css`, and the rest, one stylesheet per feature, plus `shared/forms.css` for the shared
+  form-layout classes (`stack-form`, `form-row`, `checkbox-label`, `form-actions`), loaded once
+  globally by `app/layout.tsx`.
+
+**The multi-feature override.** A namespace that reads as feature-specific by name stays in
+`globals.css` regardless of its name when it has consumers in two or more features. Moving it would
+either duplicate the rule into two stylesheets (a drift risk — the two copies stop matching) or
+force one feature to import another feature's stylesheet, which breaks the boundary a different
+way. `.status-badge` has consumers in six features (`board`, `briefings`, `credits`, `projects`,
+`settings`, `workspace`); `.segmented-control` has consumers in five (`assets`, `board`, `brand`,
+`projects`, `reviews`); `.brand-logo` reads as `brand`-owned but is shared by `auth` and
+`workspace`. Each stays in `globals.css` under this rule. (These three are additional instances of
+the rule, verified the same way as the twelve below, but outside the specific count Task 5 tracked —
+see the note on that count at the end of this section.)
+
+**The twelve namespaces Task 5 tracked, verified individually, in four categories.** The refactor
+plan measured a specific, narrower set — everything matching
+`grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)'`
+against `globals.css` — and found 20 matches, 12 of which are legitimate exceptions to "feature-named
+rules move out." Re-checking each of the 12 individually (`grep -rln 'className.*\bNAME\b'
+apps/web/features --include="*.tsx" | sed 's#^features/##;s#/.*##' | sort -u`, plus reading the
+actual CSS) found that an earlier draft of this document mischaracterized five of them as directly
+multi-feature by consumer count when they are not — the real reasons are grouped selectors or, in
+two cases, not established at all. The corrected breakdown:
+
+- **Multi-feature consumers (5): `.topbar`, `.project-row`, `.project-table`, `.client-mark`,
+  `.client-mark-initials`.** `.topbar` has consumers in `brand` and `workspace`. `.project-row` and
+  `.project-table` are independently hand-authored with the same class names in both
+  `board/board-page.tsx` and `workspace/home-page.tsx` — genuinely duplicated markup across two
+  features, not a shared component. `.client-mark`/`.client-mark-initials` reach two features by a
+  different mechanism: the `ClientMark` component is defined in `features/workspace/client-mark.tsx`,
+  but its only current renderer is `features/board/board-page.tsx` (`import { ClientMark } from
+  "@/features/workspace/client-mark"`), and `board-page.tsx` imports only `./board.css`, not
+  `workspace.css` — so the class has to be visible outside feature boundaries for board's render to
+  pick it up. Separately, `board.css`'s `.board-identity-mark` overrides the `--client-mark-size`
+  custom property at equal specificity on the same element (58px there against `.client-mark`'s own
+  26px default), so `.client-mark` also has to stay loaded before `board.css` for that override to
+  keep resolving the same way.
+- **Grouped selectors binding a single-feature namespace to a multi-feature or shared rule (4):
+  `.project-title`, `.board-canvas`, `.project-canvas`, `.sidebar-collapse`.** `.project-title`'s
+  only consumer is `workspace/home-page.tsx`, but `globals.css` groups it with `.project-row` in one
+  rule (`.project-title strong, .project-row > strong { … }`), and `.project-row` is multi-feature —
+  splitting the group would duplicate the rule or change its specificity. `.board-canvas` (`board`
+  only) and `.project-canvas` (`projects` only) are each single-feature, but `globals.css` groups
+  both (with `.design-viewport`, also `projects`-owned) into one `.react-flow__attribution` rule
+  spanning `board` and `projects`. `.sidebar-collapse`'s only consumer, `workspace/app-shell.tsx`,
+  renders it with `className="icon-button sidebar-collapse"` — the toggle carries both classes on
+  one element, so the rule stays grouped with a shared primitive rather than moving cleanly to a
+  single feature's stylesheet. An earlier draft of this document justified that placement by a
+  cascade dependency: the shared `.icon-button` rule at the 640px breakpoint (`globals.css:911`,
+  `width: 40px`) supposedly had to keep winning over `.sidebar-collapse`'s own sizing there. The
+  final structural-refactor fix wave found that reasoning does not hold — `.sidebar-collapse` is
+  already `display: none` under `@media (max-width: 900px)` (`globals.css:886`), a superset of the
+  640px range, so the element is already hidden by the time the viewport reaches 640px and there is
+  no sizing conflict left for that rule to win. `.sidebar-collapse` still belongs in `globals.css`,
+  but for the grouped dual-class-selector reason above, not the cascade-order one.
+- **Removed (1): `.workspace-status`.** Zero consumers were left in any `.tsx` file, and Task 5 left
+  the rule in place because its own mandate was relocation, not cleanup. The final
+  structural-refactor fix wave re-verified the zero-consumer finding and deleted the rule (the base
+  selector, `.workspace-status i`, and its `@media (max-width: 1000px)` override) — removing
+  genuinely dead code was within that wave's mandate.
+- **Resolved (2): `.project-origin`, `.project-symbol`.** Both had exactly one consumer,
+  `workspace/home-page.tsx`, and Task 5 found neither part of a grouped selector with a multi-feature
+  rule, nor any cascade or specificity dependency — so it recorded them as unexplained rather than
+  invent a justification. The final structural-refactor fix wave re-verified the single-consumer
+  finding and moved both rules — `.project-origin small`, `.project-symbol`'s base rule, and its
+  `@media (max-width: 1200px)` override — verbatim into `workspace/workspace.css`, in their original
+  relative order. Neither selector remains in `globals.css`.
+
+**Where the original spec's prediction was wrong.** The spec's Foundation 3 predicted `brand.css`
+and `projects.css` would each receive rules split out of `globals.css`. Neither did at Task 5, for
+two different reasons. `.brand-link` and `.brand-monogram` read as brand-owned by name, but their
+only consumer is the sidebar brand mark in `workspace/app-shell.tsx`, so Task 5 moved them into
+`workspace/workspace.css` instead. Every `project-*` namespace that stayed behind in `globals.css` at
+that point stayed for one of the reasons above — genuinely multi-feature (`.project-row`,
+`.project-table`), grouped with a multi-feature rule (`.project-title`, `.project-canvas`), or
+unexplained (`.project-origin`, `.project-symbol`) — and none of those reasons pointed at
+`projects.css`: the unexplained pair's sole consumer was `workspace/home-page.tsx`, not
+`features/projects/`. The final structural-refactor fix wave later confirmed that and relocated the
+unexplained pair into `workspace/workspace.css`, per the "Resolved" entry above — so, as predicted
+here, `projects.css` still received nothing from any of this: not because `projects` has no CSS, but
+because no rule that moved or stayed behind was ever exclusively `projects`-owned.
+
 ## Final audit gate — not yet executed
 
-Complete the functional production-simulation gate first with exactly 10 clients and 20 seeded projects, then execute the comprehensive alignment audit. Preserve fixture identifiers and record any additional entities created during action testing separately. Neither the screenshots' 23 active projects nor a test that only checks the home count proves the required 20-project workflow coverage. The audit covers every action exposed by the product and all agreed end-to-end workflows; it does not require reproducing every prototype screen.
+Complete the functional production-simulation gate first with exactly 10 clients and 25 seeded projects, then execute the comprehensive alignment audit. Preserve fixture identifiers and record any additional entities created during action testing separately. Neither the screenshots' 23 active projects nor a test that only checks the home count proves the required workflow coverage across all 25. The audit covers every action exposed by the product and all agreed end-to-end workflows; it does not require reproducing every prototype screen.
 
 For each check, record application revision, environment, seed revision, authenticated role, client/project identifiers, viewport, steps, expected/actual result, screenshot or test-log path, defect identifier, and retest evidence. Link results from the implementation's validation report; do not turn this checklist into a pass claim without those artifacts.
 
-- [ ] All 10 clients and all 20 projects can be reached through authorized navigation and reload correctly; summaries reconcile with their scoped records.
+- [ ] All 10 clients and all 25 projects can be reached through authorized navigation and reload correctly; summaries reconcile with their scoped records.
 - [ ] Board, implemented alternate views, search, filters, empty states, campaign creation, and project inspection work with the seeded portfolio.
 - [ ] All supported briefing types and fields have meaningful coverage, including draft recovery, attachments, submission, adjusted quotes, insufficient credits, and repeated acceptance.
 - [ ] Every project status and authorized transition is covered; invalid and unauthorized transitions fail with clear feedback.

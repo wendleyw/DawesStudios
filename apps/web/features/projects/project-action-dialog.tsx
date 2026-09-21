@@ -4,10 +4,23 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
-import { uploadArtwork } from "./artwork-files";
+import { discardUnreferencedArtwork, uploadArtwork } from "./artwork-files";
 import { discardPreparedAssets, preparePublicationAssets } from "./media-client";
-import { useInvalidateProject, type CanvasDesign, type CanvasVersion } from "./project-data";
+import {
+  addDesign,
+  createDesignVersion,
+  findDesignByAsset,
+  findUnchangedDesign,
+  publishVersion,
+  reviewPublication,
+  submitDesignVersion,
+  updateDesignContent,
+  updateWorkingDesign,
+  useInvalidateProject,
+  type CanvasDesign,
+  type CanvasVersion,
+} from "./project-data";
+import { FormError } from "@/features/shared/form-error";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
@@ -33,7 +46,6 @@ export function ProjectActionDialog({
 }) {
   const { database, mediaUrl } = useAuth();
   const invalidate = useInvalidateProject();
-  const [publicationKey] = useState(() => crypto.randomUUID());
   const [stagedArtwork, setStagedArtwork] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
@@ -42,13 +54,7 @@ export function ProjectActionDialog({
     setClosing(true);
     setCloseError("");
     try {
-      if (stagedArtwork) {
-        const rows = assertResult(
-          await database.from("designs").select("id").eq("internal_asset_path", stagedArtwork),
-        );
-        if (!rows.length)
-          assertResult(await database.storage.from("internal-assets").remove([stagedArtwork]));
-      }
+      if (stagedArtwork) await discardUnreferencedArtwork(database, stagedArtwork);
       onClose();
     } catch {
       setCloseError("The unfinished upload could not be removed. Please try closing again.");
@@ -61,15 +67,12 @@ export function ProjectActionDialog({
       if (!action) return;
       const value = (name: string) => String(form.get(name) ?? "").trim();
       if (action.kind === "version") {
-        assertResult(
-          await database.rpc("create_design_version", {
-            p_deliverable_id: action.deliverableId,
-            p_notes: value("notes"),
-            ...(form.get("copy") && action.sourceVersionId
-              ? { p_copy_version_id: action.sourceVersionId }
-              : {}),
-          }),
-        );
+        await createDesignVersion(database, {
+          deliverableId: action.deliverableId,
+          notes: value("notes"),
+          copyVersionId:
+            form.get("copy") && action.sourceVersionId ? action.sourceVersionId : undefined,
+        });
       } else if (action.kind === "design" || action.kind === "edit-design") {
         if (!value("title")) throw new Error("Add a design name.");
         const file = form.get("artwork");
@@ -91,73 +94,49 @@ export function ProjectActionDialog({
           const payload = {
             title: value("title"),
             content: designContent,
-            internal_asset_path: path ?? action.design.assetPath,
+            assetPath: path ?? action.design.assetPath,
           };
-          let same = database
-            .from("designs")
-            .select("id")
-            .eq("id", action.design.id)
-            .eq("title", payload.title)
-            .eq("content", JSON.stringify(payload.content));
-          same = payload.internal_asset_path
-            ? same.eq("internal_asset_path", payload.internal_asset_path)
-            : same.is("internal_asset_path", null);
-          if (assertResult(await same).length) return;
-          let update = database
-            .from("designs")
-            .update(payload)
-            .eq("id", action.design.id)
-            .eq("title", action.design.title)
-            .eq("content", JSON.stringify(action.design.content));
-          update = action.design.assetPath
-            ? update.eq("internal_asset_path", action.design.assetPath)
-            : update.is("internal_asset_path", null);
-          const result = await update.select("id").single();
-          if (result.error?.code === "PGRST116")
-            throw new Error(
-              "This design changed while you were editing. Close and reopen it before saving.",
-            );
-          assertResult(result);
+          const unchanged = await findUnchangedDesign(database, {
+            id: action.design.id,
+            ...payload,
+          });
+          if (unchanged.length) return;
+          await updateWorkingDesign(database, {
+            id: action.design.id,
+            ...payload,
+            previousTitle: action.design.title,
+            previousContent: action.design.content,
+            previousAssetPath: action.design.assetPath,
+          });
         } else {
           const existing = path
-            ? assertResult(
-                await database
-                  .from("designs")
-                  .select("id")
-                  .eq("version_id", action.version.id)
-                  .eq("internal_asset_path", path),
-              )
+            ? await findDesignByAsset(database, {
+                versionId: action.version.id,
+                assetPath: path,
+              })
             : [];
           if (existing[0])
-            assertResult(
-              await database
-                .from("designs")
-                .update({ title: value("title"), content: designContent })
-                .eq("id", existing[0].id)
-                .select("id")
-                .single(),
-            );
+            await updateDesignContent(database, {
+              id: existing[0].id,
+              title: value("title"),
+              content: designContent,
+            });
           else
-            assertResult(
-              await database.rpc("add_design", {
-                p_version_id: action.version.id,
-                p_title: value("title"),
-                p_content: designContent,
-                ...(path ? { p_internal_asset_path: path } : {}),
-              }),
-            );
+            await addDesign(database, {
+              versionId: action.version.id,
+              title: value("title"),
+              content: designContent,
+              internalAssetPath: path,
+            });
         }
       } else if (action.kind === "publish") {
         const assets = await preparePublicationAssets(database, mediaUrl, action.version.id);
         try {
-          assertResult(
-            await database.rpc("publish_version", {
-              p_version_id: action.version.id,
-              p_release_note: value("note"),
-              p_assets: assets,
-              p_idempotency_key: publicationKey,
-            }),
-          );
+          await publishVersion(database, {
+            versionId: action.version.id,
+            releaseNote: value("note"),
+            assets,
+          });
         } finally {
           // Referenced files are retained; the server also expires abandoned preparations.
           await discardPreparedAssets(database, mediaUrl, Object.values(assets)).catch(
@@ -165,17 +144,13 @@ export function ProjectActionDialog({
           );
         }
       } else if (action.kind === "submit") {
-        assertResult(
-          await database.rpc("submit_design_version", { p_version_id: action.version.id }),
-        );
+        await submitDesignVersion(database, { versionId: action.version.id });
       } else if (action.kind === "review") {
-        assertResult(
-          await database.rpc("review_publication", {
-            p_publication_id: action.version.id,
-            p_decision: value("decision"),
-            p_feedback: value("feedback"),
-          }),
-        );
+        await reviewPublication(database, {
+          publicationId: action.version.id,
+          decision: value("decision"),
+          feedback: value("feedback"),
+        });
       }
     },
     onSuccess: async () => {
@@ -327,9 +302,7 @@ export function ProjectActionDialog({
             </>
           )}
           {(mutation.error || closeError) && (
-            <p className="form-error" role="alert">
-              {closeError || mutation.error?.message}
-            </p>
+            <FormError>{closeError || mutation.error?.message}</FormError>
           )}
           <div className="form-actions">
             <button

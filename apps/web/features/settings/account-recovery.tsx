@@ -7,7 +7,9 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { validatePassword } from "./settings-model";
+import { SettingsSuccess } from "./settings-success";
 import "./settings.css";
+import { FormError } from "@/features/shared/form-error";
 
 export function AccountRecovery() {
   const { database, session, loading } = useAuth();
@@ -65,9 +67,7 @@ export function AccountRecovery() {
             <p>Choose a unique password with at least 12 characters.</p>
             {reset.isSuccess ? (
               <>
-                <p role="status" className="settings-success">
-                  Your password has been updated.
-                </p>
+                <SettingsSuccess>Your password has been updated.</SettingsSuccess>
                 <Link href="/home" className="button primary">
                   Open your workspace
                 </Link>
@@ -102,11 +102,7 @@ export function AccountRecovery() {
                     onChange={(event) => setConfirmation(event.target.value)}
                   />
                 </label>
-                {reset.error && (
-                  <p role="alert" className="form-error">
-                    {reset.error.message}
-                  </p>
-                )}
+                {reset.error && <FormError>{reset.error.message}</FormError>}
                 <button className="button primary" disabled={reset.isPending}>
                   {reset.isPending ? "Updating…" : "Set new password"}
                 </button>
@@ -119,9 +115,9 @@ export function AccountRecovery() {
             <h1>Forgot your password?</h1>
             <p>We will email you a link to set a new one.</p>
             {send.isSuccess ? (
-              <p className="settings-success" role="status">
+              <SettingsSuccess>
                 If an account uses this email, a reset link is on its way. Check your inbox.
-              </p>
+              </SettingsSuccess>
             ) : (
               <form
                 className="settings-form"
@@ -140,11 +136,7 @@ export function AccountRecovery() {
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </label>
-                {send.error && (
-                  <p className="form-error" role="alert">
-                    {send.error.message}
-                  </p>
-                )}
+                {send.error && <FormError>{send.error.message}</FormError>}
                 <button className="button primary" disabled={send.isPending}>
                   {send.isPending ? "Sending…" : "Send reset link"}
                 </button>

@@ -44,7 +44,7 @@ npm run build
 npm start
 ```
 
-`check` generates Next.js route types, checks TypeScript, runs ESLint and executes the colocated Vitest tests. `build` creates production output under `apps/web/.next`; `start` serves that output with Node.js. Next.js fetches the configured Google fonts during the build, so the build requires network access to the font service.
+`check` generates Next.js route types, checks TypeScript, runs ESLint, verifies Prettier formatting and executes the colocated Vitest tests. Formatting is part of the gate so the pre-commit hook cannot rewrite files the gate has already passed. `build` creates production output under `apps/web/.next`; `start` serves that output with Node.js. Next.js fetches the configured Google fonts during the build, so the build requires network access to the font service.
 
 Set the `NEXT_PUBLIC_*` variables before building; their values are included in the browser bundle. Provide the server-only invitation credential to the production process. A production environment also needs a reachable Supabase installation and the trusted media service; a successful local build does not deploy them.
 
@@ -54,7 +54,11 @@ With the web server and local Supabase running, and fixture accounts provisioned
 npm run test:e2e
 ```
 
-The Playwright suite reads local test credentials from ignored `supabase/.env.local`. It covers the three roles, all ten client workspaces, production/review/delivery, billing, invitations, personal templates, upload failures, concurrent editing, responsive layouts and accessibility. It does not start the services automatically. Mutation journeys create guarded temporary fixtures and remove them afterward. Run the suite with one worker against the local acceptance backend; do not run another seed reset or independent mutation suite at the same time.
+The Playwright suite reads local test credentials from ignored `supabase/.env.local`. Because these journeys create and delete real rows, `tests/e2e/test-support.ts` refuses to run against a backend it was not told to expect: it accepts the local stack by default, and any other one must be declared through `ACCEPTANCE_SUPABASE_URL`. `PLAYWRIGHT_BASE_URL` points the browser at a server other than `http://localhost:3003`. It covers the three roles, all ten client workspaces, production/review/delivery, billing, invitations, personal templates, upload failures, concurrent editing, responsive layouts and accessibility. It does not start the services automatically. Mutation journeys create guarded temporary fixtures and remove them afterward. Run the suite with one worker against the local acceptance backend; do not run another seed reset or independent mutation suite at the same time.
+
+## Continuous integration
+
+[`.github/workflows/check.yml`](../../.github/workflows/check.yml) runs the web gate and the media unit tests on every push and pull request. The browser suite is deliberately not in that workflow: it needs a provisioned Supabase stack, the trusted media worker, the seeded dataset and the fixture accounts, and a job that quietly skipped it would read as coverage it does not have. The workflow file records what a browser job must set up when one is added.
 
 ## Production containers
 

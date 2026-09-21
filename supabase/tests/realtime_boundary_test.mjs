@@ -11,10 +11,19 @@ const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { 
 const clients = [];
 const received = [];
 const created = [];
+const createdWork = [];
 const marker = 'Realtime boundary ' + randomUUID();
+const startedAt = new Date().toISOString();
 const projectId = fixtures.projects[15].id;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const checked = result => { if (result.error) throw new Error(result.error.message); return result.data; };
+function runSql(sql) {
+  execFileSync('docker', ['exec', 'supabase_db_dawes-studios', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
+}
+function deleteWork(item) {
+  assert.match(item.versionId, /^[0-9a-f-]{36}$/);
+  runSql(`begin; delete from public.designs where version_id='${item.versionId}'; delete from public.design_versions where id='${item.versionId}'; commit;`);
+}
 function deleteComment(item) {
   assert.match(item.id, /^[0-9a-f-]{36}$/);
   assert.ok(['client', 'internal'].includes(item.channel));
@@ -27,7 +36,7 @@ try {
     checked(await client.auth.signInWithPassword({ email, password: env.DEMO_PASSWORD }));
     clients.push({ name, client });
     const channel = client.channel(marker + name);
-    for (const table of ['internal_comments', 'client_comments']) channel.on('postgres_changes', { event: '*', schema: 'public', table }, payload => received.push({ name, table, type: payload.eventType, id: payload.new.id ?? payload.old.id }));
+    for (const table of ['internal_comments', 'client_comments', 'design_versions', 'designs']) channel.on('postgres_changes', { event: '*', schema: 'public', table }, payload => received.push({ name, table, type: payload.eventType, id: payload.new.id ?? payload.old.id }));
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Realtime subscription timed out for ' + name)), 12000);
       channel.subscribe(status => { if (status === 'SUBSCRIBED') { clearTimeout(timer); resolve(); } else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) { clearTimeout(timer); reject(new Error('Realtime subscription failed for ' + name)); } });
@@ -47,13 +56,28 @@ try {
     const authorized = item.channel === 'internal' ? ['agency', 'designer'] : ['agency', 'client'];
     assert.deepEqual(received.filter(event => event.id === item.id && event.type === 'INSERT').map(event => event.name).sort(), authorized.sort(), 'Only authorized sessions receive ' + item.channel + ' events');
   }
+  // Versions and designs drive the project canvas, so an agency watching a project must see a
+  // designer's new work arrive. can_produce gates delivery, so no client may receive either.
+  const deliverableId = checked(await agency.from('deliverables').select('id').eq('project_id', projectId).order('sort_order').limit(1).single()).id;
+  const versionId = checked(await agency.rpc('create_design_version', { p_deliverable_id: deliverableId, p_notes: marker }));
+  createdWork.push({ versionId });
+  const designId = checked(await agency.rpc('add_design', { p_version_id: versionId, p_title: marker, p_content: { headline: marker } }));
+  const workDeadline = Date.now() + 10000;
+  const producers = ['agency', 'designer'];
+  const arrived = id => producers.every(name => received.some(event => event.id === id && event.type === 'INSERT' && event.name === name));
+  while (!(arrived(versionId) && arrived(designId)) && Date.now() < workDeadline) await sleep(100);
+  for (const [label, id] of [['design_versions', versionId], ['designs', designId]])
+    assert.deepEqual(received.filter(event => event.id === id && event.type === 'INSERT').map(event => event.name).sort(), producers.slice().sort(), 'Only producers receive ' + label + ' events');
+
   for (const item of created) deleteComment(item);
+  for (const item of createdWork) deleteWork(item);
   await sleep(1500);
   assert.equal(received.filter(event => event.type === 'DELETE').length, 0, 'The dedicated publication must not broadcast deleted private row identifiers');
   assert.equal(received.filter(event => event.name === 'foreign').length, 0, 'A different client must receive no row or event-count signal');
-  process.stdout.write('Realtime boundary PASS: four authenticated subscriptions; internal/client recipients match RLS; cross-client events absent; deleted-row events disabled.\n');
+  process.stdout.write('Realtime boundary PASS: four authenticated subscriptions; internal/client recipients match RLS; version and design events reach producers only; cross-client events absent; deleted-row events disabled.\n');
 } finally {
   for (const item of created) deleteComment(item);
-  await service.from('notifications').delete().eq('body', marker);
+  for (const item of createdWork) deleteWork(item);
+  await service.from('notifications').delete().eq('project_id', projectId).gte('created_at', startedAt);
   await Promise.all(clients.map(async ({ client }) => { await client.removeAllChannels(); await client.auth.signOut({ scope: 'local' }); }));
 }

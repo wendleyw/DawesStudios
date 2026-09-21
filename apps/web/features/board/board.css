@@ -1,0 +1,741 @@
+.board-page {
+  display: flex;
+  min-width: 0;
+  min-height: calc(100dvh - var(--topbar-height));
+  flex-direction: column;
+}
+/*
+ * Showing the canvas, the page takes the viewport exactly and the canvas takes whatever the
+ * identity header above it leaves — so the header stays free to grow a second row of controls on a
+ * narrow screen without a height being restated anywhere. React Flow sizes itself with
+ * `height: 100%` inline, which only resolves against a definite height, which is why this is
+ * `height` rather than another `min-height`. The floor keeps the canvas usable on a short window.
+ * The list scrolls with the page instead, so it keeps the flexible box.
+ */
+.board-page.shows-canvas {
+  height: calc(100dvh - var(--topbar-height));
+  min-height: 568px;
+}
+.board-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px var(--space-page) 20px;
+}
+.board-identity-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 18px;
+}
+.board-identity-mark {
+  --client-mark-size: 58px;
+}
+.board-identity-text {
+  min-width: 0;
+}
+/* The board's own controls, on the header's row rather than in the shared topbar above it. */
+.board-tools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+.board-tools .search-field {
+  width: 236px;
+}
+.board-tools select {
+  min-height: 38px;
+  width: 132px;
+  border-color: var(--border);
+  font-size: 12px;
+}
+.board-filter-menu {
+  position: relative;
+}
+.board-identity h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.9px;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-identity p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.board-result-count {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.board-filters {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  width: 264px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 9%);
+}
+.board-filters label {
+  font-size: 11px;
+}
+.board-filters select {
+  min-height: 38px;
+  width: 100%;
+  font-size: 12px;
+}
+.board-filter-actions {
+  display: flex;
+  gap: 8px;
+}
+.filter-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.board-page > .form-error {
+  margin: 16px var(--space-page) 0;
+}
+.board-page > .empty-state {
+  margin: 8px var(--space-page) 36px;
+  flex: 1;
+}
+.board-canvas {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  background: #f0f0ed;
+}
+.board-canvas .react-flow__node {
+  border-radius: 12px;
+}
+.board-canvas .react-flow__node:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+.board-canvas .react-flow__node.selected .board-card {
+  border-color: #888b7d;
+  box-shadow: 0 0 0 1px #888b7d;
+}
+.board-canvas .react-flow__controls {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 4%);
+}
+.board-canvas .react-flow__controls-button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 5px;
+  background: #fff;
+}
+.board-canvas .react-flow__controls-button:hover {
+  background: var(--surface-subtle);
+}
+.board-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d9d9d2;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
+}
+.board-card-grip {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  color: #a3a397;
+  cursor: grab;
+}
+.board-card-grip:active {
+  cursor: grabbing;
+}
+.board-card-body {
+  display: block;
+  padding: 20px;
+}
+.board-card-grip + .board-card-body {
+  padding-top: 6px;
+}
+.board-card-body:hover {
+  background: #fdfdfb;
+}
+.board-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.board-card-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-card :is(h2, h3, h4) {
+  font-size: 15px;
+}
+.board-card-body > p {
+  display: -webkit-box;
+  min-height: 36px;
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.board-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.board-card-footer > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.kanban-board {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.kanban-column {
+  display: flex;
+  /* Matches KANBAN_COLUMN_W in board-layout.ts, which sizes the frame around seven of these. */
+  min-width: 176px;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f0f0eb;
+}
+.kanban-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: -12px -12px 0;
+  padding: 12px;
+  border-radius: 11px 11px 0 0;
+  background: #f0f0eb;
+}
+.kanban-heading :is(h2, h3) {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.kanban-heading > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.kanban-column .board-card-body {
+  padding: 12px;
+}
+.kanban-column .board-card :is(h2, h3, h4) {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.kanban-column .board-card-body > p {
+  margin-top: 7px;
+  font-size: 10px;
+}
+.kanban-column .eyebrow {
+  margin-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+.kanban-column .board-card-body > p {
+  min-height: 0;
+}
+.board-list {
+  margin: 8px var(--space-page) 36px;
+}
+@media (max-width: 1200px) {
+  .board-tools .search-field {
+    width: 196px;
+  }
+  .board-tools .board-result-count {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  /* The controls take their own row under the client's name rather than crowding it. */
+  .board-identity {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .board-tools {
+    width: 100%;
+  }
+  .board-tools .search-field {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+  }
+}
+@media (max-width: 900px) {
+  /* The bar is still overhead here, so the board does not show a second marker of its own. */
+  .board-tools .notifications-bell {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .board-identity {
+    padding-block: 18px 14px;
+    gap: 14px;
+  }
+  .board-identity-name {
+    gap: 13px;
+  }
+  .board-identity-mark {
+    --client-mark-size: 42px;
+  }
+  .board-identity h1 {
+    font-size: 23px;
+    letter-spacing: -0.5px;
+  }
+  .board-identity p {
+    font-size: 10px;
+  }
+  .board-tools {
+    gap: 8px;
+  }
+  .board-tools select {
+    width: 116px;
+  }
+  .board-tools .button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .board-tools .button {
+    padding-inline: 13px;
+  }
+  .board-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 20px;
+    padding-top: 24px;
+  }
+  .board-header h1 {
+    font-size: 26px;
+  }
+  .board-header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .board-header-actions select {
+    width: 138px;
+  }
+  .board-toolbar {
+    gap: 4px;
+  }
+  .board-toolbar .search-field {
+    width: auto;
+    min-width: 0;
+  }
+  .board-toolbar .button {
+    padding-inline: 10px;
+  }
+  .board-result-count {
+    display: none;
+  }
+  .board-filters {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .board-filters label {
+    flex: 1;
+    min-width: 120px;
+  }
+  .board-filters > .button {
+    align-self: flex-end;
+  }
+  .board-canvas {
+    height: max(400px, calc(100dvh - 291px));
+  }
+}
+
+/* Stacked board canvas: a Planning frame above one frame per campaign, in a single column. */
+
+.board-canvas .react-flow__node-planning,
+.board-canvas .react-flow__node-campaign,
+.board-canvas .react-flow__node-notice,
+.board-canvas .react-flow__node-addCampaign {
+  cursor: default;
+}
+
+/*
+ * xyflow sets `pointer-events: none` inline on any node that is neither selectable nor draggable,
+ * which is every frame in this stack. The frames still hold real controls, so their content opts
+ * back in; the frame element itself stays transparent to the pane.
+ */
+.board-planning,
+.board-campaign,
+.board-slot,
+.board-add-campaign,
+.board-stack-notice {
+  pointer-events: auto;
+}
+
+.board-planning {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.board-planning-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 14px 0 8px;
+}
+.board-planning-head h2 {
+  flex: 1;
+  font-size: 14px;
+}
+.board-planning-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+.board-planning-body > * {
+  min-height: 0;
+  flex: 1;
+}
+.board-campaign {
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #f6f5f4;
+}
+.board-campaign-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 12px 0 18px;
+  color: var(--muted);
+}
+.board-campaign-head h2 {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-campaign-dates {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.board-slot {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.board-slot:hover {
+  border-color: var(--ink);
+  color: var(--foreground);
+}
+
+.board-add-campaign {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+.board-add-campaign:hover {
+  border-color: var(--ink);
+  color: var(--foreground);
+}
+
+.board-stack-notice {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.kanban-empty {
+  display: grid;
+  min-height: 84px;
+  place-items: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.board-planning-body .project-timeline {
+  padding: 16px;
+  border: 0;
+}
+/* The stage title wraps rather than widening its column past the shared width. */
+.kanban-heading :is(h2, h3) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .board-planning-head {
+    gap: 6px;
+    padding-right: 8px;
+  }
+  .board-planning-head h2 {
+    font-size: 13px;
+  }
+  .board-campaign-dates {
+    display: none;
+  }
+}
+
+.board-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+.board-card-head h2 {
+  min-width: 0;
+  color: var(--foreground);
+}
+
+/* One explicit card height keeps a row aligned when a title wraps; the footer stays at the bottom. */
+.board-canvas .react-flow__node-project .board-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+.board-canvas .react-flow__node-project .board-card-body {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  /* The card answers to the pointer even though it no longer links anywhere. */
+  cursor: pointer;
+}
+.board-canvas .react-flow__node-project .board-card-head h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.board-canvas .react-flow__node-project .board-card-footer {
+  margin-top: auto;
+}
+
+/*
+ * The artwork band. It takes whatever height the fixed card has left, so it fits both the agency
+ * card — which gives 22px to its drag grip — and the shorter card the other roles read.
+ */
+.board-card-media {
+  display: flex;
+  min-height: 158px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 11px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f1f1ec;
+  color: #b4b4a7;
+}
+.board-card-media.empty {
+  gap: 5px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  opacity: 0.75;
+}
+.board-card-media > img {
+  /* The whole design, not a crop of its middle. A reel is 1080x1920, and covering a wide box with
+     it showed a horizontal slice that read as nothing at all. Letterboxing a portrait is the price
+     of the card being recognisable as the work it stands for. */
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* The second click is the shortcut; this is the control that says so and answers the keyboard. */
+.board-card-open {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--muted);
+}
+.board-card-open:hover,
+.board-card-open:focus-visible {
+  border-color: var(--ink);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+/*
+ * A selected card has to read as chosen across a board of them, so it carries a ring rather than
+ * the hairline the shared rule gives every canvas node. The extra class matches the same element
+ * twice to win on specificity wherever the two stylesheets land in the bundle.
+ */
+.board-canvas .react-flow__node.react-flow__node-project.selected .board-card {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 26%, transparent);
+}
+
+/* The stage list scrolls under its own pinned heading rather than pushing it out of the frame. */
+.board-planning-body .kanban-board {
+  min-height: 0;
+  align-items: stretch;
+}
+.board-planning-body .kanban-column {
+  min-height: 0;
+  overflow: hidden auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+}
+.board-planning-body .kanban-column > * {
+  flex: 0 0 auto;
+}
+
+.board-list-empty {
+  padding: 40px 24px 44px;
+  color: var(--muted);
+  text-align: center;
+}
+.board-list-empty h2 {
+  margin-bottom: 6px;
+  color: var(--foreground);
+  font-size: 15px;
+}
+.board-list-empty p {
+  font-size: 12px;
+}
+
+/* The version names the artwork above it and the type names the deliverable; a separator keeps the
+   two from reading as one string. */
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+/* A dash between the version and the deliverable type, so "V1" and "Infographic" read as two
+   facts rather than one run-on label. */
+.board-card-meta > span + span::before {
+  margin-right: 7px;
+  color: var(--border-strong);
+  content: "–";
+}
+.board-card-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-card-meta .board-card-version {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}

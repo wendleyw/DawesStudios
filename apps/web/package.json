@@ -16,7 +16,7 @@
     "test:e2e": "playwright test",
     "format": "prettier --write app features lib tests *.ts *.mjs",
     "format:check": "prettier --check app features lib tests *.ts *.mjs",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

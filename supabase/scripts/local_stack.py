@@ -37,11 +37,17 @@ def stop_media():
         if result.stdout.strip()!='dawes-studios':raise RuntimeError('Media container ownership does not match.')
         run(['docker','rm','-f',MEDIA])
 
+# The loopback origins this machine serves the application from: the container on its documented
+# port, and a `next dev` on either of the ports this project uses beside it. The media service
+# matches an origin whole, so naming them is what lets a publication be prepared from a development
+# server without reflecting whatever origin happens to ask. Override with MEDIA_ALLOWED_ORIGINS.
+LOCAL_ORIGINS=','.join(f'http://{host}:{port}' for host in ('localhost','127.0.0.1') for port in (3000,3003,3010))
+
 def start_media():
     if media_running():print('Media service is already healthy on port55430.');return
     status=json.loads(run(['supabase','status','-o','json']))
     path=ROOT/'apps/media/.env.docker.local'
-    path.write_text('\n'.join(['SUPABASE_URL=http://host.docker.internal:55421','SUPABASE_ANON_KEY='+status['ANON_KEY'],'SUPABASE_SERVICE_ROLE_KEY='+status['SERVICE_ROLE_KEY'],'APP_ORIGIN=http://localhost:3003','MEDIA_PORT=55430','MEDIA_HOST=0.0.0.0'])+'\n');os.chmod(path,0o600)
+    path.write_text('\n'.join(['SUPABASE_URL=http://host.docker.internal:55421','SUPABASE_ANON_KEY='+status['ANON_KEY'],'SUPABASE_SERVICE_ROLE_KEY='+status['SERVICE_ROLE_KEY'],'APP_ORIGIN=http://localhost:3003','MEDIA_ALLOWED_ORIGINS='+os.environ.get('MEDIA_ALLOWED_ORIGINS',LOCAL_ORIGINS),'MEDIA_PORT=55430','MEDIA_HOST=0.0.0.0'])+'\n');os.chmod(path,0o600)
     run(['docker','build','-t','dawes-media:local','apps/media'])
     stop_media()
     run(['docker','run','-d','--name',MEDIA,'--label','com.dawes.project=dawes-studios','--restart','unless-stopped','--memory','1g','--cpus','2','--pids-limit','128','--security-opt','no-new-privileges','--read-only','--tmpfs','/tmp:rw,noexec,nosuid,size=536870912','-p','127.0.0.1:55430:55430','--env-file',str(path),'dawes-media:local'])

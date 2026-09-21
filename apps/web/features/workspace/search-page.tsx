@@ -1,14 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
+import { useWorkspaceSearch } from "./workspace-data";
+import { SearchField } from "@/features/shared/search-field";
 
 export function SearchPage() {
-  const { database, session, profile } = useAuth();
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,64 +17,7 @@ export function SearchPage() {
     const timeout = setTimeout(() => setSearch(input.trim()), 250);
     return () => clearTimeout(timeout);
   }, [input]);
-  const results = useQuery({
-    queryKey: ["search", session?.user.id, search],
-    enabled: search.length > 1,
-    queryFn: async () => {
-      const pattern = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
-      const [clients, projects, briefings, assets] = await Promise.all([
-        database
-          .from("clients")
-          .select("id,name,industry")
-          .eq("archived", false)
-          .ilike("name", pattern)
-          .limit(30),
-        database.from("projects").select("id,title,description").ilike("title", pattern).limit(40),
-        profile?.role !== "designer"
-          ? database
-              .from("briefings")
-              .select("id,title,client_id,status")
-              .ilike("title", pattern)
-              .limit(30)
-          : Promise.resolve({ data: [], error: null }),
-        database
-          .from("brand_assets")
-          .select("id,name,client_id,category")
-          .ilike("name", pattern)
-          .limit(30),
-      ]);
-      return [
-        ...assertResult(clients).map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.industry,
-          type: "Workspace",
-          href: `/clients/${item.id}/board`,
-        })),
-        ...assertResult(projects).map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          type: "Project",
-          href: `/projects/${item.id}`,
-        })),
-        ...assertResult(briefings).map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.status.replaceAll("_", " "),
-          type: "Briefing",
-          href: `/clients/${item.client_id}/briefings/${item.id}`,
-        })),
-        ...assertResult(assets).map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.category,
-          type: "Brand asset",
-          href: `/clients/${item.client_id}/brand/assets?asset=${item.id}`,
-        })),
-      ];
-    },
-  });
+  const results = useWorkspaceSearch(search);
   return (
     <div className="page-content">
       <div className="page-heading">
@@ -86,16 +27,15 @@ export function SearchPage() {
           <p>Projects, briefings, and brand resources, in one search.</p>
         </div>
       </div>
-      <label className="search-field global-search">
-        <Search size={20} />
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Search your workspace…"
-          aria-label="Search your workspace"
-        />
-      </label>
+      <SearchField
+        className="global-search"
+        label="Search your workspace"
+        value={input}
+        onChange={setInput}
+        placeholder="Search your workspace…"
+        iconSize={20}
+        inputRef={inputRef}
+      />
       {search.length < 2 ? (
         <div className="empty-state">
           <Search size={25} />

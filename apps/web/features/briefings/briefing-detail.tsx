@@ -1,36 +1,37 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import { useBriefings, useCampaigns } from "./briefing-data";
+import {
+  useInvalidateNotifications,
+  useInvalidateWorkspace,
+} from "@/features/workspace/workspace-data";
+import {
+  acceptBriefing,
+  confirmBriefingBudget,
+  useBriefingCreditBalance,
+  useBriefingProject,
+  useBriefings,
+  useCampaigns,
+} from "./briefing-data";
 import { briefingStatusLabels, initialDraft, type Briefing } from "./briefing-model";
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
-  const { database, profile, session } = useAuth();
+  const { profile } = useAuth();
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
-  const linked = useQuery({
-    queryKey: ["briefing-project", session?.user.id, briefingId],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult(
-        await database.from("projects").select("id").eq("briefing_id", briefingId).maybeSingle(),
-      ) as { id: string } | null,
-  });
+  const linked = useBriefingProject(briefingId);
   if (briefings.isPending || campaigns.isPending)
-    return (
-      <div className="page-content" role="status">
-        Loading the briefing…
-      </div>
-    );
+    return <PageStatus>Loading the briefing…</PageStatus>;
   const briefing = briefings.data?.find((item) => item.id === briefingId);
   if (!briefing || briefings.error || campaigns.error)
     return (
@@ -127,24 +128,16 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
 }
 
 function BudgetReview({ briefing }: { briefing: Briefing }) {
-  const { database, session } = useAuth();
+  const { database } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
+  const invalidateNotifications = useInvalidateNotifications();
   const router = useRouter();
   const [credits, setCredits] = useState(
     String(briefing.confirmed_credits ?? briefing.estimated_credits ?? 1),
   );
   const [note, setNote] = useState(briefing.budget_note ?? "");
-  const balance = useQuery({
-    queryKey: ["credit-account", session?.user.id, briefing.client_id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("credit_accounts")
-          .select("balance")
-          .eq("client_id", briefing.client_id)
-          .single(),
-      ) as { balance: number },
-  });
+  const balance = useBriefingCreditBalance(briefing.client_id);
   const confirm = useMutation({
     mutationFn: async () => {
       const amount = Number(credits);
@@ -155,30 +148,37 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
         !note.trim()
       )
         throw new Error("Explain the custom estimate or adjustment.");
-      assertResult(
-        await database.rpc("confirm_briefing_budget", {
-          p_briefing_id: briefing.id,
-          p_credits: amount,
-          p_note: note.trim(),
-        }),
-      );
+      await confirmBriefingBudget(database, {
+        briefingId: briefing.id,
+        credits: amount,
+        note: note.trim(),
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["briefings"] }),
   });
   const accept = useMutation({
-    mutationFn: async () =>
-      assertResult(await database.rpc("accept_briefing", { p_briefing_id: briefing.id })) as string,
+    mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id }),
     onSuccess: async (id) => {
-      await Promise.all(
-        ["briefings", "projects", "credit-account", "credit-ledger", "notifications"].map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["briefings"] }),
+        // `credit-account`/`credit-ledger` are owned by `credits/credit-data.ts`, but its
+        // `useInvalidateCredits()` also covers `credit-requests`, a key accepting a briefing never
+        // touched before this migration — calling it here would widen the invalidation, so these
+        // two stay explicit instead of going through that helper.
+        queryClient.invalidateQueries({ queryKey: ["credit-account"] }),
+        queryClient.invalidateQueries({ queryKey: ["credit-ledger"] }),
+        invalidateWorkspace(),
+        invalidateNotifications(),
+      ]);
       router.push(`/projects/${id}`);
     },
   });
   const enough =
     balance.data && balance.data.balance >= (briefing.confirmed_credits ?? Number(credits));
+  // Accept applies the confirmed figures, so an edited-but-unsaved form must say why it is blocked
+  // instead of greying the button out with no explanation.
+  const unconfirmedEdit =
+    Number(credits) !== briefing.confirmed_credits || note !== (briefing.budget_note ?? "");
   return (
     <>
       <h2>Project budget</h2>
@@ -210,18 +210,31 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             placeholder="Explain any adjustment to the estimate"
           />
         </label>
-        <p className="briefing-note">
-          {balance.isPending
-            ? "Checking balance…"
-            : balance.error
-              ? "Balance unavailable. Try reloading."
-              : `${balance.data?.balance ?? 0} credits available`}
-        </p>
-        {confirm.error && (
-          <p className="form-error" role="alert">
-            {confirm.error.message}
-          </p>
+        {balance.isPending ? (
+          <p className="briefing-note">Checking balance…</p>
+        ) : balance.error ? (
+          <p className="briefing-note">Balance unavailable. Try reloading.</p>
+        ) : (
+          <dl className="briefing-budget-figures">
+            <div>
+              <dt>Scope estimate</dt>
+              <dd>{briefing.estimated_credits ?? "—"} cr</dd>
+            </div>
+            <div>
+              <dt>Approved total</dt>
+              <dd>{Number(credits) || 0} cr</dd>
+            </div>
+            <div>
+              <dt>Available balance</dt>
+              <dd>{balance.data?.balance ?? 0} cr</dd>
+            </div>
+            <div>
+              <dt>Balance after acceptance</dt>
+              <dd>{(balance.data?.balance ?? 0) - (Number(credits) || 0)} cr</dd>
+            </div>
+          </dl>
         )}
+        {confirm.error && <FormError>{confirm.error.message}</FormError>}
         <button className="button" disabled={confirm.isPending || accept.isPending}>
           {confirm.isPending ? "Saving…" : "Confirm budget"}
         </button>
@@ -233,23 +246,19 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             <p className="form-error">
               {balance.error
                 ? "Check the credit account before accepting."
-                : "This client needs additional credits before work can begin."}
+                : `${(briefing.confirmed_credits ?? 0) - (balance.data?.balance ?? 0)} more credits are needed to accept this briefing.`}
             </p>
           )}
-          {accept.error && (
-            <p className="form-error" role="alert">
-              {accept.error.message}
+          {accept.error && <FormError>{accept.error.message}</FormError>}
+          {unconfirmedEdit && (
+            <p className="briefing-note">
+              The budget above has unsaved changes. Choose Confirm budget to apply them, or restore
+              the confirmed values to accept as they stand.
             </p>
           )}
           <button
             className="button primary"
-            disabled={
-              accept.isPending ||
-              confirm.isPending ||
-              !enough ||
-              Number(credits) !== briefing.confirmed_credits ||
-              note !== (briefing.budget_note ?? "")
-            }
+            disabled={accept.isPending || confirm.isPending || !enough || unconfirmedEdit}
             onClick={() => accept.mutate()}
           >
             {accept.isPending ? "Creating project…" : "Accept & create project"}

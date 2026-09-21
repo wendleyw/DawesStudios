@@ -1,12 +1,14 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useServicePresets } from "@/features/briefings/briefing-data";
 import { services } from "@/features/briefings/briefing-model";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
+import { saveServicePreset, useInvalidatePresets } from "./settings-data";
+import { SettingsSuccess } from "./settings-success";
+import { FormError } from "@/features/shared/form-error";
 
 type EditablePreset = {
   service_type: string;
@@ -24,9 +26,7 @@ export function PresetSettings() {
   if (presets.error)
     return (
       <div>
-        <p className="form-error" role="alert">
-          Service presets could not be loaded.
-        </p>
+        <FormError>Service presets could not be loaded.</FormError>
         <button className="button" onClick={() => void presets.refetch()}>
           Try again
         </button>
@@ -42,11 +42,7 @@ export function PresetSettings() {
           </p>
         </div>
       </header>
-      {notice && (
-        <p className="settings-success" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <SettingsSuccess>{notice}</SettingsSuccess>}
       <div className="settings-list">
         {services.map((service) => {
           const preset = presets.data?.find((item) => item.service_type === service.id);
@@ -102,7 +98,7 @@ function PresetEditor({
   onSaved: (revision: number) => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidatePresets = useInvalidatePresets();
   const [minimum, setMinimum] = useState(String(preset.min_credits ?? ""));
   const [maximum, setMaximum] = useState(String(preset.max_credits ?? ""));
   const [days, setDays] = useState(String(preset.due_days ?? ""));
@@ -121,17 +117,15 @@ function PresetEditor({
         throw new Error(
           "Use positive whole numbers, a maximum at least equal to the minimum, and timing from 1 to 365 days.",
         );
-      return assertResult(
-        await database.rpc("save_service_preset", {
-          p_service_type: preset.service_type,
-          p_min_credits: min,
-          p_max_credits: max,
-          p_due_days: duration,
-        }),
-      );
+      return saveServicePreset(database, {
+        serviceType: preset.service_type,
+        minCredits: min,
+        maxCredits: max,
+        dueDays: duration,
+      });
     },
     onSuccess: async (revision) => {
-      await queryClient.invalidateQueries({ queryKey: ["service-presets"] });
+      await invalidatePresets();
       onSaved(revision);
     },
   });
@@ -185,11 +179,7 @@ function PresetEditor({
             onChange={(event) => setDays(event.target.value)}
           />
         </label>
-        {save.error && (
-          <p className="form-error" role="alert">
-            {save.error.message}
-          </p>
-        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
         <div className="settings-dialog-actions">
           <button className="button" type="button" onClick={onClose} disabled={save.isPending}>
             Cancel

@@ -1,0 +1,256 @@
+import { useMemo } from "react";
+import type { Node } from "@xyflow/react";
+import type { Project } from "@/features/workspace/workspace-data";
+import {
+  CARD_H,
+  buildStack,
+  cardWidth,
+  hasStoredPosition,
+  slotPosition,
+  type BoardCampaign,
+} from "./board-layout";
+import type { PlanningMode } from "./planning-view";
+import { sharedTitlePrefix, type TimelineScale } from "./timeline-model";
+import { artworkFor, type ProjectArtworkMap } from "./project-thumbnail";
+
+/** The box the built nodes occupy, which is what a fit has to cover. */
+function contentBounds(nodes: Node[]): { width: number; height: number } {
+  let width = 0;
+  let height = 0;
+  for (const node of nodes) {
+    // Cards are positioned relative to their frame, so only top-level frames set the bounds.
+    if (node.parentId) continue;
+    const style = node.style as { width?: number; height?: number } | undefined;
+    width = Math.max(width, node.position.x + (style?.width ?? 0));
+    height = Math.max(height, node.position.y + (style?.height ?? 0));
+  }
+  return { width, height };
+}
+
+/**
+ * A node that states its own size.
+ *
+ * xyflow keeps the measured size on the internal node it builds from the array it is given, and
+ * throws it away whenever that array is rebuilt. Until the resize observer runs again the node has
+ * no dimensions: it is rendered hidden and clamped to its parent's corner. On this board the array
+ * is rebuilt whenever a card is selected or dragged, which is exactly when a card has to stay
+ * under the pointer — the second click of a double click would otherwise land on the pane.
+ */
+function sized(width: number, height: number) {
+  return { width, height, style: { width, height } };
+}
+
+/**
+ * Builds the board canvas's xyflow node array — the planning frame, the notice and add-campaign
+ * frames, and every campaign's project cards — from the board's filtered projects and campaigns.
+ *
+ * Kept as its own hook so `BoardPage` reads as page orchestration (state, effects, chrome) rather
+ * than as node assembly.
+ */
+export function useBoardCanvasNodes(input: {
+  filteredProjects: Project[];
+  campaigns: BoardCampaign[] | undefined;
+  column: number;
+  viewportWidth: number;
+  planningOpen: boolean;
+  planningMode: PlanningMode;
+  period: number;
+  setPeriod: (start: number) => void;
+  scale: TimelineScale;
+  setChosenScale: (scale: TimelineScale) => void;
+  setPlanningOpen: (update: (open: boolean) => boolean) => void;
+  setPlanningMode: (mode: PlanningMode) => void;
+  campaignOrder: string[];
+  canCreate: boolean;
+  canMove: boolean;
+  filtered: boolean;
+  positions: Record<string, { x: number; y: number }>;
+  campaignName: (id: string | null) => string;
+  clearFilters: () => void;
+  clientId: string;
+  setCreatingCampaign: (creating: boolean) => void;
+  openProject: (projectId: string) => void;
+  selectedProjectId: string | null;
+  setSelectedProjectId: (projectId: string | null) => void;
+  artwork: ProjectArtworkMap | undefined;
+}): { nodes: Node[]; content: { width: number; height: number } } {
+  const {
+    filteredProjects,
+    campaigns,
+    column,
+    viewportWidth,
+    planningOpen,
+    planningMode,
+    period,
+    setPeriod,
+    scale,
+    setChosenScale,
+    setPlanningOpen,
+    setPlanningMode,
+    campaignOrder,
+    canCreate,
+    canMove,
+    filtered,
+    positions,
+    campaignName,
+    clearFilters,
+    clientId,
+    setCreatingCampaign,
+    openProject,
+    selectedProjectId,
+    setSelectedProjectId,
+    artwork,
+  } = input;
+  return useMemo(() => {
+    // Seeded titles repeat the client name the viewer is already inside, which is what pushes the
+    // distinguishing tail out of a fixed-width card. The calendar drops the same head.
+    const titlePrefix = sharedTitlePrefix(filteredProjects.map((item) => item.title));
+    // A designer reads only the campaigns they hold work in: campaigns_read is scoped to the
+    // client, so an empty frame would expose a campaign title and dates they have no part in.
+    const frames = buildStack({
+      projects: filteredProjects,
+      campaigns: campaigns ?? [],
+      columnWidth: column,
+      viewportWidth,
+      planningOpen,
+      planningKanban: planningMode === "kanban",
+      canCreate,
+      keepEmptyCampaigns: canCreate,
+      filtered,
+      overrides: positions,
+    });
+    const built: Node[] = [];
+    for (const frame of frames) {
+      const shared = {
+        position: { x: frame.x, y: frame.y },
+        draggable: false,
+        selectable: false,
+        // xyflow only adds `nopan` to draggable nodes, so a non-draggable frame would let the pane
+        // swallow every click on the controls inside it.
+        className: "nopan",
+        ...sized(frame.width, frame.height),
+      };
+      if (frame.kind === "planning")
+        built.push({
+          ...shared,
+          id: frame.id,
+          type: "planning",
+          ariaLabel: "Planning",
+          ...sized(frame.width, frame.height),
+          data: {
+            open: planningOpen,
+            mode: planningMode,
+            projects: filteredProjects,
+            campaignName,
+            campaignOrder,
+            period,
+            onPeriod: setPeriod,
+            scale,
+            onScale: setChosenScale,
+            onToggle: () => setPlanningOpen((open) => !open),
+            onMode: setPlanningMode,
+            selectedId: selectedProjectId,
+            onSelect: setSelectedProjectId,
+            onOpen: openProject,
+          },
+        });
+      else if (frame.kind === "notice")
+        built.push({
+          ...shared,
+          id: frame.id,
+          type: "notice",
+          ariaLabel: "No matching projects",
+          data: { filtered, onClear: clearFilters },
+        });
+      else if (frame.kind === "addCampaign")
+        built.push({
+          ...shared,
+          id: frame.id,
+          type: "addCampaign",
+          ariaLabel: "Add a campaign",
+          data: { onCreate: () => setCreatingCampaign(true) },
+        });
+      else if (frame.campaign) {
+        const group = frame.campaign;
+        const real = group.id !== "none";
+        built.push({
+          ...shared,
+          id: frame.id,
+          type: "campaign",
+          ariaLabel: `Campaign ${group.title}`,
+          data: { campaign: group, count: frame.projects?.length ?? 0 },
+        });
+        const width = cardWidth();
+        (frame.projects ?? []).forEach((project, index) => {
+          const stored = positions[project.id] ?? project.board_position;
+          built.push({
+            id: project.id,
+            type: "project",
+            parentId: frame.id,
+            extent: "parent",
+            position: hasStoredPosition(stored) ? stored : slotPosition(index),
+            data: {
+              project,
+              titlePrefix,
+              canMove,
+              artwork: artworkFor(artwork, project.id),
+              onOpen: openProject,
+            },
+            draggable: canMove,
+            dragHandle: ".board-card-grip",
+            ...sized(width, CARD_H),
+            selected: project.id === selectedProjectId,
+            ariaLabel: project.title,
+            // The node is the selectable thing, so it is the node that reports being current.
+            domAttributes: project.id === selectedProjectId ? { "aria-current": true } : undefined,
+          });
+        });
+        if (frame.briefingSlot)
+          built.push({
+            id: `${frame.id}:new`,
+            type: "briefingSlot",
+            parentId: frame.id,
+            extent: "parent",
+            position: slotPosition(frame.projects?.length ?? 0),
+            draggable: false,
+            selectable: false,
+            className: "nopan",
+            ...sized(width, CARD_H),
+            data: {
+              href: real
+                ? `/clients/${clientId}/briefings/new?campaign=${group.id}`
+                : `/clients/${clientId}/briefings/new`,
+              campaign: group.title,
+            },
+          });
+      }
+    }
+    return { nodes: built, content: contentBounds(built) };
+  }, [
+    filteredProjects,
+    campaigns,
+    column,
+    viewportWidth,
+    planningOpen,
+    planningMode,
+    period,
+    setPeriod,
+    scale,
+    setChosenScale,
+    setPlanningOpen,
+    setPlanningMode,
+    campaignOrder,
+    canCreate,
+    canMove,
+    filtered,
+    positions,
+    campaignName,
+    clearFilters,
+    clientId,
+    setCreatingCampaign,
+    openProject,
+    selectedProjectId,
+    setSelectedProjectId,
+    artwork,
+  ]);
+}

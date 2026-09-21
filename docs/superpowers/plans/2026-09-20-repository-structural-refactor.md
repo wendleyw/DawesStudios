@@ -17,8 +17,9 @@
 - **English for all project content** — code, identifiers, comments, docs, commit messages. Brazilian Portuguese only for direct chat with the user.
 - **Conventional Commits required.** `commitlint` runs on `commit-msg`; `gitleaks` and `lint-staged` run on `pre-commit`.
 - **Commit trailer:** every commit ends with `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
-- **Verification command:** `npm run check` = `typecheck && lint && format:check && test` (109 unit tests). It runs after every task, not only at the end.
+- **Verification command:** `npm run check` = `typecheck && lint && format:check && test` (274 unit tests across 15 files). It runs after every task, not only at the end.
 - **Playwright runs on port 3003 only.** The media service allows `APP_ORIGIN=http://localhost:3003`; port 3010 returns 403 at the share-version dialog. Results from any other origin are not evidence.
+- **Rebuild the web container before every Playwright run.** `dawes-studios-app-web-1` has **zero bind mounts** and runs a baked `node apps/web/server.js`, so it serves whatever source was current when its image was built — not the working tree. Verified on 2026-09-20: the image was built at 19:59 UTC while the branch head was 22:10 UTC, more than two hours newer. Running the suite against a stale image produces a **false green**: it passes on code the refactor already replaced. This exact failure is recorded in `docs/engineering/handoff.md`, where earlier browser evidence had been measured against an image older than the source. Before any task's browser verification, rebuild and restart the web service, then confirm the image is newer than `git log -1 --format=%cI`. A browser result from an unrebuilt container is not evidence and must not be recorded as one.
 - **Never discard uncommitted or untracked work** to reach a cleaner state.
 - **Out of scope:** server-side data fetching / Server Actions, visual redesign, schema changes, API contract changes, dependency upgrades, acceptance-matrix rows.
 - **Documentation is part of every change.** `AGENTS.md` and `CLAUDE.md` stay byte-identical; affected docs update in the same task.
@@ -557,7 +558,7 @@ Expected: all pass. Then measure the documented widths — 1440, 1200, 1100, 100
 wc -l apps/web/app/globals.css
 grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)' apps/web/app/globals.css
 ```
-Expected: a substantially smaller file; the grep reports `0`.
+Expected: a substantially smaller file. The grep reports **20**, not `0`, and that is the correct result: 12 namespaces legitimately stay in `globals.css` because they have consumers in two or more features (`.topbar`, `.project-table`, `.project-row`, `.client-mark`, `.client-mark-initials`, `.board-canvas`, `.project-canvas`, `.project-origin`, `.project-symbol`, `.project-title`), because they sit in grouped selectors that cannot be split without changing specificity (`.sidebar-collapse`, which also carries `icon-button`), or because they are dead (`.workspace-status`, zero consumers). Each is justified individually in the Task 5 report. A `0` here would mean rules were moved that should not have been.
 
 - [ ] **Step 6: Commit**
 
@@ -896,11 +897,24 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 npm run check
 npm run build
 npm --prefix apps/media test
-npm run db:test
+npm run db:test   # SEE THE NOTE BELOW — red before this refactor began
 python3 supabase/tests/http_auth_storage_test.py
 npm --prefix apps/media run test:integration
 npm run test:e2e
 ```
+
+**`npm run db:test` is expected to FAIL, and that failure predates this refactor.**
+`supabase/scripts/build_seed.py` and `supabase/seed.sql` were rewritten (+382 / -163) at
+16:44 on 2026-09-20, roughly an hour before this refactor's first commit, and the pgTAP
+suite was not updated to match. The tests reference the fixture keys `dawes:version-16-2`
+and `dawes:version-3-1`; the regenerated seed produces neither, so
+`public.publish_version` raises `P0001: Version not found`. The failure is
+11 of 53 in `access_and_workflows`, 1 of 1 in `production_integrity`, and 3 of 14 in
+`trusted_media_and_catalog`. This refactor touched **zero** SQL files — `git diff
+--name-only 31a2f7a HEAD -- '*.sql' supabase/migrations/` is empty — so it is not the
+cause and must not be blamed for it. **Do not "fix" it here.** Repairing it means either
+editing test files, which this plan forbids outright, or changing the seed, which is not
+behavior-preserving work. Record it as a pre-existing defect for its owner and move on.
 
 Record each command's actual result. The Playwright suite runs against the container on port 3003. The handoff's reference point is **24 of 24 browser tests passing**; anything less is a regression to investigate, not to explain away.
 
@@ -910,15 +924,24 @@ Substitute `BASELINE` with the commit SHA recorded in Task 1, Step 6:
 
 ```bash
 BASELINE=<the SHA recorded in Task 1 Step 6>
-grep -rc '\.from(\|\.rpc(\|\.storage\.' apps/web/features --include='*.tsx' | grep -v ':0$' | wc -l
+grep -rn '\.from(\|\.rpc(\|\.storage\.' apps/web/features --include='*.tsx' | grep -v 'Array\.from(' | wc -l
 grep -cE '^\.(board|kanban|project-|login-|sidebar|topbar|workspace|client-|profile-|home-|overview-)' apps/web/app/globals.css
-git diff --stat "$BASELINE" -- 'apps/web/features/**/*.test.ts' 'apps/web/tests/**'
+git diff --diff-filter=MD --stat "$BASELINE" HEAD -- apps/web/features apps/web/tests \
+  | grep -E '\.test\.|\.spec\.' || echo "no existing test modified or deleted"
+git diff --diff-filter=A --stat "$BASELINE" HEAD -- apps/web/features | grep -E '\.test\.'
 diff AGENTS.md CLAUDE.md && echo "identical"
 ```
 
-Expected: `0` components with queries; `0` feature namespaces in `globals.css`; **an empty test diff** — no test file changed across the entire refactor; instruction files identical.
+Expected: `0` components with queries; **20** remaining feature-named rules in `globals.css` — the documented multi-feature, grouped-selector and dead-code exceptions from Task 5, not missed moves; `no existing test modified or deleted` from the first test command; a list of ADDED test files from the second; instruction files identical.
 
-The empty test diff is the single most important check in this plan. It is the proof that behavior was preserved.
+**The query grep must exclude `Array.from(`.** The bare pattern `\.from(` matches
+`Array.from(`, which is ordinary JavaScript and appears in `features/shared/modal.tsx`'s
+focus trap among others — four occurrences repo-wide. Without the `grep -v 'Array\.from('`
+filter, the "zero queries in components" check can never reach zero on correct code, and an
+executor under pressure would "fix" it by rewriting legitimate JavaScript. Expect **0** from
+the filtered command.
+
+**The test check is the single most important verification in this plan**, and it filters on `MD` — modified or deleted — deliberately. It must NOT be an "empty test diff" check: the agent mandate requires every agent to **add** unit tests for the write functions it extracts, so added test files are expected and required. What must never happen is an existing test being edited or removed to accommodate the refactor. A modified test is the signature of changed behavior; an added test is the signature of newly testable behavior.
 
 - [ ] **Step 3: Compare the before and after shape**
 

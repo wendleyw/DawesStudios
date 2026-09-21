@@ -29,14 +29,20 @@ Auth redirect URLs include the configured app origin, `/auth/recovery` and `/aut
 
 ## Canonical fixture reset and acceptance
 
-Stop all browser mutation suites before resetting. This command deletes only the local `dawes-studios` database and Storage volumes, recreates them and loads the deterministic fixture dataset:
+Stop all browser mutation suites before resetting. This command deletes only the local `dawes-studios` database and Storage volumes, recreates them and loads the deterministic fixture dataset. The 22 private production images and their 15 published copies are rendered at the true pixel size of the format each deliverable was ordered in — print formats at 150 DPI, and deliverables whose format carries no dimensions at 1080x1080 — so the fixtures show work at the shape it would really be delivered in:
 
 ```sh
 python3 supabase/scripts/local_stack.py reset --confirm-local-data-loss
 python3 supabase/scripts/verify_local.py
 ```
 
-The supported reset replaces a fixture environment; applying `seed.sql` repeatedly over populated tables is intentionally unsupported. `build_seed.py` deterministically regenerates checked-in seed SQL and fixture IDs. The dataset contains 10 clients, 20 projects, all 20 services, four projects with multiple deliverables/V1/V2, 30 products, 70 templates and 59 actual file objects. All creative files are clearly labeled synthetic demonstration resources.
+The supported reset replaces a fixture environment; applying `seed.sql` repeatedly over populated tables is intentionally unsupported. `build_seed.py` deterministically regenerates checked-in seed SQL and fixture IDs. The dataset contains 10 clients and 25 projects — two for each of nine workspaces, and seven for SABRE, whose campaigns, projects and open briefings come from the reference package that documents that workspace. It covers all 20 services, five projects with multiple deliverables (four of them on V1 and V2 throughout), 30 products, 70 templates and 116 actual file objects (70 brand files, 27 private production images, 18 published copies and one delivery). All creative files are clearly labeled synthetic demonstration resources.
+
+### Looking at a populated board
+
+The fixture artwork is deliberately synthetic — flat generated cards — which is right for an acceptance baseline and wrong for judging how a board reads. `npm run db:artwork:photos` replaces the 27 production images in `internal-assets` with photographs from picsum.photos, cropped server side to the exact canvas each deliverable was ordered in. Nothing is added to the repository, `build_seed.py` and `fixture_media.py` are untouched, and a reset restores the synthetic artwork.
+
+Two things it deliberately does not do. It leaves the published copies alone: a publication is an immutable client snapshot, and `register_sanitized_asset` refuses to re-describe an existing path with different bytes, so a client login still shows the generated cards. Publish a new version through the product to change what a client sees. And it is an overlay, not a fixture: run `verify_seed.py` before it, because that check compares production artwork byte for byte against the generated cards and will fail — correctly — once those bytes are photographs. The photographs are placeholders for looking at layout, not approved client material.
 
 `verify_local.py` runs SQL assertions/lint, real Auth/Storage checks, four-session Realtime boundaries, media behavior/integration/dependency checks, then verifies the final exact dataset and downloads actual files under client sessions. It writes `backend-evidence.json` and `seed-evidence.json`; web build/browser/visual evidence is separate. Run `python3 supabase/scripts/verify_seed.py` for the read-only all-client dataset check.
 

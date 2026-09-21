@@ -26,6 +26,12 @@
 - Keep feature code, data access, validation, and unit tests colocated. Share code only when multiple consumers need it. Avoid duplicate domain rules, catch-all modules, competing state stores, and unnecessary services.
 - Do not run permanent background AI agents as product infrastructure merely to implement this development workflow. Persistent agent orchestration is documented in docs/engineering/agent-orchestration.md.
 
+## Codebase Architecture Boundaries
+
+- Data access: Supabase queries live only in `features/<feature>/<feature>-data.ts` — reads as `use<Thing>()` hooks, writes as plain `async (database, input)` functions; validation, trimming, idempotency keys and retry state stay in the component. See `docs/architecture/data-access.md`.
+- Shared UI layer: a primitive moves to `apps/web/features/shared/` only with two or more real consumers today; consumer differences become props, never a normalized-away behavior. See `apps/web/features/shared/README.md`.
+- Styling boundary: `apps/web/app/globals.css` holds tokens/`@theme`, reset and base element styles, and shared-primitive styles only; `apps/web/features/<feature>/<feature>.css` holds that feature's own rules; a namespace with consumers in two or more features stays in `globals.css` regardless of its name. See `docs/architecture/design-system.md#styling-boundary`.
+
 ## Cross-Agent Continuity
 
 - Read `docs/engineering/handoff.md` before resuming work in either Codex or Claude Code. Preserve the current objective, accepted decisions, unfinished changes, and verification gaps.
@@ -44,5 +50,5 @@
 - Only the agency publishes an immutable client snapshot. Keep client and internal comment channels separate, including design pins and drafts.
 - Briefing submission is free. Budget acceptance must atomically create one project and one credit debit, reject insufficient balance, and remain idempotent under retries and concurrent requests.
 - Keep template drafts private to their owner and separate from projects and billing. Require explicit campaign selection or creation in briefing details.
-- Completion requires evidence for the entire acceptance matrix with a deterministic baseline of exactly 10 clients and 20 projects, realistic related data, real persistence, role isolation, and complete action flows.
+- Completion requires evidence for the entire acceptance matrix with a deterministic baseline of exactly 10 clients and 25 projects — two for each of nine workspaces and seven for SABRE, whose structure is taken from the reference package — with realistic related data, real persistence, role isolation, and complete action flows.
 - Visual quality is judged by clarity, restrained styling, modern typography, consistent spacing, and usability rather than pixel matching every prototype screenshot. After functional verification, perform a complete audit of alignment, application logic, spacing, minimalism, accessibility, responsive behavior, and duplication. Do not infer correctness from a successful build alone.

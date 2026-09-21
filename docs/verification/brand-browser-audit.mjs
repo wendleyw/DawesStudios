@@ -4,6 +4,19 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const { chromium, expect } = require("@playwright/test");
+/** The visible name of each brand section, which is what the navigation row is driven by. */
+const sectionLabels = {
+  overview: "Overview",
+  logos: "Logos",
+  colors: "Colors",
+  typography: "Typography",
+  "visual-style": "Visual style",
+  products: "Products",
+  assets: "Assets",
+  templates: "Templates",
+  messaging: "Messaging",
+  ai: "Brand context",
+};
 const AxeBuilder = require("@axe-core/playwright").default;
 const { createClient } = require("@supabase/supabase-js");
 const env = Object.fromEntries(readFileSync(new URL("../../supabase/.env.local", import.meta.url), "utf8").split("\n").filter(line => line.includes("=") && !line.startsWith("#")).map(line => { const index = line.indexOf("="); return [line.slice(0, index), line.slice(index + 1)]; }));
@@ -46,6 +59,10 @@ try {
   const boardPath = await page.locator(".client-nav").filter({ hasText: "SABRE" }).getAttribute("href");
   clientId = boardPath.split("/")[2];
   const brandBase = `http://localhost:3003/clients/${clientId}/brand`;
+  // The sections are a row of links; a section is opened the way a viewer opens it.
+  const sectionNav = () => page.getByRole("navigation", { name: "Brand sections" });
+  const openSection = section =>
+    sectionNav().getByRole("link", { name: sectionLabels[section], exact: true }).click();
   await capture("brand-audit-home-desktop");
 
   for (const [width, height] of [[1600, 1000], [1024, 768], [1000, 800], [768, 1024], [390, 844], [320, 800]]) {
@@ -89,9 +106,9 @@ try {
   report.actions.modalFocusRestored = await page.getByRole("button", { name: "Edit overview", exact: true }).evaluate(element => element === document.activeElement);
 
   for (const section of ["logos", "colors", "typography", "visual-style", "products", "assets", "templates", "messaging", "ai"]) {
-    await page.getByLabel("Brand section").selectOption(section);
+    await openSection(section);
     await expect(page).toHaveURL(`${brandBase}/${section}`);
-    await expect(page.getByLabel("Brand section")).toHaveValue(section);
+    await expect(sectionNav().getByRole("link", { current: "page" })).toHaveText(sectionLabels[section]);
     if (section === "templates") await expect(page.locator(".brand-draft-note")).toBeVisible();
     if (section === "assets") await expect(page.getByRole("button", { name: "Add asset", exact: true })).toBeVisible();
     await capture(`brand-audit-${section}-desktop`);
@@ -99,7 +116,7 @@ try {
     record();
   }
 
-  await page.getByLabel("Brand section").selectOption("templates");
+  await openSection("templates");
   await expect(page.locator(".brand-template-card")).toHaveCount(3);
   await page.getByLabel("Template category").selectOption("Social");
   await expect(page.locator(".brand-template-card")).toHaveCount(1);

@@ -4,7 +4,7 @@ This small HTTP service regenerates client-visible artwork from source bytes. It
 
 ## Run locally
 
-Install dependencies with `npm ci --prefix apps/media`. Copy `.env.example` to ignored `.env.local`, fill the values from the isolated local Supabase project, and run `npm --prefix apps/media start`. Poppler's `pdfinfo` and `pdftoppm` commands must be available on `PATH`. The default address is `http://127.0.0.1:55430`; the allowed browser origin is `http://localhost:3003`.
+Install dependencies with `npm ci --prefix apps/media`. Copy `.env.example` to ignored `.env.local`, fill the values from the isolated local Supabase project, and run `npm --prefix apps/media start`. Poppler's `pdfinfo` and `pdftoppm` commands must be available on `PATH`. The default address is `http://127.0.0.1:55430`. `APP_ORIGIN` names the canonical browser origin, `http://localhost:3003` by default; `MEDIA_ALLOWED_ORIGINS` adds any further origins this machine serves the same application from, comma separated, which is what lets a `next dev` on its own port prepare a publication. `local_stack.py` writes the local development origins for you.
 
 Never put `SUPABASE_SERVICE_ROLE_KEY` in a browser environment variable. Both service and fixture credential files are ignored and should have file mode `0600`.
 
@@ -15,7 +15,7 @@ Never put `SUPABASE_SERVICE_ROLE_KEY` in a browser environment variable. Both se
 - `POST /deliveries/prepare?projectId=<project-uuid>` accepts a raw PNG, JPEG, WebP or PDF body, its exact `Content-Type`, and an optional URL-encoded `X-File-Name` display label. The project must be approved. It returns `{ "id", "storagePath", "mimeType", "fileSize" }` after persisting the trusted delivery record. Marking the project delivered is a separate idempotent agency action. New supplemental files after delivery are not supported.
 - `POST /assets/discard` accepts `{ "paths": ["<prepared-publication-path>"] }`, at most 20 paths, and returns `{ "discarded": [], "retained": [] }`. It removes only the caller's unreferenced prepared assets. If publication succeeded but its response was lost, referenced files are retained. The database flags files before deletion and removes the attestation only after Storage deletion succeeds.
 
-All POST routes require `Authorization: Bearer <Supabase-user-access-token>`. Only the configured browser origin receives CORS permission. Authentication and agency-role checks also apply to non-browser requests.
+All POST routes require `Authorization: Bearer <Supabase-user-access-token>`. Only a configured browser origin receives CORS permission: origins are compared whole against the allowlist, never reflected back because they asked, and an origin that is not named is refused with 403 before the body is read. Authentication and agency-role checks also apply to non-browser requests.
 
 ## Byte handling and limits
 
@@ -29,7 +29,7 @@ Video and ZIP files are not accepted by this trusted client-visible pipeline. No
 
 ## Tests and image
 
-- `npm --prefix apps/media test` runs seven behavior tests covering metadata stripping, invalid formats, pixel limits, PDF attachments/scripts and page preservation.
+- `npm --prefix apps/media test` runs 14 tests across two files: `sanitize.test.js` covers metadata stripping, invalid formats, pixel limits, PDF attachments/scripts and page preservation; `server.test.js` covers the origin allowlist.
 - `npm --prefix apps/media run test:integration` requires the running local service and provisioned fixture credentials; it exercises real Auth, worker, Storage and SQL-attestation boundaries, then removes its temporary objects and restores the source design.
 - `docker build -t dawes-media:local apps/media` builds the production image with Poppler and production dependencies only. Inject environment variables at runtime, publish the chosen port, and keep Supabase service access within the deployment's trusted network.
 - `MEDIA_TEST_URL=http://127.0.0.1:55431 npm --prefix apps/media run test:integration` runs the same real pipeline checks against an isolated Docker image mapped to test port 55431.

@@ -1,18 +1,21 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Paperclip, X } from "lucide-react";
 import { useRef } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
+import { FormError } from "@/features/shared/form-error";
+import {
+  addBriefingAttachment,
+  downloadBriefingAttachmentFile,
+  findBriefingAttachmentByPath,
+  removeBriefingAttachment,
+  removeBriefingAttachmentFile,
+  uploadBriefingAttachmentFile,
+  useBriefingAttachments,
+  type BriefingAttachment,
+} from "./briefing-data";
 
-type Attachment = {
-  id: string;
-  name: string;
-  storage_path: string;
-  mime_type: string;
-  file_size: number;
-};
 const fileTypes: Record<string, string[]> = {
   "image/png": ["png"],
   "image/jpeg": ["jpg", "jpeg"],
@@ -36,50 +39,28 @@ export function BriefingAttachments({
   briefingId: string;
   editable?: boolean;
 }) {
-  const { database, session } = useAuth();
+  const { database } = useAuth();
   const queryClient = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
-  const attachments = useQuery({
-    queryKey: ["briefing-attachments", session?.user.id, briefingId],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("briefing_attachments")
-          .select("id,name,storage_path,mime_type,file_size")
-          .eq("briefing_id", briefingId)
-          .order("created_at"),
-      ) as Attachment[],
-  });
+  const attachments = useBriefingAttachments(briefingId);
   const upload = useMutation({
     mutationKey: ["briefing-file", briefingId],
     mutationFn: async (file: File) => {
       const extension = validateAttachment(file);
       const path = `${briefingId}/${crypto.randomUUID()}.${extension}`;
-      assertResult(
-        await database.storage
-          .from("briefing-files")
-          .upload(path, file, { contentType: file.type, upsert: false }),
-      );
+      await uploadBriefingAttachmentFile(database, { path, file });
       try {
-        assertResult(
-          await database.rpc("add_briefing_attachment", {
-            p_briefing_id: briefingId,
-            p_name: file.name,
-            p_storage_path: path,
-            p_mime_type: file.type,
-            p_file_size: file.size,
-          }),
-        );
+        await addBriefingAttachment(database, {
+          briefingId,
+          name: file.name,
+          storagePath: path,
+          mimeType: file.type,
+          fileSize: file.size,
+        });
       } catch (error) {
-        const registered = await database
-          .from("briefing_attachments")
-          .select("id")
-          .eq("briefing_id", briefingId)
-          .eq("storage_path", path)
-          .maybeSingle();
+        const registered = await findBriefingAttachmentByPath(database, { briefingId, path });
         if (!registered.error && registered.data) return;
-        if (!registered.error) await database.storage.from("briefing-files").remove([path]);
+        if (!registered.error) await removeBriefingAttachmentFile(database, { path });
         throw error;
       }
     },
@@ -88,18 +69,16 @@ export function BriefingAttachments({
   const remove = useMutation({
     mutationKey: ["briefing-file", briefingId],
     mutationFn: async (id: string) => {
-      const path = assertResult(
-        await database.rpc("remove_briefing_attachment", { p_attachment_id: id }),
-      ) as string;
-      assertResult(await database.storage.from("briefing-files").remove([path]));
+      const path = await removeBriefingAttachment(database, { id });
+      await removeBriefingAttachmentFile(database, { path });
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["briefing-attachments"] }),
   });
   const download = useMutation({
-    mutationFn: async (attachment: Attachment) => {
-      const blob = assertResult(
-        await database.storage.from("briefing-files").download(attachment.storage_path),
-      );
+    mutationFn: async (attachment: BriefingAttachment) => {
+      const blob = await downloadBriefingAttachmentFile(database, {
+        path: attachment.storage_path,
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -113,12 +92,12 @@ export function BriefingAttachments({
       <h3>Attachments</h3>
       {attachments.isPending && <p role="status">Loading attachments…</p>}
       {attachments.error && (
-        <p className="form-error" role="alert">
+        <FormError>
           Attachments could not be loaded.{" "}
           <button className="button quiet" onClick={() => void attachments.refetch()}>
             Try again
           </button>
-        </p>
+        </FormError>
       )}
       {attachments.data?.map((file) => (
         <div className="briefing-attachment" key={file.id}>
@@ -172,9 +151,9 @@ export function BriefingAttachments({
         </>
       )}
       {(upload.error || remove.error || download.error) && (
-        <p className="form-error" role="alert">
+        <FormError>
           {upload.error?.message ?? remove.error?.message ?? download.error?.message}
-        </p>
+        </FormError>
       )}
     </div>
   );

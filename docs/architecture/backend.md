@@ -121,7 +121,7 @@ PDF delivery is flattened to newly rendered page images and rebuilt as a new PDF
 - `npm --prefix apps/media audit --omit=dev`: production dependency advisory check.
 - `node supabase/tests/realtime_boundary_test.mjs`: real four-role subscription and deleted-event boundary check.
 - `python3 supabase/tests/concurrent_workflows_test.py`: four concurrent workflow scenarios restricted to the disposable port-55521 backend.
-- `python3 supabase/scripts/verify_seed.py`: exact all-client scenario, all 20 accepted service answers, ledger, version graph, 70 templates and 59 actual file downloads.
+- `python3 supabase/scripts/verify_seed.py`: exact all-client scenario, all 20 accepted service answers, ledger, version graph, 70 templates, artwork coverage per role and 108 actual file downloads. It also reads each artwork file's own PNG header and checks the pixel size against the format `format_catalog` records for the deliverable it belongs to, so a fixture that no longer matches its ordered format fails here rather than looking plausible on screen.
 - `python3 supabase/scripts/verify_local.py`: final source-backend verification after browser mutations stop.
 
 Database tests now also cover trusted-worker attestations, denied direct publication/delivery uploads, source mapping, submitted question validation and safe removal of unregistered brand files. Execute these commands against the isolated fixture environment, not a production database. Browser end-to-end checks are owned by the web application test suite and are not implied by these backend results.

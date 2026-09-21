@@ -1,10 +1,15 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@database";
-import { assertResult } from "@/lib/supabase";
+import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
+
+/**
+ * The lifecycle of an uploaded design artwork: preparing the image, storing it, and removing one
+ * that no design ended up referencing. The signed URL that displays a stored artwork is a read, and
+ * lives with the feature's other read hooks in `project-data.ts`.
+ */
 
 const allowedImageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 
-export async function sanitizeArtwork(file: Blob): Promise<Blob> {
+/** Only `uploadArtwork` prepares an image, so this stays internal to the module. */
+async function sanitizeArtwork(file: Blob): Promise<Blob> {
   if (!allowedImageTypes.has(file.type))
     throw new Error("Choose a PNG, JPG, or WebP image for the design preview.");
   if (file.size > 25 * 1024 * 1024) throw new Error("Please choose an image smaller than 25 MB.");
@@ -29,11 +34,7 @@ export async function sanitizeArtwork(file: Blob): Promise<Blob> {
   }
 }
 
-export async function uploadArtwork(
-  database: SupabaseClient<Database>,
-  projectId: string,
-  file: Blob,
-) {
+export async function uploadArtwork(database: SupabaseDatabase, projectId: string, file: Blob) {
   const image = await sanitizeArtwork(file);
   const path = `${projectId}/${crypto.randomUUID()}.png`;
   assertResult(
@@ -42,4 +43,18 @@ export async function uploadArtwork(
       .upload(path, image, { contentType: "image/png", upsert: false }),
   );
   return path;
+}
+
+/**
+ * Removes an artwork the dialog uploaded but never attached to a design.
+ *
+ * The reference check is what makes the removal safe: a second attempt at the same upload resolves
+ * to the design row already holding this path, and closing the dialog afterwards must not delete
+ * the file that design now points at.
+ */
+export async function discardUnreferencedArtwork(database: SupabaseDatabase, path: string) {
+  const rows = assertResult(
+    await database.from("designs").select("id").eq("internal_asset_path", path),
+  );
+  if (!rows.length) assertResult(await database.storage.from("internal-assets").remove([path]));
 }

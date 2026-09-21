@@ -1,0 +1,181 @@
+/* Sign-in surfaces: the two-panel login layout and its form panel. */
+.login-layout {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-columns: 47% 53%;
+}
+.login-story {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 48px clamp(36px, 5vw, 80px);
+  overflow: hidden;
+  background: var(--sidebar);
+  color: #fff;
+}
+.login-story > .brand-logo {
+  width: 192px;
+}
+.login-story > div {
+  padding-top: 40px;
+  padding-bottom: 64px;
+}
+.login-story .eyebrow {
+  margin-bottom: 24px;
+  color: #b8b9af;
+  font-size: 11px;
+  letter-spacing: 0.25px;
+  text-transform: none;
+}
+.login-story h1 {
+  font-size: clamp(42px, 4.7vw, 72px);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -2.7px;
+}
+.login-story p {
+  margin-top: 28px;
+  color: #bfc0b7;
+  font-size: 14px;
+  line-height: 1.85;
+}
+.login-caption {
+  color: #a3a59a;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+}
+.login-form-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 64px 36px;
+  background: #fafaf7;
+}
+.login-form {
+  width: 100%;
+  max-width: 360px;
+}
+.login-form .eyebrow {
+  margin-bottom: 17px;
+}
+.login-form h2 {
+  margin-bottom: 12px;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+.login-form > p:not(.form-error):not(.form-help) {
+  margin-bottom: 36px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.login-form label {
+  margin-top: 22px;
+}
+.login-form input {
+  min-height: 46px;
+  background: transparent;
+}
+.login-form > .button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 26px;
+  justify-content: space-between;
+  padding-inline: 16px;
+}
+.login-form .form-error {
+  margin-top: 20px;
+}
+.login-form .form-help {
+  max-width: 300px;
+  margin: 24px auto 0;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .login-layout {
+    grid-template-columns: 42% 58%;
+  }
+  .login-story {
+    padding: 36px;
+  }
+  .login-story > .brand-logo {
+    width: 166px;
+  }
+  .login-story h1 {
+    font-size: 44px;
+    letter-spacing: -1.7px;
+  }
+  .login-story p {
+    font-size: 13px;
+  }
+  .login-caption {
+    max-width: 180px;
+    line-height: 1.8;
+  }
+  .login-form-panel {
+    padding-inline: 32px;
+  }
+}
+@media (max-width: 640px) {
+  .login-layout {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+  .login-story {
+    min-height: 0;
+    padding: 28px 28px 32px;
+  }
+  .login-story > .brand-logo {
+    width: 152px;
+  }
+  .login-story > div {
+    padding-top: 32px;
+    padding-bottom: 0;
+  }
+  .login-story .eyebrow {
+    display: none;
+  }
+  .login-story h1 {
+    font-size: 36px;
+    letter-spacing: -1.25px;
+  }
+  .login-story h1 br {
+    display: none;
+  }
+  .login-story p,
+  .login-caption {
+    display: none;
+  }
+  .login-form-panel {
+    flex: 1;
+    align-items: flex-start;
+    padding: 36px 28px 40px;
+  }
+  .login-form h2 {
+    font-size: 28px;
+  }
+  .login-form > p:not(.form-error):not(.form-help) {
+    margin-bottom: 28px;
+    font-size: 13px;
+  }
+  .login-form .eyebrow {
+    margin-bottom: 12px;
+  }
+  .login-form label {
+    margin-top: 20px;
+  }
+  .login-form input {
+    font-size: 16px;
+  }
+}
+@media (max-width: 374px) {
+  .login-story,
+  .login-form-panel {
+    padding-inline: 24px;
+  }
+}

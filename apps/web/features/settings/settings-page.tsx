@@ -8,6 +8,7 @@ import { PresetSettings } from "./preset-settings";
 import { TeamSettings } from "./team-settings";
 import { WorkspaceSettings } from "./workspace-settings";
 import "./settings.css";
+import { PageStatus } from "@/features/shared/page-status";
 
 type SettingsTab = "workspace" | "team" | "clients" | "presets" | "account";
 const labels: Record<SettingsTab, string> = {
@@ -20,12 +21,7 @@ const labels: Record<SettingsTab, string> = {
 
 export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
   const { profile } = useAuth();
-  if (!profile)
-    return (
-      <div className="page-content" role="status">
-        Opening settings…
-      </div>
-    );
+  if (!profile) return <PageStatus>Opening settings…</PageStatus>;
   if (profile.role !== "agency" && tab !== "account")
     return (
       <div className="page-content">

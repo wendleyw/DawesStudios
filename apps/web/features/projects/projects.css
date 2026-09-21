@@ -64,56 +64,95 @@
   justify-content: space-between;
   padding: 0 2px;
 }
+/* The canvas sizes this header with DELIVERABLE_HEAD_H, so its name keeps to one line. */
 .deliverable-header h2 {
   font-size: 16px;
+  line-height: 20px;
   letter-spacing: -0.3px;
   margin: 7px 0 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .deliverable-header p {
   font-size: 11px;
+  line-height: 17px;
   color: var(--muted);
   margin: 0;
 }
+/* One version reads as a single line: the label column on the left, the designs beside it. */
 .version-card {
+  display: flex;
+  align-items: stretch;
   border: 1px solid #e2e2dc;
   border-radius: 9px;
   background: #fff;
   overflow: hidden;
   box-shadow: 0 3px 8px #00000003;
 }
-.version-card > header {
+/* Fixed sizes here and below mirror canvas-layout.ts, which places the lines without
+   measuring them. Change the two together. */
+.version-label {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 200px;
+  width: 200px;
+  background: #fcfcfa;
+  border-right: 1px solid #efefe9;
+}
+.version-label > header {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  gap: 9px;
+  height: 56px;
+  padding: 0 14px;
+  gap: 8px;
 }
-.version-card > header > strong {
+.version-label > header > strong {
   font-size: 12px;
 }
+/* A 200 px column leaves the icon button less room than the page's default, and the status has to
+   give way before the version number does. */
+.version-label > header .icon-button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 6px;
+}
 .version-state {
+  flex: 1;
+  min-width: 0;
   color: var(--muted);
   font-size: 11px;
   text-transform: capitalize;
-  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .version-designs {
   display: flex;
-  padding: 0 12px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
   gap: 8px;
 }
+/* One tile per design, all the same width, so the row reads as a row however many it holds. */
 .design-preview {
   padding: 0;
   border: 0;
   background: #f6f6f3;
   border-radius: 4px;
   overflow: hidden;
-  flex: 1;
+  flex: 0 0 200px;
   min-width: 0;
   text-align: left;
 }
+/* The artwork box takes the deliverable's own proportions, and holds them while the preview is
+   still loading, so the card never changes height after it is placed. */
 .design-preview > .artwork,
-.design-preview > .uploaded-artwork {
-  height: 218px;
+.design-preview > .uploaded-artwork,
+.design-preview > .artwork-loading {
+  height: var(--artwork-height, 200px);
   width: 100%;
   object-fit: contain;
 }
@@ -124,41 +163,65 @@
   gap: 4px;
   padding: 10px 9px;
   font-size: 10px;
+  line-height: 15px;
   color: #555;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .version-note {
-  padding: 8px 15px 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  height: 40px;
+  padding: 8px 14px 0;
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 16px;
   color: var(--muted);
   margin: 0;
 }
-.version-card > footer {
+/* The label column's footer keeps its control on its own full-width line: the column is one tile
+   wide, which is not enough to set the count and the control side by side. */
+.version-label > footer {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 14px;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  margin-top: auto;
+  height: 66px;
+  padding: 10px 14px 8px;
 }
-.version-card > footer > span {
+.version-label > footer > span {
   color: var(--muted);
   font-size: 10px;
+  line-height: 15px;
 }
-.version-card > footer .button {
-  padding: 5px;
+.version-label > footer .button {
+  padding: 5px 7px;
   font-size: 10px;
   min-height: 28px;
 }
-.more-designs {
-  width: 100%;
+/* The rest of the row sits in a trailing slot rather than a row of its own, so the line stays one
+   line. Selector kept specific so the shared `.button` rules cannot re-shape it. */
+.version-designs > .more-designs {
+  flex: 0 0 112px;
+  align-self: stretch;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+  padding: 10px;
+  border-radius: 4px;
+  background: #f6f6f3;
   font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+  white-space: normal;
 }
 .version-empty {
-  width: 100%;
-  min-height: 165px;
+  flex: 0 0 408px;
+  align-self: stretch;
+  min-height: 144px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -289,12 +352,6 @@
 }
 .artwork-thumbnail .artwork-mark {
   font-size: 15px;
-}
-.version-designs:has(.design-preview:nth-child(2)) .artwork-thumbnail .artwork-title {
-  font-size: 18px;
-}
-.version-designs:has(.design-preview:nth-child(2)) .design-preview > .artwork {
-  height: 218px;
 }
 .uploaded-artwork {
   width: 100%;
@@ -718,18 +775,28 @@
 }
 
 .version-feedback {
+  height: 70px;
   margin: 10px 14px;
   padding: 10px;
   border-radius: 5px;
   background: #f4f5ef;
   color: #556247;
   font-size: 11px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  line-height: 16px;
+  overflow: hidden;
 }
 .version-feedback strong {
   display: block;
   font-size: 10px;
+  line-height: 15px;
   margin-bottom: 3px;
+}
+.version-feedback > span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  height: 32px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

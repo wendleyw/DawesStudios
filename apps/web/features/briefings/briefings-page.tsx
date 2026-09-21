@@ -8,6 +8,8 @@ import { formatDate, useClients } from "@/features/workspace/workspace-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
 import { briefingStatusLabels, services } from "./briefing-model";
 import "./briefings.css";
+import { FormError } from "@/features/shared/form-error";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -15,20 +17,14 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
   const [tab, setTab] = useState("all");
-  if (briefings.isPending || clients.isPending)
-    return (
-      <div className="page-content" role="status">
-        Loading briefings…
-      </div>
-    );
+  if (briefings.isPending || clients.isPending || campaigns.isPending)
+    return <PageStatus>Loading briefings…</PageStatus>;
   const client = clients.data?.find((item) => item.id === clientId);
   if (briefings.error || campaigns.error || !client)
     return (
       <div className="page-content">
         <h1>Briefings unavailable.</h1>
-        <p className="form-error" role="alert">
-          We could not load this workspace. Please try again.
-        </p>
+        <FormError>We could not load this workspace. Please try again.</FormError>
         <button
           className="button"
           onClick={() => {

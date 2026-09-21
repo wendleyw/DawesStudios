@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { safeReturnPath } from "./return-path";
+import { FormError } from "@/features/shared/form-error";
+import "./auth.css";
 
 export function LoginPage() {
   const { database, session, loading } = useAuth();
@@ -85,11 +87,7 @@ export function LoginPage() {
               minLength={8}
             />
           </label>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <FormError>{error}</FormError>}
           <button className="button primary" type="submit" disabled={pending || loading}>
             {pending ? (
               <LoaderCircle className="spin" size={16} />

@@ -1,14 +1,16 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
+import { updateProfile, useInvalidateAccount } from "./settings-data";
+import { SettingsSuccess } from "./settings-success";
+import { FormError } from "@/features/shared/form-error";
 
 export function AccountSettings() {
   const { database, profile, session } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateAccount = useInvalidateAccount();
   const [name, setName] = useState(profile?.display_name ?? "");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -16,16 +18,9 @@ export function AccountSettings() {
     mutationFn: async () => {
       if (!name.trim() || name.trim().length > 120)
         throw new Error("Use a display name between 1 and 120 characters.");
-      assertResult(
-        await database
-          .from("profiles")
-          .update({ display_name: name.trim() })
-          .eq("id", session!.user.id)
-          .select("id")
-          .single(),
-      );
+      await updateProfile(database, { userId: session!.user.id, displayName: name.trim() });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+    onSuccess: () => invalidateAccount(),
   });
   const changePassword = useMutation({
     mutationFn: async () => {
@@ -73,16 +68,8 @@ export function AccountSettings() {
               Your sign-in email is managed with your workspace access.
             </span>
           </label>
-          {saveProfile.error && (
-            <p className="form-error" role="alert">
-              {saveProfile.error.message}
-            </p>
-          )}
-          {saveProfile.isSuccess && (
-            <p className="settings-success" role="status">
-              Profile saved.
-            </p>
-          )}
+          {saveProfile.error && <FormError>{saveProfile.error.message}</FormError>}
+          {saveProfile.isSuccess && <SettingsSuccess>Profile saved.</SettingsSuccess>}
           <button className="button primary" disabled={saveProfile.isPending}>
             {saveProfile.isPending ? "Saving…" : "Save profile"}
           </button>
@@ -128,16 +115,8 @@ export function AccountSettings() {
               }}
             />
           </label>
-          {changePassword.error && (
-            <p className="form-error" role="alert">
-              {changePassword.error.message}
-            </p>
-          )}
-          {changePassword.isSuccess && (
-            <p className="settings-success" role="status">
-              Password updated.
-            </p>
-          )}
+          {changePassword.error && <FormError>{changePassword.error.message}</FormError>}
+          {changePassword.isSuccess && <SettingsSuccess>Password updated.</SettingsSuccess>}
           <button className="button primary" disabled={changePassword.isPending}>
             {changePassword.isPending ? "Updating…" : "Update password"}
           </button>

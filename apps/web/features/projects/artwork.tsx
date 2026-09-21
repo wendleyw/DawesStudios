@@ -1,10 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
-import type { CanvasDesign, ProjectChannel } from "./project-data";
+import { useDesignAssetUrl, type CanvasDesign, type ProjectChannel } from "./project-data";
 
 export function Artwork({
   design,
@@ -15,20 +12,8 @@ export function Artwork({
   channel: ProjectChannel;
   thumbnail?: boolean;
 }) {
-  const { database, session } = useAuth();
   const [failedSource, setFailedSource] = useState<string | null>(null);
-  const asset = useQuery({
-    queryKey: ["asset-url", session?.user.id, channel, design.assetPath],
-    enabled: !!design.assetPath,
-    staleTime: 120_000,
-    refetchInterval: 240_000,
-    queryFn: async () =>
-      assertResult(
-        await database.storage
-          .from(channel === "internal" ? "internal-assets" : "published-assets")
-          .createSignedUrl(design.assetPath!, 300),
-      ).signedUrl,
-  });
+  const asset = useDesignAssetUrl(design.assetPath, channel);
   const content =
     typeof design.content === "object" && design.content && !Array.isArray(design.content)
       ? design.content
@@ -43,8 +28,11 @@ export function Artwork({
       // eslint-disable-next-line @next/next/no-img-element
       <img
         className="uploaded-artwork"
+        // The design's title is already rendered beside this image, so repeating it here makes a
+        // screen reader announce the same name twice. The artwork carries no information a caption
+        // can express, which is what `alt=""` is for.
+        alt=""
         src={asset.data}
-        alt={design.title}
         draggable={false}
         onError={() => setFailedSource(asset.data!)}
       />

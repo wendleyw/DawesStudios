@@ -1,22 +1,34 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, FileImage, FileText, Plus, Search, Check } from "lucide-react";
+import { Download, FileImage, FileText, Plus, Check } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { downloadPrivateFile } from "@/features/shared/file-download";
+import { downloadPrivateFile } from "./file-download";
 import { Modal } from "@/features/shared/modal";
-import { formatDate, useClients } from "@/features/workspace/workspace-data";
-import { assertResult } from "@/lib/supabase";
-import { useProjectAssets, type ProjectAsset } from "./asset-data";
+import {
+  formatDate,
+  useClients,
+  useInvalidateWorkspace,
+} from "@/features/workspace/workspace-data";
+import {
+  initialUploadProject,
+  markProjectDelivered,
+  useProjectAssets,
+  type ProjectAsset,
+} from "./asset-data";
 import { UploadFileDialog } from "./upload-file-dialog";
 import "./assets.css";
+import { FormError } from "@/features/shared/form-error";
+import { SearchField } from "@/features/shared/search-field";
+import { PageStatus } from "@/features/shared/page-status";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
   const [project, setProject] = useState(parameters.get("project") ?? "");
   const [search, setSearch] = useState("");
@@ -36,25 +48,20 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   });
   const deliver = useMutation({
     mutationFn: async () => {
-      if (deliverProject)
-        assertResult(
-          await database.rpc("mark_project_delivered", { p_project_id: deliverProject }),
-        );
+      if (deliverProject) await markProjectDelivered(database, { projectId: deliverProject });
     },
     onSuccess: async () => {
+      // `projects` is owned by `workspace/workspace-data.ts`; `useInvalidateWorkspace()`'s key set
+      // (`workspaceQueryKeys = ["projects"]`) is identical to what this call invalidated inline, so
+      // this is non-widening.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["assets"] }),
-        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        invalidateWorkspace(),
       ]);
       setDeliverProject(null);
     },
   });
-  if (data.isPending || clients.isPending)
-    return (
-      <div className="page-content" role="status">
-        Gathering files…
-      </div>
-    );
+  if (data.isPending || clients.isPending) return <PageStatus>Gathering files…</PageStatus>;
   if (data.error || !data.data || !clients.data?.some((client) => client.id === clientId))
     return (
       <div className="page-content">
@@ -73,6 +80,8 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       (!search || asset.name.toLowerCase().includes(search.trim().toLowerCase())),
   );
   const selectedProject = projects.find((item) => item.id === project);
+  // A delivery belongs to an approved project, and the dialog opens on the one being looked at.
+  const deliverable = projects.filter((item) => item.status === "approved");
   const canDeliver =
     profile?.role === "agency" &&
     selectedProject?.status === "approved" &&
@@ -95,7 +104,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             {profile?.role === "agency" && (
               <button
                 className="button"
-                disabled={!projects.some((item) => item.status === "approved")}
+                disabled={!deliverable.length}
                 title="Available when a project is approved"
                 onClick={() => setUpload("delivery")}
               >
@@ -111,15 +120,13 @@ export function AssetsPage({ clientId }: { clientId: string }) {
         )}
       </header>
       <div className="files-toolbar">
-        <label className="search-field">
-          <Search size={16} />
-          <input
-            aria-label="Search files"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Find a file…"
-          />
-        </label>
+        <SearchField
+          label="Search files"
+          value={search}
+          onChange={setSearch}
+          placeholder="Find a file…"
+          iconSize={16}
+        />
         <label className="visually-hidden" htmlFor="files-project">
           Filter project
         </label>
@@ -156,11 +163,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
           </button>
         </div>
       )}
-      {download.error && (
-        <p className="form-error" role="alert">
-          The file could not be downloaded. Please try again.
-        </p>
-      )}
+      {download.error && <FormError>The file could not be downloaded. Please try again.</FormError>}
       {visible.length ? (
         <div className="file-grid">
           {visible.map((file) => (
@@ -219,12 +222,10 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       {upload && (
         <UploadFileDialog
           kind={upload}
-          projects={
-            upload === "delivery" ? projects.filter((item) => item.status === "approved") : projects
-          }
+          projects={upload === "delivery" ? deliverable : projects}
           initialProject={
             upload === "delivery"
-              ? (projects.find((item) => item.status === "approved")?.id ?? "")
+              ? initialUploadProject(deliverable, project)
               : project || projects[0].id
           }
           onClose={() => setUpload(null)}
@@ -254,11 +255,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             {deliver.isPending ? "Completing…" : "Complete delivery"}
           </button>
         </div>
-        {deliver.error && (
-          <p className="form-error" role="alert">
-            {deliver.error.message}
-          </p>
-        )}
+        {deliver.error && <FormError>{deliver.error.message}</FormError>}
       </Modal>
     </div>
   );

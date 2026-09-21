@@ -1,310 +1,385 @@
 {
   "clients": 10,
-  "projects": 20,
+  "projects": 25,
   "authenticatedActors": 13,
-  "projectVisits": 60,
-  "p95Milliseconds": 183,
+  "projectVisits": 75,
+  "p95Milliseconds": 91,
   "consoleErrors": [],
   "timings": [
     {
       "role": "agency",
       "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
-      "milliseconds": 152
+      "milliseconds": 79
     },
     {
       "role": "agency",
       "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
-      "milliseconds": 96
+      "milliseconds": 65
+    },
+    {
+      "role": "agency",
+      "projectId": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
+      "milliseconds": 112
+    },
+    {
+      "role": "agency",
+      "projectId": "15e2d399-e215-9707-9499-96b455c83adf",
+      "milliseconds": 57
+    },
+    {
+      "role": "agency",
+      "projectId": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
+      "milliseconds": 66
     },
     {
       "role": "agency",
       "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
-      "milliseconds": 199
+      "milliseconds": 61
     },
     {
       "role": "agency",
       "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
-      "milliseconds": 115
+      "milliseconds": 73
+    },
+    {
+      "role": "agency",
+      "projectId": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
+      "milliseconds": 62
     },
     {
       "role": "agency",
       "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
-      "milliseconds": 100
+      "milliseconds": 61
     },
     {
       "role": "agency",
       "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
-      "milliseconds": 91
+      "milliseconds": 100
     },
     {
       "role": "agency",
       "projectId": "0124c675-4357-beea-4c83-0870d323acda",
-      "milliseconds": 88
+      "milliseconds": 55
     },
     {
       "role": "agency",
       "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
-      "milliseconds": 107
+      "milliseconds": 68
     },
     {
       "role": "agency",
       "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
-      "milliseconds": 181
+      "milliseconds": 57
     },
     {
       "role": "agency",
       "projectId": "9790601b-4480-3698-12a8-677157977a42",
-      "milliseconds": 97
+      "milliseconds": 71
     },
     {
       "role": "agency",
       "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
-      "milliseconds": 91
+      "milliseconds": 59
     },
     {
       "role": "agency",
       "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
-      "milliseconds": 106
+      "milliseconds": 65
+    },
+    {
+      "role": "agency",
+      "projectId": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
+      "milliseconds": 58
     },
     {
       "role": "agency",
       "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
-      "milliseconds": 92
+      "milliseconds": 65
     },
     {
       "role": "agency",
       "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
-      "milliseconds": 88
+      "milliseconds": 66
     },
     {
       "role": "agency",
       "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
-      "milliseconds": 92
+      "milliseconds": 67
     },
     {
       "role": "agency",
       "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
-      "milliseconds": 95
+      "milliseconds": 66
     },
     {
       "role": "agency",
-      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
-      "milliseconds": 88
+      "projectId": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
+      "milliseconds": 66
     },
     {
       "role": "agency",
-      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
-      "milliseconds": 106
+      "projectId": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
+      "milliseconds": 101
     },
     {
       "role": "agency",
       "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
-      "milliseconds": 100
+      "milliseconds": 65
     },
     {
       "role": "agency",
       "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
-      "milliseconds": 84
+      "milliseconds": 55
     },
     {
       "role": "client",
       "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
-      "milliseconds": 140
+      "milliseconds": 68
     },
     {
       "role": "client",
       "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
-      "milliseconds": 94
+      "milliseconds": 53
     },
     {
       "role": "client",
       "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
-      "milliseconds": 149
+      "milliseconds": 68
     },
     {
       "role": "client",
       "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
-      "milliseconds": 100
+      "milliseconds": 78
     },
     {
       "role": "client",
       "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
-      "milliseconds": 139
+      "milliseconds": 88
     },
     {
       "role": "client",
       "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
-      "milliseconds": 92
+      "milliseconds": 56
     },
     {
       "role": "client",
       "projectId": "0124c675-4357-beea-4c83-0870d323acda",
-      "milliseconds": 142
-    },
-    {
-      "role": "client",
-      "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
-      "milliseconds": 99
-    },
-    {
-      "role": "client",
-      "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
-      "milliseconds": 141
-    },
-    {
-      "role": "client",
-      "projectId": "9790601b-4480-3698-12a8-677157977a42",
       "milliseconds": 90
     },
     {
       "role": "client",
+      "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
+      "milliseconds": 57
+    },
+    {
+      "role": "client",
+      "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
+      "milliseconds": 89
+    },
+    {
+      "role": "client",
+      "projectId": "9790601b-4480-3698-12a8-677157977a42",
+      "milliseconds": 56
+    },
+    {
+      "role": "client",
       "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
-      "milliseconds": 150
+      "milliseconds": 68
     },
     {
       "role": "client",
       "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
-      "milliseconds": 98
+      "milliseconds": 85
     },
     {
       "role": "client",
       "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
-      "milliseconds": 144
+      "milliseconds": 72
     },
     {
       "role": "client",
       "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
-      "milliseconds": 93
+      "milliseconds": 75
     },
     {
       "role": "client",
       "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
-      "milliseconds": 151
+      "milliseconds": 89
     },
     {
       "role": "client",
       "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
-      "milliseconds": 98
+      "milliseconds": 58
     },
     {
       "role": "client",
-      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
-      "milliseconds": 153
+      "projectId": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
+      "milliseconds": 69
     },
     {
       "role": "client",
-      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
-      "milliseconds": 101
+      "projectId": "15e2d399-e215-9707-9499-96b455c83adf",
+      "milliseconds": 56
+    },
+    {
+      "role": "client",
+      "projectId": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
+      "milliseconds": 56
+    },
+    {
+      "role": "client",
+      "projectId": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
+      "milliseconds": 64
+    },
+    {
+      "role": "client",
+      "projectId": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
+      "milliseconds": 81
+    },
+    {
+      "role": "client",
+      "projectId": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
+      "milliseconds": 55
+    },
+    {
+      "role": "client",
+      "projectId": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
+      "milliseconds": 58
     },
     {
       "role": "client",
       "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
-      "milliseconds": 147
+      "milliseconds": 91
     },
     {
       "role": "client",
       "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
-      "milliseconds": 91
+      "milliseconds": 57
     },
     {
       "role": "designer",
       "projectId": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
-      "milliseconds": 147
+      "milliseconds": 82
+    },
+    {
+      "role": "designer",
+      "projectId": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
+      "milliseconds": 62
+    },
+    {
+      "role": "designer",
+      "projectId": "15e2d399-e215-9707-9499-96b455c83adf",
+      "milliseconds": 66
     },
     {
       "role": "designer",
       "projectId": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
-      "milliseconds": 105
+      "milliseconds": 73
     },
     {
       "role": "designer",
       "projectId": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
-      "milliseconds": 190
+      "milliseconds": 65
     },
     {
       "role": "designer",
       "projectId": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
-      "milliseconds": 124
+      "milliseconds": 68
     },
     {
       "role": "designer",
       "projectId": "9790601b-4480-3698-12a8-677157977a42",
-      "milliseconds": 86
+      "milliseconds": 66
     },
     {
       "role": "designer",
       "projectId": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
-      "milliseconds": 107
+      "milliseconds": 63
     },
     {
       "role": "designer",
       "projectId": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
-      "milliseconds": 121
+      "milliseconds": 65
     },
     {
       "role": "designer",
       "projectId": "6361cfa3-7996-579e-08ed-9106d5c394f0",
-      "milliseconds": 93
+      "milliseconds": 63
     },
     {
       "role": "designer",
-      "projectId": "95dc529b-2db0-50ad-9a6f-f33697568ed5",
-      "milliseconds": 202
+      "projectId": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
+      "milliseconds": 65
     },
     {
       "role": "designer",
       "projectId": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
-      "milliseconds": 107
+      "milliseconds": 67
     },
     {
       "role": "designer",
       "projectId": "19b68267-ec9c-7a9f-926c-828b7f882f22",
-      "milliseconds": 138
+      "milliseconds": 79
+    },
+    {
+      "role": "designer",
+      "projectId": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
+      "milliseconds": 85
     },
     {
       "role": "designer",
       "projectId": "cd179de9-0dd1-00da-89d1-74fab5225237",
-      "milliseconds": 100
+      "milliseconds": 77
+    },
+    {
+      "role": "designer",
+      "projectId": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
+      "milliseconds": 59
     },
     {
       "role": "designer",
       "projectId": "438efff4-c04a-d623-d4ac-243072ddccc5",
-      "milliseconds": 183
+      "milliseconds": 67
     },
     {
       "role": "designer",
       "projectId": "0124c675-4357-beea-4c83-0870d323acda",
-      "milliseconds": 106
+      "milliseconds": 61
     },
     {
       "role": "designer",
       "projectId": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
-      "milliseconds": 93
+      "milliseconds": 66
     },
     {
       "role": "designer",
       "projectId": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
-      "milliseconds": 93
+      "milliseconds": 65
+    },
+    {
+      "role": "designer",
+      "projectId": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
+      "milliseconds": 72
     },
     {
       "role": "designer",
       "projectId": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
-      "milliseconds": 95
+      "milliseconds": 68
     },
     {
       "role": "designer",
       "projectId": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
-      "milliseconds": 96
+      "milliseconds": 94
     },
     {
       "role": "designer",
-      "projectId": "ef7aa2ff-5aec-1443-c3d9-f9c386fdada8",
-      "milliseconds": 92
+      "projectId": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
+      "milliseconds": 61
     },
     {
       "role": "designer",
       "projectId": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
-      "milliseconds": 182
+      "milliseconds": 64
     }
   ]
 }

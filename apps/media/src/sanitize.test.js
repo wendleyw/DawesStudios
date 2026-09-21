@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { sanitizeDelivery, sanitizePdf, sanitizeRaster } from './sanitize.js';
+import { LIMITS, sanitizeDelivery, sanitizePdf, sanitizeRaster } from './sanitize.js';
 
 describe('trusted raster regeneration', () => {
   it('preserves pixels while removing EXIF creator metadata', async () => {
@@ -20,6 +20,30 @@ describe('trusted raster regeneration', () => {
     const input = await sharp({ create: { width: 7000, height: 6000, channels: 3, background: 'white' } }).png().toBuffer();
     await expect(sanitizeRaster(input)).rejects.toThrow('pixel limit');
   });
+  it('keeps a photographic upload that PNG would inflate past the byte limit', async () => {
+    // A 24 MP JPEG sits inside every stated limit, but re-encoding it as PNG produced ~57 MiB and
+    // the file was rejected with a message blaming the upload. Opaque images fall back to JPEG.
+    const pixels = Buffer.alloc(6000 * 4000 * 3);
+    for (let index = 0; index < pixels.length; index += 1) pixels[index] = (index * 2654435761) % 251;
+    const input = await sharp(pixels, { raw: { width: 6000, height: 4000, channels: 3 } }).jpeg({ quality: 92 }).toBuffer();
+    expect((await sharp(input).png().toBuffer()).length).toBeGreaterThan(LIMITS.bytes);
+    const result = await sanitizeRaster(input);
+    expect(result.mimeType).toBe('image/jpeg');
+    expect(result.extension).toBe('jpg');
+    expect(result.bytes.length).toBeLessThanOrEqual(LIMITS.bytes);
+    const metadata = await sharp(result.bytes).metadata();
+    expect(metadata.width).toBe(6000);
+    expect(metadata.height).toBe(4000);
+    expect(metadata.exif).toBeUndefined();
+  }, 60_000);
+
+  it('keeps transparency as PNG rather than flattening it into the fallback', async () => {
+    const input = await sharp({ create: { width: 40, height: 40, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 0.4 } } }).png().toBuffer();
+    const result = await sanitizeRaster(input);
+    expect(result.mimeType).toBe('image/png');
+    expect((await sharp(result.bytes).metadata()).hasAlpha).toBe(true);
+  });
+
   it('rejects unsupported delivery types', async () => {
     await expect(sanitizeDelivery(Buffer.from('video'), 'video/mp4')).rejects.toThrow('PNG, JPEG, WebP and PDF');
   });

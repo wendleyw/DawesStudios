@@ -1,38 +1,25 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Bell, Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
-import { assertResult } from "@/lib/supabase";
+import {
+  markNotificationsRead,
+  useInvalidateNotifications,
+  useNotifications,
+} from "./workspace-data";
+import { FormError } from "@/features/shared/form-error";
 
 export function NotificationsPage() {
   const { database, session } = useAuth();
-  const queryClient = useQueryClient();
   const settings = useWorkspaceSettings();
-  const notifications = useQuery({
-    queryKey: ["notifications", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("notifications")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(100),
-      ),
-    refetchInterval: 30_000,
-  });
+  const notifications = useNotifications();
+  const invalidateNotifications = useInvalidateNotifications();
   const markRead = useMutation({
-    mutationFn: async (id?: string) => {
-      const query = database
-        .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("user_id", session!.user.id)
-        .is("read_at", null);
-      assertResult(await (id ? query.eq("id", id) : query));
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    mutationFn: (id?: string) => markNotificationsRead(database, { userId: session!.user.id, id }),
+    onSuccess: () => invalidateNotifications(),
   });
   const unread = notifications.data?.filter((item) => !item.read_at).length ?? 0;
   return (
@@ -121,11 +108,7 @@ export function NotificationsPage() {
           <p>Project updates and feedback will appear here.</p>
         </div>
       )}
-      {markRead.error && (
-        <p className="form-error" role="alert">
-          {markRead.error.message}
-        </p>
-      )}
+      {markRead.error && <FormError>{markRead.error.message}</FormError>}
     </div>
   );
 }

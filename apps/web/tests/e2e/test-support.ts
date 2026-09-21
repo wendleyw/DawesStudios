@@ -14,8 +14,11 @@ function required(name: string): string {
   return value;
 }
 export const password = required("DEMO_PASSWORD");
-if (required("SUPABASE_URL") !== "http://127.0.0.1:55421")
-  throw new Error("Acceptance tests require the isolated local backend.");
+const acceptanceBackend = process.env.ACCEPTANCE_SUPABASE_URL ?? "http://127.0.0.1:55421";
+if (required("SUPABASE_URL") !== acceptanceBackend)
+  throw new Error(
+    `Acceptance tests mutate data and must run against the declared backend (${acceptanceBackend}). Set ACCEPTANCE_SUPABASE_URL to run them elsewhere.`,
+  );
 export const screenshotDirectory = fileURLToPath(
   new URL("../../../../docs/verification/screenshots/", import.meta.url),
 );
@@ -50,3 +53,17 @@ export async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/(home|clients\/[^/]+\/board)$/);
 }
+
+/** The visible name of each brand section, which is what the navigation row is driven by. */
+export const sectionLabels: Record<string, string> = {
+  overview: "Overview",
+  logos: "Logos",
+  colors: "Colors",
+  typography: "Typography",
+  "visual-style": "Visual style",
+  products: "Products",
+  assets: "Assets",
+  templates: "Templates",
+  messaging: "Messaging",
+  ai: "Brand context",
+};

@@ -6,7 +6,7 @@ import hashlib
 import json
 import urllib.error
 import urllib.request
-from fixture_media import png_card, monogram_svg, monogram_png, monogram_pdf, simple_pdf
+from fixture_media import FORMAT_FREE_SIZE, format_pixel_size, png_card, png_pixel_size, monogram_svg, monogram_png, monogram_pdf, simple_pdf
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,10 +35,15 @@ def main():
 
     clients, projects = rows('clients'), rows('projects')
     assert {row['id'] for row in clients} == {row['id'] for row in fixture['clients']}, 'Expected exactly the 10 reference clients'
-    assert {row['id'] for row in projects} == {row['id'] for row in fixture['projects']}, 'Expected exactly the 20 reference projects'
-    assert set(Counter(row['client_id'] for row in projects).values()) == {2}, 'Expected two projects per client'
+    assert {row['id'] for row in projects} == {row['id'] for row in fixture['projects']}, 'Expected exactly the 25 reference projects'
+    # Nine clients carry the uniform pair; SABRE carries the workspace the reference package
+    # documents, so the shape is read from the manifest rather than asserted as one number.
+    project_count = Counter(row['client_id'] for row in projects)
+    assert project_count == Counter(row['client_id'] for row in fixture['projects']), 'Project distribution moved away from the manifest'
+    assert sorted(project_count.values()) == [2] * 9 + [7], 'Expected two projects per client and seven for SABRE'
     assert {row['service_type'] for row in projects} == {row['id'] for row in rows('service_catalog')}, 'All 20 services must be represented'
-    assert len(rows('format_catalog')) == 25
+    formats = {row['id']: row['definition'] for row in rows('format_catalog')}
+    assert len(formats) == 25
     catalog = json.loads((ROOT / 'docs/ref/00-guia/CATALOGO-DE-SERVICOS.json').read_text())
     briefs = {row['id']: row for row in rows('briefings')}
     for project in projects:
@@ -55,11 +60,22 @@ def main():
         assert project['due_date'] >= project['start_date']
     assert {row['status'] for row in projects} == {'planned', 'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'}
     deliverables, versions, designs = rows('deliverables'), rows('design_versions'), rows('designs')
+    # Artwork carries the true canvas of the format its deliverable was ordered in, so the board and the
+    # project canvas show every piece in the shape it will really be delivered in. The expected size is
+    # derived from the format catalog; the actual size is read from each downloaded file's IHDR header
+    # further down, never from the manifest that asked for it.
+    deliverable_of_version = {row['id']: row['deliverable_id'] for row in versions}
+    format_of_deliverable = {row['id']: row['format'] for row in deliverables}
+    artwork_size = {row['id']: format_pixel_size(formats[format_of_deliverable[deliverable_of_version[row['version_id']]]]) for row in designs if row['internal_asset_path']}
     multi = [project for project, count in Counter(row['project_id'] for row in deliverables).items() if count >= 2]
     assert len(multi) >= 4, 'At least four projects need multiple deliverables'
-    for project in multi:
-        for deliverable in [row for row in deliverables if row['project_id'] == project]:
-            assert {1, 2} <= {row['version_number'] for row in versions if row['deliverable_id'] == deliverable['id']}, 'Each deliverable on representative projects needs V1 and V2'
+    # A multi-deliverable project may legitimately still be on its first version throughout — SABRE's
+    # Instagram Ads is — so the guarantee is that at least four of them carry V1 and V2 on every
+    # deliverable, not that all of them do.
+    fully_versioned = [project for project in multi
+                       if all({1, 2} <= {row['version_number'] for row in versions if row['deliverable_id'] == deliverable['id']}
+                              for deliverable in [row for row in deliverables if row['project_id'] == project])]
+    assert len(fully_versioned) >= 4, 'At least four multi-deliverable projects need V1 and V2 on every deliverable'
     assert max(Counter(row['version_id'] for row in designs).values()) >= 2, 'A version must contain multiple designs'
     ledger = rows('credit_ledger')
     assert Counter(row['project_id'] for row in ledger if row['kind'] == 'project_debit') == Counter({row['id']: 1 for row in projects})
@@ -80,6 +96,15 @@ def main():
     assert rows('internal_comments'), 'Internal channel examples are required'
     assert {row['id'] for row in projects} <= {row['project_id'] for row in comments}, 'Every project has meaningful client activity'
 
+    # Artwork coverage, stated per role because the two channels are filled by different events.
+    # Production starts a project's artwork; publication, and only publication, hands a copy to the
+    # client. A project still in planning has no design at all and therefore carries no image.
+    started = {row['id'] for row in projects if row['status'] != 'planned'}
+    internal_artwork = {row['project_id'] for row in designs if row['internal_asset_path']}
+    published_artwork = {row['project_id'] for row in rows('published_designs') if row['asset_path']}
+    assert internal_artwork == started, 'Every project past planning needs internal artwork'
+    assert published_artwork == {row['project_id'] for row in publications}, 'Every published project shows the client real artwork'
+
     for email in ['studio@dawes.local', 'designer@dawes.local', 'designer2@dawes.local']:
         session = request('/auth/v1/token?grant_type=password', payload={'email': email, 'password': env['DEMO_PASSWORD']})
         token = session['access_token']
@@ -90,11 +115,23 @@ def main():
             assert rows('briefings', token=token) == [] and rows('credit_ledger', token=token) == []
             assert rows('client_comments', token=token) == []
 
+    # The file total below is an arithmetic statement about the dataset, not a magic number: each
+    # term is the count of one kind of fixture file, and each is checked against the manifest first
+    # so a term that drifts fails where it is defined rather than as an unexplained total.
+    brand_files = 70            # seven brand files for each of the ten clients
+    working_files = 27          # one private production PNG per version-1 design on the 22 started projects
+    publication_files = 18      # the sanitized copy of each version-1 design the agency has actually published
+    delivery_files = 1          # the single approved delivery PDF
+    assert len(fixture['brand_assets']) == brand_files, 'Brand fixture count moved'
+    assert len(fixture['working_assets']) == working_files, 'Production artwork count moved'
+    assert sum(1 for row in fixture['working_assets'] if row['published_path']) == publication_files, 'Published artwork count moved'
+
     downloaded = 0
     for client in fixture['clients']:
         session = request('/auth/v1/token?grant_type=password', payload={'email': client['slug'] + '@client.dawes.local', 'password': env['DEMO_PASSWORD']})
         token = session['access_token']
-        assert len(rows('clients', token=token)) == 1 and len(rows('projects', token=token)) == 2
+        client_project_count = sum(1 for row in fixture['projects'] if row['client_id'] == client['id'])
+        assert len(rows('clients', token=token)) == 1 and len(rows('projects', token=token)) == client_project_count
         for table in ('designs', 'design_versions', 'project_assignments', 'internal_comments'):
             assert rows(table, token=token) == [], 'Client read leaked internal rows: ' + table
         for asset in [row for row in fixture['brand_assets'] if row['client_id'] == client['id']]:
@@ -102,13 +139,19 @@ def main():
             elif asset['kind'] == 'mark-png': expected_bytes = monogram_png(asset['client_name'])
             elif asset['kind'] == 'mark-pdf': expected_bytes = monogram_pdf(asset['client_name'])
             elif asset['kind'] == 'guidelines': expected_bytes = simple_pdf(asset['client_name'] + ' / Sample brand guidelines')
-            else: expected_bytes = png_card(asset['index'] + int(asset['kind'][-1]))
+            else: expected_bytes = png_card(asset['index'] + int(asset['kind'][-1]), asset['width'], asset['height'])
             actual = request('/storage/v1/object/authenticated/brand-assets/' + asset['storage_path'], token)
             assert actual == expected_bytes, 'Brand fixture bytes differ'
+            # A brand product reference belongs to no deliverable, so it holds the documented
+            # format-free canvas instead of a shape that was never ordered.
+            if asset['kind'].startswith('product'): assert png_pixel_size(actual) == FORMAT_FREE_SIZE, 'Brand product reference is not the documented format-free size'
             downloaded += 1
         for asset in [row for row in fixture['working_assets'] if row['project_id'] in {project['id'] for project in projects if project['client_id'] == client['id']}]:
-            actual = request('/storage/v1/object/authenticated/published-assets/' + asset['published_path'], token)
-            assert actual == png_card(asset['index']) and b'Author' not in actual
+            internal = request('/storage/v1/object/authenticated/internal-assets/' + asset['source_path'])
+            expected_size = artwork_size[asset['design_id']]
+            assert (asset['width'], asset['height']) == expected_size, 'Manifest artwork size differs from the deliverable format'
+            assert internal == png_card(asset['index'], asset['width'], asset['height'], internal=True) and b'Author' in internal
+            assert png_pixel_size(internal) == expected_size, 'Internal artwork is not rendered at the size of its format'
             downloaded += 1
             try:
                 request('/storage/v1/object/authenticated/internal-assets/' + asset['source_path'], token)
@@ -116,15 +159,18 @@ def main():
             except urllib.error.HTTPError as error:
                 assert error.code in (400, 403, 404)
                 error.close()
-            internal = request('/storage/v1/object/authenticated/internal-assets/' + asset['source_path'])
-            assert internal == png_card(asset['index'], internal=True) and b'Author' in internal
+            # Unpublished production work has no client-readable copy at all, which is the point.
+            if not asset['published_path']: continue
+            actual = request('/storage/v1/object/authenticated/published-assets/' + asset['published_path'], token)
+            assert actual == png_card(asset['index'], asset['width'], asset['height']) and b'Author' not in actual
+            assert png_pixel_size(actual) == expected_size, 'Published artwork is not rendered at the size of its format'
             downloaded += 1
         for delivery in rows('delivery_files', token=token):
             actual = request('/storage/v1/object/authenticated/delivery-files/' + delivery['storage_path'], token)
             assert actual.startswith(b'%PDF-') and len(actual) == delivery['file_size']
             downloaded += 1
-    assert downloaded == 79, 'Expected 70 brand files, four working/publication pairs and one delivery'
-    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 20, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects_with_v1_v2': len(multi), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'verified_actual_file_downloads': downloaded, 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'all_publications_have_client_pins': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
+    assert downloaded == brand_files + working_files + publication_files + delivery_files, 'Downloaded file total does not match the fixture dataset'
+    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 25, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects': len(multi), 'multiple_deliverable_projects_with_v1_v2': len(fully_versioned), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'verified_actual_file_downloads': downloaded, 'projects_with_internal_artwork': len(internal_artwork), 'projects_with_published_artwork': len(published_artwork), 'artwork_pixel_sizes_match_deliverable_format': True, 'distinct_artwork_pixel_sizes': len(set(artwork_size.values())), 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'all_publications_have_client_pins': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, indent=2) + '\n')

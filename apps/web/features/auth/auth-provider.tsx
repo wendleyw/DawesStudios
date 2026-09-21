@@ -1,15 +1,11 @@
 "use client";
 
-import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@database";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import {
-  assertResult,
-  createBrowserDatabase,
-  type Profile,
-  type PublicConfiguration,
-} from "@/lib/supabase";
+import { createBrowserDatabase, type Profile, type PublicConfiguration } from "@/lib/supabase";
+import { useProfile } from "./auth-data";
 
 type AuthContextValue = {
   database: SupabaseClient<Database>;
@@ -94,18 +90,7 @@ function SessionProvider({
     };
   }, [database, queryClient]);
 
-  const profileQuery = useQuery({
-    queryKey: ["profile", session?.user.id],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("profiles")
-          .select("id, display_name, role, avatar_url")
-          .eq("id", session!.user.id)
-          .single(),
-      ) as Profile,
-  });
+  const profileQuery = useProfile(database, session);
 
   return (
     <AuthContext.Provider

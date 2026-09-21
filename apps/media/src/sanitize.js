@@ -31,8 +31,23 @@ export async function sanitizeRaster(bytes) {
     // Metadata is deliberately not retained. Rotation bakes EXIF orientation into new pixels.
     output = await pipeline.rotate().toColourspace('srgb').png().timeout({ seconds: 30 }).toBuffer();
   } catch { throw new MediaError('The image could not be safely regenerated.'); }
-  validateSize(output);
-  return { bytes: output, mimeType: 'image/png', extension: 'png' };
+  let mimeType = 'image/png';
+  let extension = 'png';
+  if (output.length > LIMITS.bytes && !metadata.hasAlpha) {
+    // A photographic JPEG re-encoded as PNG can be several times its source size, so a file that
+    // passed every stated limit was rejected for being too large once we had inflated it. Opaque
+    // images fall back to JPEG, which still strips metadata and bakes orientation.
+    try {
+      output = await sharp(bytes, { limitInputPixels: LIMITS.pixels, failOn: 'warning', sequentialRead: true })
+        .rotate().toColourspace('srgb').jpeg({ quality: 88, mozjpeg: true }).timeout({ seconds: 30 }).toBuffer();
+    } catch { throw new MediaError('The image could not be safely regenerated.'); }
+    mimeType = 'image/jpeg';
+    extension = 'jpg';
+  }
+  if (!output.length) throw new MediaError('The image could not be safely regenerated.');
+  if (output.length > LIMITS.bytes)
+    throw new MediaError('The regenerated image is larger than 50 MiB. Reduce its dimensions and upload again.', 413);
+  return { bytes: output, mimeType, extension };
 }
 
 async function runPdfTool(tool, args) {

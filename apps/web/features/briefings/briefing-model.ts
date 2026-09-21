@@ -217,12 +217,50 @@ export function initialDraft(
       };
 }
 
+/**
+ * Direction fields with their written labels. The form previously rendered the state key itself and
+ * relied on `text-transform: capitalize`, which only changes the pixels — the accessible name stayed
+ * lowercase, and no field could ever carry multi-word copy. The editor and the review summary read
+ * this one list so they cannot drift apart.
+ */
+export const directionFields = [
+  { id: "audience", label: "Audience" },
+  { id: "messaging", label: "Key messaging" },
+  { id: "style", label: "Visual style" },
+  { id: "resources", label: "Available resources" },
+  { id: "inspirations", label: "Inspiration" },
+  { id: "notes", label: "Anything else" },
+] as const;
+
+/** The generated name for a format's nth piece; anything else is a name the client typed. */
+function generatedName(format: { name: string }, sequence: number): string {
+  return `${format.name}${sequence > 1 ? ` / Variation ${sequence}` : ""}`;
+}
+
+/**
+ * The sequence number for a newly added deliverable.
+ *
+ * It keeps counting the pieces of that format, so numbering still reads naturally, but skips
+ * forward while the generated name is already taken. Counting alone let "remove one, add another"
+ * mint a second card with an identical name and an identical "Remove …" label — ambiguous for
+ * assistive technology and for any locator built on those names. Deriving from names alone was
+ * worse: a client who renames their pieces would send the next one back to Variation 1.
+ */
+export function nextVariation(deliverables: RequestedDeliverable[], formatId: string): number {
+  const format = formats.find((item) => item.id === formatId);
+  if (!format) return 1;
+  const taken = new Set(deliverables.map((item) => item.name));
+  let sequence = deliverables.filter((item) => item.format === formatId).length + 1;
+  while (taken.has(generatedName(format, sequence))) sequence += 1;
+  return sequence;
+}
+
 export function newDeliverable(formatId: string, sequence = 1): RequestedDeliverable {
   const format = formats.find((item) => item.id === formatId);
   if (!format) throw new Error("Choose an available format.");
   return {
     id: crypto.randomUUID(),
-    name: `${format.name}${sequence > 1 ? ` / Variation ${sequence}` : ""}`,
+    name: generatedName(format, sequence),
     format: format.id,
     width: format.layout === "none" ? undefined : format.width,
     height: format.layout === "fixed" ? format.height : undefined,

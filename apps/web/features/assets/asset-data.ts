@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
+import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 export type ProjectAsset = {
   id: string;
@@ -102,4 +102,77 @@ export function useProjectAssets(clientId: string) {
       return { assets: assets.toSorted((a, b) => b.date.localeCompare(a.date)), projects };
     },
   });
+}
+
+/**
+ * The project an upload dialog opens on.
+ *
+ * A delivery can only be attached to an approved project, so the choices are narrowed — but the
+ * narrowing must not throw away which project the viewer is actually looking at. Preferring the
+ * first approved project in the workspace over the current filter silently attached a final file
+ * to a different project, and the client was notified about that one instead: the assets page was
+ * filtered to one project, the dialog targeted another, and nothing on screen disagreed.
+ */
+export function initialUploadProject(
+  candidates: { id: string }[],
+  filteredProject: string,
+): string {
+  if (candidates.some((candidate) => candidate.id === filteredProject)) return filteredProject;
+  return candidates[0]?.id ?? "";
+}
+
+/**
+ * Looks up whether a `project_assets` row already points at a storage path.
+ *
+ * Called from `upload-file-dialog.tsx`'s `close()` (deciding whether an unfinished upload's file can
+ * be safely removed from storage) and from its upload `mutationFn` (deciding whether the same upload
+ * already recorded its row on a previous, interrupted attempt). Neither call site renders this
+ * result — both branch on it before performing a write — so it is a plain `(database, input)`
+ * function per the contract's "reads that cannot be hooks" rule, not a `use<Thing>()` hook.
+ */
+export async function findAssetByStoragePath(database: SupabaseDatabase, input: { path: string }) {
+  return assertResult(
+    await database.from("project_assets").select("id").eq("storage_path", input.path),
+  ) as { id: string }[];
+}
+
+/** Removes an unfinished upload's file from the private bucket once nothing else references it. */
+export async function removeUnusedUpload(database: SupabaseDatabase, input: { path: string }) {
+  assertResult(await database.storage.from("internal-assets").remove([input.path]));
+}
+
+/** Uploads a working file to the private bucket at an already-chosen path. */
+export async function uploadInternalAsset(
+  database: SupabaseDatabase,
+  input: { path: string; file: File },
+) {
+  assertResult(
+    await database.storage
+      .from("internal-assets")
+      .upload(input.path, input.file, { contentType: input.file.type, upsert: false }),
+  );
+}
+
+/** Records an uploaded working file's row for a project. */
+export async function recordProjectAsset(
+  database: SupabaseDatabase,
+  input: { projectId: string; name: string; path: string; mime: string; size: number },
+) {
+  assertResult(
+    await database.from("project_assets").insert({
+      project_id: input.projectId,
+      name: input.name,
+      storage_path: input.path,
+      mime_type: input.mime,
+      file_size: input.size,
+    }),
+  );
+}
+
+/** Marks an approved project as delivered, notifying its client. */
+export async function markProjectDelivered(
+  database: SupabaseDatabase,
+  input: { projectId: string },
+) {
+  assertResult(await database.rpc("mark_project_delivered", { p_project_id: input.projectId }));
 }

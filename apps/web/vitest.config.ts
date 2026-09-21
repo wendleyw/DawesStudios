@@ -1,3 +1,11 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
-export default defineConfig({ resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } }, test: { environment: "jsdom", include: ["features/**/*.test.{ts,tsx}", "lib/**/*.test.ts"], setupFiles: ["./tests/setup.ts"], restoreMocks: true } });
+export default defineConfig({
+  resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
+  test: {
+    environment: "jsdom",
+    include: ["features/**/*.test.{ts,tsx}", "lib/**/*.test.ts"],
+    setupFiles: ["./tests/setup.ts"],
+    restoreMocks: true,
+  },
+});
