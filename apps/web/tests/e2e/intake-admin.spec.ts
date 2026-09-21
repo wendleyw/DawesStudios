@@ -529,16 +529,30 @@ test.describe("Briefing intake, credits, and account administration", () => {
         ).error,
       ).not.toBeNull();
     } finally {
+      const currentWorkspace = await localAdmin
+        .from("workspace_settings")
+        .select("updated_at")
+        .eq("id", 1)
+        .single();
+      if (currentWorkspace.error) throw currentWorkspace.error;
       const restoredWorkspace = await agency.rpc("update_workspace_settings", {
         p_studio_name: workspace.studio_name,
         p_timezone: workspace.timezone,
+        p_expected_updated_at: currentWorkspace.data.updated_at,
       });
       if (restoredWorkspace.error) throw restoredWorkspace.error;
+      const currentPreset = await localAdmin
+        .from("service_presets")
+        .select("revision")
+        .eq("service_type", "reel")
+        .single();
+      if (currentPreset.error) throw currentPreset.error;
       const restoredPreset = await agency.rpc("save_service_preset", {
         p_service_type: "reel",
         p_min_credits: preset.min_credits!,
         p_max_credits: preset.max_credits!,
         p_due_days: preset.due_days!,
+        p_expected_revision: currentPreset.data.revision,
       });
       if (restoredPreset.error) throw restoredPreset.error;
     }
