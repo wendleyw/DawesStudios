@@ -11,7 +11,16 @@ export const LIMITS = Object.freeze({
   bytes: 50 * 1024 * 1024, pixels: 40_000_000, pages: 20, pagePixels: 16_000_000, pdfPixels: 100_000_000, processMs: 30_000,
   // Video is bounded by remux time and storage cost, not by memory: a stream copy never decodes a
   // frame. The image `processMs` is far too short for a gigabyte, so video carries its own.
-  videoBytes: 1024 * 1024 * 1024, videoProcessMs: 300_000,
+  //
+  // `sanitizeVideo` below makes two separate `runMediaTool` calls and they do not share a bound:
+  // `videoProbeMs` covers `ffprobe`, which reads only the container/stream headers off a file
+  // already sitting on local disk -- no network, no frame decode -- so even a gigabyte input
+  // needs seconds, not minutes; `videoProcessMs` covers `ffmpeg`'s `-c copy` remux, which moves
+  // the full stream data into a fresh container and is sized for the disk-copy cost of the 1 GB
+  // ceiling (`videoBytes`). Giving the probe the remux's five-minute budget hid a malformed or
+  // truncated upload behind a long, silent wait instead of refusing it quickly -- exactly the
+  // failure mode the probe exists to catch fast.
+  videoBytes: 1024 * 1024 * 1024, videoProbeMs: 30_000, videoProcessMs: 300_000,
 });
 sharp.cache({ memory: 64, files: 0, items: 20 });
 sharp.concurrency(2);
@@ -158,7 +167,7 @@ export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = 
     '-v', 'error', '-select_streams', 'v:0',
     '-show_entries', 'stream=codec_name,width,height', '-show_entries', 'format=duration',
     '-of', 'json', inputPath,
-  ], LIMITS.videoProcessMs, 'The video could not be read.');
+  ], LIMITS.videoProbeMs, 'The video could not be read.');
 
   const probe = JSON.parse(stdout);
   const stream = probe.streams?.[0];

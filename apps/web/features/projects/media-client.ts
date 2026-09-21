@@ -98,22 +98,32 @@ export const sanitizedVideoSchema = z.object({
  * The deadline for `sanitizeVideoAsset` alone — not `DEFAULT_TIMEOUT_MS`, which every other call
  * through `requestMedia` uses.
  *
- * `/designs/sanitize-video` (`apps/media/src/server.js`) runs three legs in sequence, and each is
- * independently bounded by `LIMITS.videoProcessMs` (300_000 ms, `apps/media/src/sanitize.js`):
- * downloading the raw object (`downloadToFile`), remuxing it with ffmpeg (`sanitizeVideo` via
- * `runMediaTool`), and uploading the clean object (`uploadFile`) — see the matching comments in
- * `apps/media/src/supabase.js`. At the 1 GB ceiling (`VIDEO_MAX_BYTES`) all three can plausibly
- * take close to their full budget, so the client's deadline has to cover the *sum*, not just the
- * remux: `DEFAULT_TIMEOUT_MS` (120 s) would abort a transfer the server is still completing
- * successfully, leaving a clean object registered under a path no design will ever reference and
- * no way for the person to recover the upload short of re-sending the whole file.
+ * `/designs/sanitize-video` (`apps/media/src/server.js`) runs **four** independently bounded
+ * operations in sequence, not three — the probe and the remux are two separate `runMediaTool`
+ * calls with two different budgets, not one "ffmpeg" step:
  *
- * This is exactly `3 × LIMITS.videoProcessMs`, restated here rather than imported — `apps/media`
- * is a separate deployable with its own `package.json` and no shared module boundary with this
- * app — so raising the server-side budget is a signal to reconsider this constant too, not an
+ * 1. `downloadToFile` (`apps/media/src/supabase.js:84`) — bounded by `LIMITS.videoProcessMs`.
+ * 2. `ffprobe`, inside `sanitizeVideo` (`apps/media/src/sanitize.js`) — bounded by the smaller
+ *    `LIMITS.videoProbeMs`, since it only reads container/stream headers off a file already on
+ *    local disk.
+ * 3. `ffmpeg`'s `-c copy` remux, also inside `sanitizeVideo` — bounded by `LIMITS.videoProcessMs`.
+ * 4. `uploadFile` (`apps/media/src/supabase.js:97`) — bounded by `LIMITS.videoProcessMs`.
+ *
+ * At the 1 GB ceiling (`VIDEO_MAX_BYTES`), the three `videoProcessMs`-bounded legs can plausibly
+ * each take close to their full budget; the probe cannot, by design (see `videoProbeMs`'s own
+ * comment in `sanitize.js`), but it still has to be counted, not ignored. The client's deadline
+ * has to cover the sum of all four, not just the remux: `DEFAULT_TIMEOUT_MS` (120 s) would abort
+ * a transfer the server is still completing successfully, leaving a clean object registered under
+ * a path no design will ever reference and no way for the person to recover the upload short of
+ * re-sending the whole file.
+ *
+ * This is exactly `3 × LIMITS.videoProcessMs + LIMITS.videoProbeMs` = `900_000 + 30_000` =
+ * `930_000` ms (15 minutes 30 seconds), restated here rather than imported — `apps/media` is a
+ * separate deployable with its own `package.json` and no shared module boundary with this app —
+ * so raising either server-side budget is a signal to reconsider this arithmetic too, not an
  * automatic fix.
  */
-const VIDEO_SANITIZE_TIMEOUT_MS = 3 * 300_000;
+const VIDEO_SANITIZE_TIMEOUT_MS = 3 * 300_000 + 30_000;
 
 /**
  * Asks `apps/media` to remux a raw video upload into a clean object and delete the raw one.
