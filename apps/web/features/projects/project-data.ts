@@ -42,6 +42,8 @@ export type CanvasComment = {
   label: string;
   pinX: number | null;
   pinY: number | null;
+  /** Seconds from the start of the video the pin belongs to; null for a still design's pin. */
+  pinT: number | null;
   designId: string | null;
   resolved: boolean;
   createdAt: string;
@@ -158,6 +160,7 @@ function toCanvasComment(
     body: string;
     pin_x: number | null;
     pin_y: number | null;
+    pin_t: number | null;
     design_id: string | null;
     resolved: boolean;
     created_at: string;
@@ -170,6 +173,7 @@ function toCanvasComment(
     label,
     pinX: comment.pin_x,
     pinY: comment.pin_y,
+    pinT: comment.pin_t,
     designId: comment.design_id,
     resolved: comment.resolved,
     createdAt: comment.created_at,
