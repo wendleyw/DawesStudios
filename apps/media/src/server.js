@@ -94,6 +94,29 @@ export function createMediaServer(config) {
         try {
           for (const design of designs) {
             if (!design.internal_asset_path) continue;
+            const extension = design.internal_asset_path.split('.').pop().toLowerCase();
+            if (['mp4', 'webm'].includes(extension)) {
+              // Video was stripped of its metadata on the way in, by `/designs/sanitize-video`.
+              // There is nothing left to remove, and re-running a remux here would put every
+              // video in the version through one synchronous request — up to twenty gigabytes
+              // on a single publish click. So this copies the already-clean object rather than
+              // reprocessing it.
+              const mimeType = extension === 'mp4' ? 'video/mp4' : 'video/webm';
+              const directory = await mkdtemp(join(tmpdir(), 'dawes-publish-'));
+              try {
+                const local = join(directory, `asset.${extension}`);
+                await backend.downloadToFile(design.internal_asset_path, projectId, token, local);
+                const target = `${projectId}/${randomUUID()}.${extension}`;
+                await backend.uploadFile('published-assets', target, local, mimeType);
+                assets[design.id] = await backend.registerCopied(
+                  projectId, 'published-assets', target, local, mimeType, userId,
+                  { designId: design.id, path: design.internal_asset_path },
+                );
+              } finally {
+                await rm(directory, { recursive: true, force: true });
+              }
+              continue;
+            }
             const input = await backend.downloadInternal(design.internal_asset_path, projectId, token);
             assets[design.id] = await backend.saveSanitized(projectId, 'published-assets', await sanitizeRaster(input), userId, { designId: design.id, path: design.internal_asset_path });
           }

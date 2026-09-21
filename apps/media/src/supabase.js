@@ -1,16 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { LIMITS, MediaError } from './sanitize.js';
 
-// A raw video lands as `<projectId>/<uuid>.raw` — the shape `private.opaque_storage_path`
-// accepts, but that check runs on every bucket's insert policy, not only internal-assets, and the
-// insert policies on the client-served buckets were dropped long ago in favour of service_role
-// writes. This route (and `downloadToFile` below) is the only place a `.raw` object's fate is
-// decided, so both validate the full shape and the project prefix themselves rather than leaning
-// on that database-level check.
-const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
+// A raw video lands as `<projectId>/<uuid>.raw` while `/designs/sanitize-video` still holds it,
+// and as `<projectId>/<uuid>.mp4` (or `.webm`) once that route has stripped it and it becomes a
+// design's `internal_asset_path` — both are shapes `private.opaque_storage_path` accepts, but
+// that check runs on every bucket's insert policy, not only internal-assets, and the insert
+// policies on the client-served buckets were dropped long ago in favour of service_role writes.
+// This route (and `downloadToFile` below) is the only place either object's fate is decided, so
+// both validate the full shape and the project prefix themselves rather than leaning on that
+// database-level check.
+const VIDEO_ASSET_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(mp4|webm|raw)$/;
 
 export function createBackend(config) {
   const root = config.supabaseUrl.replace(/\/$/, '');
@@ -71,9 +74,11 @@ export function createBackend(config) {
     return Buffer.concat(chunks);
   }
   // Video is handled as files on disk rather than buffers. `downloadInternal` returns bytes,
-  // which is right for a 40-megapixel image and wrong for a gigabyte of video.
+  // which is right for a 40-megapixel image and wrong for a gigabyte of video. Used both for the
+  // raw upload `/designs/sanitize-video` streams in, and for the already-sanitized `.mp4`/`.webm`
+  // `/publications/prepare` streams back out to copy into `published-assets`.
   async function downloadToFile(path, projectId, token, destination) {
-    if (!RAW_VIDEO_PATH.test(path) || path.split('/')[0] !== projectId) throw new MediaError('Asset path must belong to the project.');
+    if (!VIDEO_ASSET_PATH.test(path) || path.split('/')[0] !== projectId) throw new MediaError('Asset path must belong to the project.');
     // `request()`'s AbortSignal covers the whole fetch lifecycle, including streaming the body —
     // not just getting a response header — so the default 30 seconds would abort a realistic
     // transfer mid-stream. Reusing `LIMITS.videoProcessMs` (five minutes) rather than inventing a
@@ -110,6 +115,34 @@ export function createBackend(config) {
       return path;
     } catch (error) { await discard(bucket, path); throw error; }
   }
+
+  // Video's registration half, on its own: `uploadFile` above already copied the already-clean
+  // bytes into the target bucket, so this only attests to them, mirroring `saveSanitized`'s own
+  // `register_sanitized_asset` call exactly (same RPC, same argument names and order). The one
+  // difference is the checksum and size, which come from streaming `filePath` off disk through
+  // `createHash('sha256')` rather than hashing a buffer — the file may be a gigabyte, and holding
+  // it in memory twice (once for `uploadFile`'s read stream, once for a hashed buffer) is exactly
+  // the cost this task exists to avoid.
+  //
+  // If the copy already landed in the bucket and this registration then fails — a bad checksum,
+  // a stale byte count, a dropped connection to the RPC — the bytes are unreferenced but still
+  // present and billable, and worse, `/publish_version` would otherwise be unable to tell them
+  // apart from a legitimately attested object at that same path. So, exactly like `saveSanitized`,
+  // any failure here discards what `uploadFile` wrote before re-throwing.
+  async function registerCopied(projectId, bucket, path, filePath, mimeType, userId, source = {}) {
+    try {
+      const { size } = await stat(filePath);
+      const hash = createHash('sha256');
+      await pipeline(createReadStream(filePath), hash);
+      await rpc('register_sanitized_asset', {
+        p_project_id: projectId, p_bucket_id: bucket, p_storage_path: path,
+        p_sha256: hash.digest('hex'),
+        p_mime_type: mimeType, p_file_size: size, p_prepared_by: userId,
+        p_source_design_id: source.designId ?? null, p_source_path: source.path ?? null,
+      }, config.serviceKey);
+      return path;
+    } catch (error) { await discard(bucket, path); throw error; }
+  }
   async function discard(bucket, path) {
     // Refuse to remove bytes if a publication or delivery already references them.
     await rpc('discard_sanitized_asset', { p_bucket_id: bucket, p_storage_path: path }, config.serviceKey);
@@ -125,5 +158,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, discard, discardPrepared, cleanStaleAssets };
 }
