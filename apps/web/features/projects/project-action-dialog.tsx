@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { discardUnreferencedArtwork, uploadArtwork } from "./artwork-files";
+import { discardUnreferencedArtwork, uploadDesignAsset } from "./artwork-files";
 import { discardPreparedAssets, preparePublicationAssets } from "./media-client";
 import {
   addDesign,
@@ -21,7 +21,13 @@ import {
   type CanvasVersion,
 } from "./project-data";
 import { FormError } from "@/features/shared/form-error";
-import { ARTWORK_MAX_BYTES, uploadLimitMb } from "@/features/shared/upload-rules";
+import {
+  ARTWORK_MAX_BYTES,
+  designUploadMimes,
+  uploadLimitMb,
+  uploadTypesLabel,
+  VIDEO_MAX_BYTES,
+} from "@/features/shared/upload-rules";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
@@ -50,12 +56,25 @@ export function ProjectActionDialog({
   const [stagedArtwork, setStagedArtwork] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
+  // `null` means no upload is in flight (or none was ever started for this attempt); once an
+  // upload begins it's set to 0 and tracks `uploadDesignAsset`'s `onProgress` fraction up to 1.
+  // A video's own resumable transfer can run for many minutes, so this is what turns "Saving…"
+  // into an honest, moving number instead of a hang.
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   async function close() {
+    // `mutation.isPending` covers the whole upload, not just the initial request: `mutationFn`
+    // does not resolve until `uploadDesignAsset` does, so this guard — and the disabled Cancel
+    // button and disabled Modal close control below — already refuse to close the dialog while a
+    // video is mid-transfer. That is deliberate: `uploadResumable` has no cancellation wired up
+    // (see `artwork-files.ts`), so "closing" during an upload could only ever hide the request,
+    // not stop it, while still leaving the raw object it's writing to `internal-assets` behind.
+    // Blocking the close keeps the visible state honest about what's actually still happening.
     if (mutation.isPending || closing) return;
     setClosing(true);
     setCloseError("");
     try {
       if (stagedArtwork) await discardUnreferencedArtwork(database, stagedArtwork);
+      setUploadProgress(null);
       onClose();
     } catch {
       setCloseError("The unfinished upload could not be removed. Please try closing again.");
@@ -77,11 +96,11 @@ export function ProjectActionDialog({
       } else if (action.kind === "design" || action.kind === "edit-design") {
         if (!value("title")) throw new Error("Add a design name.");
         const file = form.get("artwork");
-        const path =
-          stagedArtwork ??
-          (file instanceof File && file.size
-            ? await uploadArtwork(database, projectId, file)
-            : null);
+        let path = stagedArtwork;
+        if (!path && file instanceof File && file.size) {
+          setUploadProgress(0);
+          path = await uploadDesignAsset(database, mediaUrl, projectId, file, setUploadProgress);
+        }
         if (path) setStagedArtwork(path);
         const designContent = {
           ...(action.kind === "edit-design" ? Object(action.design.content) : {}),
@@ -155,6 +174,7 @@ export function ProjectActionDialog({
       }
     },
     onSuccess: async () => {
+      setUploadProgress(null);
       await invalidate();
       onClose();
     },
@@ -215,10 +235,20 @@ export function ProjectActionDialog({
                   name="artwork"
                   type="file"
                   disabled={!!stagedArtwork || mutation.isPending}
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={designUploadMimes.join(",")}
                 />
-                <small>PNG, JPG, or WebP. Up to {uploadLimitMb(ARTWORK_MAX_BYTES)} MB.</small>
+                <small>
+                  {uploadTypesLabel(designUploadMimes)}. Images up to{" "}
+                  {uploadLimitMb(ARTWORK_MAX_BYTES)} MB, video up to{" "}
+                  {uploadLimitMb(VIDEO_MAX_BYTES)} MB.
+                </small>
               </label>
+              {uploadProgress !== null && (
+                <p className="upload-progress" aria-live="polite">
+                  <progress value={uploadProgress} max={1} aria-label="Upload progress" />
+                  <span>{Math.round(uploadProgress * 100)}%</span>
+                </p>
+              )}
               <details className="design-text-options">
                 <summary>Or compose a text concept</summary>
                 <label>
@@ -316,7 +346,9 @@ export function ProjectActionDialog({
             </button>
             <button className="button primary" type="submit" disabled={mutation.isPending}>
               {mutation.isPending
-                ? "Saving…"
+                ? uploadProgress !== null
+                  ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+                  : "Saving…"
                 : {
                     version: "Create version",
                     design: "Add design",

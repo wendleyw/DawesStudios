@@ -625,6 +625,23 @@
 .design-text-options label {
   margin-top: 14px;
 }
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 0;
+}
+.upload-progress progress {
+  flex: 1;
+  height: 6px;
+  accent-color: currentColor;
+}
+.upload-progress span {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  min-width: 3ch;
+  text-align: right;
+}
 @media (max-width: 1000px) {
   .project-header {
     padding: 20px;
