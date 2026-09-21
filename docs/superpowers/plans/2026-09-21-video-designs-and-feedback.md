@@ -211,7 +211,7 @@ git commit -m "feat(comments): pin a comment to a moment as well as a point"
 ### Task 2: Storage capacity for video
 
 **Files:**
-- Create: `supabase/migrations/202609210002_video_storage.sql`
+- Create: `supabase/migrations/202609210004_video_storage.sql`
 - Modify: `supabase/config.toml:112`
 - Test: `supabase/tests/database/video_storage.test.sql`
 
@@ -256,7 +256,7 @@ Expected: FAIL — the buckets still report `52428800`, and `opaque_storage_path
 
 - [ ] **Step 3: Write the migration**
 
-Create `supabase/migrations/202609210002_video_storage.sql`:
+Create `supabase/migrations/202609210004_video_storage.sql`:
 
 ```sql
 -- Video is a design, so only the two design buckets widen. `brand-assets` and `delivery-files`
@@ -304,7 +304,7 @@ migration changed.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/202609210002_video_storage.sql supabase/config.toml supabase/tests/database/video_storage.test.sql
+git add supabase/migrations/202609210004_video_storage.sql supabase/config.toml supabase/tests/database/video_storage.test.sql
 git commit -m "feat(storage): accept web video up to a gigabyte on the design buckets"
 ```
 
@@ -328,7 +328,7 @@ Append to `apps/web/features/shared/upload-rules.test.ts`:
 describe("video", () => {
   it("matches the design buckets' raised ceiling in the migration", () => {
     const sql = readFileSync(
-      resolve(import.meta.dirname, "../../../../supabase/migrations/202609210002_video_storage.sql"),
+      resolve(import.meta.dirname, "../../../../supabase/migrations/202609210004_video_storage.sql"),
       "utf8",
     );
     const limit = sql.match(/file_size_limit = (\d+)/)?.[1];
@@ -368,7 +368,7 @@ In `apps/web/features/shared/upload-rules.ts`, add after `ARTWORK_MAX_BYTES`:
 ```ts
 /**
  * The design path accepts video up to a gigabyte, matching `internal-assets` and
- * `published-assets` after `supabase/migrations/202609210002_video_storage.sql`.
+ * `published-assets` after `supabase/migrations/202609210004_video_storage.sql`.
  *
  * The reason for this ceiling is **remux time and storage cost**, and deliberately not the
  * reason behind `ARTWORK_MAX_BYTES`. Nothing decodes a video frame in the browser: the file is
