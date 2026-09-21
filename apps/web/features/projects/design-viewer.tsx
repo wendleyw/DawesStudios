@@ -196,6 +196,7 @@ export function DesignViewer({
             nodes={nodes}
             edges={[]}
             nodeTypes={nodeTypes}
+            proOptions={{ hideAttribution: true }}
             fitView
             fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
             minZoom={0.15}

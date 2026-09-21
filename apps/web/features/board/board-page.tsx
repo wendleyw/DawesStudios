@@ -360,6 +360,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
             nodes={nodes}
             edges={[]}
             nodeTypes={boardNodeTypes}
+            proOptions={{ hideAttribution: true }}
             onNodesChange={changeNodes}
             onNodeDragStop={(_event, node) =>
               moveProject.mutate({ id: node.id, position: node.position })

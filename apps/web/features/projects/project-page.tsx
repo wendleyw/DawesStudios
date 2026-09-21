@@ -258,6 +258,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                 nodes={nodes}
                 edges={[]}
                 nodeTypes={nodeTypes}
+                proOptions={{ hideAttribution: true }}
                 nodesConnectable={false}
                 deleteKeyCode={null}
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
