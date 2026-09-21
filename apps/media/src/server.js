@@ -1,10 +1,15 @@
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { createBackend } from './supabase.js';
-import { LIMITS, MediaError, sanitizeDelivery, sanitizeRaster } from './sanitize.js';
+import { LIMITS, MediaError, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
 function validId(value) { if (typeof value !== 'string' || !UUID.test(value)) throw new MediaError('A valid resource identifier is required.'); return value; }
 async function readBody(request, maxBytes) {
   if (Number(request.headers['content-length']) > maxBytes) throw new MediaError('Request exceeds the file-size limit.', 413);
@@ -57,7 +62,7 @@ export function createMediaServer(config) {
     }
     const url = new URL(request.url, 'http://media.local');
     if (request.method === 'GET' && url.pathname === '/health') return send(200, { status: 'ok', service: 'dawes-media' });
-    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
+    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard', '/designs/sanitize-video'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
     let acquired = false;
     try {
       const token = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]+)$/)?.[1];
@@ -91,6 +96,57 @@ export function createMediaServer(config) {
           throw error;
         }
         return send(200, { assets });
+      }
+      if (url.pathname === '/designs/sanitize-video') {
+        const { projectId, rawPath, mimeType } = parseJson(await readBody(request, 16 * 1024));
+        validId(projectId);
+        if (!['video/mp4', 'video/webm'].includes(mimeType))
+          throw new MediaError('Upload an MP4 or WebM video.', 415);
+        // `opaque_storage_path` accepts this `.raw` shape in every bucket's insert policy, not
+        // only internal-assets, and only service_role writes to the client-served buckets in
+        // practice. The bucket below is a literal, never taken from the request; the path shape
+        // and project ownership are validated here rather than relying on that database check.
+        if (!RAW_VIDEO_PATH.test(rawPath) || rawPath.split('/')[0] !== projectId)
+          throw new MediaError('Asset path must belong to the project.');
+
+        // Production access is the same gate `add_design` applies, checked here so the service
+        // never processes a file for someone who could not attach it to a design anyway.
+        const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id`, { token });
+        if (projects.length !== 1) throw new MediaError('Project not found.', 404);
+
+        const extension = mimeType === 'video/mp4' ? 'mp4' : 'webm';
+        const directory = await mkdtemp(join(tmpdir(), 'dawes-video-'));
+        try {
+          const input = join(directory, `in.${extension}`);
+          const output = join(directory, `out.${extension}`);
+          await backend.downloadToFile(rawPath, projectId, token, input);
+          const probe = await sanitizeVideo(input, output, mimeType);
+          const path = `${projectId}/${randomUUID()}.${extension}`;
+          try {
+            await backend.uploadFile('internal-assets', path, output, mimeType);
+          } catch (error) {
+            // The upload may have left a partial object under `path` before failing. Nothing
+            // references that path yet — it was never linked to a design — so a best-effort
+            // removal is safe whether or not anything actually landed. The raw object is
+            // untouched, so the caller's original upload is not lost to this failure.
+            await backend.discard('internal-assets', path).catch(() => {});
+            throw error;
+          }
+          try {
+            // The raw object has served its purpose now that the clean one is durably stored.
+            await backend.discard('internal-assets', rawPath);
+          } catch {
+            // The clean object already exists and is what the caller is about to receive;
+            // failing the whole request over this cleanup step would make the caller re-upload
+            // and re-run ffmpeg for nothing. internal-assets is never client-served, so a
+            // duplicate raw object left behind costs storage, not correctness or security, and
+            // is recoverable by a later pass rather than by losing the sanitized result.
+            process.stderr.write(`Raw video discard failed for ${rawPath}; a duplicate remains in internal-assets.\n`);
+          }
+          return send(200, { path, ...probe });
+        } finally {
+          await rm(directory, { recursive: true, force: true });
+        }
       }
       const projectId = validId(url.searchParams.get('projectId'));
       const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id,status`, { token });

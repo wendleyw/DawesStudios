@@ -1,13 +1,25 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { LIMITS, MediaError } from './sanitize.js';
+
+// A raw video lands as `<projectId>/<uuid>.raw` — the shape `private.opaque_storage_path`
+// accepts, but that check runs on every bucket's insert policy, not only internal-assets, and the
+// insert policies on the client-served buckets were dropped long ago in favour of service_role
+// writes. This route (and `downloadToFile` below) is the only place a `.raw` object's fate is
+// decided, so both validate the full shape and the project prefix themselves rather than leaning
+// on that database-level check.
+const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
 
 export function createBackend(config) {
   const root = config.supabaseUrl.replace(/\/$/, '');
-  async function request(path, { token, method = 'GET', data, binary, mimeType } = {}) {
+  async function request(path, { token, method = 'GET', data, binary, mimeType, duplex } = {}) {
     const response = await fetch(root + path, {
       method, signal: AbortSignal.timeout(30_000), redirect: 'error',
       headers: { apikey: config.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': mimeType ?? 'application/json' },
       body: binary ?? (data === undefined ? undefined : JSON.stringify(data)),
+      ...(duplex ? { duplex } : {}),
     });
     if (!response.ok) {
       // Upstream error bodies may contain metadata or credentials; expose a stable safe message.
@@ -37,6 +49,25 @@ export function createBackend(config) {
     }
     return Buffer.concat(chunks);
   }
+  // Video is handled as files on disk rather than buffers. `downloadInternal` returns bytes,
+  // which is right for a 40-megapixel image and wrong for a gigabyte of video.
+  async function downloadToFile(path, projectId, token, destination) {
+    if (!RAW_VIDEO_PATH.test(path) || path.split('/')[0] !== projectId) throw new MediaError('Asset path must belong to the project.');
+    const response = await request(`/storage/v1/object/authenticated/internal-assets/${path}`, { token });
+    const contentLength = Number(response.headers.get('content-length'));
+    if (!contentLength || contentLength > LIMITS.videoBytes) { await response.body?.cancel().catch(() => {}); throw new MediaError('Source exceeds the file-size limit.', 413); }
+    await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
+  }
+
+  // The clean copy is written with the service key, exactly like `saveSanitized` below: this
+  // service has already authenticated the caller and checked project access, so the write itself
+  // bypasses `internal_storage_insert`'s RLS checks (including `opaque_storage_path`) rather than
+  // depending on them.
+  async function uploadFile(bucket, path, filePath, mimeType) {
+    const body = Readable.toWeb(createReadStream(filePath));
+    await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half' });
+  }
+
   async function saveSanitized(projectId, bucket, sanitized, userId, source = {}) {
     const path = `${projectId}/${randomUUID()}.${sanitized.extension}`;
     await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: sanitized.bytes, mimeType: sanitized.mimeType });
@@ -65,5 +96,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, authenticate, downloadInternal, saveSanitized, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, authenticate, downloadInternal, downloadToFile, uploadFile, saveSanitized, discard, discardPrepared, cleanStaleAssets };
 }
