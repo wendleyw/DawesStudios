@@ -16,6 +16,29 @@ The reusable [CopyButton](../shared/copy-button.tsx) handles clipboard permissio
 
 Feature styles are in `brand.css`; shared controls, shell, and modal styling remain in `app/globals.css`. Brand color values are content and may be chromatic while application chrome stays restrained. The only `brand-`-prefixed selector left in `globals.css` is `.brand-logo`, and it is not this feature's: its consumers are `features/auth/login-page.tsx` and `features/workspace/app-shell.tsx`, neither of which is `features/brand`. This feature's own classes (`brand-link`, `brand-monogram`) already moved to `features/workspace/workspace.css` in an earlier pass.
 
+## Cache invalidation: `brandQueryKeys` and no aggregate helper
+
+`brand-data.ts` exports `brandQueryKeys`, a named-key record covering the four keys this feature's
+writes dirty: `sections` (`brand-sections`), `assets` (`brand-assets`), `templateDrafts`
+(`template-drafts`) and `templateDraft` (`template-draft`). Every `invalidateQueries` call in this
+feature composes its own subset from that record instead of repeating the key string, per
+[rule 5 of the contract](../../../../docs/architecture/data-access.md).
+
+There is no `useInvalidateBrand()`, and adding one would be a behavior change rather than a tidy-up:
+no write here dirties all four keys. Saving a section touches `sections`; adding an asset touches
+`assets`; creating a draft touches `templateDrafts`; saving a draft touches `templateDrafts` and
+`templateDraft`. An aggregate helper would make each of those refetch caches it does not refetch
+today. The feature's other read keys — `brand-templates`, `brand-asset-preview` and `client-logo` —
+are deliberately absent from the record, because no write invalidates them and naming them would
+invite a call site to.
+
+`section-editor.tsx` also invalidates `briefing-brand`, which is **not** a brand key:
+`briefings/briefing-data.ts`'s `useBriefingBrand` is the only hook that reads it, so `briefings` owns
+the cache entry even though this feature owns the `brand_sections` rows behind it. That call site
+imports `briefingQueryKeys` and composes `briefingQueryKeys.brand` rather than declaring a
+brand-side copy — the same read-side ownership test `board-data.ts` applies above
+`moveProjectPosition`. The reasoning is recorded in a comment at the call site.
+
 ## Deviation from the data-access contract: two reads that are not hooks
 
 `findBrandAssetById` and `downloadBrandAssetFile` in `brand-data.ts` are exported as plain

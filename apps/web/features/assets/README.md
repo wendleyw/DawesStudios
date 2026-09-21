@@ -14,6 +14,19 @@ is the page's single read hook. `findAssetByStoragePath`, `removeUnusedUpload`,
 consumer, `assets-page.tsx`, and the shared layer's own rule is that a primitive belongs in
 `shared/` only with two or more real consumers.
 
+## Cache invalidation: `assetQueryKeys` and `useInvalidateAssets()`
+
+`asset-data.ts` exports `assetQueryKeys` (`["assets"]`) and `useInvalidateAssets()`. Unlike `brand`
+and `briefings`, this feature does get an aggregate helper, and the reason is the condition
+[rule 5 of the contract](../../../../docs/architecture/data-access.md) sets for one: both of the
+feature's write call sites — `assets-page.tsx`'s deliver mutation and `upload-file-dialog.tsx`'s
+upload mutation — already invalidated the whole set, because the whole set is a single key. Routing
+them through the helper is therefore exactly non-widening.
+
+`assets-page.tsx` also invalidates `projects`, which `workspace/workspace-data.ts` owns; it reaches
+that key through that feature's `useInvalidateWorkspace()`, whose set (`["projects"]`) is likewise
+exactly what the call site invalidated inline. Neither key is duplicated here.
+
 ## Deviation from the data-access contract: a read that is not a hook
 
 `findAssetByStoragePath` is exported as a plain `async (database, input)` function instead of a

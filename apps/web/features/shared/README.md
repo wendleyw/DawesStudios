@@ -125,6 +125,26 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-assets`,
 | `canvas-fit.ts` | Viewport fit maths for the board and project canvases.                            | `board/board-layout`, `projects/canvas-layout` |
 | `forms.css`     | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes. | Loaded once globally by `app/layout.tsx`.      |
 
+## Repository-wide invariant tests
+
+Two test files live here because the invariant they check spans every feature, so
+there is no single feature that owns them.
+
+| Test                            | Invariant                                                                                                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stylesheet-boundary.test.ts`   | No two feature stylesheets declare the same selector, which is what makes their global load order irrelevant.                                                                                                        |
+| `invalidation-boundary.test.ts` | Cache keys are declared once, in the owning feature's `<feature>-data.ts`, and composed at the call site — so an invalidation set cannot silently widen. See [rule 5](../../../../docs/architecture/data-access.md). |
+
+`invalidation-boundary.test.ts` checks four things: that no file outside a
+`*-data.ts` module invalidates a bare string-literal query key (with a small
+allowlist that names both the call site and the key, and that fails once that
+call site stops using it); that the one keyless whole-cache clear, in
+`settings/invitation-acceptance.tsx`, stays the only one; that the five-key
+realtime fan-out in `projects/project-events.ts` is pinned, since it matches no
+exported key set and has no non-widening constant to route through; and that
+`brandQueryKeys`, `briefingQueryKeys` and `assetQueryKeys` still hold the exact
+strings their call sites were measured against.
+
 ## Candidates that were evaluated and rejected
 
 Recorded so they are not re-proposed:
