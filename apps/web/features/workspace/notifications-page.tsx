@@ -1,29 +1,25 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Bell, Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
-import { useNotifications } from "./workspace-data";
-import { assertResult } from "@/lib/supabase";
+import {
+  markNotificationsRead,
+  useInvalidateNotifications,
+  useNotifications,
+} from "./workspace-data";
 import { FormError } from "@/features/shared/form-error";
 
 export function NotificationsPage() {
   const { database, session } = useAuth();
-  const queryClient = useQueryClient();
   const settings = useWorkspaceSettings();
   const notifications = useNotifications();
+  const invalidateNotifications = useInvalidateNotifications();
   const markRead = useMutation({
-    mutationFn: async (id?: string) => {
-      const query = database
-        .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("user_id", session!.user.id)
-        .is("read_at", null);
-      assertResult(await (id ? query.eq("id", id) : query));
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    mutationFn: (id?: string) => markNotificationsRead(database, { userId: session!.user.id, id }),
+    onSuccess: () => invalidateNotifications(),
   });
   const unread = notifications.data?.filter((item) => !item.read_at).length ?? 0;
   return (
