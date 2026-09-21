@@ -1413,3 +1413,69 @@ did not touch them, and the standing instruction from the "Next actions" list ab
 remaining rows by domain; the C, E, F and I families hold the largest gaps) still applies. No fixture,
 container or deployment state was changed by this session; the audits and fixes were measured against
 the already-running local stack and a container rebuild performed for final verification only.
+
+## Required-revision guards closed, and two false diagnoses behind them (2026-09-21)
+
+`202609210005` removed the `is null or` escape from the compare-and-set on
+`update_workspace_settings` and `save_service_preset`, so a call quoting no revision is refused
+exactly as a stale one is. That closed the guard and immediately broke the browser suite, and the two
+failures that followed were both measurement faults rather than product defects. Both are recorded
+here because each one produced a confident, wrong conclusion first.
+
+### The spec change the migration forced
+
+`apps/web/tests/e2e/intake-admin.spec.ts` called both RPCs without a revision in the `finally`
+teardown that restores the seeded settings. That block asserts nothing about product behavior — it
+restores a fixture — so `b3f4ea5` reads the current revision immediately before each restore and
+quotes it. The three other call sites in that file (lines 473, 515, 523) are negative-path assertions
+that expect an error regardless of revision and were left untouched. No other spec calls either RPC.
+
+### False diagnosis 1 — the shared stack's password had been rotated
+
+Every fixture sign-in returned `invalid_credentials`, and this was first reported as predating the
+session. It did not: `auth.users.updated_at` was `16:45:31Z` for all thirteen accounts, `supabase/.env.local`
+in this tree had not been written since the previous day, and the password in the *other* working
+tree's copy bcrypt-matched the stored hashes while this tree's did not.
+
+`provision_local_auth.py` runs on every `db:start` and reads `DEMO_PASSWORD` from the tree it was
+invoked from. A git worktree starts without that ignored file, so provisioning minted a new random
+password, applied it to the single shared stack, and wrote it to that tree alone. Neither existing
+guard catches it: the workdir check passes because `ROOT` derives from the script's own path, and the
+API_URL check passes because both trees legitimately address the same instance.
+
+`de10caa` fixes it. The seed inserts each account with `created_at` equal to `updated_at`, so an
+account whose timestamps still match has never been given a password; provisioning mints one only in
+that case and otherwise stops with a message naming both recoveries. Verified both ways: with the
+credentials file hidden it refuses and changes nothing, and with it present a full run provisions 13
+accounts, 70 brand files, 27 internal working files, 18 published copies and the delivery fixture,
+after which sign-in returns `200`.
+
+### False diagnosis 2 — a container 42 minutes older than the fix it was measuring
+
+With auth restored, one test still failed: the workspace settings save produced no toast. The
+procedure was not at fault — called over HTTP with a correct revision it returned `200`, and the
+source sends one. The image serving `3003` had been built at 12:03; `5843974`, the commit that makes
+the form send a revision at all, landed at 12:45. An old bundle was calling the procedure without a
+revision against a guard that had just stopped accepting that. Rebuilding `web` alone
+(`docker compose --env-file .env.production up --build -d --wait web`) returned the suite to 25/25.
+
+**A red measured against a container proves something about the image, not about the tree.** This
+session had already recorded the same trap in the opposite direction, where a stale container hid a
+regression; it produces false failures just as readily as false passes.
+
+### Verified in this session
+
+| Check | Result |
+| --- | --- |
+| `npm run test:e2e` | 25 passed / 25, against a container rebuilt from `b3f4ea5` |
+| `npm run check` | 457 passed / 457 across 33 files |
+| `npm run db:test` | 158 assertions across 6 files, PASS |
+| Dataset | 10 clients, 25 projects, 12 campaigns, 30 briefings, 70 brand assets |
+| `gitleaks`, `commitlint` on `de10caa` | pass; `lint-staged` covers no file in that commit |
+
+### What remains
+
+The acceptance matrix is unchanged by this session. The `ddl_command_end` event trigger as the
+permanent ACL fix is still deferred while the concurrent session writes migrations, and the
+`.env.local` trap re-arms for any third working tree that starts the stack without a credentials
+file — the refusal now names the recovery instead of failing silently an hour later.
