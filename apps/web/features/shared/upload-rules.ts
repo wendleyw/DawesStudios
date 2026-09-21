@@ -16,9 +16,12 @@
  * rejection into a raw storage error at the end of a long transfer; one *below* it refuses valid
  * files with no explanation. Raising a limit or widening a MIME list means editing the migration
  * first and this module second — `upload-rules.test.ts` computes each bucket's *effective* value
- * (inserts with later updates applied) from the migrations themselves and fails if the two drift
- * apart. A migration that touches `storage.buckets` must be added to that test's source list, or
- * the comparison silently keeps checking an older shape.
+ * (inserts with later `update storage.buckets` statements applied, regardless of column order or
+ * whether the `where` clause names one bucket or several) from the migrations themselves, and
+ * fails if that effective value drifts from this module's constants. That check only covers
+ * migrations it has been told to read, though: a new migration that changes a bucket must still
+ * be added by hand to that test's source list, or the comparison keeps passing against a stale
+ * value without any parser being able to notice.
  *
  * The ceiling is expressed per upload path rather than as a single number, because the paths
  * deliberately disagree with each other and with their bucket: see `ARTWORK_MAX_BYTES` (tighter

@@ -25,11 +25,18 @@ import {
 // `update storage.buckets set ...` over an earlier `insert`. `effectiveBucketLimits` and
 // `effectiveBucketMimeTypes` below compute each bucket's final value by applying every source
 // file's updates over its inserts, in the order the sources are given, so the assertions compare
-// against what the bucket actually enforces rather than only its first migration. Adding a
-// migration that touches `storage.buckets` therefore requires adding its filename to the source
-// list passed to those functions here — that is the one manual step this file cannot verify for
-// you. Forgetting it, or drifting the module's exported constants from the bucket values, fails
-// this file.
+// against what the bucket actually enforces rather than only its first migration. The update
+// parsing is deliberately shape-tolerant within a single `update storage.buckets ... ;`
+// statement: `file_size_limit` and the `allowed_mime_types` append are each found independently
+// of their position in the `set` list and of each other (a statement may set only one of the
+// two), and the target ids are read from either `where id in (...)` or `where id = '...'`.
+//
+// What this file still cannot verify for you: a migration that touches `storage.buckets` must be
+// added by hand to the source list passed to `effectiveBucketLimits`/`effectiveBucketMimeTypes`
+// in each test below. A new migration that changes a bucket but is never added to those lists
+// will not be seen, and this file will keep passing against the old, stale values — that gap is
+// structural, not something a parsing fix can close. Once a migration *is* in the list, drift
+// between its effective values and this module's exported constants does fail this file.
 
 const migrations = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -45,20 +52,48 @@ function migration(name: string): string {
   return readFileSync(join(migrations, name), "utf8");
 }
 
+function unquote(value: string): string {
+  return value.trim().replace(/^'|'$/g, "");
+}
+
+/**
+ * Every `update storage.buckets ... ;` statement in a migration, as raw SQL text. Matched from
+ * the `update` keyword to its terminating semicolon so the two column-specific parsers below can
+ * each search the whole statement independently, rather than depending on where a column sits in
+ * the `set` list or on the rest of the statement following it.
+ */
+function bucketUpdateStatements(sql: string): string[] {
+  return [...sql.matchAll(/update\s+storage\.buckets[\s\S]*?;/gi)].map((m) => m[0]);
+}
+
+/**
+ * The bucket ids a single `update storage.buckets` statement targets, whichever `where` shape it
+ * uses: a list (`where id in ('a','b')`) or a single id (`where id = 'a'`).
+ */
+function targetedBucketIds(statement: string): string[] {
+  const list = statement.match(/where\s+id\s+in\s*\(([^)]*)\)/i);
+  if (list) return list[1].split(",").map(unquote);
+  const single = statement.match(/where\s+id\s*=\s*'([a-z-]+)'/i);
+  return single ? [single[1]] : [];
+}
+
 /** Each bucket's effective `allowed_mime_types`: the inserted list with later appends applied. */
 function effectiveBucketMimeTypes(sources: string[]): Map<string, string[]> {
   const mimes = new Map<string, string[]>();
-  const unquote = (v: string) => v.trim().replace(/^'|'$/g, "");
   for (const sql of sources) {
     for (const m of sql.matchAll(/\('([a-z-]+)','[a-z-]+',(?:true|false),\d+,array\[([^\]]*)\]\)/g))
       mimes.set(m[1], m[2].split(",").map(unquote));
-    // `update storage.buckets set ... allowed_mime_types = allowed_mime_types || array[...]
-    //  where id in ('a','b')`
-    for (const m of sql.matchAll(
-      /update storage\.buckets[\s\S]*?allowed_mime_types\s*=\s*allowed_mime_types\s*\|\|\s*array\[([^\]]*)\][\s\S]*?where id in \(([^)]*)\)/gi,
-    ))
-      for (const id of m[2].split(",").map(unquote))
-        mimes.set(id, [...(mimes.get(id) ?? []), ...m[1].split(",").map(unquote)]);
+    for (const statement of bucketUpdateStatements(sql)) {
+      // Found independently of where it sits in the `set` list, and optional: a statement may
+      // set only `file_size_limit` and never touch the mime list at all.
+      const append = statement.match(
+        /allowed_mime_types\s*=\s*allowed_mime_types\s*\|\|\s*array\[([^\]]*)\]/i,
+      );
+      if (!append) continue;
+      const added = append[1].split(",").map(unquote);
+      for (const id of targetedBucketIds(statement))
+        mimes.set(id, [...(mimes.get(id) ?? []), ...added]);
+    }
   }
   return mimes;
 }
@@ -69,12 +104,13 @@ function effectiveBucketLimits(sources: string[]): Map<string, number> {
   for (const sql of sources) {
     for (const m of sql.matchAll(/\('([a-z-]+)','[a-z-]+',(?:true|false),(\d+),array\[/g))
       limits.set(m[1], Number(m[2]));
-    // `update storage.buckets set file_size_limit = N ... where id in ('a','b')`
-    for (const m of sql.matchAll(
-      /update storage\.buckets\s+set\s+file_size_limit\s*=\s*(\d+)[\s\S]*?where id in \(([^)]*)\)/gi,
-    ))
-      for (const id of m[2].split(",").map((v) => v.trim().replace(/^'|'$/g, "")))
-        limits.set(id, Number(m[1]));
+    for (const statement of bucketUpdateStatements(sql)) {
+      // Found independently of where it sits in the `set` list, and optional: a statement may
+      // set only `allowed_mime_types` and never touch the size limit at all.
+      const limit = statement.match(/file_size_limit\s*=\s*(\d+)/i);
+      if (!limit) continue;
+      for (const id of targetedBucketIds(statement)) limits.set(id, Number(limit[1]));
+    }
   }
   return limits;
 }
@@ -92,20 +128,6 @@ describe("the client upload ceiling mirrors the bucket limit", () => {
     const designBuckets = ["internal-assets", "published-assets"];
     for (const [id, limit] of limits)
       expect(limit).toBe(designBuckets.includes(id) ? VIDEO_MAX_BYTES : BUCKET_MAX_BYTES);
-  });
-
-  it("fails a bucket that has drifted from the pre-video expectation", () => {
-    // This is the guard proving itself: without applying the video migration's `update`, every
-    // bucket "looks like" it is still at the base ceiling, so asserting the old, single-value
-    // expectation against the effective (post-update) limits must now fail for the design
-    // buckets. If this assertion stopped failing, the guard above would be blind again.
-    const limits = effectiveBucketLimits([
-      migration("202609200003_storage.sql"),
-      migration("202609200004_requests_and_attachments.sql"),
-      migration("202609210004_video_storage.sql"),
-    ]);
-    const drifted = [...limits.values()].some((limit) => limit !== BUCKET_MAX_BYTES);
-    expect(drifted).toBe(true);
   });
 
   it("matches the `file_size` check constraints that guard the attachment tables", () => {
