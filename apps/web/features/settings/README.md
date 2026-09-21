@@ -93,10 +93,13 @@ $ grep -n "settings" apps/web/app/globals.css
 ```
 
 `status-badge`, for one, looked like a candidate at first glance (only `team-settings.tsx` uses the
-bare class), but its state-suffixed variants (`.status-badge.internal_review`, `.status-badge.approved`,
-etc.) are consumed by `board/board-page.tsx`, `board/board-nodes.tsx`, `briefings/briefings-page.tsx`,
+bare class), but its tone variants (`.status-badge.tone-active`, `.tone-attention`, `.tone-complete`)
+are consumed by `board/board-page.tsx`, `board/board-nodes.tsx`, `briefings/briefings-page.tsx`,
 `briefings/briefing-detail.tsx`, `credits/credits-page.tsx`, `projects/project-page.tsx` and
-`workspace/home-page.tsx`, so it stays shared. No file was moved or split for this step.
+`workspace/home-page.tsx`, so it stays shared. (Those variants used to be named after project enum
+values; they now name meanings, and each domain maps its enum onto one in TypeScript — see
+`features/shared/status-tone.ts`. `team-settings.tsx` renders the bare class, which is the resting
+`neutral` tone.) No file was moved or split for this step.
 
 ## Invitation delivery
 

@@ -20,7 +20,7 @@ Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.
 
 The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
 
-**Decision**: status chrome differentiates by shape and tone, not hue, wherever a badge has room to do so. `.status-badge` therefore carries a dashed border for changes requested, a hollow dot for internal review, a square dot for delivered, and tonal greys elsewhere. The board calendar is the documented exception: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
+**Decision**: status chrome differentiates by shape and tone, not hue, wherever a badge has room to do so. `.status-badge` styles four *meanings* rather than the enum values of any one domain: `neutral` (the base — a filled dot on the subtle surface), `active` (a hollow ring on the plain surface), `attention` (a dashed border) and `complete` (a solid fill, full-strength text and a square dot). Each domain maps its own enum onto that vocabulary in TypeScript beside its label map, so briefings, credit requests and projects read consistently and a new domain needs no new CSS — see [`features/shared/status-tone.ts`](../../apps/web/features/shared/status-tone.ts). The board calendar is the documented exception: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
 
 ## Shared tokens
 
@@ -42,16 +42,23 @@ The shared shell styles are implemented in [globals.css](../../apps/web/app/glob
 | `color.primary` | `#252523` | Implemented filled primary action |
 | `color.focus` | `#252523` | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces |
 | `color.canvasDot` | `#d4d4d0` | Board component uses a 1 px dot at a 20 px grid step at 100% zoom |
-| `radius.small` | `8px` | Implemented controls; reference was approximately 4 px |
-| `radius.medium` | `12px` | Implemented panels/cards; dialogs use 14 px corners |
-| `radius.round` | `999px` | Decision: only avatars, pins, and circular marks |
+| `radius.small` | `8px` | `--radius`. Implemented controls; reference was approximately 4 px |
+| `radius.medium` | `12px` | `--radius-lg`. Implemented panels/cards; dialogs use 14 px corners |
+| `radius.round` | `999px` | Decision: only avatars, pins, and circular marks. No token; one call site |
+| `text.xs` | `10px` | `--text-xs`. Eyebrows, badges, table headers |
+| `text.sm` | `11px` | `--text-sm`. Timestamps, counts, secondary metadata |
+| `text.base` | `12px` | `--text-base`. Navigation, supporting copy, small controls |
+| `text.lg` | `13px` | `--text-lg`. Inputs, labels, action copy, list titles |
+| `eyebrow.tracking` | `0.1em` | `--eyebrow-tracking`. The one tracking every eyebrow-shaped rule reads |
+| `space.xs` / `sm` / `md` / `lg` | `8` / `12` / `16` / `24px` | `--space-xs`…`--space-lg`. The four steps the stylesheets lean on most |
+| `space.page` | `36px` | `--space-page`. The page gutter |
 | `border.default` | `1px solid` | Measured surface separation |
 | `shadow.surface` | `none` | Shell/list/workspace cards use borders; draggable board cards have a subtle 2% shadow |
 | `shadow.overlay` | `0 20px 64px rgb(25 27 21 / 16%)` | Implemented dialogs only |
 
 Spacing uses `4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 64px`. These form an inferred four-pixel scale. Prefer 8–12 px within a compact control group, 16–24 px inside panels, 24–32 px between sections, and 36–40 px at large content boundaries. Add a new spacing value only when a named component requires it.
 
-The screenshots do not identify a font file. The implementation uses Geist supplied by [the application layout](../../apps/web/app/layout.tsx), followed by `ui-sans-serif`, `system-ui`, and `sans-serif`. Body text is 14 px / 1.5, navigation 12 px, table project names 13 px, supporting copy 12–13 px, section headings 18 px, and page headings a fluid 28–36 px. Summary figures are 36 px. Compact badges and eyebrows use 10–11 px, with important action copy at 13 px; their readability remains an explicit audit item. Use weight 400 for body, 500 for controls/page headings, and 550 for section headings. Avoid all-caps prose; short section eyebrows use restrained tracking.
+The screenshots do not identify a font file. The implementation uses Geist supplied by [the application layout](../../apps/web/app/layout.tsx), followed by `ui-sans-serif`, `system-ui`, and `sans-serif`. Body text is 14 px / 1.5, navigation 12 px, table project names 13 px, supporting copy 12–13 px, section headings 18 px, and page headings a fluid 28–36 px. Summary figures are 36 px. Compact badges and eyebrows use 10–11 px, with important action copy at 13 px; their readability remains an explicit audit item. The four commonest of these sizes — 10, 11, 12 and 13 px — are the `--text-xs`/`--text-sm`/`--text-base`/`--text-lg` tokens above and are written as tokens, never as literals; a font size written as a literal is by that fact an exceptional value and should be able to say why. Use weight 400 for body, 500 for controls/page headings, and 550 for section headings. Avoid all-caps prose; short section eyebrows use restrained tracking. The eyebrow is one treatment, defined once on `.eyebrow`: `--text-xs`, weight 500, `--eyebrow-tracking`, and `text-transform: uppercase`. Casing is the stylesheet's job — eyebrow copy is written in sentence case and no call site upper-cases a string in JavaScript. The three rules that cannot carry the class (`.nav-section-label`, `.board-identity p`, `.credit-table th`) read the same tokens instead of restating their own numbers.
 
 ## Reference geometry and fresh shell decisions
 
@@ -223,8 +230,9 @@ Three systems share the frontend, and each has exactly one job. This is the answ
 system do I use here", established by the [repository structural refactor](../superpowers/specs/2026-09-20-repository-structural-refactor-design.md) and enforced by every feature agent that follows it.
 
 - **Tailwind v4** supplies the design-token bridge and utility classes. `apps/web/app/globals.css`
-  opens with `@import "tailwindcss"`, followed by a `:root` block of 14 custom properties (colors,
-  radii, and the sidebar/topbar geometry) and an `@theme inline` block that maps four of them —
+  opens with `@import "tailwindcss"`, followed by a `:root` block of 23 custom properties (colors,
+  radii, the type and spacing scales, the eyebrow tracking, and the sidebar/topbar geometry) and an
+  `@theme inline` block that maps four of them —
   `--color-background`, `--color-foreground`, `--font-sans`, `--font-mono` — into Tailwind's theme,
   so a utility class such as `bg-background` resolves to the same token the hand-authored CSS
   reads. Reach for a Tailwind utility for one-off layout or spacing on new markup; reach for the

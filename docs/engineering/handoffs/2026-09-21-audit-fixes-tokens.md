@@ -218,3 +218,42 @@ explicit `background: var(--surface)` (white) on the input itself.
 No test file was modified. Only colour values changed in 8 stylesheets (`assets.css`, `board.css`,
 `briefings.css`, `credits.css`, `projects.css`, `reviews.css`, `settings.css`, `workspace.css`); no
 size, spacing, radius, or position touched.
+
+## Addendum — documentation pass and independent re-verification
+
+The batch landed in `ec422c7` and `a1fda12` while this session was still verifying its own copy of
+the same work; the working tree matched `HEAD` afterwards, so nothing was re-applied or reverted.
+What remained was the documentation half of the change, which neither commit carried, and a re-run
+of the gate against the tree as landed.
+
+### Documentation updated
+
+| File | Change |
+| --- | --- |
+| `docs/architecture/design-system.md` | The status-chrome decision now describes the four tones (`neutral`, `active`, `attention`, `complete`) instead of the retired per-enum variants, and points at `features/shared/status-tone.ts`. The shared-token table gains `--text-xs`/`--text-sm`/`--text-base`/`--text-lg`, `--eyebrow-tracking` and `--space-xs`…`--space-lg`, and names the token behind each radius. The typography section records that the four commonest sizes are written as tokens, that a literal font size is by that fact exceptional, and what the single eyebrow treatment and its sentence-case copy rule are. The `:root` property count is corrected from 14 to 23. |
+| `apps/web/features/shared/README.md` | `status-tone.ts` added to the non-component module table with its seven consumers, and the note that the vocabulary lives here while each domain's mapping lives beside its label map; `status-tone.test.ts` added to the repository-wide invariant table ("Two test files" → "Three test files"). |
+| `apps/web/features/settings/README.md` | The paragraph explaining why `status-badge` stays shared no longer cites `.status-badge.internal_review` / `.approved`; it cites the tone variants and records that the bare class is the resting tone. |
+
+`apps/web/features/briefings/README.md` was checked and needed no change: it only records that
+`status-badge` is defined in `globals.css` and consumed by several features, which is still true.
+
+### Checks executed in this pass
+
+| Command / scenario | Result |
+| --- | --- |
+| `npm run check` | Passed — 420 tests / 29 files, 0 errors, the same 2 pre-existing lint warnings (`board-canvas-controls.tsx` `exhaustive-deps`, `board-nodes.tsx` unused `ArrowLeft`), both present at `a16ad72` |
+| `next dev --port 3011` + `playwright test tests/e2e/design-audit.spec.ts tests/e2e/brand-accessibility.spec.ts` | 5/5 passed against the tree as landed |
+| `docs/verification/design-audit.json` diff | One line — `capturedAt` only (`2026-09-21T05:29:34.872Z` → `2026-09-21T10:31:30.509Z`). No `overflow` flag and no axe violation moved, which is the whole of what this file records: `{name, width, overflow, violations}` per surface, and no geometry figure and no colour. The deliberate J08-6 badge recolour could therefore only have surfaced here as a contrast violation, and did not. |
+| `docker exec supabase_db_dawes-studios psql … count(*)` | 10 clients, 25 projects |
+| Port 3011 | Stopped after verification; confirmed free. The container on `localhost:3003` and Docker were not touched. |
+
+`design-audit.json` and the regenerated screenshots were reverted after inspection, matching the
+practice of the previous batches.
+
+### One item deliberately left, for the orchestrator
+
+`.status-badge`'s `border-radius: 5px` is still a literal, commented in place. The radius scale
+offers `--radius` (8px) and `--radius-lg` (12px); neither equals 5px, and rounding it would visibly
+change the badge. Whether the scale should gain a small step (`--radius-sm`) — which would also
+absorb `.segmented-control button`'s 5px and the 4px, 6px, 7px, 9px, 10px, 11px and 14px radii in
+Table 2 — is a scale decision, not a substitution.

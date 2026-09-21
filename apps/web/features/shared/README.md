@@ -123,20 +123,31 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-assets`,
 
 ## Non-component modules
 
-| Module          | Purpose                                                                           | Consumers                                      |
-| --------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `canvas-fit.ts` | Viewport fit maths for the board and project canvases.                            | `board/board-layout`, `projects/canvas-layout` |
-| `forms.css`     | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes. | Loaded once globally by `app/layout.tsx`.      |
+| Module           | Purpose                                                                                                                                                     | Consumers                                                                                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `canvas-fit.ts`  | Viewport fit maths for the board and project canvases.                                                                                                      | `board/board-layout`, `projects/canvas-layout`                                                                                                                           |
+| `forms.css`      | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes.                                                                           | Loaded once globally by `app/layout.tsx`.                                                                                                                                |
+| `status-tone.ts` | The `StatusTone` vocabulary (`neutral`, `active`, `attention`, `complete`) and `statusToneClass()`, which turns a tone into the `.status-badge` class list. | `board/board-nodes`, `board/board-page`, `briefings/briefing-detail`, `briefings/briefings-page`, `credits/credits-page`, `projects/project-page`, `workspace/home-page` |
+
+`status-tone.ts` holds the vocabulary, not the mappings. Each domain maps its own
+enum onto a tone beside its label map — `projectStatusTones` in
+`workspace/workspace-data.ts`, `briefingStatusTones` in
+`briefings/briefing-model.ts`, `creditRequestStatusTones` in
+`credits/credit-model.ts` — so a database enum value never appears in a
+stylesheet selector and a new domain needs no new CSS. `neutral` is the badge's
+base appearance and adds no modifier class, which is why a badge with no status
+at all (`settings/team-settings.tsx`) still writes `className="status-badge"`.
 
 ## Repository-wide invariant tests
 
-Two test files live here because the invariant they check spans every feature, so
-there is no single feature that owns them.
+Three test files live here because the invariant they check spans every feature,
+so there is no single feature that owns them.
 
 | Test                            | Invariant                                                                                                                                                                                                            |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stylesheet-boundary.test.ts`   | No two feature stylesheets declare the same selector, which is what makes their global load order irrelevant.                                                                                                        |
 | `invalidation-boundary.test.ts` | Cache keys are declared once, in the owning feature's `<feature>-data.ts`, and composed at the call site — so an invalidation set cannot silently widen. See [rule 5](../../../../docs/architecture/data-access.md). |
+| `status-tone.test.ts`           | Every status value in every domain maps to a tone the badge actually styles, checked against the generated database enums, and no enum value appears as a `.status-badge` selector.                                  |
 
 `invalidation-boundary.test.ts` checks four things: that no file outside a
 `*-data.ts` module invalidates a bare string-literal query key (with a small
