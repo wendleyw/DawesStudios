@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
+  brandQueryKeys,
   createTemplateDraft,
   useBrandTemplates,
   useTemplateDrafts,
@@ -36,7 +37,9 @@ export function BrandTemplates({ clientId }: { clientId: string }) {
         content: readTemplateContent(template.content),
       }),
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["template-drafts"] });
+      // Creating a draft adds a list entry and nothing else; the newly created draft is navigated
+      // to rather than read from cache, so `templateDraft` stays out of this set.
+      await queryClient.invalidateQueries({ queryKey: [brandQueryKeys.templateDrafts] });
       router.push(`/clients/${clientId}/brand/drafts/${result.id}`);
     },
   });

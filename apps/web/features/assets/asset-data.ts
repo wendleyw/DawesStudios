@@ -1,8 +1,33 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
+
+/**
+ * The one cache key this feature owns: the combined delivery/working/published file list behind
+ * `useProjectAssets`.
+ *
+ * Unlike `brand` and `briefings`, this feature does get an aggregate `useInvalidateAssets()`: both
+ * of its write call sites (`assets-page.tsx`'s deliver mutation and `upload-file-dialog.tsx`'s
+ * upload mutation) already invalidated the whole set, because the whole set is one key. Routing
+ * them through the helper is therefore exactly non-widening, which is the only condition under
+ * which the helper in rule 5 of `docs/architecture/data-access.md` may be used.
+ *
+ * `projects` is not listed here. `assets-page.tsx` does invalidate it alongside `assets`, but
+ * `workspace/workspace-data.ts` owns that key and the call site reaches it through that feature's
+ * `useInvalidateWorkspace()` — the same split `board-data.ts` records above `moveProjectPosition`.
+ */
+export const assetQueryKeys = ["assets"] as const;
+
+export function useInvalidateAssets() {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all(
+      assetQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    );
+  };
+}
 
 export type ProjectAsset = {
   id: string;

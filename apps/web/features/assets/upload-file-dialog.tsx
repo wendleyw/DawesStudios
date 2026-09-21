@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
@@ -11,6 +11,7 @@ import {
   recordProjectAsset,
   removeUnusedUpload,
   uploadInternalAsset,
+  useInvalidateAssets,
 } from "./asset-data";
 
 const formats: Record<string, string> = {
@@ -33,7 +34,7 @@ export function UploadFileDialog({
   onClose: () => void;
 }) {
   const { database, mediaUrl } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateAssets = useInvalidateAssets();
   const [projectId, setProjectId] = useState(initialProject);
   const [prepared, setPrepared] = useState<PreparedFile | null>(null);
   const [closing, setClosing] = useState(false);
@@ -87,7 +88,9 @@ export function UploadFileDialog({
         });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["assets"] });
+      // `assetQueryKeys` is the single `assets` key this call already invalidated, so the helper
+      // covers exactly this set and nothing more.
+      await invalidateAssets();
       onClose();
     },
   });

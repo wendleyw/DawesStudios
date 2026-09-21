@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { FormError } from "@/features/shared/form-error";
 import {
   addBriefingAttachment,
+  briefingQueryKeys,
   downloadBriefingAttachmentFile,
   findBriefingAttachmentByPath,
   removeBriefingAttachment,
@@ -64,7 +65,9 @@ export function BriefingAttachments({
         throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["briefing-attachments"] }),
+    // Attaching a file changes only the attachment list: the briefing row itself is untouched, so
+    // `briefings` is deliberately not in this set.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.attachments] }),
   });
   const remove = useMutation({
     mutationKey: ["briefing-file", briefingId],
@@ -72,7 +75,7 @@ export function BriefingAttachments({
       const path = await removeBriefingAttachment(database, { id });
       await removeBriefingAttachmentFile(database, { path });
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["briefing-attachments"] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.attachments] }),
   });
   const download = useMutation({
     mutationFn: async (attachment: BriefingAttachment) => {

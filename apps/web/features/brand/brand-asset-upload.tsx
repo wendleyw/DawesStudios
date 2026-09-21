@@ -6,6 +6,7 @@ import { useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import {
+  brandQueryKeys,
   findBrandAssetById,
   insertBrandAsset,
   removeBrandAssetFile,
@@ -56,7 +57,7 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
       uploaded.current = null;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["brand-assets"] });
+      await queryClient.invalidateQueries({ queryKey: [brandQueryKeys.assets] });
       onClose();
     },
   });
@@ -68,7 +69,7 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
       if (uploaded.current) {
         const existing = await findBrandAssetById(database, { id: assetId });
         if (!existing) await removeBrandAssetFile(database, { path: uploaded.current.path });
-        else await queryClient.invalidateQueries({ queryKey: ["brand-assets"] });
+        else await queryClient.invalidateQueries({ queryKey: [brandQueryKeys.assets] });
       }
       onClose();
     } catch {

@@ -6,6 +6,32 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { EditableSectionId, TemplateContent } from "./brand-model";
 
+/**
+ * The cache keys this feature's writes dirty, named one by one so each call site can invalidate
+ * exactly its own subset instead of the union of all of them.
+ *
+ * There is no aggregate `useInvalidateBrand()` helper, and adding one would be a behavior change:
+ * no write in this feature dirties all four keys. Saving a section touches `sections` only; adding
+ * an asset touches `assets` only; creating a draft touches `templateDrafts` only; saving a draft
+ * touches `templateDrafts` and `templateDraft`. A helper covering the set would make each of those
+ * call sites refetch caches it does not refetch today — the same reason `credit-data.ts` records
+ * above `creditQueryKeys` for declining to route `briefing-detail.tsx` through
+ * `useInvalidateCredits()`.
+ *
+ * The feature's other read keys (`brand-templates`, `brand-asset-preview`, `client-logo`) are
+ * absent on purpose: no write here invalidates them, so naming them would invite a call site to.
+ */
+export const brandQueryKeys = {
+  /** `useBrandSections` — the shared brand guidance shown on the brand page. */
+  sections: "brand-sections",
+  /** `useBrandAssets` — the approved file list for one client. */
+  assets: "brand-assets",
+  /** `useTemplateDrafts` — the owner's private draft list. */
+  templateDrafts: "template-drafts",
+  /** `useTemplateDraft` — one open draft. */
+  templateDraft: "template-draft",
+} as const;
+
 export type BrandSection = Database["public"]["Tables"]["brand_sections"]["Row"];
 export type BrandAsset = Database["public"]["Tables"]["brand_assets"]["Row"];
 export type BrandTemplate = Database["public"]["Tables"]["brand_templates"]["Row"];
@@ -14,7 +40,7 @@ export type TemplateDraft = Database["public"]["Tables"]["template_drafts"]["Row
 export function useBrandSections(clientId: string) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["brand-sections", session?.user.id, clientId],
+    queryKey: [brandQueryKeys.sections, session?.user.id, clientId],
     enabled: !!session,
     queryFn: async () =>
       assertResult(await database.from("brand_sections").select("*").eq("client_id", clientId)),
@@ -23,7 +49,7 @@ export function useBrandSections(clientId: string) {
 export function useBrandAssets(clientId: string) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["brand-assets", session?.user.id, clientId],
+    queryKey: [brandQueryKeys.assets, session?.user.id, clientId],
     enabled: !!session,
     queryFn: async () =>
       assertResult(
@@ -45,7 +71,7 @@ export function useBrandTemplates(clientId: string) {
 export function useTemplateDrafts(clientId: string) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["template-drafts", session?.user.id, clientId],
+    queryKey: [brandQueryKeys.templateDrafts, session?.user.id, clientId],
     enabled: !!session,
     queryFn: async () =>
       assertResult(
@@ -61,7 +87,7 @@ export function useTemplateDrafts(clientId: string) {
 export function useTemplateDraft(clientId: string, draftId: string) {
   const { database, session } = useAuth();
   return useQuery<TemplateDraft | null>({
-    queryKey: ["template-draft", session?.user.id, clientId, draftId],
+    queryKey: [brandQueryKeys.templateDraft, session?.user.id, clientId, draftId],
     enabled: !!session,
     queryFn: async () =>
       assertResult<TemplateDraft | null>(

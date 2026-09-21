@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Download, FileImage, FileText, Plus, Check } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -16,6 +16,7 @@ import {
 import {
   initialUploadProject,
   markProjectDelivered,
+  useInvalidateAssets,
   useProjectAssets,
   type ProjectAsset,
 } from "./asset-data";
@@ -27,7 +28,7 @@ import { PageStatus } from "@/features/shared/page-status";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateAssets = useInvalidateAssets();
   const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
   const [project, setProject] = useState(parameters.get("project") ?? "");
@@ -51,13 +52,11 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       if (deliverProject) await markProjectDelivered(database, { projectId: deliverProject });
     },
     onSuccess: async () => {
-      // `projects` is owned by `workspace/workspace-data.ts`; `useInvalidateWorkspace()`'s key set
-      // (`workspaceQueryKeys = ["projects"]`) is identical to what this call invalidated inline, so
-      // this is non-widening.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["assets"] }),
-        invalidateWorkspace(),
-      ]);
+      // Both helpers cover exactly one key each — `assetQueryKeys = ["assets"]` and
+      // `workspaceQueryKeys = ["projects"]` — which is precisely what this call invalidated inline,
+      // so routing through them is non-widening. `projects` is owned by
+      // `workspace/workspace-data.ts`, which is why it is reached through that feature's helper.
+      await Promise.all([invalidateAssets(), invalidateWorkspace()]);
       setDeliverProject(null);
     },
   });

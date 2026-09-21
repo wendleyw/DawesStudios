@@ -6,7 +6,8 @@ import { useId, useState } from "react";
 import type { Json } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { saveBrandSection } from "./brand-data";
+import { briefingQueryKeys } from "@/features/briefings/briefing-data";
+import { brandQueryKeys, saveBrandSection } from "./brand-data";
 import {
   fieldsForSection,
   parseSectionInput,
@@ -43,9 +44,16 @@ export function SectionEditor({
       await saveBrandSection(database, { clientId, section, content: validated });
     },
     onSuccess: async () => {
+      // `briefing-brand` is not a brand key. `briefings/briefing-data.ts`'s `useBriefingBrand` is
+      // the only hook that reads it, so `briefings` owns the cache entry even though this feature
+      // owns the `brand_sections` rows behind it — the same read-side ownership test `board-data.ts`
+      // applies above `moveProjectPosition` to the `projects` key. It is composed from that
+      // feature's `briefingQueryKeys` rather than copied as a literal or re-declared here, and not
+      // reached through a whole-feature helper, which would also refetch `briefings` and
+      // `briefing-attachments` that saving a brand section leaves untouched.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["brand-sections"] }),
-        queryClient.invalidateQueries({ queryKey: ["briefing-brand"] }),
+        queryClient.invalidateQueries({ queryKey: [brandQueryKeys.sections] }),
+        queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.brand] }),
       ]);
       onClose();
     },

@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
-import { saveBriefingRevision, submitBriefing } from "./briefing-data";
+import { useInvalidateNotifications } from "@/features/workspace/workspace-data";
+import { briefingQueryKeys, saveBriefingRevision, submitBriefing } from "./briefing-data";
 import {
   briefingPayload,
   estimateLabel,
@@ -49,6 +50,7 @@ export function BriefingEditor({
 }) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateNotifications = useInvalidateNotifications();
   const router = useRouter();
   const [draft, setDraft] = useState(() => initialDraft(briefing, defaults));
   const [step, setStep] = useState(briefing?.service_type ? 1 : 0);
@@ -101,8 +103,13 @@ export function BriefingEditor({
     onSuccess: ({ id, submit }) => {
       setSaved(true);
       setErrors([]);
-      void queryClient.invalidateQueries({ queryKey: ["briefings"] });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      // Saving or submitting changes the briefing row and, on submit, notifies the studio. The
+      // briefing's own attachments and brand guidance are untouched, so only `briefings` is taken
+      // from this feature's keys. `notifications` is owned by `workspace/workspace-data.ts`, whose
+      // `notificationsQueryKeys` is exactly `["notifications"]` — the same single key this call
+      // already invalidated — so its helper is non-widening here, as in `briefing-detail.tsx`.
+      void queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] });
+      void invalidateNotifications();
       if (submit) router.push(`/clients/${clientId}/briefings/${id}`);
       else router.replace(`/clients/${clientId}/briefings/${id}/edit`);
     },

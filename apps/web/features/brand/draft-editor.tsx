@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
+  brandQueryKeys,
   updateTemplateDraft,
   useBrandTemplates,
   useTemplateDraft,
@@ -84,8 +85,10 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
       setName(result.name);
       setContent(result.content);
       setSaved(JSON.stringify({ name: result.name, content: result.content }));
-      void queryClient.invalidateQueries({ queryKey: ["template-drafts"] });
-      void queryClient.invalidateQueries({ queryKey: ["template-draft"] });
+      // Saving a draft changes the list entry and the open draft, and nothing else brand owns, so
+      // this composes those two keys rather than taking a whole-feature helper.
+      void queryClient.invalidateQueries({ queryKey: [brandQueryKeys.templateDrafts] });
+      void queryClient.invalidateQueries({ queryKey: [brandQueryKeys.templateDraft] });
     },
   });
   function change<K extends keyof TemplateContent>(key: K, value: TemplateContent[K]) {

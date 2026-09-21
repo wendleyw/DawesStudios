@@ -12,6 +12,7 @@ import {
 } from "@/features/workspace/workspace-data";
 import {
   acceptBriefing,
+  briefingQueryKeys,
   confirmBriefingBudget,
   useBriefingCreditBalance,
   useBriefingProject,
@@ -154,13 +155,14 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
         note: note.trim(),
       });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["briefings"] }),
+    // Confirming a budget rewrites the briefing row only.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] }),
   });
   const accept = useMutation({
     mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id }),
     onSuccess: async (id) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["briefings"] }),
+        queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] }),
         // `credit-account`/`credit-ledger` are owned by `credits/credit-data.ts`, but its
         // `useInvalidateCredits()` also covers `credit-requests`, a key accepting a briefing never
         // touched before this migration — calling it here would widen the invalidation, so these

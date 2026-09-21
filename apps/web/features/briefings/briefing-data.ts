@@ -11,6 +11,37 @@ import {
 } from "./briefing-model";
 import type { Database } from "@database";
 
+/**
+ * The cache keys this feature's writes dirty, named one by one so each call site can invalidate
+ * exactly its own subset instead of the union of all of them.
+ *
+ * There is no aggregate `useInvalidateBriefings()` helper, and adding one would be a behavior
+ * change: no write dirties all three keys. Attachment upload and removal touch `attachments` only;
+ * saving a draft and confirming or accepting a budget touch `briefings` only (plus keys other
+ * features own, reached through those features' own helpers); and `brand` is dirtied only from
+ * `brand/section-editor.tsx`, which never touches the other two. A helper covering the set would
+ * make each of those call sites refetch caches it does not refetch today.
+ *
+ * `campaigns`, `credit-account`, `service-presets` and `briefing-project` are absent on purpose:
+ * the first two are keys other features own and this file only reads (see `useCampaigns` and
+ * `useBriefingCreditBalance` below), and no write here invalidates the last two.
+ */
+export const briefingQueryKeys = {
+  /** `useBriefings` — the briefing list, which every briefing write changes. */
+  briefings: "briefings",
+  /** `useBriefingAttachments` — one briefing's attached files. */
+  attachments: "briefing-attachments",
+  /**
+   * `useBriefingBrand` — the brand guidance the briefing editor shows alongside the form.
+   *
+   * This key lives here rather than in `brand/brand-data.ts` because `useBriefingBrand` is the only
+   * hook that reads it: the key names this feature's cache entry, not brand's, even though the
+   * `brand_sections` rows behind it are brand's to write. `brand/section-editor.tsx` is therefore
+   * the one call site outside this feature that composes from this record.
+   */
+  brand: "briefing-brand",
+} as const;
+
 export type BriefingAttachment = {
   id: string;
   name: string;
@@ -34,7 +65,7 @@ export function useServicePresets() {
 export function useBriefings(clientId: string) {
   const { database, session, profile } = useAuth();
   return useQuery({
-    queryKey: ["briefings", session?.user.id, clientId],
+    queryKey: [briefingQueryKeys.briefings, session?.user.id, clientId],
     enabled: !!session && !!profile,
     queryFn: async () =>
       profile?.role === "designer"
@@ -70,7 +101,7 @@ export function useCampaigns(clientId: string) {
 export function useBriefingBrand(clientId: string) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["briefing-brand", session?.user.id, clientId],
+    queryKey: [briefingQueryKeys.brand, session?.user.id, clientId],
     enabled: !!session,
     queryFn: async () =>
       assertResult(
@@ -119,7 +150,7 @@ export function useBriefingCreditBalance(clientId: string) {
 export function useBriefingAttachments(briefingId: string) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["briefing-attachments", session?.user.id, briefingId],
+    queryKey: [briefingQueryKeys.attachments, session?.user.id, briefingId],
     enabled: !!session,
     queryFn: async () =>
       assertResult(
