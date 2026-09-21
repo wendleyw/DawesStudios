@@ -1,10 +1,11 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { saveWorkspaceSettings, useInvalidateWorkspace } from "./settings-data";
+import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 
 export function WorkspaceSettings() {
@@ -35,7 +36,7 @@ function WorkspaceForm({
   initialTimezone: string;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const [name, setName] = useState(initialName);
   const [timezone, setTimezone] = useState(initialTimezone);
   const timezones = [
@@ -45,14 +46,9 @@ function WorkspaceForm({
     mutationFn: async () => {
       if (!name.trim() || name.trim().length > 120)
         throw new Error("Use a studio name between 1 and 120 characters.");
-      assertResult(
-        await database.rpc("update_workspace_settings", {
-          p_studio_name: name.trim(),
-          p_timezone: timezone,
-        }),
-      );
+      await saveWorkspaceSettings(database, { studioName: name.trim(), timezone });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workspace-settings"] }),
+    onSuccess: () => invalidateWorkspace(),
   });
   return (
     <section className="settings-section">
@@ -87,11 +83,7 @@ function WorkspaceForm({
           </select>
         </label>
         {save.error && <FormError>{save.error.message}</FormError>}
-        {save.isSuccess && (
-          <p className="settings-success" role="status">
-            Workspace updated.
-          </p>
-        )}
+        {save.isSuccess && <SettingsSuccess>Workspace updated.</SettingsSuccess>}
         <button className="button primary" disabled={save.isPending}>
           {save.isPending ? "Saving…" : "Save changes"}
         </button>

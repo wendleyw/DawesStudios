@@ -6,8 +6,8 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
+import { acceptInvitation } from "./settings-data";
 import "./settings.css";
 import { FormError } from "@/features/shared/form-error";
 
@@ -36,7 +36,7 @@ export function InvitationAcceptance() {
       if (error) throw new Error(error);
       const result = await database.auth.updateUser({ password });
       if (result.error) throw result.error;
-      assertResult(await database.rpc("accept_invitation", { p_token: token }));
+      await acceptInvitation(database, { token });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries();

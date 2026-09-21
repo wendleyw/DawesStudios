@@ -1,18 +1,24 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useClients } from "@/features/workspace/workspace-data";
-import { assertResult, type Profile } from "@/lib/supabase";
-import { invitationRequestSchema, type Invitation } from "./settings-model";
+import { invitationRequestSchema } from "./settings-model";
+import {
+  revokeInvitation,
+  useInvalidateTeam,
+  useInvitations,
+  useTeamMembers,
+} from "./settings-data";
+import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 
 export function TeamSettings() {
   const { database, session } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateTeam = useInvalidateTeam();
   const clients = useClients();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -21,28 +27,11 @@ export function TeamSettings() {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  const members = useQuery({
-    queryKey: ["studio-team", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("profiles")
-          .select("id,display_name,role,avatar_url")
-          .in("role", ["agency", "designer"])
-          .order("display_name"),
-      ) as Profile[],
-  });
-  const invitations = useQuery({
-    queryKey: ["invitations", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database.from("invitations").select("*").order("created_at", { ascending: false }),
-      ) as Invitation[],
-  });
+  const members = useTeamMembers();
+  const invitations = useInvitations();
   const revoke = useMutation({
-    mutationFn: async (id: string) =>
-      assertResult(await database.rpc("revoke_invitation", { p_invitation_id: id })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invitations"] }),
+    mutationFn: async (id: string) => revokeInvitation(database, { invitationId: id }),
+    onSuccess: () => invalidateTeam(),
   });
   return (
     <div className="settings-sections">
@@ -63,11 +52,7 @@ export function TeamSettings() {
             Invite someone
           </button>
         </header>
-        {sent && (
-          <p className="settings-success" role="status">
-            Invitation email sent.
-          </p>
-        )}
+        {sent && <SettingsSuccess>Invitation email sent.</SettingsSuccess>}
         {members.isPending ? (
           <p role="status">Loading the team…</p>
         ) : members.error ? (
@@ -186,7 +171,7 @@ export function InvitePerson({
   clientId?: string;
 }) {
   const { session } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateTeam = useInvalidateTeam();
   const clients = useClients();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"agency" | "client" | "designer">(
@@ -215,10 +200,10 @@ export function InvitePerson({
         throw new Error(result.error ?? "The invitation email could not be sent.");
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      await invalidateTeam();
       onSent();
     },
-    onError: () => queryClient.invalidateQueries({ queryKey: ["invitations"] }),
+    onError: () => invalidateTeam(),
   });
   return (
     <Modal

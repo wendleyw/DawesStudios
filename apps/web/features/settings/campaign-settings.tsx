@@ -1,13 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useCampaigns } from "@/features/briefings/briefing-data";
 import type { Campaign } from "@/features/briefings/briefing-model";
 import { Modal } from "@/features/shared/modal";
-import { assertResult } from "@/lib/supabase";
+import { saveCampaign, useInvalidateCampaigns } from "./settings-data";
 import { FormError } from "@/features/shared/form-error";
 
 export function CampaignSettings({
@@ -91,7 +91,7 @@ function CampaignForm({
   onCancel: () => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateCampaigns = useInvalidateCampaigns();
   const [title, setTitle] = useState(campaign?.title ?? "");
   const [description, setDescription] = useState(campaign?.description ?? "");
   const [start, setStart] = useState(campaign?.start_date ?? "");
@@ -101,33 +101,18 @@ function CampaignForm({
       if (!title.trim()) throw new Error("Give the campaign a name.");
       if (start && end && end < start)
         throw new Error("The end date cannot be before the start date.");
-      const payload = {
+      const fields = {
+        clientId,
         title: title.trim(),
         description: description.trim(),
-        start_date: start || null,
-        end_date: end || null,
+        startDate: start || null,
+        endDate: end || null,
       };
-      if (campaign)
-        assertResult(
-          await database
-            .from("campaigns")
-            .update(payload)
-            .eq("id", campaign.id)
-            .eq("client_id", clientId)
-            .select("id")
-            .single(),
-        );
-      else
-        assertResult(
-          await database
-            .from("campaigns")
-            .insert({ ...payload, client_id: clientId })
-            .select("id")
-            .single(),
-        );
+      if (campaign) await saveCampaign(database, { mode: "update", id: campaign.id, ...fields });
+      else await saveCampaign(database, { mode: "create", ...fields });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      await invalidateCampaigns();
       onSaved();
     },
   });

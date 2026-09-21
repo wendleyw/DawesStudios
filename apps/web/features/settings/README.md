@@ -12,6 +12,92 @@ The Settings feature persists account, studio, client, campaign, and service-pre
 
 Routes are `/settings/{workspace,team,clients,presets,account}`, `/auth/recovery`, and `/auth/invite`. `/settings` defaults to Workspace for agency users and displays authorized account settings for other roles.
 
+## Data access
+
+`settings-data.ts` owns every Supabase query this feature's own components issue, as
+[the data-access contract](../../../../docs/architecture/data-access.md) requires. It relocated 11
+call sites out of seven components: `team-settings.tsx` (3: the team roster read, the invitation
+history read, and `revoke_invitation`), `campaign-settings.tsx` (2: the campaign update and insert),
+`client-settings.tsx` (2: the client update and `create_client`), `account-settings.tsx` (1: the
+profile update), `preset-settings.tsx` (1: `save_service_preset`), `workspace-settings.tsx` (1:
+`update_workspace_settings`), and `invitation-acceptance.tsx` (1: `accept_invitation`).
+
+| Source (component)                                                 | Destination in `settings-data.ts`       | Table/procedure                                                                                          | Unchanged?                                                                                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `team-settings.tsx` — `members` query                              | `useTeamMembers()`                      | `profiles`, `.select("id,display_name,role,avatar_url")`, `.in("role", [...])`, `.order("display_name")` | Yes — same columns, filter and order                                                                                                                               |
+| `team-settings.tsx` — `invitations` query                          | `useInvitations()`                      | `invitations`, `.select("*")`, `.order("created_at", { ascending: false })`                              | Yes                                                                                                                                                                |
+| `team-settings.tsx` — `revoke` mutation                            | `revokeInvitation()`                    | `rpc("revoke_invitation", { p_invitation_id })`                                                          | Yes                                                                                                                                                                |
+| `campaign-settings.tsx` — save (edit branch)                       | `saveCampaign({ mode: "update", ... })` | `campaigns` `.update(payload).eq("id", ...).eq("client_id", ...)`                                        | Yes                                                                                                                                                                |
+| `campaign-settings.tsx` — save (new branch)                        | `saveCampaign({ mode: "create", ... })` | `campaigns` `.insert({ ...payload, client_id })`                                                         | Yes                                                                                                                                                                |
+| `client-settings.tsx` — save (edit branch)                         | `saveClient({ mode: "update", ... })`   | `clients` `.update({...}).eq("id", ...)`                                                                 | Yes                                                                                                                                                                |
+| `client-settings.tsx` — save (new branch)                          | `saveClient({ mode: "create", ... })`   | `rpc("create_client", { p_name, p_slug, p_industry, p_initial_credits })`                                | Yes                                                                                                                                                                |
+| `account-settings.tsx` — `saveProfile` mutation                    | `updateProfile()`                       | `profiles` `.update({ display_name }).eq("id", ...)`                                                     | Yes                                                                                                                                                                |
+| `preset-settings.tsx` — save mutation                              | `saveServicePreset()`                   | `rpc("save_service_preset", { p_service_type, p_min_credits, p_max_credits, p_due_days })`               | Yes                                                                                                                                                                |
+| `workspace-settings.tsx` — save mutation                           | `saveWorkspaceSettings()`               | `rpc("update_workspace_settings", { p_studio_name, p_timezone })`                                        | Yes                                                                                                                                                                |
+| `invitation-acceptance.tsx` — `accept` mutation (RPC portion only) | `acceptInvitation()`                    | `rpc("accept_invitation", { p_token })`                                                                  | Yes — the `database.auth.updateUser({ password })` call in the same mutation stays in the component; it is Supabase Auth, not a `.from(`/`.rpc(`/`.storage.` query |
+
+Every `.select()` column list, filter, order clause and `assertResult(...)` error surfacing is
+unchanged; only the call site moved. Validation, trimming and `clientSlug`/date-range checks stay in
+the components exactly as before, per rule 4 of the contract.
+
+### Why six domains instead of one shared module
+
+`settings-data.ts` groups its exports by the domain the underlying component serves — team, clients,
+campaigns, presets, workspace, account — rather than as one flat list of 11 functions, because that
+is what the components themselves are: six independent tabs (plus invitation acceptance, folded into
+"account" because it writes to the same signed-in caller's row) that never share a page and never
+want to see each other's mutations invalidate their cache. Each domain gets its own
+`<domain>QueryKeys` array and `useInvalidate<Domain>()` hook, following the shape `credit-data.ts`
+and `project-data.ts` established, but split six ways instead of held as one `settingsQueryKeys` /
+`useInvalidateSettings()` pair. A single shared pair, invalidated by every mutation in the feature,
+would change behavior: saving a service preset would also refetch the client list and the team
+roster, when today it refetches only `service-presets`. Splitting by domain is what keeps every
+mutation invalidating exactly the query key it invalidated before this migration. `team`'s domain is
+the one with genuine repetition to remove — three mutations (`revoke`, invite success, invite error)
+in `team-settings.tsx` all invalidated `["invitations"]` before this migration — the other five
+domains had one invalidating call site each, and gain a named export mainly for a consistent shape
+and so a second write added to that domain has one place to invalidate from.
+
+Two write functions — `saveClient` and `saveCampaign` — each combine what was an `if (client) ... else
+...` / `if (campaign) ... else ...` branch in a single mutation into one function with a discriminated
+`mode: "update" | "create"` input, mirroring the single call site exactly rather than splitting one
+mutation's two branches into two exported functions.
+
+`acceptInvitation` in the account domain extracts only the `database.rpc("accept_invitation", ...)`
+call from `invitation-acceptance.tsx`'s `accept` mutation. The same mutation's preceding
+`database.auth.updateUser({ password })` call stays in the component: it is Supabase Auth, not a
+`.from(`/`.rpc(`/`.storage.` query, so it is outside this contract's scope and the boundary check
+(`grep -rn '\.from(\|\.rpc(\|\.storage\.' features/settings --include='*.tsx'`) does not expect it to
+move.
+
+### `SettingsSuccess`
+
+`features/shared/README.md` evaluated the `<p className="settings-success" role="status">{...}</p>`
+markup already and rejected it for `features/shared/`: all 8 call sites were inside this feature, so
+a primitive shared by "two or more features" did not apply. Within this feature, though, the same
+markup repeats at all 8 call sites (`account-recovery.tsx` ×2, `account-settings.tsx` ×2,
+`client-settings.tsx`, `preset-settings.tsx`, `team-settings.tsx`, `workspace-settings.tsx`) with only
+the message varying, exactly the shape that justified `FormError` in `features/shared/`. It is now
+`SettingsSuccess` in `settings-success.tsx`, and every call site above uses it.
+
+### CSS boundary
+
+`app/globals.css` holds no selector used only by this feature. Every class this feature's
+components and `settings.css` reference from `globals.css` — `button`, `primary`, `quiet`,
+`form-error` (via the shared `FormError` component), `page-content`, `page-heading`, `eyebrow` and
+`status-badge` — is consumed by at least one other feature as well:
+
+```sh
+$ grep -n "settings" apps/web/app/globals.css
+# (no output — globals.css defines no settings-specific selector)
+```
+
+`status-badge`, for one, looked like a candidate at first glance (only `team-settings.tsx` uses the
+bare class), but its state-suffixed variants (`.status-badge.internal_review`, `.status-badge.approved`,
+etc.) are consumed by `board/board-page.tsx`, `board/board-nodes.tsx`, `briefings/briefings-page.tsx`,
+`briefings/briefing-detail.tsx`, `credits/credits-page.tsx`, `projects/project-page.tsx` and
+`workspace/home-page.tsx`, so it stays shared. No file was moved or split for this step.
+
 ## Invitation delivery
 
 `app/api/invitations/route.ts` accepts an authenticated Bearer token, validates it with Auth `getUser`, reads the caller's protected agency role, validates a bounded request body and same-origin browser requests, then creates the invitation through the caller-scoped RPC. The service credential is used only on the server for `inviteUserByEmail`; role metadata never authorizes membership. The backend serializes rate limits of 20 creations per sender per hour and 50 unexpired pending invitations per installation.
@@ -25,10 +111,28 @@ The server needs `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, a
 From `apps/web`:
 
 ```sh
-npm run test -- features/settings/settings-model.test.ts
+npm run test -- features/settings/settings-model.test.ts features/settings/settings-data.test.ts
 npm run test:e2e -- tests/e2e/intake-admin.spec.ts
 npm run typecheck
 npx eslint features/settings app/api/invitations app/auth 'app/(workspace)/settings'
 ```
 
-Unit coverage exercises invitation normalization/scope, password rules, client slugs, and website validation. The E2E suite creates an isolated acceptance client, exercises actual invitation/recovery mail and settings mutations, and removes its resources afterward. It restores the studio/preset values it changes; preset history intentionally records those revisions. Run it against the isolated local backend without resetting the canonical ten-client, twenty-project dataset. Verification results and remaining coverage belong in the [acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+Unit coverage exercises invitation normalization/scope, password rules, client slugs, and website
+validation (`settings-model.test.ts`), and every relocated write function's exact table/procedure
+name, argument shape and database-error surfacing (`settings-data.test.ts`, 18 tests, using the same
+Proxy call-recording stub as `features/projects/project-data.test.ts`). The E2E suite creates an
+isolated acceptance client, exercises actual invitation/recovery mail and settings mutations, and
+removes its resources afterward. It restores the studio/preset values it changes; preset history
+intentionally records those revisions. Run it against the isolated local backend without resetting
+the canonical ten-client, twenty-five-project dataset. Verification results and remaining coverage
+belong in the [acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+
+Executed for this data-access migration (Task 12):
+
+- `npm run check` from `apps/web`: typecheck, eslint, prettier and the unit suites. 22 files / 376
+  tests pass (358 pre-existing + 18 new in `settings-data.test.ts`). The two lint warnings reported
+  belong to `features/board` and predate this task.
+- `grep -rn '\.from(\|\.rpc(\|\.storage\.' features/settings --include='*.tsx' | grep -v 'Array\.from('`
+  returns no output: no component in this feature issues a Supabase query directly.
+- `npm --prefix apps/web run test:e2e -- intake-admin` — see the task-12 handoff report for the full
+  run output.

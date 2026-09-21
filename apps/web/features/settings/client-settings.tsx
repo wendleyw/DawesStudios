@@ -1,16 +1,17 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useClients, type Client } from "@/features/workspace/workspace-data";
-import { assertResult } from "@/lib/supabase";
 import { clientSlug, validWebsite } from "./settings-model";
+import { saveClient, useInvalidateClients } from "./settings-data";
 import { CampaignSettings } from "./campaign-settings";
 import { InvitePerson } from "./team-settings";
+import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 
 export function ClientSettings() {
@@ -31,11 +32,7 @@ export function ClientSettings() {
           New client
         </button>
       </header>
-      {notice && (
-        <p className="settings-success" role="status">
-          {notice}
-        </p>
-      )}
+      {notice && <SettingsSuccess>{notice}</SettingsSuccess>}
       {clients.isPending ? (
         <p role="status">Loading clients…</p>
       ) : clients.error ? (
@@ -114,7 +111,7 @@ function ClientEditor({
   onSaved: (name: string) => void;
 }) {
   const { database } = useAuth();
-  const queryClient = useQueryClient();
+  const invalidateClients = useInvalidateClients();
   const [name, setName] = useState(client?.name ?? "");
   const [industry, setIndustry] = useState(client?.industry ?? "");
   const [website, setWebsite] = useState(client?.website ?? "");
@@ -127,37 +124,31 @@ function ClientEditor({
       if (!validWebsite(website))
         throw new Error("Use a complete website address beginning with https:// or http://.");
       if (client)
-        assertResult(
-          await database
-            .from("clients")
-            .update({
-              name: name.trim(),
-              industry: industry.trim(),
-              website: website.trim(),
-              description: description.trim(),
-            })
-            .eq("id", client.id)
-            .select("id")
-            .single(),
-        );
+        await saveClient(database, {
+          mode: "update",
+          id: client.id,
+          name: name.trim(),
+          industry: industry.trim(),
+          website: website.trim(),
+          description: description.trim(),
+        });
       else {
         const credits = Number(initialCredits);
         if (!Number.isSafeInteger(credits) || credits < 0)
           throw new Error("Initial credits must be a non-negative whole number.");
         const slug = clientSlug(name);
         if (!slug) throw new Error("Use a client name containing letters or numbers.");
-        assertResult(
-          await database.rpc("create_client", {
-            p_name: name.trim(),
-            p_slug: slug,
-            p_industry: industry.trim(),
-            p_initial_credits: credits,
-          }),
-        );
+        await saveClient(database, {
+          mode: "create",
+          name: name.trim(),
+          slug,
+          industry: industry.trim(),
+          initialCredits: credits,
+        });
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      await invalidateClients();
       onSaved(name.trim());
     },
   });
