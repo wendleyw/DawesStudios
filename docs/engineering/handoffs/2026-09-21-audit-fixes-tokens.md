@@ -155,3 +155,66 @@ Nothing else changed — confirms the acceptance criterion held, including for J
 All 30 files plus the two new `status-tone.*` files are committed on `main` in this batch's commit.
 No process was left running: the `next dev --port 3021` server used for verification was stopped
 before this report was written; port 3021 is free. The container on `localhost:3003` was not touched.
+
+## Addendum — orchestrator's convergence decision (batch 5)
+
+The orchestrator reviewed Table 2 above and decided: converge all four near-twin pairs onto their
+tokens. Token values in `app/globals.css` were re-verified unchanged before starting: `--foreground:
+#252523`, `--surface-subtle: #f1f1ee`, `--border: #e3e3df`, `--muted: #6c6c67`.
+
+Convergence was not a blind value swap. Each of the 35 sites was checked against the **role** the
+token already plays elsewhere in the codebase (a grep of every existing `var(--foreground)` /
+`var(--surface-subtle)` / `var(--border)` / `var(--muted)` call site first): `--foreground` is used
+exclusively as `color:` (never `background`/`border-color`) everywhere else in the product;
+`--surface-subtle` is used exclusively as `background:`; `--border` and `--muted` matched their
+declared roles at every site. Where a near-twin literal was doing the token's job in a different
+property role, it was left alone as a semantic mismatch rather than converged.
+
+### Converged: 23 of 35
+
+| Token | Converged count | Sites |
+| --- | --- | --- |
+| `--foreground` | 4 | `briefings.css:23,83,158` (`color:`), `credits.css:73` (`color:`) |
+| `--surface-subtle` | 5 | `board.css:249,262`, `projects.css:538`, `workspace.css:303`, `assets.css:33` (all `background:`) |
+| `--border` | 11 | `settings.css:9,37`; `briefings.css:174,185,268`; `credits.css:13,16,55,136,239,266` (all `border-*`) |
+| `--muted` | 3 | `projects.css:758`, `reviews.css:32,49` (all `color:`) |
+
+### Declined: 12 of 35, with reason
+
+| Site | Literal | Role found | Reason declined |
+| --- | --- | --- | --- |
+| `projects.css:431` | `#252525` | `background:` (pin marker fill) | Semantic mismatch — `--foreground` is never used as a fill anywhere in the codebase; this is a solid-ink accent, not body/label text. |
+| `briefings.css:86` | `#252525` | `background:` (progress-step marker fill) | Same mismatch as above. |
+| `briefings.css:88` | `#252525` | `border-color:` (progress-step marker) | Mismatch — emphasis border on an active-state marker, not the subtle-divider role `--border` plays, and not `--foreground`'s text role either. |
+| `briefings.css:110` | `#252525` | `border-color:` (selected service card) | Same mismatch — active-state emphasis border, not `--foreground`'s text role. |
+| `briefings.css:111` | `#252525` | `box-shadow: inset …` (selected-card ring) | Same mismatch — decorative ring, not text. |
+| `projects.css:464` | `#242424` | `background:` (canvas hint tooltip) | Semantic mismatch — fill, not text. |
+| `projects.css:595` | `#242424 !important` | `background:` (send-comment button) | Semantic mismatch — fill, not text. |
+| `briefings.css:22` | `#242424` | `border-bottom-color:` (active tab underline) | Mismatch — active-tab accent border, not `--foreground`'s established text-only role. |
+| `credits.css:72` | `#242424` | `border-bottom-color:` (active tab underline) | Same as above. |
+| `timeline.css:197` | `#222` | `color:` on `.timeline-day.today`, which sets an explicit `background: #ecefe3` (not white) | The one case flagged for independent contrast check. Computed contrast: `#222` on `#ecefe3` ≈ 13.7:1; `#252523` on `#ecefe3` ≈ 13.2:1 — both far above AA, so converging would still be safe on contrast grounds alone. Declined anyway per the explicit instruction to leave and report any `#222` site sitting on a non-white surface, since this is a genuine colour override (a "today" highlight), not the default page background. |
+| `timeline.css:202` | `#f0f0eb` | `border-right:` (timeline cell divider) | Semantic mismatch — `--surface-subtle` is used exclusively as a background fill elsewhere; this literal is playing the divider role that `--border` (a different, non-matching value) already covers. |
+| `projects.css:518` | `#f0f0eb` | `border-bottom:` (artwork list divider) | Same mismatch as above. |
+
+One clarifying note on `briefings.css:83` and `briefings.css:158` (both converged): neither sits on
+pure white. `.briefing-progress`/`.briefing-detail` have no background of their own, so they inherit
+`body`/`html`'s `var(--background)` (`#f6f6f4`), which is the default page background under virtually
+every other `var(--foreground)` text site in the product (`body`'s own `color: var(--foreground)`
+sits on that same `#f6f6f4` by default). That is not a special colored surface the way
+`.timeline-day.today`'s explicit `#ecefe3` override is — it is the ordinary case the token already
+handles everywhere — so these two converged normally. `briefings.css:158` additionally has an
+explicit `background: var(--surface)` (white) on the input itself.
+
+### Verification for this addendum
+
+| Command / scenario | Result |
+| --- | --- |
+| `npm run check` | 420/29 passed, same 2 pre-existing lint warnings (`board-canvas-controls.tsx`, `board-nodes.tsx`), 0 new |
+| `next dev --port 3021` + `playwright test tests/e2e/design-audit.spec.ts tests/e2e/brand-accessibility.spec.ts` | 5/5 passed |
+| `docs/verification/design-audit.json` diff | `capturedAt` only (`2026-09-21T05:29:34.872Z` → `2026-09-21T07:43:09.911Z`); reverted after inspection along with the regenerated screenshots, same as the previous batch's practice |
+| `docker exec supabase_db_dawes-studios psql … count(*) from clients/projects` | 10 clients, 25 projects |
+| Port 3021 | Stopped after verification; confirmed free |
+
+No test file was modified. Only colour values changed in 8 stylesheets (`assets.css`, `board.css`,
+`briefings.css`, `credits.css`, `projects.css`, `reviews.css`, `settings.css`, `workspace.css`); no
+size, spacing, radius, or position touched.

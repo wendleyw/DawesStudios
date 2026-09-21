@@ -535,7 +535,7 @@
   place-items: center;
   width: 23px;
   height: 23px;
-  background: #f0f0eb;
+  background: var(--surface-subtle);
   border-radius: 50%;
   font-size: var(--text-xs);
 }
@@ -755,7 +755,7 @@
   line-height: 1.6;
 }
 .project-history span {
-  color: #6d6d65;
+  color: var(--muted);
 }
 
 .version-feedback {

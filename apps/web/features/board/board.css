@@ -246,7 +246,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: #f0f0eb;
+  background: var(--surface-subtle);
 }
 .kanban-heading {
   position: sticky;
@@ -259,7 +259,7 @@
   margin: -12px -12px 0;
   padding: 12px;
   border-radius: 11px 11px 0 0;
-  background: #f0f0eb;
+  background: var(--surface-subtle);
 }
 .kanban-heading :is(h2, h3) {
   font-size: var(--text-base);

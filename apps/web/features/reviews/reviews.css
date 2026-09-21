@@ -29,7 +29,7 @@
 }
 .review-card p {
   font-size: var(--text-lg);
-  color: #6d6d65;
+  color: var(--muted);
   line-height: 1.6;
   margin: 0 0 12px;
   overflow-wrap: anywhere;
@@ -46,7 +46,7 @@
 }
 .review-date {
   font-size: var(--text-sm);
-  color: #6d6d65;
+  color: var(--muted);
 }
 @media (max-width: 720px) {
   .review-card {

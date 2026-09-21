@@ -10,10 +10,10 @@
   gap: 32px;
   padding: 30px 0 40px;
   margin-top: 20px;
-  border-bottom: 1px solid #e3e2dc;
+  border-bottom: 1px solid var(--border);
 }
 .credit-overview > section + section {
-  border-left: 1px solid #e3e2dc;
+  border-left: 1px solid var(--border);
   padding-left: 32px;
 }
 .credit-balance {
@@ -52,7 +52,7 @@
   justify-content: space-between;
   gap: 20px;
   margin-top: 22px;
-  border-bottom: 1px solid #e3e2dc;
+  border-bottom: 1px solid var(--border);
 }
 .credit-tabs {
   display: flex;
@@ -70,7 +70,7 @@
 }
 .credit-tabs button.active {
   border-bottom-color: #242424;
-  color: #242424;
+  color: var(--foreground);
 }
 .credit-toolbar {
   display: flex;
@@ -133,7 +133,7 @@
   letter-spacing: var(--eyebrow-tracking);
   color: var(--muted);
   padding: 16px 12px;
-  border-bottom: 1px solid #e3e2dc;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .credit-table td {
@@ -236,7 +236,7 @@
   margin-bottom: 8px;
 }
 .credit-detail section {
-  border-top: 1px solid #e3e2dc;
+  border-top: 1px solid var(--border);
   margin-top: 20px;
   padding-top: 8px;
 }
@@ -263,7 +263,7 @@
   .credit-overview > .credit-plan {
     grid-column: 1/-1;
     border-left: 0;
-    border-top: 1px solid #e3e2dc;
+    border-top: 1px solid var(--border);
     padding: 12px 0 0;
   }
   .credit-plan p {

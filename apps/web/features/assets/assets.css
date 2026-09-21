@@ -30,7 +30,7 @@
   overflow: hidden;
 }
 .file-icon {
-  background: #f0f0eb;
+  background: var(--surface-subtle);
   display: flex;
   flex-direction: column;
   align-items: center;
