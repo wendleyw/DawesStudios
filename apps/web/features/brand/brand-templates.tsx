@@ -157,7 +157,7 @@ export function BrandTemplates({ clientId }: { clientId: string }) {
                   height={template?.height ?? 1080}
                 />
                 <div className="brand-template-info">
-                  <span className="eyebrow">PRIVATE DRAFT</span>
+                  <span className="eyebrow">Private draft</span>
                   <h3>{draft.name}</h3>
                   <span className="brand-inline-heading">
                     <span>Continue editing</span>

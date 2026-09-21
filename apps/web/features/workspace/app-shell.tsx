@@ -265,7 +265,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Search</span>
             <kbd>⌘ K</kbd>
           </Link>
-          <div className="nav-section-label">CLIENTS</div>
+          <div className="nav-section-label">Clients</div>
           <div className="client-navigation">
             {clients.data?.map((client) => {
               const open = activeClientId === client.id;

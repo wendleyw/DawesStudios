@@ -1286,3 +1286,31 @@ which may have made the rule dead — styling an element that `hideAttribution` 
 rendering. This refactor did not check whether the badge is still ever mounted (e.g., during load, or
 by a code path `hideAttribution` doesn't cover) and did not touch the rule or `design-system.md`.
 Flagging it as an open question for that session's owner to resolve, not resolving it here.
+
+## Audit-fix batch 4 landed — J08 tokens and semantic badge tones (2026-09-21)
+
+Full report: [audit-fixes-tokens](handoffs/2026-09-21-audit-fixes-tokens.md).
+
+A previous agent implemented this batch (`docs/verification/audit-j03-j04-j08-j09.md` section J08 —
+literal-to-token substitution, the type/spacing scale, eyebrow consolidation, and semantic badge
+tones in the new `apps/web/features/shared/status-tone.ts`) and was interrupted mid-task by an API
+rate limit, leaving 30 modified files plus the two new `status-tone.*` files uncommitted. This
+session verified that work rather than redoing it, found and fixed two exact-match literals the
+implementer had missed (`.segmented-control`'s `border-radius: 8px` and its button's `font-size:
+12px`, both in `globals.css`, outside the excluded React Flow attribution block), built the
+near-match table the implementer had not left anywhere in the tree, and committed.
+
+**Verified in this session:** `npm run check` — **420 tests / 29 files**, 0 errors, the same 2
+pre-existing unrelated lint warnings in `features/board/`. A `next dev` server was started on port
+3021 (not 3003 — that container was left untouched, per instruction) against the running local Docker
+Supabase; `design-audit.spec.ts` and `brand-accessibility.spec.ts` both passed in full, and
+`design-audit.json`'s diff against the committed baseline was **`capturedAt` only** — no route gained
+overflow or a new axe violation, including from the J08-6 badge-colour change, which was the one
+change this batch made on purpose. That regenerated `design-audit.json` and its screenshots were
+reverted before committing (verification byproducts, not this batch's deliverable) and the port-3021
+server was stopped. The dataset was re-counted directly against `supabase_db_dawes-studios`: 10
+clients, 25 projects, unchanged.
+
+**Not done:** the new `--space-xs/sm/md/lg` spacing scale is declared but not yet consumed anywhere —
+converting spacing literals to it was out of this batch's scope. The J08-2 near-match literals remain
+literals by design; growing the token scale to absorb them is explicitly the orchestrator's call.

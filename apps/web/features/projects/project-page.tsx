@@ -6,7 +6,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { statusLabels, useDateFormat } from "@/features/workspace/workspace-data";
+import {
+  projectStatusTones,
+  statusLabels,
+  useDateFormat,
+} from "@/features/workspace/workspace-data";
+import { statusToneClass } from "@/features/shared/status-tone";
 import { buildCanvas, canvasBounds } from "./canvas-layout";
 import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
@@ -173,7 +178,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         <div className="project-heading">
           <h1>{project.title}</h1>
           <div>
-            <span className={`status-badge ${project.status}`}>{statusLabels[project.status]}</span>
+            <span className={statusToneClass(projectStatusTones[project.status])}>
+              {statusLabels[project.status]}
+            </span>
             <span>{formatDate(project.due_date, "No due date")}</span>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   creditCsv,
   creditKindLabels,
   creditRequestStatusLabels,
+  creditRequestStatusTones,
   deliverableBreakdown,
   filterCreditEntries,
   type CreditEntry,
@@ -24,6 +25,7 @@ import "./credits.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { statusToneClass } from "@/features/shared/status-tone";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
@@ -361,7 +363,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
                 <p>{item.note || "Additional credits requested"}</p>
                 {item.response_note && <p>{item.response_note}</p>}
               </div>
-              <span className={`status-badge ${item.status}`}>
+              <span className={statusToneClass(creditRequestStatusTones[item.status])}>
                 {creditRequestStatusLabels[item.status]}
               </span>
               {profile?.role === "agency" && item.status === "pending" && (

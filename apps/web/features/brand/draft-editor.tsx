@@ -140,7 +140,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
             save.mutate();
           }}
         >
-          <span className="eyebrow">PRIVATE DRAFT</span>
+          <span className="eyebrow">Private draft</span>
           <h1>Template draft</h1>
           <p className="brand-muted">Edit the content and layout. Your changes stay private.</p>
           <label>

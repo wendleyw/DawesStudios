@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { ArrowRight, ArrowUpRight, FolderKanban, Plus } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
+  projectStatusTones,
   statusLabels,
   useClients,
   useDateFormat,
@@ -13,6 +14,7 @@ import {
   useWorkspaceCampaigns,
 } from "./workspace-data";
 import { PageStatus } from "@/features/shared/page-status";
+import { statusToneClass } from "@/features/shared/status-tone";
 
 export function HomePage() {
   const { profile } = useAuth();
@@ -130,7 +132,7 @@ export function HomePage() {
                   )}
                 </span>
                 <span>
-                  <span className={`status-badge ${project.status}`}>
+                  <span className={statusToneClass(projectStatusTones[project.status])}>
                     {statusLabels[project.status]}
                   </span>
                 </span>

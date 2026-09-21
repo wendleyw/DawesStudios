@@ -1,3 +1,4 @@
+import type { StatusTone } from "@/features/shared/status-tone";
 import { formatSize, type Briefing } from "@/features/briefings/briefing-model";
 import type { Project } from "@/features/workspace/workspace-data";
 
@@ -38,6 +39,17 @@ export const creditRequestStatusLabels: Record<CreditRequest["status"], string> 
   pending: "Pending",
   fulfilled: "Allocated",
   rejected: "Declined",
+};
+
+/**
+ * A credit request read as a badge tone. A pending request waits on the agency. A fulfilled one
+ * produced the credits it asked for. A declined one is closed but produced nothing, so it rests at
+ * `neutral` rather than claiming the completion tone.
+ */
+export const creditRequestStatusTones: Record<CreditRequest["status"], StatusTone> = {
+  pending: "attention",
+  fulfilled: "complete",
+  rejected: "neutral",
 };
 
 export function filterCreditEntries(

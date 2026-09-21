@@ -71,7 +71,7 @@
 }
 .brand-panel p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.8;
 }
 .brand-panel .eyebrow {
@@ -79,7 +79,7 @@
 }
 .brand-muted {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.75;
 }
 .brand-page > .brand-muted {
@@ -121,7 +121,7 @@
   border-radius: 6px;
   background: var(--surface-subtle);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-two-columns {
   display: grid;
@@ -135,7 +135,7 @@
   margin: 0;
   padding-left: 17px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.65;
 }
 .brand-guidance-list li {
@@ -143,7 +143,7 @@
 }
 .brand-guidance-list li::marker {
   color: #8b8c81;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .brand-context-link {
   display: flex;
@@ -163,13 +163,13 @@
   display: block;
 }
 .brand-context-link strong {
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
 }
 .brand-context-link > span > span {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-context-link:hover {
   border-color: var(--border-strong);
@@ -184,7 +184,7 @@
   width: 100px;
   flex: 0 0 100px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .brand-inline-heading .button {
   flex-shrink: 0;
@@ -220,11 +220,11 @@
   margin-top: 7px;
   color: var(--muted);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-color-card .button {
   margin: 14px 0 -8px -10px;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-sample-input {
   max-width: 540px;
@@ -264,7 +264,7 @@
 }
 .brand-type-scale > span > span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-product h3 {
   font-size: 22px;
@@ -278,7 +278,7 @@
 }
 .brand-product h4 {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 500;
 }
 .brand-message > p {
@@ -293,7 +293,7 @@
 }
 .brand-panel summary {
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
 }
 .brand-context-preview {
@@ -302,7 +302,7 @@
   white-space: pre-wrap;
   color: var(--muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.8;
 }
 .brand-repeater {
@@ -331,7 +331,7 @@
 .brand-product-input legend {
   padding: 0 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-product-input > button {
   grid-column: 1 / -1;
@@ -387,7 +387,7 @@
 .brand-asset-card p {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.7;
 }
 .brand-asset-preview {
@@ -401,7 +401,7 @@
   border-bottom: 1px solid var(--border);
   background: #eeeee9;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-asset-preview img {
   width: 100%;
@@ -416,7 +416,7 @@
 .brand-draft-note {
   margin: -6px 0 26px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.75;
 }
 .brand-template-grid + .empty-state {
@@ -448,7 +448,7 @@ a.brand-template-card:hover {
 .brand-template-info > .brand-inline-heading {
   margin-top: 18px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-template-art {
   container-type: inline-size;
@@ -548,7 +548,7 @@ a.brand-template-card:hover {
 .brand-save-status {
   margin-left: auto;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-draft-layout {
   display: grid;
@@ -567,7 +567,7 @@ a.brand-template-card:hover {
 }
 .brand-draft-controls > p {
   margin-top: -10px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-color-fields {
   display: grid;
@@ -596,7 +596,7 @@ a.brand-template-card:hover {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-preview-toolbar label {
   width: 84px;
@@ -605,7 +605,7 @@ a.brand-template-card:hover {
 .brand-preview-toolbar select {
   min-height: 32px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .brand-preview-canvas {
   display: flex;
@@ -673,7 +673,7 @@ a.brand-template-card:hover {
   }
   .brand-section-heading > .button {
     padding-inline: 8px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .brand-panel {
     padding: 22px;
@@ -689,7 +689,7 @@ a.brand-template-card:hover {
     font-size: 17px;
   }
   .brand-overview-hero > p {
-    font-size: 13px;
+    font-size: var(--text-lg);
   }
   .brand-context-link {
     padding: 22px;
@@ -708,14 +708,14 @@ a.brand-template-card:hover {
     padding: 16px;
   }
   .brand-color-card h3 {
-    font-size: 13px;
+    font-size: var(--text-lg);
   }
   .brand-color-card code {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .brand-color-card .button {
     gap: 6px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .brand-inline-heading {
     align-items: flex-start;
@@ -733,7 +733,7 @@ a.brand-template-card:hover {
     gap: 8px;
   }
   .brand-color-input label {
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .brand-color-input .icon-button {
     width: 30px;
@@ -765,7 +765,7 @@ a.brand-template-card:hover {
     height: 220px;
   }
   .brand-save-status {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .brand-draft-topbar {
     gap: 8px;
@@ -773,14 +773,14 @@ a.brand-template-card:hover {
   .brand-draft-topbar .button {
     gap: 7px;
     padding-inline: 10px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .brand-preview-toolbar {
     padding: 12px;
     gap: 12px;
   }
   .brand-preview-toolbar > span {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 }
 
@@ -790,7 +790,7 @@ a.brand-template-card:hover {
 }
 .brand-font-source {
   margin: 20px 0 -8px -10px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .brand-art-copy .brand-art-cta {
   display: inline-block;

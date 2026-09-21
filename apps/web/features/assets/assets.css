@@ -40,7 +40,7 @@
   color: #6c6c65;
 }
 .file-icon span {
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 1px;
 }
 .file-information {
@@ -52,7 +52,7 @@
   overflow-wrap: anywhere;
 }
 .file-information > a {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-muted);
   line-height: 1.5;
 }
@@ -64,7 +64,7 @@
   margin-top: 18px;
 }
 .file-information footer > span {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: #70706a;
 }
 .delivery-callout {
@@ -75,12 +75,12 @@
   padding: 20px 24px;
   margin-bottom: 24px;
   border: 1px solid #d5e1cd;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #f4f8f0;
 }
 .delivery-callout p {
   margin: 5px 0 0;
-  font-size: 12px;
+  font-size: var(--text-base);
   color: #5e6758;
 }
 @media (max-width: 720px) {

@@ -13,7 +13,13 @@ import {
 import Link from "next/link";
 import { memo } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
-import { statusLabels, useDateFormat, type Project } from "@/features/workspace/workspace-data";
+import {
+  projectStatusTones,
+  statusLabels,
+  useDateFormat,
+  type Project,
+} from "@/features/workspace/workspace-data";
+import { statusToneClass } from "@/features/shared/status-tone";
 import { BoardKanban } from "./board-kanban";
 import { ProjectTimeline } from "./project-timeline";
 import { campaignDateRange, type BoardCampaign } from "./board-layout";
@@ -194,7 +200,7 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
           </p>
         )}
         <div className="board-card-footer">
-          <span className={`status-badge ${data.project.status}`}>
+          <span className={statusToneClass(projectStatusTones[data.project.status])}>
             {statusLabels[data.project.status]}
           </span>
           <span>

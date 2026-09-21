@@ -49,7 +49,7 @@
   border: 1px solid #53554b;
   border-radius: 6px;
   color: #c9ccbf;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: -0.25px;
 }
@@ -85,7 +85,7 @@
   border-radius: 50%;
   background: #3c3f33;
   color: #e3e5d9;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .profile-bar > div {
   min-width: 0;
@@ -100,13 +100,13 @@
 }
 .profile-bar strong {
   color: #eee;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 .profile-bar > div > span {
   margin-top: 2px;
   color: #a8ac9d;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .profile-account {
   display: flex;
@@ -123,7 +123,7 @@
   display: block;
   margin-top: 2px;
   color: #a8ac9d;
-  font-size: 10px;
+  font-size: var(--text-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -163,7 +163,7 @@
   align-items: center;
   gap: 10px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   white-space: nowrap;
 }
 .topbar-identity > svg {
@@ -173,7 +173,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
   text-overflow: ellipsis;
 }
@@ -214,7 +214,7 @@
   padding: 7px 10px;
   border-radius: 7px;
   color: var(--sidebar-muted, #a3a69a);
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.4;
 }
 .client-destination:hover {
@@ -253,12 +253,12 @@
   display: block;
   margin-top: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .home-date {
   align-self: start;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   white-space: nowrap;
 }
 .attention-section {
@@ -302,7 +302,7 @@
   border-radius: 10px;
   background: #f0f0eb;
   color: #5d5d54;
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
   letter-spacing: -0.5px;
 }
@@ -314,7 +314,7 @@
   margin-top: 6px;
   margin-bottom: 22px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.6;
 }
 .workspace-card-footer {
@@ -325,7 +325,7 @@
   gap: 12px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .notifications-bell {
   position: relative;
@@ -473,7 +473,7 @@
   }
   .topbar-identity {
     gap: 8px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .topbar-identity > svg {
     display: none;
@@ -492,7 +492,7 @@
   .overview-stats > div > span {
     display: block;
     min-height: 32px;
-    font-size: 11px;
+    font-size: var(--text-sm);
     line-height: 1.6;
   }
   .overview-stats strong {
@@ -509,7 +509,7 @@
     padding: 16px 16px 0;
   }
   .workspace-card h3 {
-    font-size: 13px;
+    font-size: var(--text-lg);
   }
   .workspace-card-top {
     margin-bottom: 16px;
@@ -520,16 +520,16 @@
   .brand-monogram {
     width: 36px;
     height: 36px;
-    border-radius: 8px;
-    font-size: 11px;
+    border-radius: var(--radius);
+    font-size: var(--text-sm);
   }
   .workspace-card > p {
     margin-bottom: 16px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .workspace-card-footer {
     min-height: 42px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .workspace-card-footer > svg {
     display: none;
@@ -543,16 +543,16 @@
     padding: 20px 20px 0;
   }
   .workspace-card > p {
-    font-size: 12px;
+    font-size: var(--text-base);
   }
   .workspace-card h3 {
     font-size: 15px;
   }
   .workspace-card-footer {
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .overview-stats > div > span {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 }
 
@@ -566,7 +566,7 @@
   display: block;
   margin-top: 2px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .project-symbol {
   display: inline-flex;

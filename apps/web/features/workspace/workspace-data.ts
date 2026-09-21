@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { briefingStatusLabels } from "@/features/briefings/briefing-model";
+import type { StatusTone } from "@/features/shared/status-tone";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
@@ -299,6 +300,21 @@ export const statusLabels: Record<ProjectStatus, string> = {
   changes_requested: "Changes requested",
   approved: "Approved",
   delivered: "Delivered",
+};
+
+/**
+ * A project status read as a badge tone. Three states wait on a person — the studio's own review,
+ * the client's review, and a change request — so all three read as `attention`; the label says
+ * whose turn it is.
+ */
+export const projectStatusTones: Record<ProjectStatus, StatusTone> = {
+  planned: "neutral",
+  in_progress: "active",
+  internal_review: "attention",
+  client_review: "attention",
+  changes_requested: "attention",
+  approved: "complete",
+  delivered: "complete",
 };
 
 /**

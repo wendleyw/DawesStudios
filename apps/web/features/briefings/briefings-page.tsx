@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
-import { briefingStatusLabels, services } from "./briefing-model";
+import { briefingStatusLabels, briefingStatusTones, services } from "./briefing-model";
+import { statusToneClass } from "@/features/shared/status-tone";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
 import { NotificationsBell } from "@/features/workspace/notifications-bell";
@@ -113,7 +114,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
                   {item.requested_deliverables.length === 1 ? "" : "s"}
                 </p>
               </div>
-              <span className={`status-badge ${item.status}`}>
+              <span className={statusToneClass(briefingStatusTones[item.status])}>
                 {briefingStatusLabels[item.status]}
               </span>
               <span className="briefing-list-date">{formatDate(item.due_date, "No due date")}</span>

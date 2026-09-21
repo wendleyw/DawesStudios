@@ -15,6 +15,23 @@
   --topbar-height: 64px;
   --radius: 8px;
   --radius-lg: 12px;
+  /*
+   * The type scale. The four names rank secondary text rather than describe a pixel value, so a
+   * later change to the rank changes one declaration instead of every call site. Only the four
+   * sizes these tokens name are converted; every other literal font size in the product is
+   * deliberately exceptional and is judged on its own.
+   */
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 12px;
+  --text-lg: 13px;
+  /* The eyebrow: one size, one tracking, one casing, consumed by every eyebrow-shaped rule. */
+  --eyebrow-tracking: 0.1em;
+  /* The spacing scale, in the four steps the stylesheets already lean on most. */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
   --space-page: 36px;
 }
 @theme inline {
@@ -128,7 +145,7 @@ h3 {
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
@@ -166,7 +183,7 @@ h3 {
 .button.small {
   min-height: 32px;
   padding: 6px 11px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .button:disabled {
   opacity: 0.48;
@@ -194,20 +211,28 @@ h3 {
 .icon-button:disabled {
   opacity: 0.4;
 }
+/*
+ * The eyebrow: the single treatment for the small label that sits above a heading, a value or a
+ * column. Size, weight, tracking and casing are declared here once; the rules that cannot carry
+ * this class (`.nav-section-label`, `.board-identity p`, `.credit-table th`) consume the same
+ * tokens instead of restating their own numbers. Casing is the stylesheet's job, so the copy is
+ * written in sentence case and no call site upper-cases a string in JavaScript.
+ */
 .eyebrow {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 1.4px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
 }
 .muted,
 .text-muted {
   color: var(--muted);
 }
 .text-small {
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .sr-only,
 .visually-hidden {
@@ -235,7 +260,7 @@ h3 {
   z-index: 100;
   padding: 10px 16px;
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   transform: translateY(-160%);
 }
@@ -248,7 +273,7 @@ label,
   flex-direction: column;
   gap: 8px;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
 }
 input:not([type="checkbox"]):not([type="radio"]),
@@ -261,8 +286,8 @@ select {
   color: var(--foreground);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: #fff;
-  font-size: 13px;
+  background: var(--surface);
+  font-size: var(--text-lg);
   font-weight: 400;
   line-height: 1.5;
   transition:
@@ -300,7 +325,7 @@ textarea {
 }
 .copy-textarea {
   min-height: 260px;
-  font-size: 13px;
+  font-size: var(--text-lg);
 }
 select {
   padding-right: 28px;
@@ -310,13 +335,13 @@ select {
   border-left: 2px solid var(--ink);
   background: #eeeee8;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .form-help {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 400;
   line-height: 1.65;
 }
@@ -396,7 +421,7 @@ select {
   border-radius: 7px;
   background: transparent;
   color: #bfc1b8;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 400;
   line-height: 1.5;
   text-align: left;
@@ -425,14 +450,15 @@ select {
   border-radius: 4px;
   color: #bdc0b3;
   font-family: inherit;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .nav-section-label {
   margin: 32px 12px 12px;
   color: #a3a69a;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
-  letter-spacing: 1.3px;
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
 }
 /*
  * A page that carries its own header row takes the top of the workspace itself, and this bar above
@@ -495,7 +521,7 @@ select {
 .page-heading p {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.65;
 }
 .page-heading > .button {
@@ -524,7 +550,7 @@ select {
 .section-heading p {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .section-heading .count-badge {
   align-self: flex-start;
@@ -541,7 +567,7 @@ select {
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 400;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
@@ -564,7 +590,7 @@ select {
   min-height: 40px;
   background: #fafaf8;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.9px;
 }
@@ -572,7 +598,7 @@ select {
   min-height: 66px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.5;
   transition: background 140ms ease;
 }
@@ -594,11 +620,17 @@ select {
 .project-row > strong {
   overflow: hidden;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/*
+ * The badge styles four meanings, not four enum values: `neutral` (the base), `active`,
+ * `attention` and `complete`. Every domain maps its own enum onto that vocabulary in TypeScript
+ * beside its label map (see `features/shared/status-tone.ts`), so a new domain needs no CSS and no
+ * database enum value appears in a selector here.
+ */
 .status-badge {
   display: inline-flex;
   max-width: 100%;
@@ -606,11 +638,13 @@ select {
   align-items: center;
   gap: 6px;
   padding: 3px 7px;
-  border: 1px solid #dfdfda;
+  border: 1px solid var(--border);
+  /* 5px is between `--radius` (8px) and nothing smaller; it is left as a literal rather than
+     rounded to a scale step that would visibly change this badge. */
   border-radius: 5px;
-  background: #f3f3ef;
-  color: #60605b;
-  font-size: 10px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: var(--text-xs);
   font-weight: 400;
   line-height: 1.35;
   white-space: nowrap;
@@ -623,25 +657,27 @@ select {
   background: currentColor;
   content: "";
 }
-.status-badge.internal_review {
-  background: #fff;
-  border-color: #d6d6cf;
+/* Work is underway: an open ring on the plain surface. */
+.status-badge.tone-active {
+  border-color: var(--border-strong);
+  background: var(--surface);
 }
-.status-badge.internal_review::before {
+.status-badge.tone-active::before {
   background: transparent;
   border: 1px solid currentColor;
 }
-.status-badge.changes_requested {
+/* Waiting on a person: a dashed edge, the one shape that reads as unsettled. */
+.status-badge.tone-attention {
   border-style: dashed;
-  background: #efefea;
+  border-color: var(--border-strong);
 }
-.status-badge.approved,
-.status-badge.delivered {
-  background: #e7e7e1;
-  color: #50504a;
-  border-color: #d9d9d2;
+/* Finished: a solid fill, full-strength text and a square mark. */
+.status-badge.tone-complete {
+  border-color: var(--border-strong);
+  background: var(--border);
+  color: var(--foreground);
 }
-.status-badge.delivered::before {
+.status-badge.tone-complete::before {
   border-radius: 1px;
 }
 .empty-state {
@@ -664,7 +700,7 @@ select {
 .empty-state p {
   max-width: 390px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.65;
 }
 .empty-state .button {
@@ -679,10 +715,10 @@ select {
   min-height: 0;
   gap: 8px;
   padding: 16px;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .empty-state-compact p {
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .panel {
   padding: 24px;
@@ -737,7 +773,7 @@ select {
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface-subtle);
 }
 .segmented-control button {
@@ -747,7 +783,7 @@ select {
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .segmented-control button.active,
 .segmented-control button[aria-pressed="true"] {
@@ -799,7 +835,7 @@ select {
 .modal > p {
   margin-bottom: 16px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.7;
 }
 .modal > .button {
@@ -853,7 +889,7 @@ select {
 .modal-header p {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-lg);
   line-height: 1.65;
 }
 .modal-header .modal-close {
@@ -972,7 +1008,7 @@ select {
     font-size: 17px;
   }
   .section-heading p {
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .table-head {
     display: none;
@@ -992,13 +1028,13 @@ select {
   .project-title strong,
   .project-row > strong {
     overflow: visible;
-    font-size: 12px;
+    font-size: var(--text-base);
     white-space: normal;
   }
   .project-row > span:nth-child(2) {
     grid-column: 1;
     grid-row: 2;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .project-row > span:nth-child(3) {
     grid-column: 2;
@@ -1036,7 +1072,7 @@ select {
   .modal {
     max-height: calc(100dvh - 32px);
     padding: 26px 24px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
   }
   .modal h2 {
     font-size: 21px;

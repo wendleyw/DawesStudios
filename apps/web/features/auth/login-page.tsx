@@ -71,7 +71,7 @@ export function LoginPage() {
       </section>
       <section className="login-form-panel">
         <form onSubmit={signIn} className="login-form">
-          <span className="eyebrow">YOUR WORKSPACE</span>
+          <span className="eyebrow">Your workspace</span>
           <h2>Welcome back.</h2>
           <p>Sign in to pick up where you left off.</p>
           <label>

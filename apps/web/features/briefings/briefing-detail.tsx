@@ -19,7 +19,13 @@ import {
   useBriefings,
   useCampaigns,
 } from "./briefing-data";
-import { briefingStatusLabels, initialDraft, type Briefing } from "./briefing-model";
+import {
+  briefingStatusLabels,
+  briefingStatusTones,
+  initialDraft,
+  type Briefing,
+} from "./briefing-model";
+import { statusToneClass } from "@/features/shared/status-tone";
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
@@ -53,7 +59,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
           All briefings
         </Link>
         <div className="page-actions">
-          <span className={`status-badge ${briefing.status}`}>
+          <span className={statusToneClass(briefingStatusTones[briefing.status])}>
             {briefingStatusLabels[briefing.status]}
           </span>
           <NotificationsBell className="page-bell" />

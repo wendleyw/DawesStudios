@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
+  projectStatusTones,
   statusLabels,
   useDateFormat,
   useClients,
@@ -22,6 +23,7 @@ import {
   useProjects,
   type Project,
 } from "@/features/workspace/workspace-data";
+import { statusToneClass } from "@/features/shared/status-tone";
 
 import {
   FRAME_HEAD,
@@ -417,7 +419,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
               <strong title={project.title}>{project.title}</strong>
               <span>{campaignName(project.campaign_id)}</span>
               <span>
-                <span className={`status-badge ${project.status}`}>
+                <span className={statusToneClass(projectStatusTones[project.status])}>
                   {statusLabels[project.status]}
                 </span>
               </span>

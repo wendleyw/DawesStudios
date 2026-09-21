@@ -174,7 +174,7 @@ export function BrandSectionContent({
           ).map(([key, label]) => (
             <section className="brand-panel brand-type-card" key={key}>
               <div className="brand-inline-heading">
-                <span className="eyebrow">{label.toUpperCase()}</span>
+                <span className="eyebrow">{label}</span>
                 <Type size={17} />
               </div>
               <h3>{textValue(content, key, "System sans-serif")}</h3>
@@ -237,7 +237,7 @@ export function BrandSectionContent({
       <div className="brand-content-stack">
         {readProducts(content).map((product, i) => (
           <section className="brand-panel brand-product" key={i}>
-            <span className="eyebrow">PRODUCT {String(i + 1).padStart(2, "0")}</span>
+            <span className="eyebrow">Product {String(i + 1).padStart(2, "0")}</span>
             <h3>{product.name}</h3>
             <p>{product.description}</p>
             <div className="brand-two-columns">

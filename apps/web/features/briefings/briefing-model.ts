@@ -1,3 +1,4 @@
+import type { StatusTone } from "@/features/shared/status-tone";
 import catalog from "./service-catalog.json";
 import { z } from "zod";
 import type { Database } from "@database";
@@ -138,6 +139,18 @@ export const briefingStatusLabels: Record<Briefing["status"], string> = {
   awaiting_review: "Awaiting review",
   budget_confirmed: "Budget confirmed",
   accepted: "In progress",
+};
+
+/**
+ * A briefing status read as a badge tone. A draft rests with its author; a submitted briefing and a
+ * confirmed budget both wait on a decision; an accepted briefing has produced its project and is
+ * done, which is the same meaning a project's `approved` carries.
+ */
+export const briefingStatusTones: Record<Briefing["status"], StatusTone> = {
+  draft: "neutral",
+  awaiting_review: "attention",
+  budget_confirmed: "attention",
+  accepted: "complete",
 };
 
 export function serviceEstimate(service: ServiceDefinition | undefined) {
