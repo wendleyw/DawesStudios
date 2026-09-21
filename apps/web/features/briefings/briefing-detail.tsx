@@ -7,6 +7,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
+  useInvalidateNotifications,
+  useInvalidateWorkspace,
+} from "@/features/workspace/workspace-data";
+import {
   acceptBriefing,
   confirmBriefingBudget,
   useBriefingCreditBalance,
@@ -126,6 +130,8 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
 function BudgetReview({ briefing }: { briefing: Briefing }) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
+  const invalidateNotifications = useInvalidateNotifications();
   const router = useRouter();
   const [credits, setCredits] = useState(
     String(briefing.confirmed_credits ?? briefing.estimated_credits ?? 1),
@@ -153,11 +159,17 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
   const accept = useMutation({
     mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id }),
     onSuccess: async (id) => {
-      await Promise.all(
-        ["briefings", "projects", "credit-account", "credit-ledger", "notifications"].map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["briefings"] }),
+        // `credit-account`/`credit-ledger` are owned by `credits/credit-data.ts`, but its
+        // `useInvalidateCredits()` also covers `credit-requests`, a key accepting a briefing never
+        // touched before this migration — calling it here would widen the invalidation, so these
+        // two stay explicit instead of going through that helper.
+        queryClient.invalidateQueries({ queryKey: ["credit-account"] }),
+        queryClient.invalidateQueries({ queryKey: ["credit-ledger"] }),
+        invalidateWorkspace(),
+        invalidateNotifications(),
+      ]);
       router.push(`/projects/${id}`);
     },
   });

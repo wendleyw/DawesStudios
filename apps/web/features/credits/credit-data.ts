@@ -62,6 +62,10 @@ export function useCreditRequests(clientId: string) {
   });
 }
 
+// `briefings/briefing-detail.tsx`'s accept-briefing mutation invalidates `credit-account` and
+// `credit-ledger` inline rather than through `useInvalidateCredits()` below: this set also covers
+// `credit-requests`, a key accepting a briefing never touched before, so routing through it would
+// widen that call site's invalidation. See the comment at that call site for the full reasoning.
 export const creditQueryKeys = [
   "credit-account",
   "credit-ledger",

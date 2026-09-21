@@ -8,7 +8,11 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { downloadPrivateFile } from "./file-download";
 import { Modal } from "@/features/shared/modal";
-import { formatDate, useClients } from "@/features/workspace/workspace-data";
+import {
+  formatDate,
+  useClients,
+  useInvalidateWorkspace,
+} from "@/features/workspace/workspace-data";
 import {
   initialUploadProject,
   markProjectDelivered,
@@ -24,6 +28,7 @@ import { PageStatus } from "@/features/shared/page-status";
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
   const [project, setProject] = useState(parameters.get("project") ?? "");
   const [search, setSearch] = useState("");
@@ -46,9 +51,12 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       if (deliverProject) await markProjectDelivered(database, { projectId: deliverProject });
     },
     onSuccess: async () => {
+      // `projects` is owned by `workspace/workspace-data.ts`; `useInvalidateWorkspace()`'s key set
+      // (`workspaceQueryKeys = ["projects"]`) is identical to what this call invalidated inline, so
+      // this is non-widening.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["assets"] }),
-        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        invalidateWorkspace(),
       ]);
       setDeliverProject(null);
     },
