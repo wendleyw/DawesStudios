@@ -237,35 +237,43 @@ two cases, not established at all. The corrected breakdown:
   splitting the group would duplicate the rule or change its specificity. `.board-canvas` (`board`
   only) and `.project-canvas` (`projects` only) are each single-feature, but `globals.css` groups
   both (with `.design-viewport`, also `projects`-owned) into one `.react-flow__attribution` rule
-  spanning `board` and `projects`. `.sidebar-collapse`'s only consumer,
-  `workspace/app-shell.tsx`, renders it with `className="icon-button sidebar-collapse"` — the toggle
-  carries both classes on one element, and the shared `.icon-button` rule at the 640px breakpoint has
-  to keep winning over `.sidebar-collapse`'s own sizing there, which depends on their relative order
-  inside `globals.css`.
-- **Dead (1): `.workspace-status`.** Zero consumers left in any `.tsx` file. Left in place rather
-  than deleted, because Task 5's mandate was relocation, not cleanup; removing it is a decision for
-  whichever Phase B agent owns `workspace`, not for this document.
-- **Unexplained — flagged for follow-up, not justified (2): `.project-origin`, `.project-symbol`.**
-  Both have exactly one consumer, `workspace/home-page.tsx` (`.project-origin small` at
-  `globals.css:556`, `.project-symbol` at `globals.css:615` plus a `:911` media override), and
-  neither is part of any grouped selector with a multi-feature rule. No cascade or specificity
-  dependency was found either. These two do not currently satisfy the multi-feature override, the
-  grouped-selector exception, or any other stated reason to stay in `globals.css` — they are
-  candidates for relocation into `workspace.css` in Phase B, and are recorded here as unresolved
-  rather than given a fabricated justification.
+  spanning `board` and `projects`. `.sidebar-collapse`'s only consumer, `workspace/app-shell.tsx`,
+  renders it with `className="icon-button sidebar-collapse"` — the toggle carries both classes on
+  one element, so the rule stays grouped with a shared primitive rather than moving cleanly to a
+  single feature's stylesheet. An earlier draft of this document justified that placement by a
+  cascade dependency: the shared `.icon-button` rule at the 640px breakpoint (`globals.css:911`,
+  `width: 40px`) supposedly had to keep winning over `.sidebar-collapse`'s own sizing there. The
+  final structural-refactor fix wave found that reasoning does not hold — `.sidebar-collapse` is
+  already `display: none` under `@media (max-width: 900px)` (`globals.css:886`), a superset of the
+  640px range, so the element is already hidden by the time the viewport reaches 640px and there is
+  no sizing conflict left for that rule to win. `.sidebar-collapse` still belongs in `globals.css`,
+  but for the grouped dual-class-selector reason above, not the cascade-order one.
+- **Removed (1): `.workspace-status`.** Zero consumers were left in any `.tsx` file, and Task 5 left
+  the rule in place because its own mandate was relocation, not cleanup. The final
+  structural-refactor fix wave re-verified the zero-consumer finding and deleted the rule (the base
+  selector, `.workspace-status i`, and its `@media (max-width: 1000px)` override) — removing
+  genuinely dead code was within that wave's mandate.
+- **Resolved (2): `.project-origin`, `.project-symbol`.** Both had exactly one consumer,
+  `workspace/home-page.tsx`, and Task 5 found neither part of a grouped selector with a multi-feature
+  rule, nor any cascade or specificity dependency — so it recorded them as unexplained rather than
+  invent a justification. The final structural-refactor fix wave re-verified the single-consumer
+  finding and moved both rules — `.project-origin small`, `.project-symbol`'s base rule, and its
+  `@media (max-width: 1200px)` override — verbatim into `workspace/workspace.css`, in their original
+  relative order. Neither selector remains in `globals.css`.
 
 **Where the original spec's prediction was wrong.** The spec's Foundation 3 predicted `brand.css`
-and `projects.css` would each receive rules split out of `globals.css`. Neither did, for two
-different reasons. `.brand-link` and `.brand-monogram` read as brand-owned by name, but their only
-consumer is the sidebar brand mark in `workspace/app-shell.tsx`, so Task 5 moved them into
-`workspace/workspace.css` instead. Every `project-*` namespace that stayed behind in `globals.css`
-stayed for one of the reasons above — genuinely multi-feature (`.project-row`, `.project-table`),
-grouped with a multi-feature rule (`.project-title`, `.project-canvas`), or unexplained
-(`.project-origin`, `.project-symbol`) — and none of those reasons points at `projects.css`: the
-unexplained pair's sole consumer is `workspace/home-page.tsx`, not `features/projects/`, so if they
-are ever relocated the destination is `workspace.css`, not `projects.css`. `projects.css` therefore
-received nothing from the split — not because `projects` has no CSS, but because no rule that moved
-or stayed behind was exclusively `projects`-owned.
+and `projects.css` would each receive rules split out of `globals.css`. Neither did at Task 5, for
+two different reasons. `.brand-link` and `.brand-monogram` read as brand-owned by name, but their
+only consumer is the sidebar brand mark in `workspace/app-shell.tsx`, so Task 5 moved them into
+`workspace/workspace.css` instead. Every `project-*` namespace that stayed behind in `globals.css` at
+that point stayed for one of the reasons above — genuinely multi-feature (`.project-row`,
+`.project-table`), grouped with a multi-feature rule (`.project-title`, `.project-canvas`), or
+unexplained (`.project-origin`, `.project-symbol`) — and none of those reasons pointed at
+`projects.css`: the unexplained pair's sole consumer was `workspace/home-page.tsx`, not
+`features/projects/`. The final structural-refactor fix wave later confirmed that and relocated the
+unexplained pair into `workspace/workspace.css`, per the "Resolved" entry above — so, as predicted
+here, `projects.css` still received nothing from any of this: not because `projects` has no CSS, but
+because no rule that moved or stayed behind was ever exclusively `projects`-owned.
 
 ## Final audit gate — not yet executed
 

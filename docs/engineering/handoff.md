@@ -1,6 +1,39 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-20. Maintainer: the active orchestrator.
+Updated: 2026-09-20 (final fix wave). Maintainer: the active orchestrator.
+
+## Final fix wave — repository structural refactor, closed
+
+Applied after the final whole-branch review, as the last code change before handover. Full report:
+[`.superpowers/sdd/2026-09-20-repository-structural-refactor/final-fix-report.md`](../../.superpowers/sdd/2026-09-20-repository-structural-refactor/final-fix-report.md).
+
+- **Fix 1**: `briefing-detail.tsx`'s and `assets-page.tsx`'s inline invalidation arrays now call the
+  owning features' helpers (`useInvalidateWorkspace()`, `useInvalidateNotifications()`) wherever the
+  helper's key set matched exactly. `credit-account`/`credit-ledger` stayed explicit inline rather
+  than going through `useInvalidateCredits()`, because that helper also covers `credit-requests` —
+  using it would have widened the invalidation, so it was not used, per the brief's own rule.
+- **Fix 2**: `settings/settings-data.ts`'s `useInvalidateWorkspace()`/`workspaceQueryKeys` renamed to
+  `useInvalidateWorkspaceSettings()`/`workspaceSettingsQueryKeys` to remove the naming collision with
+  `workspace/workspace-data.ts`'s unrelated, disjoint-cache hook of the same old name. Only consumer
+  (`workspace-settings.tsx`) updated; `workspace-data.ts` untouched.
+- **Fix 3**: `.project-origin`/`.project-symbol` (single consumer: `workspace/home-page.tsx`) moved
+  verbatim, same relative order, from `globals.css` into `workspace/workspace.css`.
+- **Fix 4**: `.workspace-status` (zero `.tsx` consumers, re-verified) deleted from `globals.css`.
+- **Fix 5**: `design-system.md`'s `.sidebar-collapse` justification corrected — the 640px
+  `.icon-button` cascade-order claim doesn't hold because `.sidebar-collapse` is already hidden at
+  900px, a superset range. The rule stays in `globals.css` for the real reason: a grouped dual-class
+  selector sharing an element with the `.icon-button` primitive.
+
+Verification, all run this session: `npm run check` — **391 tests / 25 files**, unchanged.
+`grep -rn '\.from(\|\.rpc(\|\.storage\.' apps/web/features --include='*.tsx' | grep -v
+'Array\.from('` — empty. `npm --prefix apps/web run test:e2e -- design-audit brand-accessibility
+workspace-actions intake-admin` against the already-running rebuilt container on port 3003 (not
+restarted, not touched) — **14/14 pass**. `docs/verification/design-audit.json` diff against the
+committed version is `capturedAt` only — every measured figure byte-identical, confirming the CSS
+moves didn't change the cascade. The regenerated `design-audit.json` and screenshot PNGs were left as
+the run produced them and are **not** staged or committed, per instruction.
+
+No unresolved risk from this wave. Next action: none required; ready for handover.
 
 ## Ownership and purpose
 
