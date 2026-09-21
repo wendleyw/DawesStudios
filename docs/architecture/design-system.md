@@ -275,6 +275,25 @@ unexplained pair into `workspace/workspace.css`, per the "Resolved" entry above 
 here, `projects.css` still received nothing from any of this: not because `projects` has no CSS, but
 because no rule that moved or stayed behind was ever exclusively `projects`-owned.
 
+**Selector disjointness is enforced, not measured.** The split traded a single deterministic
+cascade for one built from 13 feature stylesheets loaded alongside `globals.css`, which raised a
+fair question: without `@layer` or a pinned import order in `app/layout.tsx`, what stops a rule
+added to one feature's stylesheet from silently winning or losing against another feature's rule
+of the same name? The answer is that the boundary rule above — a namespace with consumers in two
+or more features stays in `globals.css` — makes the feature stylesheets' selectors disjoint by
+construction: at the time this was checked, the 13 feature stylesheets declared 736 distinct
+selectors between them and shared none. With disjoint selectors, the relative load order of
+feature stylesheets cannot matter, because nothing in them can conflict; pinning an import order
+would only order a conflict that does not exist. The two deliberate exceptions are `board.css`'s
+`h3` (an inherited override of the base heading rule in `globals.css`, not a designed shared rule)
+and `shared/forms.css`'s `.form-actions` (both files declare it, and because `app/layout.tsx`
+imports `forms.css` after `globals.css`, `forms.css` wins — an unexamined consequence of the split
+that is now pinned rather than left implicit).
+[`stylesheet-boundary.test.ts`](../../apps/web/features/shared/stylesheet-boundary.test.ts)
+enforces all of this as a standing check rather than a one-time measurement: no selector may appear
+in two feature stylesheets, and the only selectors a feature stylesheet may share with
+`globals.css` are those two named exceptions.
+
 ## Final audit gate — not yet executed
 
 Complete the functional production-simulation gate first with exactly 10 clients and 25 seeded projects, then execute the comprehensive alignment audit. Preserve fixture identifiers and record any additional entities created during action testing separately. Neither the screenshots' 23 active projects nor a test that only checks the home count proves the required workflow coverage across all 25. The audit covers every action exposed by the product and all agreed end-to-end workflows; it does not require reproducing every prototype screen.
