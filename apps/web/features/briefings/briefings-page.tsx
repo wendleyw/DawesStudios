@@ -4,7 +4,7 @@ import { ArrowUpRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { formatDate, useClients } from "@/features/workspace/workspace-data";
+import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
 import { briefingStatusLabels, services } from "./briefing-model";
 import "./briefings.css";
@@ -14,6 +14,7 @@ import { PageStatus } from "@/features/shared/page-status";
 export function BriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
+  const { formatDate } = useDateFormat();
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
   const [tab, setTab] = useState("all");
@@ -24,7 +25,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Briefings unavailable.</h1>
-        <FormError>We could not load this workspace. Please try again.</FormError>
+        <FormError>We could not load this client. Please try again.</FormError>
         <button
           className="button"
           onClick={() => {
@@ -63,7 +64,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
           {[
             ["all", "All briefings"],
             ["draft", "Draft"],
-            ["awaiting_review", "Awaiting review"],
+            ["awaiting_review", "With the studio"],
             ["accepted", "In progress"],
           ].map(([value, label]) => (
             <button
@@ -82,7 +83,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
           <h2>No briefings here yet.</h2>
           <p>
             {profile?.role === "designer"
-              ? "Accepted briefs for your assigned projects will appear here."
+              ? "Accepted briefings for your assigned projects will appear here."
               : tab === "all"
                 ? "Choose a service and tell us what you have in mind."
                 : "Your briefings will appear here as they move forward."}
@@ -112,7 +113,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
               <span className={`status-badge ${item.status}`}>
                 {briefingStatusLabels[item.status]}
               </span>
-              <span className="briefing-list-date">{formatDate(item.due_date)}</span>
+              <span className="briefing-list-date">{formatDate(item.due_date, "No due date")}</span>
               <ArrowUpRight size={17} />
             </Link>
           ))}

@@ -12,7 +12,7 @@ import { PageStatus } from "@/features/shared/page-status";
 
 type SettingsTab = "workspace" | "team" | "clients" | "presets" | "account";
 const labels: Record<SettingsTab, string> = {
-  workspace: "Workspace",
+  workspace: "Studio",
   team: "Team",
   clients: "Clients",
   presets: "Presets",
@@ -41,7 +41,7 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
       <header className="page-heading">
         <div>
           <span className="eyebrow">
-            {tab === "account" ? "YOUR WORKSPACE" : "STUDIO ADMINISTRATION"}
+            {tab === "account" ? "YOUR ACCOUNT" : "STUDIO ADMINISTRATION"}
           </span>
           <h1>{tab === "account" ? "Your account" : "Settings"}</h1>
           <p>

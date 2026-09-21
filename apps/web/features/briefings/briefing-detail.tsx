@@ -40,7 +40,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
         <h1>Briefing unavailable.</h1>
         <p>This briefing may no longer be available, or you may not have access.</p>
         <Link href={`/clients/${clientId}/briefings`} className="button">
-          Back to briefings
+          All briefings
         </Link>
       </div>
     );
@@ -81,7 +81,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
           ) : briefing.status === "draft" ? (
             <>
               <h2>Ready when you are.</h2>
-              <p>Continue shaping your brief before sending it to the studio.</p>
+              <p>Continue shaping your briefing before sending it to the studio.</p>
               <Link
                 className="button primary"
                 href={`/clients/${clientId}/briefings/${briefing.id}/edit`}
@@ -220,19 +220,19 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
           <dl className="briefing-budget-figures">
             <div>
               <dt>Scope estimate</dt>
-              <dd>{briefing.estimated_credits ?? "—"} cr</dd>
+              <dd>{briefing.estimated_credits ?? "—"} credits</dd>
             </div>
             <div>
               <dt>Approved total</dt>
-              <dd>{Number(credits) || 0} cr</dd>
+              <dd>{Number(credits) || 0} credits</dd>
             </div>
             <div>
               <dt>Available balance</dt>
-              <dd>{balance.data?.balance ?? 0} cr</dd>
+              <dd>{balance.data?.balance ?? 0} credits</dd>
             </div>
             <div>
               <dt>Balance after acceptance</dt>
-              <dd>{(balance.data?.balance ?? 0) - (Number(credits) || 0)} cr</dd>
+              <dd>{(balance.data?.balance ?? 0) - (Number(credits) || 0)} credits</dd>
             </div>
           </dl>
         )}

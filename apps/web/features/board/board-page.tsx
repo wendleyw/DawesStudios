@@ -15,8 +15,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
-  formatDate,
   statusLabels,
+  useDateFormat,
   useClients,
   useInvalidateWorkspace,
   useProjects,
@@ -52,6 +52,7 @@ const GUTTER = 24;
 
 export function BoardPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
+  const { formatDate } = useDateFormat();
   const invalidateWorkspace = useInvalidateWorkspace();
   const router = useRouter();
   const clients = useClients();
@@ -250,7 +251,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Board unavailable.</h1>
-        <p>This workspace is unavailable or you do not have access.</p>
+        <p>This client is unavailable or you do not have access.</p>
         <Link href="/home" className="button">
           Back to your work
         </Link>
@@ -415,7 +416,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
                   {statusLabels[project.status]}
                 </span>
               </span>
-              <span>{formatDate(project.due_date)}</span>
+              <span>{formatDate(project.due_date, "No due date")}</span>
               <ArrowUpRight size={16} />
             </Link>
           ))}

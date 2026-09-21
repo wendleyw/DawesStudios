@@ -151,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [mobileOpen]);
 
-  // With ten workspaces the expanded client can open below the fold, hiding its own destinations.
+  // With ten clients the expanded one can open below the fold, hiding its own destinations.
   useEffect(() => {
     activeEntry.current?.scrollIntoView({ block: "nearest" });
   }, [pathname]);
@@ -185,7 +185,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { path: "board", label: "Board" },
     { path: "briefings", label: "Briefings" },
     { path: "reviews", label: "Reviews" },
-    { path: "assets", label: "Assets" },
+    { path: "assets", label: "Files" },
     { path: "brand/overview", label: "Brand Hub" },
     ...(profile.role !== "designer" ? [{ path: "credits", label: "Credits" }] : []),
   ];
@@ -261,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Search</span>
             <kbd>⌘ K</kbd>
           </Link>
-          <div className="nav-section-label">WORKSPACES</div>
+          <div className="nav-section-label">CLIENTS</div>
           <div className="client-navigation">
             {clients.data?.map((client) => {
               const open = activeClientId === client.id;
@@ -359,8 +359,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {profile.role === "agency"
                     ? "Studio team"
                     : profile.role === "designer"
-                      ? "Creative partner"
-                      : "Client workspace"}
+                      ? "Designer"
+                      : "Client"}
                 </span>
               </div>
             </Link>
@@ -421,7 +421,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Open a project to message the studio. Select a design to add feedback or place a comment
             pin.
           </p>
-          <p>For account access or a new workspace, contact your studio representative.</p>
+          <p>For account access or a new client, contact your studio representative.</p>
         </div>
       </Modal>
     </div>

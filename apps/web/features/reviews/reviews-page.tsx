@@ -4,7 +4,7 @@ import { ArrowUpRight, CheckCheck, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { formatDate, useClients } from "@/features/workspace/workspace-data";
+import { useClients, useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
 import { useReviews } from "./review-data";
@@ -12,6 +12,7 @@ import { useReviews } from "./review-data";
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
+  const { formatDate } = useDateFormat();
   const [filter, setFilter] = useState("waiting");
   const data = useReviews(clientId);
   if (data.isPending || clients.isPending) return <PageStatus>Gathering reviews…</PageStatus>;
@@ -55,7 +56,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
                 ? "Waiting for you"
                 : profile?.role === "designer"
                   ? "In progress"
-                  : "With client",
+                  : "In review",
           },
           ...(profile?.role === "agency" ? [{ id: "studio", label: "Studio review" }] : []),
           { id: "approved", label: "Approved" },
@@ -96,7 +97,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
                       : "Open the project to see the designs and conversation.")}
                 </p>
                 <span className="review-date">
-                  {formatDate(row.date)} · {row.status.replaceAll("_", " ")}
+                  {formatDate(row.date)} · {versionStatusLabel(row.status)}
                 </span>
               </div>
               <ArrowUpRight size={18} />

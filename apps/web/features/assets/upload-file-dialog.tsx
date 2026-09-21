@@ -134,9 +134,7 @@ export function UploadFileDialog({
             name="name"
             required
             maxLength={240}
-            placeholder={
-              kind === "delivery" ? "Approved campaign — print PDF" : "Reference artwork"
-            }
+            placeholder={kind === "delivery" ? "Approved campaign — print PDF" : "Reference design"}
           />
         </label>
         <label>

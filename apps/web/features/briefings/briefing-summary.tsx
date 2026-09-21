@@ -1,3 +1,6 @@
+"use client";
+
+import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
   directionFields,
   formats,
@@ -13,6 +16,7 @@ export function BriefingSummary({
   draft: BriefingDraft;
   campaignName?: string;
 }) {
+  const { formatDate } = useDateFormat();
   const service = services.find((item) => item.id === draft.serviceId);
   return (
     <div className="briefing-summary">
@@ -71,13 +75,7 @@ export function BriefingSummary({
       </section>
       <section>
         <h3>Timing</h3>
-        <p>
-          {draft.dueDate
-            ? new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(
-                new Date(draft.dueDate),
-              )
-            : "No target date. We will agree on timing together."}
-        </p>
+        <p>{formatDate(draft.dueDate, "No target date. We will agree on timing together.")}</p>
       </section>
     </div>
   );

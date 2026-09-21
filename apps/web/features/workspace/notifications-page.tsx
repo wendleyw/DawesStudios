@@ -4,9 +4,9 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Bell, Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
-import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import {
   markNotificationsRead,
+  useDateFormat,
   useInvalidateNotifications,
   useNotifications,
 } from "./workspace-data";
@@ -14,7 +14,7 @@ import { FormError } from "@/features/shared/form-error";
 
 export function NotificationsPage() {
   const { database, session } = useAuth();
-  const settings = useWorkspaceSettings();
+  const { formatDateTime } = useDateFormat();
   const notifications = useNotifications();
   const invalidateNotifications = useInvalidateNotifications();
   const markRead = useMutation({
@@ -30,7 +30,7 @@ export function NotificationsPage() {
           <h1>Notifications</h1>
           <p>
             {unread
-              ? `${unread} update${unread === 1 ? "" : "s"} waiting for you.`
+              ? `${unread} notification${unread === 1 ? "" : "s"} waiting for you.`
               : "You’re up to date."}
           </p>
         </div>
@@ -44,7 +44,7 @@ export function NotificationsPage() {
         </button>
       </div>
       {notifications.isPending ? (
-        <p role="status">Loading your updates…</p>
+        <p role="status">Loading your notifications…</p>
       ) : notifications.error ? (
         <div role="alert">
           <p className="form-error">We couldn’t load notifications.</p>
@@ -62,13 +62,7 @@ export function NotificationsPage() {
               <div>
                 <h2>{item.title}</h2>
                 {item.body && <p>{item.body}</p>}
-                <time dateTime={item.created_at}>
-                  {new Intl.DateTimeFormat("en-US", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                    timeZone: settings.data?.timezone ?? "UTC",
-                  }).format(new Date(item.created_at))}
-                </time>
+                <time dateTime={item.created_at}>{formatDateTime(item.created_at)}</time>
               </div>
               {item.project_id ? (
                 <Link
@@ -83,7 +77,7 @@ export function NotificationsPage() {
                 <Link
                   className="icon-button"
                   href={`/clients/${item.client_id}/board`}
-                  aria-label={`Open workspace for ${item.title}`}
+                  aria-label={`Open client for ${item.title}`}
                   onClick={() => markRead.mutate(item.id)}
                 >
                   <ArrowUpRight size={17} />
@@ -105,7 +99,7 @@ export function NotificationsPage() {
         <div className="empty-state">
           <Bell size={25} />
           <h2>A quiet moment.</h2>
-          <p>Project updates and feedback will appear here.</p>
+          <p>Notifications about your projects will appear here.</p>
         </div>
       )}
       {markRead.error && <FormError>{markRead.error.message}</FormError>}

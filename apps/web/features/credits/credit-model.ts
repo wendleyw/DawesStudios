@@ -33,6 +33,13 @@ export const creditKindLabels: Record<CreditEntry["kind"], string> = {
   adjustment: "Credit adjustment",
 };
 
+/** The three states a credit request can hold, named here rather than at the one call site. */
+export const creditRequestStatusLabels: Record<CreditRequest["status"], string> = {
+  pending: "Pending",
+  fulfilled: "Allocated",
+  rejected: "Declined",
+};
+
 export function filterCreditEntries(
   entries: CreditEntry[],
   projects: Project[],

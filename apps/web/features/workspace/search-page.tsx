@@ -67,7 +67,7 @@ export function SearchPage() {
       ) : (
         <div className="empty-state">
           <h2>No matches yet.</h2>
-          <p>Try a project name, workspace, or a different keyword.</p>
+          <p>Try a project name, a client, or a different keyword.</p>
         </div>
       )}
     </div>

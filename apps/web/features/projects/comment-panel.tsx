@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Check, MapPin, MessageSquare, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
   postComment,
   resolveComment,
@@ -35,6 +36,7 @@ export function CommentPanel({
   onSelectComment?: (id: string) => void;
 }) {
   const { database } = useAuth();
+  const { formatDate } = useDateFormat();
   const comments = useProjectComments(projectId, channel, designId);
   const invalidate = useInvalidateProject();
   const { draft, update, clear } = useCommentDraft(projectId, channel, designId);
@@ -112,11 +114,7 @@ export function CommentPanel({
               <div className="comment-author">
                 <span className="comment-avatar">{comment.label[0]}</span>
                 <strong>{comment.label}</strong>
-                <time dateTime={comment.createdAt}>
-                  {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(
-                    new Date(comment.createdAt),
-                  )}
-                </time>
+                <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
               </div>
               {comment.pinX !== null && (
                 <button className="comment-pin-link" onClick={() => onSelectComment?.(comment.id)}>
@@ -159,7 +157,7 @@ export function CommentPanel({
         {pendingPin && (
           <div className="pending-pin">
             <MapPin size={13} />
-            Feedback pinned to artwork
+            Feedback pinned to a design
             <button
               type="button"
               className="icon-button"

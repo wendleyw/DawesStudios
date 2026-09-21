@@ -21,11 +21,11 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const [editing, setEditing] = useState(false);
   const client = clients.data?.find((item) => item.id === clientId);
   if (clients.isPending || sections.isPending)
-    return <PageStatus>Opening the brand hub…</PageStatus>;
+    return <PageStatus>Opening the Brand Hub…</PageStatus>;
   if (!client || sections.error || !isBrandSection(section))
     return (
       <div className="page-content">
-        <h1>Brand hub unavailable.</h1>
+        <h1>Brand Hub unavailable.</h1>
         <p className="brand-muted">This space is unavailable or you do not have access.</p>
         <Link className="button" href="/home">
           Back to your work

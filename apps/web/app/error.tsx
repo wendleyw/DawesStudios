@@ -16,7 +16,7 @@ export default function PageError({
         Try again
       </button>
       <Link className="button quiet" href="/home">
-        Open workspace
+        Back to your work
       </Link>
     </main>
   );

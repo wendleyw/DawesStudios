@@ -82,7 +82,7 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
     <Modal
       open
       title="Add a brand asset"
-      description="Share an approved file with everyone in this workspace."
+      description="Share an approved file with everyone working with this client."
       onClose={() => void close()}
       footer={
         <>

@@ -69,7 +69,7 @@ export function AccountRecovery() {
               <>
                 <SettingsSuccess>Your password has been updated.</SettingsSuccess>
                 <Link href="/home" className="button primary">
-                  Open your workspace
+                  Back to your work
                 </Link>
               </>
             ) : (

@@ -124,7 +124,6 @@
   min-width: 0;
   color: var(--muted);
   font-size: 11px;
-  text-transform: capitalize;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

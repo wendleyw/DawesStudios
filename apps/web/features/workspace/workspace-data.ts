@@ -1,7 +1,10 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { briefingStatusLabels } from "@/features/briefings/briefing-model";
+import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
@@ -216,7 +219,7 @@ export type WorkspaceSearchResult = {
   id: string;
   title: string;
   description: string;
-  type: "Workspace" | "Project" | "Briefing" | "Brand asset";
+  type: "Client" | "Project" | "Briefing" | "Brand asset";
   href: string;
 };
 
@@ -253,7 +256,7 @@ export function useWorkspaceSearch(search: string) {
           id: item.id,
           title: item.name,
           description: item.industry,
-          type: "Workspace" as const,
+          type: "Client" as const,
           href: `/clients/${item.id}/board`,
         })),
         ...assertResult(projects).map((item) => ({
@@ -266,7 +269,7 @@ export function useWorkspaceSearch(search: string) {
         ...assertResult(briefings).map((item) => ({
           id: item.id,
           title: item.title,
-          description: item.status.replaceAll("_", " "),
+          description: briefingStatusLabels[item.status],
           type: "Briefing" as const,
           href: `/clients/${item.client_id}/briefings/${item.id}`,
         })),
@@ -282,6 +285,12 @@ export function useWorkspaceSearch(search: string) {
   });
 }
 
+// ---------------------------------------------------------------------------------------------
+// Labels and dates: the vocabulary and the date rendering every feature shares. A status that is
+// read from an enum is named here once, so the same record can never be described by two different
+// words on two screens, and every date is formatted by the same set of functions.
+// ---------------------------------------------------------------------------------------------
+
 export const statusLabels: Record<ProjectStatus, string> = {
   planned: "Planned",
   in_progress: "In progress",
@@ -292,11 +301,97 @@ export const statusLabels: Record<ProjectStatus, string> = {
   delivered: "Delivered",
 };
 
-export function formatDate(date: string | null) {
-  if (!date) return "No due date";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(date));
+/**
+ * Every value a design version's status can take, in the same vocabulary as `statusLabels`.
+ *
+ * A version carries one of two status sets depending on the channel it is read through, and both
+ * reach the same components: `design_versions.status` (`draft`, `submitted`, `reviewed`) on the
+ * internal channel, and `publication_reviews.status` (`pending`, `approved`, `changes_requested`)
+ * on the client channel. Rendering the raw token instead left one state reading three ways on three
+ * screens, and left `submitted`, `reviewed` and `pending` with no label at all.
+ */
+export type VersionStatus =
+  "draft" | "submitted" | "reviewed" | "pending" | "approved" | "changes_requested";
+
+export const versionStatusLabels: Record<VersionStatus, string> = {
+  draft: "In progress",
+  submitted: "Studio review",
+  reviewed: "Shared with client",
+  pending: "In review",
+  approved: "Approved",
+  changes_requested: "Changes requested",
+};
+
+/** A status the database may hold but this build does not name yet still reads as a word. */
+export function versionStatusLabel(status: string): string {
+  return versionStatusLabels[status as VersionStatus] ?? status.replaceAll("_", " ");
+}
+
+/**
+ * A calendar date (`2026-09-21`) names a day, not an instant: a due date, a start date or a
+ * campaign boundary is the same day in every timezone, so it is read in UTC — the zone the database
+ * stores it against. Shifting one into the studio's zone would move a due date to the day before.
+ * Everything with a time in it is an instant and is read in the studio's timezone.
+ */
+function isCalendarDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export type DateFormatters = {
+  /** A record's date, in context: `Sep 21`. */
+  formatDate: (date: string | null, emptyLabel?: string) => string;
+  /** The same date where the year carries meaning, such as a ledger row: `Sep 21, 2026`. */
+  formatDateLong: (date: string | null, emptyLabel?: string) => string;
+  /** An instant, where the time of day is part of the record: `Sep 21, 2026, 11:00 PM`. */
+  formatDateTime: (date: string | null, emptyLabel?: string) => string;
+  /** A month, for the ledger's month filter: `September 2026`. */
+  formatMonth: (date: string | null, emptyLabel?: string) => string;
+  /** Today, named as a day rather than as a record: `Monday, September 21`. */
+  formatWeekdayDate: (date: string | null, emptyLabel?: string) => string;
+};
+
+/**
+ * The product's date rendering, bound to one timezone.
+ *
+ * Exported for tests and for any caller that already knows the zone; components take the studio's
+ * zone from `useDateFormat()` instead of constructing their own `Intl.DateTimeFormat`, which is
+ * what left the studio timezone setting honoured on a single screen.
+ */
+export function createDateFormatters(timeZone: string): DateFormatters {
+  const format = (options: Intl.DateTimeFormatOptions) => {
+    const instant = new Intl.DateTimeFormat("en-US", { ...options, timeZone });
+    const calendar = new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" });
+    return (date: string | null, emptyLabel = "No date") => {
+      if (!date) return emptyLabel;
+      const value = new Date(date);
+      if (Number.isNaN(value.getTime())) return emptyLabel;
+      return (isCalendarDate(date) ? calendar : instant).format(value);
+    };
+  };
+  return {
+    formatDate: format({ month: "short", day: "numeric" }),
+    formatDateLong: format({ month: "short", day: "numeric", year: "numeric" }),
+    formatDateTime: format({ dateStyle: "medium", timeStyle: "short" }),
+    formatMonth: format({ month: "long", year: "numeric" }),
+    formatWeekdayDate: format({ weekday: "long", month: "long", day: "numeric" }),
+  };
+}
+
+const utcFormatters = createDateFormatters("UTC");
+
+/**
+ * The date formatters every user-facing render uses, in the timezone the studio chose in Settings.
+ *
+ * `useWorkspaceSettings` is one shared query, so every component here reads the same value and they
+ * all re-render together when it resolves or changes. Until it resolves — and for a viewer whose
+ * session cannot read it — the formatters fall back to UTC, which is what every surface but the
+ * notifications page used before.
+ */
+export function useDateFormat(): DateFormatters {
+  const settings = useWorkspaceSettings();
+  const timeZone = settings.data?.timezone || "UTC";
+  return useMemo(
+    () => (timeZone === "UTC" ? utcFormatters : createDateFormatters(timeZone)),
+    [timeZone],
+  );
 }

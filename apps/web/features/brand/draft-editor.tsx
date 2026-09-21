@@ -238,7 +238,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
             className="brand-preview-canvas"
             tabIndex={0}
             role="region"
-            aria-label="Scrollable template artwork"
+            aria-label="Scrollable template preview"
           >
             <div className="brand-preview-sheet" style={{ width: `${zoom}%` }}>
               <TemplatePreview content={content} width={template.width} height={template.height} />

@@ -47,7 +47,6 @@
 .review-date {
   font-size: 11px;
   color: #6d6d65;
-  text-transform: capitalize;
 }
 @media (max-width: 720px) {
   .review-card {

@@ -7,12 +7,13 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useBriefings, useCampaigns } from "@/features/briefings/briefing-data";
-import { useClients, useProjects } from "@/features/workspace/workspace-data";
+import { useClients, useDateFormat, useProjects } from "@/features/workspace/workspace-data";
 import { CreditActionDialog, CreditRequestReview } from "./credit-actions";
 import { useCreditAccount, useCreditLedger, useCreditRequests } from "./credit-data";
 import {
   creditCsv,
   creditKindLabels,
+  creditRequestStatusLabels,
   deliverableBreakdown,
   filterCreditEntries,
   type CreditEntry,
@@ -26,6 +27,7 @@ import { PageStatus } from "@/features/shared/page-status";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
+  const { formatDateLong, formatMonth } = useDateFormat();
   const clients = useClients();
   const projects = useProjects(clientId);
   const briefings = useBriefings(clientId);
@@ -238,11 +240,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
               <option value="">All time</option>
               {months.map((month) => (
                 <option key={month} value={month}>
-                  {new Intl.DateTimeFormat("en-US", {
-                    month: "long",
-                    year: "numeric",
-                    timeZone: "UTC",
-                  }).format(new Date(`${month}-01`))}
+                  {formatMonth(`${month}-01`)}
                 </option>
               ))}
             </select>
@@ -319,14 +317,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
                         : creditKindLabels[entry.kind]}
                     </span>
                   </td>
-                  <td>
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      timeZone: "UTC",
-                    }).format(new Date(entry.created_at))}
-                  </td>
+                  <td>{formatDateLong(entry.created_at)}</td>
                   <td className="credit-number">
                     {entry.amount > 0 ? "+" : ""}
                     {entry.amount}
@@ -367,11 +358,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
                 {item.response_note && <p>{item.response_note}</p>}
               </div>
               <span className={`status-badge ${item.status}`}>
-                {item.status === "fulfilled"
-                  ? "Allocated"
-                  : item.status === "rejected"
-                    ? "Declined"
-                    : "Pending"}
+                {creditRequestStatusLabels[item.status]}
               </span>
               {profile?.role === "agency" && item.status === "pending" && (
                 <button className="button" onClick={() => setRequest(item)}>

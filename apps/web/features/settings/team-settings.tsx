@@ -78,7 +78,7 @@ export function TeamSettings() {
                     {person.display_name}
                     {person.id === session?.user.id ? " (you)" : ""}
                   </strong>
-                  <p>{person.role === "agency" ? "Studio team" : "Creative partner"}</p>
+                  <p>{person.role === "agency" ? "Studio team" : "Designer"}</p>
                 </div>
                 <span className="status-badge">
                   {person.role === "agency" ? "Agency" : "Designer"}
@@ -115,10 +115,10 @@ export function TeamSettings() {
                     <strong>{item.email}</strong>
                     <p>
                       {item.role === "client"
-                        ? `${clients.data?.find((client) => client.id === item.client_id)?.name ?? "Client workspace"} · Client`
+                        ? `${clients.data?.find((client) => client.id === item.client_id)?.name ?? "Client"} · Client`
                         : item.role === "agency"
                           ? "Studio team"
-                          : "Creative partner"}
+                          : "Designer"}
                     </p>
                   </div>
                   <span className="status-badge">
@@ -241,7 +241,7 @@ export function InvitePerson({
         )}
         {role === "client" && !clientId && (
           <label>
-            Client workspace
+            Client
             <select
               required
               value={selectedClient}
@@ -261,7 +261,7 @@ export function InvitePerson({
             ? "Agency members can manage studio work, clients and credits."
             : role === "designer"
               ? "Designers can access only the projects assigned to them."
-              : "Clients can access only their own workspace and shared work."}
+              : "Clients can access only their own projects and shared work."}
         </p>
         {invite.error && <FormError>{invite.error.message}</FormError>}
         <div className="settings-dialog-actions">

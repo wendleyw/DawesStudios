@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { formatDate, statusLabels } from "@/features/workspace/workspace-data";
+import { statusLabels, useDateFormat } from "@/features/workspace/workspace-data";
 import { buildCanvas, canvasBounds } from "./canvas-layout";
 import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
@@ -21,6 +21,7 @@ import { PageStatus } from "@/features/shared/page-status";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
+  const { formatDate } = useDateFormat();
   useProjectEvents(projectId);
   const parameters = useSearchParams();
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
@@ -172,7 +173,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
           <h1>{project.title}</h1>
           <div>
             <span className={`status-badge ${project.status}`}>{statusLabels[project.status]}</span>
-            <span>{formatDate(project.due_date)}</span>
+            <span>{formatDate(project.due_date, "No due date")}</span>
           </div>
         </div>
         {!selected && (

@@ -72,6 +72,10 @@ export function timelineScaleSpan(scale: TimelineScale): number {
   return timelineScaleSpec(scale).span;
 }
 
+// Every date this module prints is a calendar day — a grid column, or a start/due date sliced to
+// its `YYYY-MM-DD` — and a calendar day is the same day in every timezone. They are read in UTC for
+// the same reason `formatDate` reads a calendar date in UTC: the studio's timezone applies to
+// instants, and applying it here would shift a column heading, and the bar under it, by a day.
 const weekdayFormat = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
 const monthFormat = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
 const monthDay = new Intl.DateTimeFormat("en-US", {

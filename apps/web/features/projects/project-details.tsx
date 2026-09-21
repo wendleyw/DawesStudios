@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { CopyButton } from "@/features/shared/copy-button";
 import { Modal } from "@/features/shared/modal";
-import { formatDate } from "@/features/workspace/workspace-data";
+import { useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import {
   assignDesigner,
   revokeDesignAssignment,
@@ -29,6 +29,7 @@ export function ProjectDetails({
   versions: CanvasVersion[];
 }) {
   const { database, profile } = useAuth();
+  const { formatDate } = useDateFormat();
   const invalidate = useInvalidateProject();
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
@@ -103,15 +104,15 @@ export function ProjectDetails({
         <dt>Service</dt>
         <dd>{project.service_type.replaceAll("-", " ")}</dd>
         <dt>Starts</dt>
-        <dd>{project.start_date ? formatDate(project.start_date) : "To be planned"}</dd>
+        <dd>{formatDate(project.start_date, "To be planned")}</dd>
         <dt>Due date</dt>
-        <dd>{formatDate(project.due_date)}</dd>
+        <dd>{formatDate(project.due_date, "No due date")}</dd>
         <dt>Deliverables</dt>
         <dd>{deliverables.length}</dd>
       </dl>
       {profile?.role === "agency" && (
         <div className="assignment-section">
-          <h3>Creative partner</h3>
+          <h3>Designer</h3>
           {assignments.error ? (
             <p role="alert">Assignments could not be loaded.</p>
           ) : (
@@ -157,7 +158,7 @@ export function ProjectDetails({
         className="button quiet"
         href={`/clients/${project.client_id}/assets?project=${project.id}`}
       >
-        Files & delivery
+        Files
         <ArrowUpRight size={14} />
       </Link>
       {profile?.role !== "designer" && <CopyButton text={shareLink} label="Copy project link" />}
@@ -173,7 +174,7 @@ export function ProjectDetails({
                   {version.number}
                 </strong>
                 <span>
-                  {formatDate(version.date)} · {version.status.replaceAll("_", " ")}
+                  {formatDate(version.date)} · {versionStatusLabel(version.status)}
                 </span>
                 {version.note && <p>{version.note}</p>}
               </li>
@@ -243,7 +244,7 @@ export function ProjectDetails({
       </Modal>
       <Modal
         open={assigning}
-        title="Assign a creative partner"
+        title="Assign a designer"
         description="This person will have access to the working files and studio conversation."
         onClose={() => {
           if (!assign.isPending) setAssigning(false);

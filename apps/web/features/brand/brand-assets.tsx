@@ -38,7 +38,7 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
               : asset.mime_type === "application/pdf"
                 ? "PDF document"
                 : asset.mime_type === "image/svg+xml"
-                  ? "SVG artwork"
+                  ? "SVG asset"
                   : "Brand resource"}
           </span>
         </>

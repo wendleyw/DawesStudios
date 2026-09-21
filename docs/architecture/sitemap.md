@@ -19,17 +19,17 @@ The following paths are proposed canonical routes and may be consolidated during
 | `/auth/invite?token=:token` | Invitee | Invitee | Invitee | Validate a time-limited, single-use invitation before joining. |
 | `/home` | Studio overview | Redirect to own client board | My work | [Home and global actions](../ref/01-agencia/01-home-e-globais/README.md). |
 | `/clients/:clientId/board` | Workspace clients | Own client | Assigned work only | [Board](../ref/01-agencia/02-board/README.md); Canvas/List and Timeline/Kanban planning. |
-| `/clients/:clientId/briefings` | Read/create | Read/create | Assigned accepted only | [Briefing list](../ref/01-agencia/04-briefings/01-lista/README.md); All, Draft, Awaiting review, In progress. |
+| `/clients/:clientId/briefings` | Read/create | Read/create | Assigned accepted only | [Briefing list](../ref/01-agencia/04-briefings/01-lista/README.md); All, Draft, With the studio (awaiting review and budget confirmed), In progress. |
 | `/clients/:clientId/briefings/new` | Yes | Yes | No | Start a new Type → Details → Review flow with no inherited campaign. |
 | `/clients/:clientId/briefings/:briefingId` | Read/review/accept | Read own client scope | Assigned accepted direction; no budget | Draft, submitted, quoted, insufficient balance, accepted result. |
 | `/clients/:clientId/briefings/:briefingId/edit` | Authorized drafts | Own authorized drafts | No | Resume a persisted draft; validate every step. |
 | `/projects/:projectId` | Full project | Sanitized project and publications | Assigned production | [Project canvas and inspector](../ref/01-agencia/03-projeto/README.md). |
-| `/clients/:clientId/assets` | All project assets | Published assets | Assigned project assets | [Project asset library](../ref/01-agencia/05-assets/README.md); All/Approved, upload, detail/download. |
+| `/clients/:clientId/assets` | All project files | Published files | Assigned project files | Files, as the navigation, heading and error state all name it ([reference](../ref/01-agencia/05-assets/README.md)); All/Approved, upload, detail/download. |
 | `/clients/:clientId/reviews` | Agency and client review management | Own published reviews | No separate page | [Reviews](../ref/01-agencia/06-reviews/README.md); Waiting for review/Approved. Designers submit inside the assigned project. |
 | `/clients/:clientId/brand/:section` | Read/edit | Read | Read when assigned to client work | Ten Brand Hub sections listed below. |
 | `/clients/:clientId/brand/drafts/:draftId` | Own draft | Own draft | Own draft | Personal template editor; persistent and isolated from projects, billing, and other owners. |
 | `/clients/:clientId/credits` | Read, quote, authorized adjustments | Read, request additional credits | No | [Credits](../ref/01-agencia/08-creditos/README.md); Balance & activity / Client report. |
-| `/settings/workspace` | Agency | No | No | Studio name and timezone. |
+| `/settings/workspace` | Agency | No | No | Settings → Studio: studio name, and the timezone every instant in the product is rendered in. |
 | `/settings/team` | Agency | No | No | Team memberships, invitations, assignment availability. |
 | `/settings/clients` | Agency | No | No | Client list and new client creation. |
 | `/settings/presets` | Agency | No | No | Versioned service estimates and timing; canonical formats/questions remain unchanged. |
@@ -105,7 +105,7 @@ Credits contains plan information, balance/consumption, activity search, All/Pro
 
 Additional-credit packages retain the reference choices of 25, 50, and 100 credits. A production client action creates a request or invokes an explicitly configured payment flow; it does not grant itself credits. Authorized agency allocation records an audited ledger entry. Isolated test mode can exercise simulated fulfillment without claiming a real payment. A future payment integration must document and test its own settlement contract.
 
-Settings preserves Workspace, Team, Clients, and Presets. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation.
+Settings preserves Studio, Team, Clients, and Presets. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation.
 
 ## Empty, error, and responsive states
 

@@ -30,6 +30,24 @@ function per rule 3; `new Date().toISOString()` for `read_at` moved with the upd
 part of, not left behind as "trimming" under rule 4 — it is the write's data, not form input the
 component validates.
 
+### Labels and dates
+
+`workspace-data.ts` also holds the vocabulary and the date rendering the whole product shares,
+because no single feature owns them and two copies is how one record starts reading two ways:
+
+- `statusLabels` (project status) and `versionStatusLabels` / `versionStatusLabel()` (design-version
+  status). A version carries `design_versions.status` on the internal channel and
+  `publication_reviews.status` on the client channel, so the map covers both sets — `draft`,
+  `submitted`, `reviewed`, `pending`, `approved`, `changes_requested` — and no surface renders the
+  raw token. `workspace-format.test.ts` pins the map against the two database check constraints.
+- `useDateFormat()`, the only date formatter in the product. It takes the studio timezone from
+  `useWorkspaceSettings()` (one shared query, so every consumer re-renders together when it
+  resolves) and returns `formatDate`, `formatDateLong`, `formatDateTime`, `formatMonth` and
+  `formatWeekdayDate`. `createDateFormatters(timeZone)` is the same set, exported for tests.
+  Instants are read in the studio's zone; a calendar date (`2026-09-21`) is read in UTC, because it
+  names a day rather than an instant. Each formatter takes the empty label to print for a null
+  value, so "No due date" belongs to the due-date column rather than to the formatter.
+
 ### Why per-domain invalidation instead of one shared `workspaceQueryKeys`
 
 Following `settings-data.ts`'s reasoning: this module's domains do not want each other's cache

@@ -169,6 +169,50 @@ Follow feature colocation: briefings own their wizard and service-driven fields;
 
 The same project entity drives Home, Board, Reviews, Credits links, and notifications. Use shared display rules for project names, statuses, dates, quantities, and credit amounts. Role-specific visibility does not justify duplicated mutable state or parallel business logic. Derived counts must have one authoritative definition.
 
+### Interface vocabulary
+
+One concept, one word. The interface uses these nouns and no synonym of them:
+
+| Concept | Word | Not |
+|---|---|---|
+| A client organisation | **Client** | workspace, client workspace |
+| The studio's own account and settings | **Studio** | workspace |
+| The required output a briefing commissions | **Deliverable** | — |
+| The image produced inside a version | **Design** | artwork |
+| A downloadable file on `/clients/:id/assets` | **File**, and **Working file** for a source upload | asset |
+| A file in the Brand Hub library | **Asset** | file, resource |
+| A brief document | **Briefing** | brief |
+| A person a project is assigned to | **Designer** | creative partner |
+| A record on `/notifications` | **Notification** | update |
+| The billing unit | **credits** | cr |
+
+Deliverable, asset, working file and design are four different things and are never merged.
+`features/workspace/` keeps its directory name because it is the application shell, not a client
+record; "workspace" survives in the shell's own chrome (the navigation landmark, the shell's loading
+and connection states) and nowhere else.
+
+A status is never rendered from its database token. Every enum a user reads has a label map beside
+its type — `statusLabels` and `versionStatusLabels` in
+[`workspace-data.ts`](../../apps/web/features/workspace/workspace-data.ts),
+`briefingStatusLabels` in `briefings/briefing-model.ts`, `creditKindLabels` and
+`creditRequestStatusLabels` in `credits/credit-model.ts` — and no stylesheet re-cases a label with
+`text-transform`.
+
+### Dates and the studio timezone
+
+Every user-facing date is rendered by `useDateFormat()`
+([`workspace-data.ts`](../../apps/web/features/workspace/workspace-data.ts)); no component
+constructs its own `Intl.DateTimeFormat`. It exposes `formatDate` (`Sep 21`), `formatDateLong`
+(`Sep 21, 2026`), `formatDateTime` (`Sep 21, 2026, 11:00 PM`), `formatMonth` (`September 2026`) and
+`formatWeekdayDate` (`Monday, September 21`), each taking the label to print when the value is
+absent, so "No due date" belongs to the due-date column rather than to the formatter.
+
+The timezone chosen in Settings → Studio is the zone every **instant** is read in — comments,
+notifications, ledger rows, uploaded files, version history and "today". A **calendar date**
+(`2026-09-21`: a due date, a start date, a campaign boundary, a timeline column) names a day rather
+than an instant and is read in UTC everywhere, including `board/timeline-model.ts`, because shifting
+it into a western zone would move a due date to the day before.
+
 ## Styling boundary
 
 Three systems share the frontend, and each has exactly one job. This is the answer to "which

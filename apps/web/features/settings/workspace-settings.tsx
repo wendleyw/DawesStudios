@@ -10,11 +10,11 @@ import { FormError } from "@/features/shared/form-error";
 
 export function WorkspaceSettings() {
   const settings = useWorkspaceSettings();
-  if (settings.isPending) return <p role="status">Loading workspace settings…</p>;
+  if (settings.isPending) return <p role="status">Loading studio settings…</p>;
   if (settings.error || !settings.data)
     return (
       <div>
-        <FormError>Workspace settings could not be loaded.</FormError>
+        <FormError>Studio settings could not be loaded.</FormError>
         <button className="button" onClick={() => void settings.refetch()}>
           Try again
         </button>
@@ -54,7 +54,7 @@ function WorkspaceForm({
     <section className="settings-section">
       <div>
         <h2>Studio details</h2>
-        <p>The shared identity and timezone for your workspace.</p>
+        <p>The shared identity and timezone for the studio.</p>
       </div>
       <form
         className="settings-form"
@@ -83,7 +83,7 @@ function WorkspaceForm({
           </select>
         </label>
         {save.error && <FormError>{save.error.message}</FormError>}
-        {save.isSuccess && <SettingsSuccess>Workspace updated.</SettingsSuccess>}
+        {save.isSuccess && <SettingsSuccess>Studio updated.</SettingsSuccess>}
         <button className="button primary" disabled={save.isPending}>
           {save.isPending ? "Saving…" : "Save changes"}
         </button>

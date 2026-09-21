@@ -209,7 +209,7 @@ export function ProjectActionDialog({
                 />
               </label>
               <label>
-                Artwork file
+                Design file
                 <input
                   name="artwork"
                   type="file"

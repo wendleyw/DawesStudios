@@ -13,10 +13,11 @@ import {
 import Link from "next/link";
 import { memo } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
-import { formatDate, statusLabels, type Project } from "@/features/workspace/workspace-data";
+import { statusLabels, useDateFormat, type Project } from "@/features/workspace/workspace-data";
 import { BoardKanban } from "./board-kanban";
 import { ProjectTimeline } from "./project-timeline";
 import { campaignDateRange, type BoardCampaign } from "./board-layout";
+import { openLabel } from "./project-open";
 import { distinctTitle } from "./timeline-model";
 import { timelineScales, type TimelineScale } from "./timeline-model";
 import { type PlanningMode } from "./planning-view";
@@ -145,6 +146,7 @@ const NoticeFrame = memo(function NoticeFrame({ data }: NodeProps<NoticeNode>) {
 });
 
 const CampaignFrame = memo(function CampaignFrame({ data }: NodeProps<CampaignNode>) {
+  const { formatDate } = useDateFormat();
   return (
     <section className="board-campaign">
       <header className="board-campaign-head">
@@ -158,6 +160,7 @@ const CampaignFrame = memo(function CampaignFrame({ data }: NodeProps<CampaignNo
 });
 
 const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNode>) {
+  const { formatDate } = useDateFormat();
   return (
     <article className="board-card">
       {data.canMove && (
@@ -166,10 +169,12 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
         </div>
       )}
       {/*
-       * One click selects the card, two open it in the Planning frame; neither leaves the board.
-       * Dragging is confined to the grip above, so a card that is moved is never also read as
-       * opened. The explicit control below is the keyboard and pointer equivalent of the second
-       * click, which a double click alone would leave undiscoverable.
+       * One click selects the card, two open the project's own canvas — the same rule
+       * `project-open.ts` states for the Kanban card and the timeline bar. Dragging is confined to
+       * the grip above, so a card that is moved is never also read as opened. The explicit control
+       * below is the keyboard and pointer equivalent of the second click, which a double click
+       * alone would leave undiscoverable, and it carries the one accessible name `openLabel` gives
+       * every surface.
        */}
       <div className="nodrag board-card-body" onDoubleClick={() => data.onOpen(data.project.id)}>
         <ProjectThumbnail src={data.artwork.url ?? undefined} />
@@ -194,13 +199,13 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
           </span>
           <span>
             <CalendarDays size={13} />
-            {formatDate(data.project.due_date)}
+            {formatDate(data.project.due_date, "No due date")}
           </span>
         </div>
         <button
           type="button"
           className="nodrag board-card-open"
-          aria-label={`Open ${data.project.title} in planning`}
+          aria-label={openLabel(data.project.title)}
           onClick={() => data.onOpen(data.project.id)}
         >
           <ArrowUpRight size={15} />

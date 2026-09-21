@@ -173,7 +173,7 @@ export function DesignViewer({
           )}
           <button
             className={`icon-button ${!pinMode ? "selected" : ""}`}
-            aria-label="Navigate artwork"
+            aria-label="Navigate designs"
             aria-pressed={!pinMode}
             onClick={() => setPinMode(false)}
           >

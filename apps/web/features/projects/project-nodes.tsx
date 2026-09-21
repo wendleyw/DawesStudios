@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, ChevronRight, Plus, Send } from "lucide-react";
 import { memo, type CSSProperties } from "react";
 import { Artwork } from "./artwork";
 import type { ProjectAction } from "./project-action-dialog";
+import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import type { CanvasDesign, CanvasVersion, ProjectChannel } from "./project-data";
 
 /** The two node kinds the project canvas draws: a deliverable's heading and one of its versions. */
@@ -40,7 +41,7 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
       <div className="version-label">
         <header>
           <strong>V{data.version.number}</strong>
-          <span className="version-state">{data.version.status.replaceAll("_", " ")}</span>
+          <span className="version-state">{versionStatusLabel(data.version.status)}</span>
           {data.canProduce && (
             <button
               className="icon-button nodrag"

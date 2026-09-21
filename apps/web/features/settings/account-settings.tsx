@@ -65,7 +65,7 @@ export function AccountSettings() {
             Email address
             <input value={session?.user.email ?? ""} readOnly type="email" />
             <span className="settings-note">
-              Your sign-in email is managed with your workspace access.
+              Your sign-in email is managed with your account access.
             </span>
           </label>
           {saveProfile.error && <FormError>{saveProfile.error.message}</FormError>}

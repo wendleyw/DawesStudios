@@ -184,6 +184,6 @@ The [source catalog](../ref/00-guia/CATALOGO-DE-SERVICOS.json) is the authoritat
 
 ## Implemented administrative contract
 
-The installation persists one workspace name and IANA timezone. Service preset revisions override current estimate ranges and suggested delivery days for new briefings while preserving the canonical twenty-service/twenty-five-format definitions. Accepted briefing/project budgets remain snapshots. The Other service retains an agency-defined custom estimate.
+The installation persists one studio name and IANA timezone; that timezone is the zone every user-facing instant is rendered in, while calendar dates such as a due date stay zone-independent. Service preset revisions override current estimate ranges and suggested delivery days for new briefings while preserving the canonical twenty-service/twenty-five-format definitions. Accepted briefing/project budgets remain snapshots. The Other service retains an agency-defined custom estimate.
 
 An invitation stores an email-bound role/client scope, seven-day expiry, and a private token digest. Email confirmation establishes the Auth identity; accepting the opaque invitation token performs the authorized role/membership change. Sending an email alone does not grant workspace membership. Existing access cannot be silently replaced. The application supports real recovery-email verification and account password updates. Local SMTP capture is an operational test service, not a production delivery claim.

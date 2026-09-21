@@ -237,7 +237,7 @@ export function ProjectThumbnail({ src }: { src?: string }) {
       ) : (
         <>
           <ImageIcon size={15} />
-          <span>No artwork yet</span>
+          <span>No design yet</span>
         </>
       )}
     </div>

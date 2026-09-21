@@ -24,7 +24,7 @@ export function ClientSettings() {
     <section className="settings-block">
       <header>
         <div>
-          <h2>Client workspaces</h2>
+          <h2>Clients</h2>
           <p>One organized space for each client and their brand.</p>
         </div>
         <button className="button primary" onClick={() => setEditing("new")}>
@@ -48,7 +48,7 @@ export function ClientSettings() {
             <div className="settings-list-row settings-client-row" key={client.id}>
               <div>
                 <strong>{client.name}</strong>
-                <p>{client.industry || "Client workspace"}</p>
+                <p>{client.industry || "Client"}</p>
               </div>
               <button className="button quiet" onClick={() => setCampaignClient(client)}>
                 Campaigns
@@ -159,7 +159,7 @@ function ClientEditor({
       title={client ? "Client details" : "New client"}
       description={
         client
-          ? "Keep the workspace context up to date."
+          ? "Keep this client’s details up to date."
           : "Start a clear space for the next collaboration."
       }
     >

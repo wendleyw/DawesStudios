@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
 import { useMemo } from "react";
-import { formatDate, statusLabels, type Project } from "@/features/workspace/workspace-data";
+import { statusLabels, useDateFormat, type Project } from "@/features/workspace/workspace-data";
 import { distinctTitle, sharedTitlePrefix } from "./timeline-model";
 import { boardStatuses } from "./planning-view";
 
@@ -28,6 +28,7 @@ export function BoardKanban({
   onSelect: (projectId: string) => void;
   onOpen: (projectId: string) => void;
 }) {
+  const { formatDate } = useDateFormat();
   // Every card here belongs to the workspace the viewer is already in, so the part of the title
   // that all of them repeat is dropped from the card and kept in its accessible name.
   const prefix = useMemo(
@@ -68,11 +69,11 @@ export function BoardKanban({
                   >
                     <span className="eyebrow">{campaignName(project.campaign_id)}</span>
                     <h4 title={project.title}>{distinctTitle(project.title, prefix)}</h4>
-                    <p>{formatDate(project.due_date)}</p>
+                    <p>{formatDate(project.due_date, "No due date")}</p>
                     <Link
                       className="board-card-open"
                       href={projectHref(project.id)}
-                      aria-label={`${openLabel(project.title)}, ${campaignName(project.campaign_id)}, ${formatDate(project.due_date)}`}
+                      aria-label={`${openLabel(project.title)}, ${campaignName(project.campaign_id)}, ${formatDate(project.due_date, "No due date")}`}
                     >
                       <ArrowUpRight size={15} />
                     </Link>

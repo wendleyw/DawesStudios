@@ -9,8 +9,8 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { downloadPrivateFile } from "./file-download";
 import { Modal } from "@/features/shared/modal";
 import {
-  formatDate,
   useClients,
+  useDateFormat,
   useInvalidateWorkspace,
 } from "@/features/workspace/workspace-data";
 import {
@@ -28,6 +28,7 @@ import { PageStatus } from "@/features/shared/page-status";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
+  const { formatDate } = useDateFormat();
   const invalidateAssets = useInvalidateAssets();
   const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
@@ -65,7 +66,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
     return (
       <div className="page-content">
         <h1>Files unavailable.</h1>
-        <p>This workspace is unavailable or you do not have access.</p>
+        <p>This client is unavailable or you do not have access.</p>
         <button className="button" onClick={() => void data.refetch()}>
           Try again
         </button>
@@ -91,7 +92,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       <header className="page-heading">
         <div>
           <span className="eyebrow">THE FILES THAT MATTER</span>
-          <h1>Project assets.</h1>
+          <h1>Files.</h1>
           <p>
             {profile?.role === "client"
               ? "Shared designs and final files, together."

@@ -6,9 +6,9 @@ import { useEffect } from "react";
 import { ArrowRight, ArrowUpRight, FolderKanban, Plus } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
-  formatDate,
   statusLabels,
   useClients,
+  useDateFormat,
   useProjects,
   useWorkspaceCampaigns,
 } from "./workspace-data";
@@ -17,6 +17,7 @@ import { PageStatus } from "@/features/shared/page-status";
 export function HomePage() {
   const { profile } = useAuth();
   const clients = useClients();
+  const { formatDate, formatWeekdayDate } = useDateFormat();
   const router = useRouter();
   useEffect(() => {
     if (profile?.role === "client" && clients.data?.length === 1)
@@ -38,16 +39,9 @@ export function HomePage() {
     { label: statusLabels.client_review, value: countOf("client_review") },
     { label: statusLabels.changes_requested, value: countOf("changes_requested") },
     { label: statusLabels.approved, value: countOf("approved") },
-    {
-      label: profile?.role === "agency" ? "Client workspaces" : "Your workspaces",
-      value: clients.data?.length ?? 0,
-    },
+    { label: "Clients", value: clients.data?.length ?? 0 },
   ];
-  const today = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date());
+  const today = formatWeekdayDate(new Date().toISOString());
   if (
     clients.isPending ||
     projects.isPending ||
@@ -79,7 +73,7 @@ export function HomePage() {
               ? "Overview"
               : profile?.role === "designer"
                 ? "My work"
-                : "Your workspaces"}
+                : "Home"}
           </h1>
           <p>
             {profile?.role === "agency"
@@ -115,7 +109,7 @@ export function HomePage() {
           <div className="project-table">
             <div className="table-head">
               <span>PROJECT</span>
-              <span>WORKSPACE</span>
+              <span>CLIENT</span>
               <span>STATUS</span>
               <span>DUE</span>
               <span />
@@ -141,7 +135,7 @@ export function HomePage() {
                     {statusLabels[project.status]}
                   </span>
                 </span>
-                <span>{formatDate(project.due_date)}</span>
+                <span>{formatDate(project.due_date, "No due date")}</span>
                 <ArrowUpRight size={16} />
               </Link>
             ))}
@@ -157,7 +151,7 @@ export function HomePage() {
       <section>
         <div className="section-heading">
           <div>
-            <h2>Client workspaces</h2>
+            <h2>Clients</h2>
             <p>Projects, files, and brand direction for each client.</p>
           </div>
         </div>
@@ -166,6 +160,12 @@ export function HomePage() {
             const clientProjects = activeProjects.filter(
               (project) => project.client_id === client.id,
             );
+            // The board counts every project it draws, delivered ones included. Naming the
+            // delivered figure here is what keeps "5 active" and "7 projects" one click apart from
+            // reading as two answers to the same question.
+            const delivered =
+              (projects.data?.filter((project) => project.client_id === client.id).length ?? 0) -
+              clientProjects.length;
             return (
               <Link key={client.id} className="workspace-card" href={`/clients/${client.id}/board`}>
                 <div className="workspace-card-top">
@@ -179,6 +179,7 @@ export function HomePage() {
                 <div className="workspace-card-footer">
                   <span>
                     {clientProjects.length} active project{clientProjects.length === 1 ? "" : "s"}
+                    {delivered > 0 ? ` · ${delivered} delivered` : ""}
                   </span>
                   <ArrowRight size={15} />
                 </div>
