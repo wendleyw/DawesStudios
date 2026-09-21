@@ -56,16 +56,16 @@ entry board does not own.
 `settings-data.ts` owns `clientQueryKeys`/`useInvalidateClients()` for the `clients` key even though
 the read hook (`useClients()`) lives here: ownership of a key's invalidation follows whichever module
 is the key's canonical source of truth, not which module happens to read or write it in a given call
-site. Wiring `board-page.tsx`'s `moveProject` mutation to call `useInvalidateWorkspace()` instead of
-its inline `queryClient.invalidateQueries({ queryKey: ["projects"] })` is **not done here** —
-`board-data.ts` and `board-page.tsx` are outside this task's write scope — and is left for whoever
-owns that call site next.
+site. `board-page.tsx`'s `moveProject` mutation now calls `useInvalidateWorkspace()` for that reason
+instead of its former inline `queryClient.invalidateQueries({ queryKey: ["projects"] })`.
 
-**Naming note for the next reader:** `features/settings/settings-data.ts` also exports a function
-named `useInvalidateWorkspace()`, for its own "Workspace" domain (the singleton studio name/timezone
-settings screen). The two are unrelated — different modules, different keys (`workspace-settings`
-there, `projects` here) — and neither imports the other, so there is no collision at the type or
-build level. It is still worth a reader's attention before adding a third.
+**Naming note for the next reader:** `features/settings/settings-data.ts` used to also export a
+function named `useInvalidateWorkspace()`, for its own "Workspace" domain (the singleton studio
+name/timezone settings screen). The two never collided at the type or build level — different
+modules, different keys (`workspace-settings` there, `projects` here) — but two identically named
+hooks doing different things was a trap for the next reader, so the settings one was renamed to
+`useInvalidateWorkspaceSettings()` (and its key constant to `workspaceSettingsQueryKeys`). Only this
+module's `useInvalidateWorkspace()` keeps the shorter name.
 
 ## CSS boundary
 
@@ -75,11 +75,15 @@ namespace change was made here. Auditing every class name this feature's markup 
 
 - **`.sidebar-collapse`** — its only consumer in the whole tree is `app-shell.tsx`
   (`className="icon-button sidebar-collapse"`, and `workspace.css`'s `.sidebar-collapsed` state rules
-  reference it). It stays in `globals.css` for a documented reason, not an oversight: commit
-  `af9acf1` ("refactor(styles): move feature rules out of the global stylesheet") records that
-  `.sidebar-collapse` stays there because the shared 640px `.icon-button` breakpoint rule
-  (`globals.css:952`) must keep winning over it in source order. This is out of this task's write
-  scope (`globals.css` is not touched by this feature), so it is reported rather than moved.
+  reference it). It stays in `globals.css`, but not for the reason originally recorded here: commit
+  `af9acf1` ("refactor(styles): move feature rules out of the global stylesheet") had claimed the
+  shared 640px `.icon-button` breakpoint rule must keep winning over `.sidebar-collapse` in source
+  order. The final structural-refactor fix wave found that claim does not hold — `.sidebar-collapse`
+  is already `display: none` under `@media (max-width: 900px)`, a superset of the 640px range, so the
+  element is already hidden before the 640px rule could apply, and corrected `docs/architecture/
+design-system.md` accordingly. The rule still stays in `globals.css`: it carries `icon-button` on
+  the same element, a grouped dual-class selector whose placement is intertwined with that shared
+  primitive.
 
 `.project-row` / `.project-table` (shared with `board`) and `.topbar` (shared with `brand`'s draft
 editor) are the deliberately global namespaces named in this task's brief; both were re-verified with
@@ -137,10 +141,10 @@ recorded in [`features/shared/README.md`](../shared/README.md).
 
 ## Dead code
 
-`.workspace-status` (`app/globals.css`) has no component consumer anywhere in this feature (or the
-rest of the tree) — but the CSS rule itself is out of this feature's write scope (`globals.css`).
-There is no corresponding dead component code in `apps/web/features/workspace/` to remove: no `.tsx`
-file in this feature ever rendered a `workspace-status` class.
+`.workspace-status` had no component consumer anywhere in this feature (or the rest of the tree) —
+no `.tsx` file ever rendered a `workspace-status` class. It was originally left in `app/globals.css`
+because that file was out of this feature's write scope at the time; the final structural-refactor
+fix wave re-verified the zero-consumer finding and deleted the rule from `globals.css`.
 
 ## Verification
 

@@ -228,13 +228,17 @@ export async function saveServicePreset(
 // this feature. This module owns only the write.
 // ---------------------------------------------------------------------------------------------
 
-export const workspaceQueryKeys = ["workspace-settings"] as const;
+// Named `useInvalidateWorkspaceSettings()` rather than `useInvalidateWorkspace()`: this module's
+// domain is the workspace-*settings* screen, while `features/workspace/workspace-data.ts` exports
+// its own, unrelated `useInvalidateWorkspace()` covering the `projects` key. The two used to share a
+// name despite dirtying disjoint caches; this one was renamed so the pairing is unambiguous.
+export const workspaceSettingsQueryKeys = ["workspace-settings"] as const;
 
-export function useInvalidateWorkspace() {
+export function useInvalidateWorkspaceSettings() {
   const queryClient = useQueryClient();
   return async () => {
     await Promise.all(
-      workspaceQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+      workspaceSettingsQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
     );
   };
 }

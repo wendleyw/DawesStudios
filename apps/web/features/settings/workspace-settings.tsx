@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
-import { saveWorkspaceSettings, useInvalidateWorkspace } from "./settings-data";
+import { saveWorkspaceSettings, useInvalidateWorkspaceSettings } from "./settings-data";
 import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 
@@ -36,7 +36,7 @@ function WorkspaceForm({
   initialTimezone: string;
 }) {
   const { database } = useAuth();
-  const invalidateWorkspace = useInvalidateWorkspace();
+  const invalidateWorkspaceSettings = useInvalidateWorkspaceSettings();
   const [name, setName] = useState(initialName);
   const [timezone, setTimezone] = useState(initialTimezone);
   const timezones = [
@@ -48,7 +48,7 @@ function WorkspaceForm({
         throw new Error("Use a studio name between 1 and 120 characters.");
       await saveWorkspaceSettings(database, { studioName: name.trim(), timezone });
     },
-    onSuccess: () => invalidateWorkspace(),
+    onSuccess: () => invalidateWorkspaceSettings(),
   });
   return (
     <section className="settings-section">
