@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { discardUnreferencedArtwork, uploadDesignAsset } from "./artwork-files";
@@ -65,10 +65,13 @@ export function ProjectActionDialog({
     // `mutation.isPending` covers the whole upload, not just the initial request: `mutationFn`
     // does not resolve until `uploadDesignAsset` does, so this guard — and the disabled Cancel
     // button and disabled Modal close control below — already refuse to close the dialog while a
-    // video is mid-transfer. That is deliberate: `uploadResumable` has no cancellation wired up
-    // (see `artwork-files.ts`), so "closing" during an upload could only ever hide the request,
-    // not stop it, while still leaving the raw object it's writing to `internal-assets` behind.
-    // Blocking the close keeps the visible state honest about what's actually still happening.
+    // video is mid-transfer. `uploadResumable` (in `artwork-files.ts`) does not currently expose
+    // the `tus.Upload` handle needed to abort a transfer server-side, so "closing" today could
+    // only ever hide the request, not stop it, while still leaving the raw object it's writing to
+    // `internal-assets` behind. Real cancellation (threading an abort handle out through
+    // `uploadDesignAsset` and a new branch here) is a deliberate follow-up, not something ruled
+    // out — until it lands, blocking the close keeps the visible state honest about what's
+    // actually still happening.
     if (mutation.isPending || closing) return;
     setClosing(true);
     setCloseError("");
@@ -82,6 +85,19 @@ export function ProjectActionDialog({
       setClosing(false);
     }
   }
+  // A video upload can run for many minutes, unattended, with nothing on screen to catch outside
+  // this tab. Mirrors the `beforeunload` guard in `features/brand/draft-editor.tsx`: it can only
+  // warn, not stop the navigation, but a silent tab close abandoning a half-finished upload with
+  // no warning at all is worse than a confirmation prompt.
+  useEffect(() => {
+    if (uploadProgress === null) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [uploadProgress]);
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       if (!action) return;
@@ -98,8 +114,20 @@ export function ProjectActionDialog({
         const file = form.get("artwork");
         let path = stagedArtwork;
         if (!path && file instanceof File && file.size) {
-          setUploadProgress(0);
-          path = await uploadDesignAsset(database, mediaUrl, projectId, file, setUploadProgress);
+          // Mirrors the branch `uploadDesignAsset` takes internally: an image goes down the
+          // canvas path (`uploadArtwork`), which never calls `onProgress`, so a bar or a
+          // percentage tied to that path would sit frozen at 0% for the ~second an image takes —
+          // reading as a stall for an operation that is in fact completing normally. Progress is
+          // only meaningful, and only shown, for the video path.
+          const isVideo = file.type.startsWith("video/");
+          if (isVideo) setUploadProgress(0);
+          path = await uploadDesignAsset(
+            database,
+            mediaUrl,
+            projectId,
+            file,
+            isVideo ? setUploadProgress : undefined,
+          );
         }
         if (path) setStagedArtwork(path);
         const designContent = {
@@ -193,6 +221,7 @@ export function ProjectActionDialog({
       open={!!action}
       onClose={() => void close()}
       title={action ? titles[action.kind] : "Project action"}
+      closeDisabled={mutation.isPending || closing}
     >
       {action && (
         <form

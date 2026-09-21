@@ -42,6 +42,14 @@ export function mediaErrorMessage(status: number, payload: unknown): string {
   return reported || "The file could not be prepared. Please try again.";
 }
 
+// 120 seconds fits every call through here except the video-sanitise one, which passes its own
+// `timeoutMs` (see `VIDEO_SANITIZE_TIMEOUT_MS` below). Every other route this client calls is a
+// small JSON round trip (or, for `prepareDelivery`, a single POST bounded by `BUCKET_MAX_BYTES`,
+// 50 MB) that the media service answers quickly; a longer default here would let one of those
+// hang instead of failing fast. Mirrors the same reasoning `apps/media/src/supabase.js` states for
+// its own 30-second default.
+const DEFAULT_TIMEOUT_MS = 120_000;
+
 async function requestMedia<T>(
   database: SupabaseClient<Database>,
   mediaUrl: string,
@@ -49,7 +57,10 @@ async function requestMedia<T>(
   body: BodyInit,
   contentType: string,
   schema: z.ZodType<T>,
-  extraHeaders: Record<string, string> = {},
+  {
+    headers = {},
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  }: { headers?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<T> {
   if (!mediaUrl) throw new Error("File preparation is unavailable. Please contact the studio.");
   const {
@@ -61,12 +72,12 @@ async function requestMedia<T>(
   const response = await fetch(`${mediaUrl.replace(/\/$/, "")}${path}`, {
     method: "POST",
     headers: {
-      ...extraHeaders,
+      ...headers,
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": contentType,
     },
     body,
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const result: unknown = await response.json();
   if (!response.ok) throw new Error(mediaErrorMessage(response.status, result));
@@ -82,6 +93,27 @@ export const sanitizedVideoSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 });
+
+/**
+ * The deadline for `sanitizeVideoAsset` alone — not `DEFAULT_TIMEOUT_MS`, which every other call
+ * through `requestMedia` uses.
+ *
+ * `/designs/sanitize-video` (`apps/media/src/server.js`) runs three legs in sequence, and each is
+ * independently bounded by `LIMITS.videoProcessMs` (300_000 ms, `apps/media/src/sanitize.js`):
+ * downloading the raw object (`downloadToFile`), remuxing it with ffmpeg (`sanitizeVideo` via
+ * `runMediaTool`), and uploading the clean object (`uploadFile`) — see the matching comments in
+ * `apps/media/src/supabase.js`. At the 1 GB ceiling (`VIDEO_MAX_BYTES`) all three can plausibly
+ * take close to their full budget, so the client's deadline has to cover the *sum*, not just the
+ * remux: `DEFAULT_TIMEOUT_MS` (120 s) would abort a transfer the server is still completing
+ * successfully, leaving a clean object registered under a path no design will ever reference and
+ * no way for the person to recover the upload short of re-sending the whole file.
+ *
+ * This is exactly `3 × LIMITS.videoProcessMs`, restated here rather than imported — `apps/media`
+ * is a separate deployable with its own `package.json` and no shared module boundary with this
+ * app — so raising the server-side budget is a signal to reconsider this constant too, not an
+ * automatic fix.
+ */
+const VIDEO_SANITIZE_TIMEOUT_MS = 3 * 300_000;
 
 /**
  * Asks `apps/media` to remux a raw video upload into a clean object and delete the raw one.
@@ -104,6 +136,7 @@ export async function sanitizeVideoAsset(
     JSON.stringify(input),
     "application/json",
     sanitizedVideoSchema,
+    { timeoutMs: VIDEO_SANITIZE_TIMEOUT_MS },
   );
 }
 
@@ -141,7 +174,7 @@ export async function prepareDelivery(
     file,
     file.type,
     deliverySchema,
-    { "X-File-Name": encodeURIComponent(name) },
+    { headers: { "X-File-Name": encodeURIComponent(name) } },
   );
 }
 

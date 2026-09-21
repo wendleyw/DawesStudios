@@ -12,6 +12,11 @@ export type ModalProps = {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
   initialFocusRef?: RefObject<HTMLElement | null>;
+  // True while `onClose` would be a no-op (e.g. a caller like `ProjectActionDialog` refuses to
+  // close during an in-flight mutation). The X button is the only control here with a persistent
+  // enabled/disabled appearance, so it's the one that needs to say so; Escape and a backdrop
+  // click already call the same `onClose`, which already declines to do anything.
+  closeDisabled?: boolean;
 };
 
 export function Modal({
@@ -23,6 +28,7 @@ export function Modal({
   footer,
   size = "md",
   initialFocusRef,
+  closeDisabled = false,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -111,6 +117,7 @@ export function Modal({
             className="icon-button modal-close"
             aria-label={`Close ${title}`}
             onClick={onClose}
+            disabled={closeDisabled}
           >
             <X size={18} />
           </button>
