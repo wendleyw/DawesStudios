@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
-select plan(8);
+select plan(9);
 
 -- Final whole-branch review, Critical 2: before this migration, `register_sanitized_asset`
 -- would copy a video into `published-assets` on the sole grounds that the *design* pointed at
@@ -95,6 +95,36 @@ select lives_ok($$
     repeat('b',64), 'video/mp4', 4194304,
     md5('dawes:designer-1')::uuid)
 $$, 'a designer can attest the internal video, mirroring who may sanitise it');
+
+reset role;
+
+-- Re-review, item 2: `list_stale_sanitized_assets` excludes `bucket_id='internal-assets'`
+-- entirely, but nothing previously asserted that -- the two existing tests on that function cover
+-- a PDF and a delivery file, neither of which is in that bucket, so removing the exclusion would
+-- not have failed either. Made this attestation satisfy every OTHER staleness condition
+-- (`discard_requested`, and old enough to clear the 24-hour floor) before checking it: a query
+-- that only ever sees non-stale-looking rows would pass even without the bucket exclusion, which
+-- would prove nothing about the exclusion itself.
+--
+-- `private` grants nothing to `service_role` directly -- only the security-definer functions that
+-- run as their owner touch it -- so this UPDATE runs as the test runner's own connecting role,
+-- the same way the "no attestation row behind" read earlier in this file does.
+update private.sanitized_assets
+   set created_at = now() - interval '48 hours', discard_requested = true
+ where bucket_id = 'internal-assets'
+   and storage_path = md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('dawes:video-provenance-source')::uuid::text||'.mp4';
+
+select set_config('request.jwt.claim.role','service_role',true);
+set local role service_role;
+select ok(
+  not exists(
+    select 1 from public.list_stale_sanitized_assets() stale
+     where stale.bucket_id = 'internal-assets'
+       and stale.storage_path = md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('dawes:video-provenance-source')::uuid::text||'.mp4'
+  ),
+  'an internal-assets attestation is excluded from the stale sweep even when discard_requested and old enough to otherwise qualify'
+);
+reset role;
 
 -- 4. Allowed: the same copy that was refused in (1) now succeeds once the source is attested.
 select lives_ok($$

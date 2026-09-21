@@ -117,7 +117,7 @@ PDF delivery is flattened to newly rendered page images and rebuilt as a new PDF
 ## Additional verification commands
 
 - `python3 supabase/tests/http_auth_storage_test.py`: nine real Auth/PostgREST/Storage integration tests.
-- `npm --prefix apps/media test`: seven raster/PDF regeneration tests.
+- `npm --prefix apps/media test`: 34 tests across raster/PDF regeneration, video remux/attestation, and the origin allowlist (see `apps/media/README.md`, which states the current per-file split; treat any specific count as a snapshot rather than a contract and trust the command's own output over either document).
 - `npm --prefix apps/media run test:integration`: 15 real worker pipeline checks, with temporary-object cleanup.
 - `npm --prefix apps/media audit --omit=dev`: production dependency advisory check.
 - `node supabase/tests/realtime_boundary_test.mjs`: real four-role subscription and deleted-event boundary check.

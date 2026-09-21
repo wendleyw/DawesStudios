@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeAll, afterAll, afterEach } from 'vitest';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { allowedOrigins, createMediaServer } from './server.js';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { allowedOrigins, createMediaServer, sweepStaleScratchDirectories } from './server.js';
 
 describe('allowed browser origins', () => {
   it('answers the canonical workspace origin on its own', () => {
@@ -37,6 +38,46 @@ describe('allowed browser origins', () => {
   it('holds nothing when nothing is configured, so every origin is refused', () => {
     expect(allowedOrigins().size).toBe(0);
     expect(allowedOrigins({ additionalOrigins: '' }).size).toBe(0);
+  });
+});
+
+// Final whole-branch review, follow-up to Critical 1: `media-scratch` is a persistent disk volume,
+// not the tmpfs `/tmp` used to be, so a crashed request's scratch directory now survives a
+// container restart instead of being wiped with it. This is the boot-time sweep that closes that
+// leak, exercised against a throwaway directory rather than the process's real `tmpdir()` so the
+// test cannot depend on, or pollute, whatever `TMPDIR` this run happens to have.
+describe('sweepStaleScratchDirectories', () => {
+  let root;
+
+  beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'sweep-test-')); });
+  afterAll(async () => { await rm(root, { recursive: true, force: true }); });
+
+  it('removes every dawes-prefixed directory and leaves everything else alone', async () => {
+    await mkdir(join(root, 'dawes-video-abc123'));
+    await writeFile(join(root, 'dawes-video-abc123', 'in.mp4'), 'leftover');
+    await mkdir(join(root, 'dawes-media-def456'));
+    await mkdir(join(root, 'dawes-publish-ghi789'));
+    await mkdir(join(root, 'not-dawes-unrelated'));
+    await writeFile(join(root, 'dawes-not-a-directory'), 'a file, not a directory, sharing the prefix');
+
+    const swept = await sweepStaleScratchDirectories(root);
+
+    expect(swept).toBe(3);
+    for (const name of ['dawes-video-abc123', 'dawes-media-def456', 'dawes-publish-ghi789'])
+      await expect(stat(join(root, name))).rejects.toThrow();
+    // Not swept: it does not match the prefix, or it is a file rather than a directory.
+    await expect(stat(join(root, 'not-dawes-unrelated'))).resolves.toBeDefined();
+    await expect(stat(join(root, 'dawes-not-a-directory'))).resolves.toBeDefined();
+  });
+
+  it('returns 0 for an empty or nonexistent directory rather than throwing', async () => {
+    const empty = await mkdtemp(join(tmpdir(), 'sweep-empty-'));
+    try {
+      expect(await sweepStaleScratchDirectories(empty)).toBe(0);
+      expect(await sweepStaleScratchDirectories(join(empty, 'does-not-exist'))).toBe(0);
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
   });
 });
 

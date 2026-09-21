@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -228,6 +228,34 @@ export function createMediaServer(config) {
   return server;
 }
 
+/**
+ * Removes every leftover `dawes-*` scratch directory under `tmpdir()` at boot.
+ *
+ * Follow-up to Critical 1: `/tmp` used to be a tmpfs, wiped by the container runtime on every
+ * restart, so a scratch directory a crashed request never got to its own `finally { rm(...) }`
+ * (`server.js`'s `/designs/sanitize-video` and `/publications/prepare` video branch, and
+ * `sanitize.js`'s `sanitizePdf`) simply vanished with the container. `media-scratch` is a
+ * persistent disk volume precisely so a gigabyte temp file is never charged to container memory —
+ * but persistence cuts both ways: a SIGKILL or an OOM mid-remux now leaves that directory behind
+ * indefinitely. No request-time code path ever revisits a directory once its own request has
+ * moved on, and `cleanStaleAssets`/`list_stale_sanitized_assets` sweep database attestations, not
+ * filesystem paths, so nothing else was ever going to notice.
+ *
+ * Every `mkdtemp` call in this codebase is scoped under `tmpdir()` with a `dawes-` prefix
+ * (`dawes-media-`, `dawes-video-`, `dawes-publish-`), so that prefix is exactly the set this
+ * process could have left behind — nothing else legitimately creates a same-named directory
+ * there. Startup is the right, and only necessary, moment to sweep: a fresh process has no
+ * in-flight request of its own, so every matching directory that already exists is, by
+ * construction, an orphan from a previous run. One pass is enough; this is not a reaper.
+ */
+export async function sweepStaleScratchDirectories(root = tmpdir()) {
+  let entries;
+  try { entries = await readdir(root, { withFileTypes: true }); } catch { return 0; }
+  const stale = entries.filter(entry => entry.isDirectory() && entry.name.startsWith('dawes-'));
+  for (const entry of stale) await rm(join(root, entry.name), { recursive: true, force: true }).catch(() => {});
+  return stale.length;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = { supabaseUrl: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY, serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY, appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:3003', additionalOrigins: process.env.MEDIA_ALLOWED_ORIGINS ?? '' };
   if (['supabaseUrl', 'anonKey', 'serviceKey', 'appOrigin'].some(key => !config[key])) throw new Error('Supabase and app-origin configuration is required.');
@@ -240,6 +268,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // `ffmpeg`/`ffprobe` sets a log-level and expects a value, not "print version".
   for (const tool of ['pdfinfo', 'pdftoppm']) execFileSync(tool, ['-v'], { stdio: 'ignore', timeout: 5000 });
   for (const tool of ['ffmpeg', 'ffprobe']) execFileSync(tool, ['-version'], { stdio: 'ignore', timeout: 5000 });
+  const swept = await sweepStaleScratchDirectories();
+  if (swept) process.stderr.write(`Swept ${swept} stale scratch director${swept === 1 ? 'y' : 'ies'} left by an earlier crash.\n`);
   const port = Number(process.env.MEDIA_PORT ?? 55430);
   createMediaServer(config).listen(port, process.env.MEDIA_HOST ?? '127.0.0.1', () => process.stdout.write(`Media service listening on port ${port}.\n`));
 }
