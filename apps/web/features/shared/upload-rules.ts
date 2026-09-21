@@ -5,17 +5,25 @@
  * `file_size_limit` and `allowed_mime_types` list in
  * `supabase/migrations/202609200003_storage.sql`, and the briefing-attachment paths are
  * constrained the same way in `supabase/migrations/202609200004_requests_and_attachments.sql`
- * and `202609200008_trusted_media.sql`. Nothing here decides what storage accepts; it only
- * restates that decision early enough to explain it.
+ * and `202609200008_trusted_media.sql`. A bucket's value is not always set only where it is
+ * created, either: `202609210004_video_storage.sql` widens `internal-assets` and
+ * `published-assets` with an `update storage.buckets set ...` layered over the original insert.
+ * Nothing here decides what storage accepts; it only restates that decision early enough to
+ * explain it.
  *
  * The client ceiling exists to reject **before** the upload exactly what the bucket rejects
  * **after** it, so the two must agree. A client ceiling *above* the bucket limit turns a friendly
  * rejection into a raw storage error at the end of a long transfer; one *below* it refuses valid
- * files with no explanation. Raising the limit means editing the migration first and this module
- * second — `upload-rules.test.ts` fails if the two drift apart.
+ * files with no explanation. Raising a limit or widening a MIME list means editing the migration
+ * first and this module second — `upload-rules.test.ts` computes each bucket's *effective* value
+ * (inserts with later updates applied) from the migrations themselves and fails if the two drift
+ * apart. A migration that touches `storage.buckets` must be added to that test's source list, or
+ * the comparison silently keeps checking an older shape.
  *
- * The ceiling is expressed per upload path rather than as a single number, because one path is
- * deliberately tighter than its bucket: see `ARTWORK_MAX_BYTES`.
+ * The ceiling is expressed per upload path rather than as a single number, because the paths
+ * deliberately disagree with each other and with their bucket: see `ARTWORK_MAX_BYTES` (tighter
+ * than its bucket, for browser-memory reasons) and `VIDEO_MAX_BYTES` (wider than the default
+ * bucket, for storage-cost reasons).
  */
 
 /**
@@ -41,6 +49,21 @@ export const BUCKET_MAX_BYTES = 50 * 1024 * 1024;
 export const ARTWORK_MAX_BYTES = 25 * 1024 * 1024;
 
 /**
+ * The design path accepts video up to a gigabyte, matching `internal-assets` and
+ * `published-assets` after `supabase/migrations/202609210004_video_storage.sql`.
+ *
+ * The reason for this ceiling is **remux time and storage cost**, and deliberately not the
+ * reason behind `ARTWORK_MAX_BYTES`. Nothing decodes a video frame in the browser: the file is
+ * uploaded as-is and `apps/media` strips its metadata with a stream copy. There is no bitmap to
+ * allocate, so browser memory does not bound this number. A gigabyte covers ten minutes of
+ * 1080p H.264 at roughly 13 Mbit/s.
+ *
+ * Do not collapse this into `BUCKET_MAX_BYTES` or `ARTWORK_MAX_BYTES`. The three ceilings answer
+ * three different questions.
+ */
+export const VIDEO_MAX_BYTES = 1024 * 1024 * 1024;
+
+/**
  * The shared type vocabulary. Each entry lists the filename extensions a file of that type may
  * carry; the **first** is the canonical one a stored object is named with.
  *
@@ -53,6 +76,8 @@ export const uploadExtensions = {
   "image/webp": ["webp"],
   "image/svg+xml": ["svg"],
   "application/pdf": ["pdf"],
+  "video/mp4": ["mp4"],
+  "video/webm": ["webm"],
 } as const satisfies Record<string, readonly [string, ...string[]]>;
 
 export type UploadMime = keyof typeof uploadExtensions;
@@ -83,12 +108,44 @@ export const brandUploadMimes = [
   "application/pdf",
 ] as const satisfies readonly UploadMime[];
 
+/**
+ * Web-playable video only. The product accepts what a browser can play without transcoding: a
+ * `.mov` or ProRes file is refused rather than converted, because converting it would mean an
+ * ffmpeg re-encode, a queue, and processing state in the interface for a case a designer can
+ * resolve at export time.
+ */
+export const videoUploadMimes = [
+  "video/mp4",
+  "video/webm",
+] as const satisfies readonly UploadMime[];
+
+/**
+ * What the design uploader accepts: an image to compose or a video to review. The two carry
+ * different ceilings and different preparation paths, so `uploadDesignAsset` branches on the
+ * file's type rather than treating this as one homogeneous list.
+ */
+export const designUploadMimes = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+] as const satisfies readonly UploadMime[];
+
+/** Whether a file's declared type takes the video path rather than the image one. */
+export function isVideoUpload(mime: string): boolean {
+  const allowed: readonly string[] = videoUploadMimes;
+  return allowed.includes(mime);
+}
+
 const mimeLabels: Record<UploadMime, string> = {
   "image/png": "PNG",
   "image/jpeg": "JPG",
   "image/webp": "WebP",
   "image/svg+xml": "SVG",
   "application/pdf": "PDF",
+  "video/mp4": "MP4",
+  "video/webm": "WebM",
 };
 
 /** The ceiling as it is shown to a person: `50` for 52428800. */
