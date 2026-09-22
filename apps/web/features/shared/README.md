@@ -37,7 +37,7 @@ Consumers: `assets/assets-page`, `assets/upload-file-dialog`,
 `credits/credit-actions`, `credits/credits-page`,
 `projects/project-action-dialog`, `projects/project-details`,
 `settings/campaign-settings`, `settings/client-settings`,
-`settings/preset-settings`, `settings/team-settings`, `shared/copy-button`,
+`settings/preset-settings`, `shared/copy-button`, `team/team-page`,
 `workspace/app-shell`.
 
 ### `CopyButton` — `copy-button.tsx`
@@ -76,7 +76,7 @@ Consumers (44 call sites in 27 files): `assets/assets-page`,
 `settings/account-recovery`, `settings/account-settings`,
 `settings/campaign-settings`, `settings/client-settings`,
 `settings/invitation-acceptance`, `settings/preset-settings`,
-`settings/team-settings`, `settings/workspace-settings`,
+`settings/workspace-settings`, `team/team-page`,
 `workspace/notifications-page`.
 
 Three `form-error` paragraphs are deliberately **not** `FormError`:
@@ -137,7 +137,7 @@ enum onto a tone beside its label map — `projectStatusTones` in
 `credits/credit-model.ts` — so a database enum value never appears in a
 stylesheet selector and a new domain needs no new CSS. `neutral` is the badge's
 base appearance and adds no modifier class, which is why a badge with no status
-at all (`settings/team-settings.tsx`) still writes `className="status-badge"`.
+at all (`team/team-page.tsx`) still writes `className="status-badge"`.
 
 ## Repository-wide invariant tests
 

@@ -1,0 +1,7 @@
+.member-role-select {
+  font-size: var(--text-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  background: var(--surface);
+}

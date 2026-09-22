@@ -1,5 +1,5 @@
-import { SettingsPage } from "@/features/settings/settings-page";
+import { TeamPage } from "@/features/team/team-page";
 
 export default function Page() {
-  return <SettingsPage tab="team" />;
+  return <TeamPage />;
 }

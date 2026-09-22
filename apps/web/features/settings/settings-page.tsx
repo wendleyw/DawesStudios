@@ -5,7 +5,6 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { AccountSettings } from "./account-settings";
 import { ClientSettings } from "./client-settings";
 import { PresetSettings } from "./preset-settings";
-import { TeamSettings } from "./team-settings";
 import { WorkspaceSettings } from "./workspace-settings";
 import "./settings.css";
 import { PageStatus } from "@/features/shared/page-status";
@@ -65,8 +64,6 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
       <div className="settings-content">
         {tab === "account" ? (
           <AccountSettings key={profile.id} />
-        ) : tab === "team" ? (
-          <TeamSettings />
         ) : tab === "clients" ? (
           <ClientSettings />
         ) : tab === "presets" ? (

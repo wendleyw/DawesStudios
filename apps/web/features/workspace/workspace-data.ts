@@ -20,7 +20,7 @@ import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 // ---------------------------------------------------------------------------------------------
 // Clients: the workspace list read by the shell, the home overview and several other features
-// (`settings/client-settings.tsx`, `settings/team-settings.tsx`, `brand/brand-page.tsx`,
+// (`settings/client-settings.tsx`, `team/team-page.tsx`, `brand/brand-page.tsx`,
 // `briefings/briefings-page.tsx`, `briefings/briefing-editor.tsx`, `assets/assets-page.tsx`,
 // `credits/credits-page.tsx`, `reviews/reviews-page.tsx`). The read hook lives here because it has
 // no single owning feature; the write it is invalidated by (`saveClient`) belongs to

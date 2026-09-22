@@ -10,7 +10,7 @@ import { useClients, type Client } from "@/features/workspace/workspace-data";
 import { clientSlug, validWebsite } from "./settings-model";
 import { saveClient, useInvalidateClients } from "./settings-data";
 import { CampaignSettings } from "./campaign-settings";
-import { InvitePerson } from "./team-settings";
+import { InvitePerson } from "@/features/team/team-page";
 import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 
