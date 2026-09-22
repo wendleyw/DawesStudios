@@ -219,6 +219,36 @@ page-level transport failure is distinct and recoverable; permission loss is enf
 matters. The offline state of every **form** is a raw `TypeError`, which is not a correct recovery
 message. The row stays open on I-3.
 
+**Re-assessed 2026-09-21, on the `:3003` container rebuilt from `e3ccc83`.** Defect I-3 is closed for
+every surface this pass could bound: hanging the request (`page.route`, never fulfilled) on a
+settings save, the comment composer, sign-in and password-change all now show the translated sentence
+rather than a raw `TypeError` once they resolve, and password-change resolves at **19 944 ms**,
+matching the 20-second bound `callAuth` was designed to enforce. Permission loss was re-measured on a
+fresh fixture project rather than trusted from the earlier pass: revoking `designer@dawes.local`'s
+assignment mid-session and posting from the stale page is refused
+*"Internal channel access required"* with **0** rows written, a direct RLS read as that designer
+(raw SQL, bypassing PostgREST entirely) confirms `count = 0` on the specific project, and a reload
+resolves to *"Project unavailable."* in **1307 ms**. Unavailable-resource was re-measured against
+`/projects/<all-zero uuid>`: **1322 ms** to *"Project unavailable."* — a single-digit-second figure
+in the same range as a prior pass's ~3 s, not the multi-retry delay recorded once before; this pass
+did not reproduce a longer wait and is not asserting the earlier figure was wrong, only that it did
+not recur here. Empty-vs-failure was re-checked on `/settings/team`'s invitations list, which is
+genuinely empty in the current dataset (0 rows): *"No invitations yet."* against a forced 500 response
+giving *"Invitations could not be loaded."* — two different sentences, not one doing double duty.
+
+**But offline/transport-failure is not fully closed, on a distinction this pass had to draw rather
+than assume.** A *hung* request (dispatched, never answered, browser still believes it is connected)
+now resolves correctly wherever it is bounded. A *genuinely offline* browser
+(`context.setOffline(true)`, `navigator.onLine` confirmed `false`) does not reach that code at all,
+on any mutation, including the ones `callAuth` bounds — see
+[Defect I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound)
+for the mechanism (`@tanstack/react-query`'s default `networkMode: "online"` pausing the mutation
+before it starts) and why this is the explanation for the discrepancy `e3ccc83` recorded and left
+open, not merely a repeat measurement of it. **Verdict: not verified.** Loading, empty,
+unavailable-resource and permission-loss are all distinct and correct; transport failure is distinct
+and correct for a hung request but silent and unbounded for a genuinely offline one. The row moves
+from Defect I-3 to Defect I-6.
+
 ## I05 — pending state and failed writes
 
 **Requirement.** Forms/comments/uploads handle pending state and failed writes without false success
@@ -254,6 +284,27 @@ per project, per channel, per design, and does not appear on another project.
 
 **Verdict: not verified.** Failed writes and retries behave correctly; an interrupted write does
 not. The row stays open on I-3 and I-4.
+
+**Re-assessed 2026-09-21.** Defect I-4 is closed: the exact interrupted-write repro — `route.fetch()`
+so the server commits, `route.abort("connectionreset")` so the response never arrives, then a
+same-text retry — now produces **exactly one** `internal_comments` row, not two, and the two RPC calls
+carried the identical idempotency key (`comment:0fda5e03-…` both times), confirming
+`nextCommentAttempt`'s payload-keyed reuse holds under this specific interruption pattern, not only
+in principle. Defect I-3's translated message is what the interrupted call now shows instead of the
+raw `TypeError`, consistent with I04's re-assessment above. Pending state and recoverable input were
+not re-measured this pass; nothing touched their code paths.
+
+**Item 4 of this pass's scope — is `post_comment` the only guarded write, or representative? —
+answers no, in the less comfortable direction.** `request_credits` (a client's credit request, as
+opposed to `adjust_credits`, an agency action, which does carry a ref-based key) was checked and
+found to carry no idempotency protection on either side: no key column on `credit_requests`, no key
+argument on the RPC, no client-side attempt key. The same interruption pattern that used to duplicate
+comments still duplicates credit requests today — reproduced live: **2** rows from one interruption
+and one retry. See
+[Defect I-7](#defect-i-7-request_credits-carries-no-idempotency-protection-at-all). **Verdict: not
+verified.** The specific case this row was blocked on (Defect I-4) is closed, but the row asks about
+duplicate actions in general, and this pass found a second, unguarded write of the same shape rather
+than confirming `post_comment` was an isolated case. The row moves from Defect I-4 to Defect I-7.
 
 ## I06 — conflicting edits and transactional consistency
 
@@ -611,6 +662,91 @@ the same backend, torn down afterwards. A throwaway probe
 The draft-retained/send-button-re-enabled/nothing-written behaviour this pass measured earlier is
 unaffected — only the string handed to `<FormError>` changed.
 
+### Repair, 2026-09-21 (`e3ccc83`) — six Auth call sites bypassed the chokepoint
+
+**Found in a later session, re-measuring the fix above rather than trusting it.** `assertResult`
+only sees calls that go through a `features/*-data.ts` module. Six Auth calls never do, because they
+are awaited directly in their components and rendered as `result.error.message`:
+`signInWithPassword` (`login-page.tsx`), `updateUser` in `account-settings.tsx`,
+`account-recovery.tsx` and `invitation-acceptance.tsx`, and `resetPasswordForEmail`
+(`account-recovery.tsx`). Offline, sign-in showed the same bare `TypeError: Failed to fetch` this
+defect was opened for — the chokepoint fix never reached it.
+
+A second, worse gap surfaced measuring it: `updateUser` refreshes the session before writing, and
+that refresh retries internally, so offline it never settles. With the network cut, the password
+form sat on "Updating…" with its button disabled past 25 seconds, showing nothing — a failed write
+with no failure, indistinguishable from a slow connection and with nothing to act on.
+
+**Repair.** `lib/supabase.ts` gained `describeSupabaseError()` — `assertResult`'s translation,
+pulled out so the six call sites can share the decision instead of re-deriving it — and `callAuth()`,
+which races an Auth call against a 20-second timer and throws the transport sentence if the timer
+wins. It does not cancel the underlying call: an Auth write that reached the server must not be
+reported as never having happened. All six call sites now route through one or the other.
+
+**Re-verified in this session, against the actual running application, not by re-reading the diff.**
+The `:3003` container was rebuilt first: its image (created `00:38:07Z`) predated this commit
+(`00:44:31Z`) by six and a half minutes, confirmed two ways — `docker inspect` timestamps, and the
+fix string `"connection failed and your changes were not saved"` was absent from
+`.next/static/chunks` before the rebuild and present after. Rebuilt with
+`docker compose --env-file .env.production up --build -d --wait web`.
+
+A throwaway Playwright probe then held four requests open with
+`page.route(pattern, () => new Promise(() => {}))` — never fulfilling them, one per surface that
+handles pending state and failed writes — and separately drove the same four surfaces with
+`context.setOffline(true)`:
+
+| Surface | Path | Hung request (`page.route`, never fulfilled) | `context.setOffline(true)` |
+|---|---|---|---|
+| Settings save (`updateProfile`) | plain `assertResult`, no bound | "Saving…", disabled, **still pending at the 15 s cap this probe used — nothing times it out** | identical: "Saving…", disabled, still pending at 15 s |
+| Comment composer (`post_comment`) | plain `assertResult`, no bound | disabled, **still pending at 15 s** | identical: disabled, still pending at 15 s |
+| Sign-in (`signInWithPassword`) | not wrapped in `callAuth` (rejects promptly on a real disconnection, so the design accepted no bound here) | spinner shown, **still pending at 15 s** | resolved in **2 ms** → *"The connection failed and your changes were not saved — try again."* |
+| Password change (`updateUser`) | `callAuth`, 20 s bound | "Updating…", disabled, then at **19 944 ms** → *"The connection failed and your changes were not saved — try again."* | **still "Updating…", disabled, no message at the 32 s cap this probe used** |
+
+Three results hold up exactly as designed: the hang reproduces the 20.1 s bound on password-change
+precisely (19 944 ms here), sign-in fails almost instantly under a real disconnection because
+`signInWithPassword` itself rejects fast, and both paths now show the translated sentence instead of
+`TypeError: Failed to fetch`. The fourth cell is the recorded mystery from the commit that shipped
+this fix — explained below, not left open.
+
+**The hang-vs-`setOffline` discrepancy on password-change, explained.** The earlier session recorded
+faithfully that `context.setOffline(true)` did not surface the 20-second bound within 32 seconds on
+this one form, despite confirming a plain `setTimeout` on the same page still fires. That observation
+is correct, and the mechanism is now identified: it is not `callAuth`, and it is not specific to Auth.
+
+Instrumenting the same repro with `page.on("request"/"requestfailed"/"response")` listeners and a
+1-second `page.url()`/`navigator.onLine` poll for the full 34 seconds shows the page never leaves
+`/settings/account` and `navigator.onLine` correctly reads `false` throughout — but **zero requests of
+any kind are dispatched** after the click, not even a failed one. Compare the sign-in case in the
+same table: there, a real request is dispatched and fails in 13 ms
+(`net::ERR_INTERNET_DISCONNECTED`), which is why it resolves in 2 ms. On password-change, nothing is
+even attempted.
+
+The reason is upstream of this codebase's own code, in `@tanstack/react-query@5.103.1`'s default
+`networkMode: "online"` for both queries and mutations (`ApplicationProviders`'s `QueryClient` sets
+`mutations: { retry: false }` and never overrides `networkMode`). Its retryer
+(`node_modules/@tanstack/query-core/build/legacy/retryer.cjs`) reads:
+
+```js
+function canFetch(networkMode) {
+  return (networkMode ?? "online") === "online" ? onlineManager.isOnline() : true;
+}
+```
+
+`onlineManager.isOnline()` tracks the same browser online/offline events `context.setOffline(true)`
+correctly fires (which is why `navigator.onLine` reads `false` above). When it is false and
+`networkMode` is left at its default, a mutation's `fetchStatus` becomes `"paused"` and its
+`mutationFn` — the function that calls `database.auth.updateUser(...)` and, inside it, `callAuth` —
+is **never invoked at all**. `callAuth`'s own 20-second timer is never wrong; it is simply never
+started, because React Query holds the whole mutation at the gate until the browser reports itself
+online again. A genuinely hung *request* (this codebase's own repro) still looks "online" to that
+gate, so it sails through to `callAuth`, which is why that path shows the bound correctly. A
+genuinely offline *browser* does not get that far, on any mutation in this application, because none
+of them override `networkMode` — this is general React Query behaviour, not a password-change
+peculiarity, and this pass did not find it disprovable: it follows directly from the installed
+package's own retry logic, not from inference. Its implication is recorded as
+[Defect I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound)
+because it is broader than this one form and is not fixed by the repair above.
+
 ## Defect I-4 — an interrupted write reports failure after committing, and a retry duplicates it
 
 **Charged to I05.** Found in this pass.
@@ -650,6 +786,40 @@ takes no idempotency key, unlike `publish_version`, `adjust_credits` and `fulfil
 which all do and which the concurrency suite proves collapse eight parallel calls into one. Nothing
 in the mutation reconciles "the server may already have this" — a comment is cheap to duplicate, but
 the pattern is the product's general one for writes, and I05 names duplicate actions explicitly.
+
+### Re-verified 2026-09-21 — closed by `202609210002_post_comment_replay_hardening.sql`
+
+The migration was read before anything was re-run. It moves the idempotency lookup after
+authorization and scopes it to `project_id` (closing the cross-tenant existence oracle the review
+found), compares the matched row field by field
+(`version_id`/`publication_id`, `design_id`, `body`, `pin_x`, `pin_y`, `pin_t`) before trusting a
+replay, takes `pg_advisory_xact_lock(hashtextextended(key,0))` around the lookup-then-insert so two
+genuinely concurrent retries cannot both miss it, and re-grants `execute` to `authenticated` only
+after the `create or replace` reverted it to PUBLIC/`anon`.
+
+The exact repro from the original finding was run again — `route.fetch()` so the server executes and
+commits, then `route.abort("connectionreset")` so the response never reaches the page, followed by a
+same-text retry — on a fresh throwaway `Acceptance IO probe …` project:
+
+```
+alert after the interrupted call: "The connection failed and your changes were not saved — try again."
+draft retained: true
+thread count after the interrupt:  2   (the composer's own refetch had already pulled the committed row in)
+thread count after the retry:      2   (unchanged)
+idempotency keys sent: call 1 = comment:0fda5e03-…, call 2 = comment:0fda5e03-…  (identical)
+internal_comments rows matching the probe's body text: 1
+```
+
+**Exactly one row, not zero and not two.** The client-side half of this — whether a retry reuses the
+same key — was the open question item 3 of this pass's scope named, and it holds under this specific
+interruption: `nextCommentAttempt` (`comment-panel.tsx`) keys the attempt to the payload, not to a ref
+tied to the component's mount, and the payload (`body`/`versionId`/`designId`/`pin`) was unchanged
+between the two calls, so it returned the same `CommentAttempt` both times without needing the
+dialog to remount. The draft that carries it lives in the React Query cache
+(`comment-draft.ts`), not in a ref, which is exactly why it survived the interrupted call's failure
+and was still there to be resent. I05's row can now credit this defect as closed rather than
+"believed fixed" — the migration was read, the mechanism matches the repro, and the repro was run
+against it, not merely against the description of it.
 
 ## Defect I-5 — a stale settings form silently overwrites a newer save
 
@@ -859,6 +1029,84 @@ from the value in `supabase/.env.local`, so the browser suite could not sign in;
 password hashes were snapshotted, aligned with the repository's env file for the length of each
 browser run, and restored byte for byte afterwards.
 
+## Defect I-6 — a genuinely offline browser pauses every mutation, with no message and no bound
+
+**Charged to I04.** Found in this session, investigating the hang-vs-`setOffline` discrepancy
+`e3ccc83` recorded but left unexplained. The mechanism is described in full under
+[Defect I-3's re-verification](#repair-2026-09-21-e3ccc83-six-auth-call-sites-bypassed-the-chokepoint)
+above; this entry states its consequence for I04's own requirement.
+
+`@tanstack/react-query`'s default `networkMode: "online"` — left at its default in
+`ApplicationProviders`'s `QueryClient`, which sets `mutations: { retry: false }` and nothing else —
+pauses a mutation's `fetchStatus` before its `mutationFn` ever runs whenever
+`onlineManager.isOnline()` is false. `context.setOffline(true)` correctly makes that false
+(`navigator.onLine` reads `false`, confirmed live), which is the realistic shape of "offline": the
+browser itself has detected no connectivity, not merely a slow or unresponsive server. Under that
+condition, none of this application's mutations start — not just the four Auth calls `callAuth`
+bounds, and not just password-change, where this was first noticed. Measured directly on two more
+surfaces with the same technique: settings save and the comment composer both stayed on
+"Saving…"/disabled with **zero** matching network events at the 15-second cap this pass used, exactly
+like password-change at its 32-second cap. Only sign-in differed, and only because
+`signInWithPassword` fails fast enough on a genuine disconnection that the request is dispatched and
+rejected (13 ms) before a person would usually notice — the same gate applies to it too, it is just
+rarely the one that binds in practice.
+
+**What this means for I04.** The loading state for a mutation is not distinct from a mutation that is
+silently queued behind "come back online" — both read as an unchanging "Saving…"/"Updating…" with a
+disabled button, for as long as the browser stays offline, with no ceiling. This is not the same
+failure as Defect I-3 (a raw exception string): here there is no message at all, correct or otherwise,
+because the code path that would produce one is never reached. It is also not obviously wrong design
+— queuing a write until connectivity returns, rather than failing it, avoids losing the person's input
+and often succeeds once they reconnect — but the requirement asks for offline/transport-failure
+states that are "distinct and accurate," and a person who has genuinely lost their connection cannot
+currently tell that from this screen; they can only tell by checking their own device.
+
+**Not fixed here.** The natural repair — setting `networkMode: "always"` on the mutation defaults, so
+a mutation always attempts its `mutationFn` and lets the existing `assertResult`/`callAuth` translation
+handle the resulting fast rejection — is a one-line change in `auth-provider.tsx`, but its effect is
+global: every `useMutation` in the application would stop deferring to the browser's online status.
+That is a bigger blast radius than "small, obvious repair" covers, it changes retry/network semantics
+this pass was not asked to redesign, and it has not been checked against every mutation's own retry
+assumptions (e.g., whether any surface relies on the pause-and-auto-resume behaviour rather than
+merely tolerating it). Reported for the orchestrator to decide rather than applied.
+
+## Defect I-7 — `request_credits` carries no idempotency protection at all
+
+**Charged to I05.** Found in this session, checking item 4 of this pass's scope: whether
+`post_comment` is the only write path with this class of gap, or whether it is representative.
+
+`credit_requests` (`supabase/migrations/202609200004_requests_and_attachments.sql`) has no
+`idempotency_key` column, and `request_credits(p_client_id, p_amount, p_note)` takes no key argument
+— unlike `adjust_credits`, `publish_version` and `fulfill_credit_request`, which all take one, and
+unlike `post_comment`, which gained one in
+[Defect I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it).
+Client-side, `CreditActionDialog`'s `mode="adjust"` path (agency credit adjustments) keeps a
+`useRef`-based attempt key mirroring `comment-panel.tsx`'s pattern, but `mode="request"` (a client
+requesting credits — `requestCredits` in `credit-data.ts`) passes no key at all, because there is
+nowhere on the server for one to go.
+
+**Reproduced with the same interruption pattern as Defect I-4**, signed in as
+`sabre@client.dawes.local`, on a disposable client request (`route.fetch()` → the server commits →
+`route.abort("connectionreset")` → the response never arrives → the same dialog, still open, is
+submitted again with the same note):
+
+```
+alert after the interrupted call: "The connection failed and your changes were not saved — try again."
+dialog still open after the failure: true
+credit_requests rows matching the probe's note text: 2
+```
+
+Two rows, from one interruption and one retry — the same defect shape Defect I-4 closed for
+comments, unrepaired here because `post_comment` was the only path this pass's scope named for the
+fix and this table cannot take a key without a migration (a new column, matching the note in
+[Defect I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) about
+schema changes needing to be sequenced rather than added ad hoc). `post_comment` is not
+representative of the codebase's general posture — it is now the *best*-guarded write of the two
+this pass measured, and `request_credits` is the weaker one, not merely an unguarded one: it has no
+key on either side, where `post_comment` at least always had a column capable of holding one. Both
+probe rows were deleted by client id and note text after measurement; no other credit-request rows
+were touched.
+
 ---
 
 ## Summary
@@ -867,8 +1115,8 @@ browser run, and restored byte for byte afterwards.
 |---|---|---|
 | I01 | Unverified | [I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset): the documented start command exits 1 on every run |
 | I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
-| I04 | Unverified | [I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message): the offline state of every form is a raw `TypeError` |
-| I05 | Unverified | [I-4](#defect-i-4-an-interrupted-write-reports-failure-after-committing-and-a-retry-duplicates-it) and I-3 |
+| I04 | Unverified | I-3 closed and re-verified 2026-09-21 (all four forms show the translated sentence once bounded); [I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound) opened the same day: a genuinely offline browser pauses every mutation before it starts, with no message and no bound |
+| I05 | Unverified | I-4 closed and re-verified 2026-09-21 (exactly one row, same idempotency key, on the exact interrupted-write repro); [I-7](#defect-i-7-request_credits-carries-no-idempotency-protection-at-all) opened the same day: `request_credits` duplicates under the identical interruption, with no key on either side |
 | I06 | **Verified** | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) repaired this pass: reproduced first, then all four settings surfaces refuse a stale save with a visible sentence and keep the text that was typed; 25/25 browser tests, 457 unit tests and 155 pgTAP assertions pass |
 | I07 | **Verified** | ≤ 700 ms everywhere on the full dataset, 0 long tasks, flat heap, 0 leaks over 30 client switches, clean role change |
 
