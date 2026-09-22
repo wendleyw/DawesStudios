@@ -1,19 +1,18 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult, type Profile, type SupabaseDatabase } from "@/lib/supabase";
-import type { Invitation } from "./settings-model";
+import { useQueryClient } from "@tanstack/react-query";
+import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
- * Supabase access for every settings screen: team, clients, campaigns, presets, workspace and
- * account. Unlike `credit-data.ts` and `project-data.ts`, these six domains are independent tabs
- * that never share a page and never want each other's cache invalidated by their own mutations — so
- * this module exports one `<domain>QueryKeys` / `useInvalidate<Domain>()` pair per domain instead of
- * one shared set for the whole feature. A single feature-wide set, invalidated by every mutation,
- * would refetch the Team roster when a Preset is saved and the Preset list when a Client is renamed;
- * every domain here already invalidated exactly its own key before this migration, and splitting the
- * pair by domain is what keeps that unchanged. See `README.md` for the full reasoning.
+ * Supabase access for every settings screen except Team, which moved to
+ * `features/team/team-data.ts`: clients, campaigns, presets, workspace and account. Unlike
+ * `credit-data.ts` and `project-data.ts`, these five domains are independent tabs that never share a
+ * page and never want each other's cache invalidated by their own mutations — so this module exports
+ * one `<domain>QueryKeys` / `useInvalidate<Domain>()` pair per domain instead of one shared set for
+ * the whole feature. A single feature-wide set, invalidated by every mutation, would refetch the
+ * Preset list every time a Client is renamed; every domain here already invalidated exactly its own
+ * key before this migration, and splitting the pair by domain is what keeps that unchanged. See
+ * `README.md` for the full reasoning.
  *
  * Functions are grouped below in that same domain order. Each group holds its read hook(s), its
  * query keys and invalidation hook, and its write function(s), in the order the components that
@@ -21,56 +20,8 @@ import type { Invitation } from "./settings-model";
  */
 
 // ---------------------------------------------------------------------------------------------
-// Team: the studio roster and its invitations (`team-settings.tsx`).
-// ---------------------------------------------------------------------------------------------
-
-export function useTeamMembers() {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: ["studio-team", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("profiles")
-          .select("id,display_name,role,avatar_url")
-          .in("role", ["agency", "designer"])
-          .order("display_name"),
-      ) as Profile[],
-  });
-}
-
-export function useInvitations() {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: ["invitations", session?.user.id],
-    queryFn: async () =>
-      assertResult(
-        await database.from("invitations").select("*").order("created_at", { ascending: false }),
-      ) as Invitation[],
-  });
-}
-
-export const teamQueryKeys = ["invitations"] as const;
-
-export function useInvalidateTeam() {
-  const queryClient = useQueryClient();
-  return async () => {
-    await Promise.all(
-      teamQueryKeys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
-    );
-  };
-}
-
-export async function revokeInvitation(
-  database: SupabaseDatabase,
-  input: { invitationId: string },
-) {
-  assertResult(await database.rpc("revoke_invitation", { p_invitation_id: input.invitationId }));
-}
-
-// ---------------------------------------------------------------------------------------------
 // Clients: creating and editing a client workspace (`client-settings.tsx`). `useClients` itself is
-// not here: it is read by `team-settings.tsx` and the workspace shell as well, and already lives in
+// not here: it is read by `team/team-page.tsx` and the workspace shell as well, and already lives in
 // `features/workspace/workspace-data.ts` as their shared read hook. This module owns only the write,
 // because `client-settings.tsx` is the sole component that issues it.
 // ---------------------------------------------------------------------------------------------

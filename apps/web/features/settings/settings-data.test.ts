@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   acceptInvitation,
-  revokeInvitation,
   saveCampaign,
   saveClient,
   saveServicePreset,
@@ -41,14 +40,6 @@ function stubDatabase(result: Result) {
 
 const ok: Result = { data: [], error: null };
 const row: Result = { data: { id: "row-1" }, error: null };
-
-describe("team writes", () => {
-  it("revokes an invitation by id", async () => {
-    const { database, rpc } = stubDatabase(ok);
-    await revokeInvitation(database, { invitationId: "invitation-1" });
-    expect(rpc).toHaveBeenCalledWith("revoke_invitation", { p_invitation_id: "invitation-1" });
-  });
-});
 
 describe("client writes", () => {
   it("updates a client's own details", async () => {
@@ -219,10 +210,6 @@ describe("account writes", () => {
 
 describe("settings write failures", () => {
   const failures: [string, (database: never) => Promise<unknown>][] = [
-    [
-      "revokeInvitation",
-      (database) => revokeInvitation(database, { invitationId: "invitation-1" }),
-    ],
     [
       "saveClient (update)",
       (database) =>
