@@ -30,7 +30,16 @@ export function ApplicationProviders({
       new QueryClient({
         defaultOptions: {
           queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true },
-          mutations: { retry: false },
+          // Queries pause while the browser is offline by design (nothing to gain from re-fetching
+          // against a dead network). Mutations must not: with the default `networkMode: "online"`,
+          // @tanstack/react-query pauses a mutation's `fetchStatus` before `mutationFn` ever runs
+          // whenever `onlineManager.isOnline()` is false, so a genuinely offline browser (as opposed
+          // to a hung request against a server that is merely unreachable) never dispatches the
+          // underlying `fetch` at all -- no error, no message, no bound. `networkMode: "always"`
+          // makes every mutation always attempt its `mutationFn`; the resulting fast rejection then
+          // reaches the existing `assertResult`/`callAuth` translation exactly as a hung request
+          // does. See Defect I-6, docs/verification/acceptance-family-i.md.
+          mutations: { retry: false, networkMode: "always" },
         },
       }),
   );
