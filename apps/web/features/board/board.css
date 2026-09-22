@@ -184,20 +184,6 @@
 .board-card-body:hover {
   background: #fdfdfb;
 }
-.board-card-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 15px;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.board-card-meta > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .board-card :is(h2, h3, h4) {
   font-size: 15px;
 }
@@ -261,11 +247,6 @@
   border-radius: 11px 11px 0 0;
   background: var(--surface-subtle);
 }
-.kanban-heading :is(h2, h3) {
-  font-size: var(--text-base);
-  font-weight: 500;
-  letter-spacing: 0;
-}
 .kanban-heading > span {
   color: var(--muted);
   font-size: var(--text-sm);
@@ -278,15 +259,13 @@
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.kanban-column .board-card-body > p {
-  margin-top: 7px;
-  font-size: var(--text-xs);
-}
 .kanban-column .eyebrow {
   margin-bottom: 8px;
 }
 .kanban-column .board-card-body > p {
   min-height: 0;
+  margin-top: 7px;
+  font-size: var(--text-xs);
 }
 .board-list {
   margin: 8px var(--space-page) 36px;
@@ -551,6 +530,9 @@
 .kanban-heading :is(h2, h3) {
   min-width: 0;
   overflow-wrap: anywhere;
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 @media (max-width: 640px) {
@@ -695,8 +677,13 @@
 
 /* The version names the artwork above it and the type names the deliverable; a separator keeps the
    two from reading as one string. */
+/* The version names the artwork above it and the type names the deliverable; a separator keeps the
+   two from reading as one string. `justify-content` is inert while this element is laid out by the
+   higher-specificity `.board-card-body > p` rule above, and is kept because removing it would be a
+   design change rather than the de-duplication this is. */
 .board-card-meta {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 7px;
   min-width: 0;

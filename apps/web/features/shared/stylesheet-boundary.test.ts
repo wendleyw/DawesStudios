@@ -200,3 +200,66 @@ describe("feature stylesheet boundary", () => {
     expect(violations).toEqual([]);
   });
 });
+
+/**
+ * The checks above compare selectors *across* stylesheets, which is the boundary the design system
+ * documents. They are blind to the same selector declared twice inside one file, and that blindness
+ * had let six accumulate: `.board-card-meta` and three neighbours in `board.css`,
+ * `.brand-color-card code`, and `.briefing-form`.
+ *
+ * Five were harmless — byte-identical, or disjoint declarations that happened to be written apart.
+ * `.board-card-meta` was not: one block set `gap: 12px; margin-bottom: 15px; font-size: xs` and the
+ * other `gap: 7px; margin: 0; font-size: sm`, so what the browser applied was a per-property mix of
+ * the two that neither author wrote, with a `justify-content` surviving from a card design that no
+ * longer exists. Nothing said so, and nothing could have.
+ *
+ * A duplicate at the same nesting level is always a silent last-wins override. A rule repeated
+ * inside `@media` is the opposite — a deliberate responsive override — so only top-level blocks are
+ * compared here. Measured before this test existed: 178 selectors looked duplicated, 34 of those
+ * were legitimate media-query overrides and the rest were an artefact of not tracking nesting. The
+ * real number was six.
+ */
+function topLevelSelectorCounts(css: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  let depth = 0;
+  let atDepth: number | null = null;
+  let head = "";
+  for (const character of withoutComments) {
+    if (character === "{") {
+      const raw = head.trim();
+      head = "";
+      if (raw.startsWith("@")) {
+        if (atDepth === null) atDepth = depth;
+      } else if (depth === 0) {
+        // Order-insensitive: `a, b` and `b, a` select the same elements and collide the same way.
+        const key = raw
+          .split(",")
+          .map((part) => part.trim().replace(/\s+/g, " "))
+          .sort()
+          .join(", ");
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+      depth += 1;
+    } else if (character === "}") {
+      depth -= 1;
+      head = "";
+      if (atDepth !== null && depth <= atDepth) atDepth = null;
+    } else {
+      head += character;
+    }
+  }
+  return counts;
+}
+
+describe("no stylesheet declares the same selector twice at the top level", () => {
+  it.each([...featureFiles, globalsPath].map((file) => [relative(file), file]))(
+    "%s declares each selector once",
+    (_name, file) => {
+      const duplicates = [...topLevelSelectorCounts(readFileSync(file, "utf8"))]
+        .filter(([, count]) => count > 1)
+        .map(([selector, count]) => `${selector} (${count}x)`);
+      expect(duplicates, `a later block silently overrides an earlier one`).toEqual([]);
+    },
+  );
+});

@@ -216,12 +216,6 @@
   flex-direction: column;
   padding: 20px;
 }
-.brand-color-card code {
-  margin-top: 7px;
-  color: var(--muted);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: var(--text-sm);
-}
 .brand-color-card .button {
   margin: 14px 0 -8px -10px;
   font-size: var(--text-sm);
@@ -787,6 +781,10 @@ a.brand-template-card:hover {
 .brand-color-card code {
   max-width: 100%;
   overflow-wrap: anywhere;
+  margin-top: 7px;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: var(--text-sm);
 }
 .brand-font-source {
   margin: 20px 0 -8px -10px;
