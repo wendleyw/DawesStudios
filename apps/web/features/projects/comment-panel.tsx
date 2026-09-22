@@ -13,10 +13,8 @@ import {
   type ProjectChannel,
 } from "./project-data";
 
-import { useCommentDraft, type PendingPin } from "./comment-draft";
+import { useCommentDraft, type CommentAttempt, type PendingPin } from "./comment-draft";
 import { FormError } from "@/features/shared/form-error";
-
-export type CommentAttempt = { payload: string; key: string };
 
 /**
  * Decides whether an attempt reuses its idempotency key or mints a fresh one.
@@ -62,10 +60,14 @@ export function CommentPanel({
   const { draft, update, clear } = useCommentDraft(projectId, channel, designId);
   const body = draft.body;
   const panel = useRef<HTMLElement>(null);
-  // Keyed on the attempt's payload rather than the component's lifetime: a retry of the same
-  // comment must resend the same key (matching the server's replay), but a person editing the
+  // Keyed on the attempt's payload, and stored on the draft rather than in a ref: a retry of the
+  // same comment must resend the same key (matching the server's replay), but a person editing the
   // text or pin between retries has to mint a new one, or `post_comment` raises a conflict it
-  // cannot recover from. See `credits/credit-actions.tsx`'s `attempt` ref for the same shape.
+  // cannot recover from. The draft outlives this component, so a retry after the dialog is closed
+  // and reopened still replays instead of writing a second comment — a ref would mint a fresh key
+  // there and duplicate exactly the write this guard exists to deduplicate.
+  // `credits/credit-actions.tsx` keeps the same shape in a ref and has the same remount gap; its
+  // dialog is not reopened against a surviving draft, so the gap is unreachable there today.
   //
   // The payload identity below must include every field `post_comment`'s replay guard compares
   // (`supabase/migrations/202609210002_post_comment_replay_hardening.sql`: version_id/
@@ -73,7 +75,6 @@ export function CommentPanel({
   // client's identity omits can vary underneath an unchanged key, and the retry either replays
   // against the wrong content or gets an unrecoverable "Idempotency key conflicts" error the
   // person cannot act on. If the server starts comparing another field, mirror it here too.
-  const attempt = useRef<CommentAttempt | null>(null);
   useEffect(() => {
     if (selectedComment)
       panel.current
@@ -84,7 +85,8 @@ export function CommentPanel({
   const post = useMutation({
     mutationFn: async () => {
       const payload = JSON.stringify({ body: body.trim(), versionId, designId, pin: pendingPin });
-      attempt.current = nextCommentAttempt(attempt.current, payload);
+      const attempt = nextCommentAttempt(draft.attempt, payload);
+      update({ attempt });
       return postComment(database, {
         projectId,
         channel,
@@ -92,11 +94,11 @@ export function CommentPanel({
         versionId,
         designId,
         pin: pendingPin,
-        idempotencyKey: attempt.current.key,
+        idempotencyKey: attempt.key,
       });
     },
     onSuccess: async () => {
-      attempt.current = null;
+      // `clear()` resets the whole draft, attempt included, so the next comment starts fresh.
       clear();
       onClearPin?.();
       await invalidate();
