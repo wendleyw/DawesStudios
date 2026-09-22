@@ -62,10 +62,16 @@ select is(
   (select role::text from public.profiles where id=md5('dawes:designer-1')::uuid), 'agency',
   'Role change actually updates profiles.role'
 );
+-- private.audit_events grants no SELECT to authenticated (it is an internal log, not
+-- application-readable), so this check runs with the role impersonation lifted rather than as the
+-- agency caller the RPC call above needed.
+reset role;
 select isnt_empty(
   $$select 1 from private.audit_events where event='member.role_changed' and entity_id=md5('dawes:designer-1')::uuid$$,
   'Role change writes an audit event'
 );
+select set_config('request.jwt.claim.sub', md5('dawes:agency')::uuid::text, true);
+set local role authenticated;
 select public.set_team_member_role(md5('dawes:designer-1')::uuid, 'designer');
 select is(
   (select role::text from public.profiles where id=md5('dawes:designer-1')::uuid), 'designer',
@@ -83,10 +89,13 @@ select is(
   (select count(*)::int from public.project_assignments where designer_id=md5('dawes:designer-1')::uuid), 0,
   'Removal revokes every assignment the designer held'
 );
+reset role;
 select isnt_empty(
   $$select 1 from private.audit_events where event='member.removed' and entity_id=md5('dawes:designer-1')::uuid$$,
   'Removal writes an audit event'
 );
+select set_config('request.jwt.claim.sub', md5('dawes:agency')::uuid::text, true);
+set local role authenticated;
 
 -- Removal against a target already holding zero assignments is a no-op, not an error — matching
 -- revoke_design_assignment's own behavior (202609200015_designer_brief_and_project_integrity.sql:35).
