@@ -5,3 +5,20 @@
   padding: 4px 8px;
   background: var(--surface);
 }
+/*
+ * Moved here (verbatim) from `features/settings/settings.css` rather than into `app/globals.css`:
+ * its other historical consumer, `team-settings.tsx`, was deleted when Team moved out of Settings,
+ * so this class is genuinely team-only now, not shared — the styling boundary rule keeps a
+ * single-feature selector in that feature's own stylesheet.
+ */
+.settings-avatar {
+  width: 37px;
+  height: 37px;
+  border: 1px solid #deded7;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-sm);
+  color: #65655e;
+  flex-shrink: 0;
+}

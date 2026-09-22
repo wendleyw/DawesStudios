@@ -43,12 +43,28 @@ non-delivered assignment. No change to the query shape was needed.
 
 ## Styling boundary
 
-`team.css` declares only genuinely new, team-only selectors (`.member-role-select`). Everything else
-the page uses (`.settings-list-row`, `.settings-avatar`, `.status-badge`, `.settings-block`, …) is
-shared with `features/settings/` (`client-settings.tsx`, `preset-settings.tsx`) and stays in
-`settings.css` / `app/globals.css` rather than duplicating into this file, per
-[the styling boundary rule](../../../../docs/architecture/design-system.md#styling-boundary):
-`npx vitest run features/shared/stylesheet-boundary --root apps/web` guards this directly.
+`team.css` declares only genuinely team-only selectors: `.member-role-select`, and `.settings-avatar`
+(this page's own avatar circle — its only other historical consumer, `team-settings.tsx`, was
+deleted when Team moved out of Settings, so it is no longer shared with anything and does not belong
+in `app/globals.css`).
+
+Everything else the page uses that also has a real consumer in `features/settings/`
+(`.settings-sections`, `.settings-block` and its heading/header-row/header-paragraph, `.settings-form`
+and its labels/`input`/`select` box styling, `.settings-note`, `.settings-list-row` and its children,
+`.settings-dialog-actions`, including their media-query overrides) lives in `app/globals.css`, not
+`settings.css` and not duplicated into `team.css` — `client-settings.tsx` and `preset-settings.tsx`
+are the other real consumers. `settings.css` keeps the selectors that stayed settings-only
+(`.settings-section`, `.settings-form textarea`, `.settings-form > .button`,
+`.settings-form input[readonly]`, `.settings-success`, …).
+
+This is [the styling boundary rule](../../../../docs/architecture/design-system.md#styling-boundary)
+applied selector by selector, not file by file — grep each candidate class across `apps/web/features`
+before assuming a class "belongs" to whichever file happened to declare it first.
+`npx vitest run features/shared/stylesheet-boundary --root apps/web` guards this directly, including
+its same-file duplicate-selector check (relevant here: `.settings-block header p` had two separate
+declarations in the old `settings.css`, at different specificities in file order; moving both into
+`app/globals.css` required consolidating them into one rule with the final, cascade-correct
+`max-width: 620px` rather than declaring the same selector twice in the new file).
 
 ## Cross-feature imports
 

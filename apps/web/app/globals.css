@@ -680,6 +680,106 @@ select {
 .status-badge.tone-complete::before {
   border-radius: 1px;
 }
+/*
+ * `.settings-sections`, `.settings-block` (its heading, header paragraph and header row),
+ * `.settings-form` (its labels, its `input`/`select` box styling), `.settings-note`,
+ * `.settings-list-row` (and its children) and `.settings-dialog-actions` were declared only in
+ * `features/settings/settings.css` until `features/team/team-page.tsx` began reusing them: with
+ * real consumers in two features now, the styling boundary rule
+ * (docs/architecture/design-system.md#styling-boundary) puts them here instead of duplicating the
+ * rules into both feature stylesheets. `features/settings/settings.css` keeps the settings-only
+ * neighbors of these selectors (`.settings-section`, `.settings-form textarea`,
+ * `.settings-form > .button`, `.settings-form input[readonly]`, `.settings-success`, …) — see that
+ * file for the ones that did not move. `.settings-avatar` did not move here either: its other
+ * historical consumer (`team-settings.tsx`) was deleted rather than kept, so it is genuinely
+ * team-only now and lives in `features/team/team.css` instead.
+ */
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+.settings-block h2 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+.settings-block header p {
+  font-size: var(--text-lg);
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+  max-width: 620px;
+}
+.settings-block > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 28px;
+  margin-bottom: 26px;
+}
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+.settings-form input,
+.settings-form select {
+  width: 100%;
+  padding: 11px 13px;
+  min-height: 43px;
+  border: 1px solid #dcdcd5;
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  color: #30302a;
+}
+.settings-note {
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 21px 0;
+  border-bottom: 1px solid #e9e8e2;
+  font-size: var(--text-lg);
+}
+.settings-list-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.settings-list-row strong {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.settings-list-row p {
+  font-size: var(--text-base);
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 7px 0 0;
+}
+.settings-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
 .empty-state {
   display: flex;
   min-height: 220px;
@@ -968,6 +1068,13 @@ select {
     display: none;
   }
 }
+/* `.settings-block`'s own breakpoint, matching where `features/settings/settings.css` broke it before this rule moved here. */
+@media (max-width: 800px) {
+  .settings-block > header {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
 @media (max-width: 640px) {
   :root {
     --space-page: 20px;
@@ -1110,6 +1217,19 @@ select {
   }
   .modal-footer {
     padding: 16px 22px;
+  }
+}
+/* `.settings-list-row`/`.settings-dialog-actions`'s own breakpoint, matching where `features/settings/settings.css` broke them before these rules moved here. */
+@media (max-width: 520px) {
+  .settings-list-row {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .settings-list-row > .status-badge {
+    font-size: var(--text-xs);
+  }
+  .settings-dialog-actions {
+    flex-wrap: wrap;
   }
 }
 @media (max-width: 374px) {
