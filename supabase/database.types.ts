@@ -510,6 +510,7 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
+          idempotency_key: string | null
           ledger_id: string | null
           note: string
           requested_by: string
@@ -522,6 +523,7 @@ export type Database = {
           client_id: string
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           ledger_id?: string | null
           note?: string
           requested_by: string
@@ -534,6 +536,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           ledger_id?: string | null
           note?: string
           requested_by?: string
@@ -1578,6 +1581,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      register_sanitized_video: {
+        Args: {
+          p_file_size: number
+          p_mime_type: string
+          p_prepared_by: string
+          p_project_id: string
+          p_sha256: string
+          p_storage_path: string
+        }
+        Returns: undefined
+      }
       reject_credit_request: {
         Args: { p_note: string; p_request_id: string }
         Returns: undefined
@@ -1586,8 +1600,14 @@ export type Database = {
         Args: { p_attachment_id: string }
         Returns: string
       }
+      remove_team_member: { Args: { p_profile_id: string }; Returns: undefined }
       request_credits: {
-        Args: { p_amount: number; p_client_id: string; p_note?: string }
+        Args: {
+          p_amount: number
+          p_client_id: string
+          p_idempotency_key?: string
+          p_note?: string
+        }
         Returns: string
       }
       resolve_comment: {
@@ -1653,6 +1673,13 @@ export type Database = {
           p_service_type: string
         }
         Returns: number
+      }
+      set_team_member_role: {
+        Args: {
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
       }
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
       submit_design_version: {

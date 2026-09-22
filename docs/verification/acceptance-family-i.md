@@ -249,6 +249,13 @@ unavailable-resource and permission-loss are all distinct and correct; transport
 and correct for a hung request but silent and unbounded for a genuinely offline one. The row moves
 from Defect I-3 to Defect I-6.
 
+**Re-verified 2026-09-22, after [Defect I-6's repair](#repair-2026-09-22--mutations-gain-networkmode-always).** A genuinely offline
+browser (`context.setOffline(true)`) now dispatches the password-change mutation and shows the same
+translated sentence a hung request already showed, in 307 ms rather than never within a 32-second
+cap; a same-session online mutation was re-run to confirm no regression. **Verdict: Verified.**
+Loading, empty, unavailable-resource, permission-loss and transport failure — both the hung-request
+and the genuinely-offline case — are all distinct and offer correct recovery.
+
 ## I05 — pending state and failed writes
 
 **Requirement.** Forms/comments/uploads handle pending state and failed writes without false success
@@ -305,6 +312,14 @@ and one retry. See
 verified.** The specific case this row was blocked on (Defect I-4) is closed, but the row asks about
 duplicate actions in general, and this pass found a second, unguarded write of the same shape rather
 than confirming `post_comment` was an isolated case. The row moves from Defect I-4 to Defect I-7.
+
+**Re-verified 2026-09-22, after [Defect I-7's repair](#repair-2026-09-22--request_credits-gains-an-idempotency-key).** `request_credits`
+carries the same idempotency protection `post_comment` and `adjust_credits` already had: a replayed
+client-held key with an unchanged payload returns the original request rather than inserting a
+second one (confirmed both at the SQL level and by re-running the exact browser interruption pattern
+this row's finding used — 1 row, not 2), and a replayed key with a different payload is refused.
+**Verdict: Verified.** Pending state, recoverable input, and failed/interrupted/duplicate writes are
+now all handled correctly on both writes this family measured.
 
 ## I06 — conflicting edits and transactional consistency
 
@@ -1070,6 +1085,68 @@ this pass was not asked to redesign, and it has not been checked against every m
 assumptions (e.g., whether any surface relies on the pause-and-auto-resume behaviour rather than
 merely tolerating it). Reported for the orchestrator to decide rather than applied.
 
+### Repair, 2026-09-22 — mutations gain `networkMode: "always"`
+
+**The blast radius was checked before applying the one-line change.** Every `useMutation` in
+`apps/web/features` was read for a dependency on the pause-and-auto-resume behaviour itself (as
+opposed to merely tolerating whatever error the mutation eventually surfaces): none retries via
+`networkMode`, none inspects `fetchStatus === "paused"`, and `mutations: { retry: false }` already
+means no client-side retry loop exists to interact with a mutation that now fails fast instead of
+queuing. Nothing in the codebase reads on the assumption that a mutation stays queued while offline.
+
+`apps/web/features/auth/auth-provider.tsx`'s `QueryClient` now sets
+`mutations: { retry: false, networkMode: "always" }`. `queries` keeps its existing defaults
+untouched — pausing a re-fetch while the browser is offline is correct, since there is nothing to
+gain from re-querying a dead network; the defect was specific to mutations dispatching nothing at
+all. With `networkMode: "always"`, a mutation's `mutationFn` always runs regardless of
+`onlineManager.isOnline()`, so the underlying `fetch` always attempts and its rejection reaches the
+existing `assertResult`/`callAuth` translation exactly as a hung request's does — no change to that
+translation code was needed.
+
+**Verified by measurement, against the `dawes-studios-app-web-1` container rebuilt from this
+session's working tree** (`docker compose --env-file .env.production up --build -d --wait web`;
+confirmed the rebuilt bundle's `.next/static/chunks` contains the string `networkMode`). A throwaway
+Playwright script (`apps/web/zz-i6-probe.mjs`, deleted after use) signed in as `studio@dawes.local`,
+opened `/settings/account`, filled the password-change form, called `context.setOffline(true)` and
+confirmed `navigator.onLine` read `false`, then clicked **Update password**:
+
+```
+navigator.onLine after setOffline(true): false
+OFFLINE mutation resolved in 307ms with: "The connection failed and your changes were not saved — try again."
+matches expected translated sentence: true
+```
+
+**307 ms**, not the 32-second cap the prior pass exhausted with zero dispatched network events. This
+is faster than `callAuth`'s own 20-second bound because `context.setOffline(true)` makes Chromium
+refuse the underlying `fetch` immediately at the network layer (the same reason the sign-in case in
+[Defect I-3's re-verification](#repair-2026-09-21-e3ccc83-six-auth-call-sites-bypassed-the-chokepoint)
+resolved in 2 ms under a real disconnection) — it is a fast rejection, not a hang, so `callAuth`'s
+timer never needs to fire. This confirms the distinction the diagnosis asked to be verified before
+changing anything: a *hung* request (server unreachable, browser still thinks it is online) is bound
+by `callAuth`'s 20-second race exactly as before, untouched by this change; a *genuinely offline*
+browser now dispatches and fails fast instead of never dispatching at all. Neither path was confused
+with the other.
+
+The same script then re-enabled the network and exercised a second, unrelated mutation while online
+— `AccountSettings`'s **Save profile**, re-submitted with its own unchanged display name (a true
+no-op write, chosen so nothing needed to be restored afterward):
+
+```
+ONLINE no-op save resolved in 59ms, success message present: true
+```
+
+No regression to the normal path. `npm run check`: **501 tests / 37 files pass**, 0 type errors, the
+same 2 pre-existing lint warnings, Prettier clean — identical to the pre-repair baseline measured at
+the start of this session, since this defect's fix touches no test file. The probe script was deleted
+after use; the fix touches no server state, so there was no database row to clean up.
+
+**Verdict: Verified.** A genuinely offline browser now dispatches every mutation and shows the same
+translated transport-failure sentence a hung request already showed, within a few hundred
+milliseconds rather than never. Combined with [Defect I-3](#defect-i-3-a-raw-typeerror-failed-to-fetch-is-the-products-offline-message)'s
+existing closure, offline/transport-failure is now distinct and correct for both a hung request and a
+genuinely offline browser, on every surface `callAuth` bounds and on the two additional surfaces
+(settings save, comment composer) this repair's blast-radius review covered by inspection.
+
 ## Defect I-7 — `request_credits` carries no idempotency protection at all
 
 **Charged to I05.** Found in this session, checking item 4 of this pass's scope: whether
@@ -1107,6 +1184,101 @@ key on either side, where `post_comment` at least always had a column capable of
 probe rows were deleted by client id and note text after measurement; no other credit-request rows
 were touched.
 
+### Repair, 2026-09-22 — `request_credits` gains an idempotency key
+
+**Migration** `supabase/migrations/202609220003_request_credits_idempotency.sql` (numbered after
+`202609220002_team_management.sql`, landed by a concurrent session mid-task; `202609210008` was
+renamed to avoid an out-of-order insertion against the already-applied remote migration). It adds a
+nullable, unique `idempotency_key` column to `credit_requests`, then drops and recreates
+`request_credits` with a fourth parameter, `p_idempotency_key text default null`.
+
+The design mirrors `adjust_credits`'s own choice — `credit_ledger.idempotency_key` is declared
+`text not null unique` (`202609200001_foundation.sql:148`), so `credit_requests` gets a unique
+column too, paired with the same application-level select-then-compare rather than relying on the
+constraint alone. Two adaptations, both precedented elsewhere in this codebase rather than invented
+for this fix: the key is optional (`default null`, skipping the guard when omitted) because
+`supabase/tests/database/requests_and_storage.test.sql` and
+`supabase/tests/concurrent_workflows_test.py` already call `request_credits` with no key and neither
+may be modified for this to stay additive — the same accommodation
+`update_workspace_settings`/`save_service_preset` made in `202609210003_concurrent_edit_guards.sql`.
+And because `request_credits` is an insert-only write with no pre-existing per-client row to lock
+(unlike `adjust_credits`'s `credit_accounts` row), it borrows `post_comment`'s hardened shape instead
+for the locking and lookup mechanics: a `pg_advisory_xact_lock` on the key so two genuinely concurrent
+retries cannot both miss the lookup, a lookup scoped to `client_id` first (so a guessed or leaked key
+belonging to another tenant cannot be used to read that tenant's amount/note back through a conflict
+message), and a second, unscoped existence check that raises the same generic
+`Idempotency key conflicts with a different credit request` instead of leaking which tenant holds the
+key or falling through to a bare unique-violation.
+
+**Client side**, mirroring `adjustCredits`'s call site exactly: `credit-data.ts`'s `requestCredits()`
+gained an `idempotencyKey` parameter threaded to `p_idempotency_key`. `credit-actions.tsx`'s
+`mode === "request"` branch now builds `payload = \`${clientId}:${quantity}:${note.trim()}\`` and
+reuses the same `attempt` ref `adjustCredits` already used, minting `request:${crypto.randomUUID()}`
+only when the payload changes — the identical shape, not a new one.
+
+**Verified by SQL, directly, before touching the browser.** Inside one transaction, rolled back
+afterward:
+
+```
+select public.request_credits(<client-org-1>, 25, 'Probe note', 'probe-key-1');  -- call 1
+select public.request_credits(<client-org-1>, 25, 'Probe note', 'probe-key-1');  -- call 2, replay
+same_id_on_replay: t
+rows_for_key ('probe-key-1'): 1
+select public.request_credits(<client-org-1>, 50, 'Different note', 'probe-key-1');
+ERROR:  Idempotency key conflicts with a different credit request
+```
+
+and, separately, two distinct keys for the same client both succeed with their own row
+(`distinct_ids: t`, `rows_written: 2`), with 0 residue after `rollback`.
+
+**Verified by measurement in the browser**, reproducing the exact interruption pattern used for
+Defect I-4: a throwaway Playwright script (`apps/web/zz-i7-probe.mjs`, deleted after use) signed in
+as `sabre@client.dawes.local`, opened SABRE's Credits page, opened the **Request credits** dialog,
+filled a note, and intercepted the RPC once — `route.fetch()` so the server executes and commits,
+then `route.abort("connectionreset")` so the response never reaches the page — followed by a
+same-dialog, same-payload retry:
+
+```
+alert after the interrupted call: "The connection failed and your changes were not saved — try again."
+dialog still open after the failure: true
+credit_requests rows after the interrupted call: 1
+credit_requests rows after the retry: 1
+cleaned up rows: 1
+```
+
+**Exactly one row, not two.** The server committed the interrupted call silently (row count 1 before
+the retry, the same shape as Defect I-4's original finding), and the retry — carrying the same
+client-held `attempt.current.key` because the payload was unchanged — replayed instead of duplicating.
+The one probe row was deleted by the script itself; a direct count afterward confirmed 0 residue.
+
+**Tests added.** `supabase/tests/database/requests_and_storage.test.sql` gained 6 assertions
+(`plan(18)` → `plan(24)`): a replayed key with the same payload returns the original request id, not
+a new one; it writes exactly one row; the same key with a different payload throws
+`P0001 Idempotency key conflicts with a different credit request`; the refused replay adds no second
+row; a different key for the same client and amount creates its own, independent request; two
+distinct keys leave two distinct rows. `apps/web/features/credits/credit-data.test.ts`'s two
+`requestCredits` tests were updated (not added to) for the new parameter and its RPC argument.
+
+**Checks executed.** `npm run check`: **501 tests / 37 files pass**, 0 type errors, the same 2
+pre-existing lint warnings, Prettier clean. `npm run db:test`: `requests_and_storage.test.sql` —
+**ok**, all 24 assertions pass. The overall `supabase test db` run reports `Result: FAIL` solely
+because of `team_management.test.sql` (2 failed of 8 subtests on one run, a different
+`permission denied for table audit_events` error on a re-run moments later) — that file and the
+`register_sanitized_video`/`remove_team_member`/`set_team_member_role` functions it exercises belong
+to `202609220002_team_management.sql`, a concurrent, unrelated, actively-changing session's work on
+this same branch, out of this defect's scope and never touched here; `credit_requests` and
+`request_credits` share no table, function or code path with it (checked by inspection before relying
+on it). `database.types.ts` was regenerated in full via `npm run db:types`, which necessarily also
+picked up that concurrent session's own additions since both share one generated file reflecting one
+live schema; those are kept, not stripped, since the file must describe the actual database rather
+than only this defect's slice of it.
+
+**Verdict: Verified.** `request_credits` now carries the same idempotency protection `adjust_credits`
+and `post_comment` already had: a replayed key with an unchanged payload is a no-op that returns the
+original row, a replayed key with a different payload is refused rather than silently applied or
+duplicated, and the exact interruption pattern that produced 2 rows before this repair now produces
+exactly 1.
+
 ---
 
 ## Summary
@@ -1115,8 +1287,8 @@ were touched.
 |---|---|---|
 | I01 | Unverified | [I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset): the documented start command exits 1 on every run |
 | I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
-| I04 | Unverified | I-3 closed and re-verified 2026-09-21 (all four forms show the translated sentence once bounded); [I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound) opened the same day: a genuinely offline browser pauses every mutation before it starts, with no message and no bound |
-| I05 | Unverified | I-4 closed and re-verified 2026-09-21 (exactly one row, same idempotency key, on the exact interrupted-write repro); [I-7](#defect-i-7-request_credits-carries-no-idempotency-protection-at-all) opened the same day: `request_credits` duplicates under the identical interruption, with no key on either side |
+| I04 | **Verified** | I-3 closed and re-verified 2026-09-21 (all four forms show the translated sentence once bounded); [I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound) repaired 2026-09-22: `networkMode: "always"` on the mutation defaults makes a genuinely offline browser dispatch and fail fast (307 ms) instead of pausing forever with no message |
+| I05 | **Verified** | I-4 closed and re-verified 2026-09-21 (exactly one row, same idempotency key, on the exact interrupted-write repro); [I-7](#defect-i-7-request_credits-carries-no-idempotency-protection-at-all) repaired 2026-09-22: `request_credits` now carries the same idempotency protection `post_comment` and `adjust_credits` do — the identical interruption pattern produces exactly one row, not two |
 | I06 | **Verified** | [I-5](#defect-i-5-a-stale-settings-form-silently-overwrites-a-newer-save) repaired this pass: reproduced first, then all four settings surfaces refuse a stale save with a visible sentence and keep the text that was typed; 25/25 browser tests, 457 unit tests and 155 pgTAP assertions pass |
 | I07 | **Verified** | ≤ 700 ms everywhere on the full dataset, 0 long tasks, flat heap, 0 leaks over 30 client switches, clean role change |
 

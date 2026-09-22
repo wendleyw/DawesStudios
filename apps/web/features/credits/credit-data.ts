@@ -84,13 +84,14 @@ export function useInvalidateCredits() {
 
 export async function requestCredits(
   database: SupabaseDatabase,
-  input: { clientId: string; amount: number; note: string },
+  input: { clientId: string; amount: number; note: string; idempotencyKey: string },
 ) {
   assertResult(
     await database.rpc("request_credits", {
       p_client_id: input.clientId,
       p_amount: input.amount,
       p_note: input.note,
+      p_idempotency_key: input.idempotencyKey,
     }),
   );
 }

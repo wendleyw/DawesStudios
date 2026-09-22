@@ -6,13 +6,19 @@ function stubDatabase(result: { data: unknown; error: { message: string } | null
 }
 
 describe("credit mutations", () => {
-  it("requests credits with the client, amount and trimmed note", async () => {
+  it("requests credits with the client, amount, trimmed note and idempotency key", async () => {
     const database = stubDatabase({ data: null, error: null });
-    await requestCredits(database as never, { clientId: "c1", amount: 50, note: " top up " });
+    await requestCredits(database as never, {
+      clientId: "c1",
+      amount: 50,
+      note: " top up ",
+      idempotencyKey: "request:abc",
+    });
     expect(database.rpc).toHaveBeenCalledWith("request_credits", {
       p_client_id: "c1",
       p_amount: 50,
       p_note: " top up ",
+      p_idempotency_key: "request:abc",
     });
   });
 
@@ -61,7 +67,12 @@ describe("credit mutations", () => {
   it("surfaces the database error message", async () => {
     const database = stubDatabase({ data: null, error: { message: "insufficient balance" } });
     await expect(
-      requestCredits(database as never, { clientId: "c1", amount: 50, note: "" }),
+      requestCredits(database as never, {
+        clientId: "c1",
+        amount: 50,
+        note: "",
+        idempotencyKey: "request:abc",
+      }),
     ).rejects.toThrow("insufficient balance");
   });
 });

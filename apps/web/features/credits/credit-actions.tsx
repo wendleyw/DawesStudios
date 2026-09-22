@@ -42,7 +42,15 @@ export function CreditActionDialog({
       if (mode === "request") {
         if (!CREDIT_PACKAGES.includes(quantity as (typeof CREDIT_PACKAGES)[number]))
           throw new Error("Choose a credit package.");
-        await requestCredits(database, { clientId, amount: quantity, note: note.trim() });
+        const payload = `${clientId}:${quantity}:${note.trim()}`;
+        if (attempt.current?.payload !== payload)
+          attempt.current = { payload, key: `request:${crypto.randomUUID()}` };
+        await requestCredits(database, {
+          clientId,
+          amount: quantity,
+          note: note.trim(),
+          idempotencyKey: attempt.current.key,
+        });
       } else {
         if (!note.trim()) throw new Error("Add a reason for this credit adjustment.");
         const payload = `${clientId}:${quantity}:${note.trim()}`;
