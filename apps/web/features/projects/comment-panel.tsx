@@ -14,6 +14,7 @@ import {
 } from "./project-data";
 
 import { useCommentDraft, type CommentAttempt, type PendingPin } from "./comment-draft";
+import { formatTimecode } from "./video-pins";
 import { FormError } from "@/features/shared/form-error";
 
 /**
@@ -156,11 +157,22 @@ export function CommentPanel({
                 <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
               </div>
               {comment.pinX !== null && (
-                <button className="comment-pin-link" onClick={() => onSelectComment?.(comment.id)}>
+                <button
+                  className="comment-pin-link"
+                  // On a video this both highlights the pin and seeks the player to the moment it
+                  // marks; `design-viewer.tsx` owns the seek, because it owns the element. The
+                  // label carries the timecode for the same reason the marker's `aria-label` does:
+                  // "Pin 3" says nothing about *when*, which on a video is the only thing that
+                  // locates it.
+                  onClick={() => onSelectComment?.(comment.id)}
+                >
                   <MapPin size={12} />
                   {comment.resolved
                     ? "Resolved pin"
                     : `Pin ${(comments.data?.filter((item) => !item.resolved && item.pinX !== null).findIndex((item) => item.id === comment.id) ?? 0) + 1}`}
+                  {comment.pinT !== null && (
+                    <span className="comment-pin-time">{formatTimecode(comment.pinT)}</span>
+                  )}
                 </button>
               )}
               <p>{comment.body}</p>

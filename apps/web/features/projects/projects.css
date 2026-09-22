@@ -607,9 +607,16 @@
   gap: 4px;
   align-items: center;
   padding: 3px 0;
-}
-.comment-pin-link {
   margin-top: 9px;
+}
+.comment-pin-link:hover .comment-pin-time {
+  color: var(--ink);
+}
+/* A timed pin's moment. Tabular figures so a column of them does not shuffle horizontally as the
+   digits change, which is the whole reason a timecode is easier to scan than a label. */
+.comment-pin-time {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 .comment-composer {
   border-top: 1px solid #edede8;

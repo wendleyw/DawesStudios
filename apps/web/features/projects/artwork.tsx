@@ -73,7 +73,21 @@ export function Artwork({
           playsInline
           onTimeUpdate={(event) => onTimeUpdate?.(event.currentTarget.currentTime)}
           onLoadedMetadata={(event) => onDurationChange?.(event.currentTarget.duration)}
-          onError={() => setFailedSource(asset.data!)}
+          // Unlike an <img>, a <video> can raise `error` and still be perfectly usable. A seek
+          // backwards issues a fresh range request, and an aborted or briefly failed one fires
+          // here while the element keeps every frame it has already buffered. Retiring the player
+          // on that is unrecoverable by design — `failedSource === asset.data` stays true until
+          // the signed URL is refreshed 55 minutes later or the page is reloaded — so a person
+          // scrubbing back loses the video and only a refresh brings it back.
+          //
+          // `readyState === HAVE_NOTHING` is the distinction that matters: the source never
+          // yielded anything, which is the genuinely terminal case an <img> error always is.
+          // Anything above it means the element still holds usable media, so the error is
+          // transient and the browser recovers on its own without the UI intervening.
+          onError={(event) => {
+            if (event.currentTarget.readyState === event.currentTarget.HAVE_NOTHING)
+              setFailedSource(asset.data!);
+          }}
         />
       );
     }

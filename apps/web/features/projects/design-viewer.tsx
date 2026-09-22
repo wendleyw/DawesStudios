@@ -304,7 +304,25 @@ export function DesignViewer({
           pendingPin={pendingPin}
           onClearPin={() => setPendingPin(null)}
           selectedComment={selectedComment}
-          onSelectComment={setSelectedComment}
+          // Selecting a comment from the side list seeks to the moment it marks, exactly as
+          // clicking its marker on the track below does. Without this the two controls disagree
+          // about what selecting a pin means — the track seeks, the list only highlights — and a
+          // timed comment opened from the list leaves the viewer on whatever frame happened to be
+          // showing, which is the one frame the comment is not about.
+          //
+          // Done here rather than in an effect on `selectedComment`: an effect would not fire when
+          // an already-selected comment is clicked again, which is exactly when someone who has
+          // scrubbed away wants to come back, and its dependency on the comment array would make
+          // it re-seek on every render and fight the person dragging the scrubber. Pausing first
+          // is `placePin`'s reasoning — seeking a playing video lands a moment past the frame
+          // asked for.
+          onSelectComment={(id) => {
+            setSelectedComment(id);
+            const pinned = commentList.find((comment) => comment.id === id);
+            if (!isVideo || pinned?.pinT == null || !videoRef.current) return;
+            videoRef.current.pause();
+            videoRef.current.currentTime = pinned.pinT;
+          }}
         />
       </div>
     </div>
