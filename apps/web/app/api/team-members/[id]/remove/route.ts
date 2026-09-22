@@ -16,6 +16,9 @@ import type { Database } from "@database";
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // A standalone Node.js server derives request.url from its listening address, so in a container
+  // it reports the bind host instead of the browser origin. Trust the configured workspace origin,
+  // matching the media service, and keep the request origin for a direct `next dev`/`next start`.
   const origin = process.env.APP_ORIGIN ?? new URL(request.url).origin;
   if (request.headers.get("origin") && request.headers.get("origin") !== origin)
     return Response.json({ error: "This request must come from your workspace." }, { status: 403 });
@@ -34,6 +37,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const {
+    data: { user },
+    error: authError,
+  } = await caller.auth.getUser(token);
+  if (authError || !user)
+    return Response.json({ error: "Your session has expired. Sign in again." }, { status: 401 });
+  const { data: profile, error: profileError } = await caller
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profileError || profile?.role !== "agency")
+    return Response.json({ error: "Only the studio can remove a teammate." }, { status: 403 });
   const { error: rpcError } = await caller.rpc("remove_team_member", { p_profile_id: id });
   if (rpcError) return Response.json({ error: rpcError.message }, { status: 400 });
   const admin = createClient<Database>(url, serviceKey, {
