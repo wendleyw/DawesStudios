@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { callAuth, describeSupabaseError } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
 import { updateProfile, useInvalidateAccount } from "./settings-data";
 import { SettingsSuccess } from "./settings-success";
@@ -26,8 +27,8 @@ export function AccountSettings() {
     mutationFn: async () => {
       const error = validatePassword(password, confirmation);
       if (error) throw new Error(error);
-      const result = await database.auth.updateUser({ password });
-      if (result.error) throw result.error;
+      const result = await callAuth(database.auth.updateUser({ password }));
+      if (result.error) throw new Error(describeSupabaseError(result.error));
     },
     onSuccess: () => {
       setPassword("");

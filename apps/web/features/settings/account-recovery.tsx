@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { callAuth, describeSupabaseError } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
 import { SettingsSuccess } from "./settings-success";
 import "./settings.css";
@@ -23,15 +24,15 @@ export function AccountRecovery() {
       const result = await database.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/auth/recovery?mode=update`,
       });
-      if (result.error) throw result.error;
+      if (result.error) throw new Error(describeSupabaseError(result.error));
     },
   });
   const reset = useMutation({
     mutationFn: async () => {
       const error = validatePassword(password, confirmation);
       if (error) throw new Error(error);
-      const result = await database.auth.updateUser({ password });
-      if (result.error) throw result.error;
+      const result = await callAuth(database.auth.updateUser({ password }));
+      if (result.error) throw new Error(describeSupabaseError(result.error));
     },
     onSuccess: () => {
       setPassword("");

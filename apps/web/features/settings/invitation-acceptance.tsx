@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { callAuth, describeSupabaseError } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
 import { acceptInvitation } from "./settings-data";
 import "./settings.css";
@@ -22,8 +23,10 @@ export function InvitationAcceptance() {
   const [confirmation, setConfirmation] = useState("");
   const signIn = useMutation({
     mutationFn: async () => {
-      const result = await database.auth.signInWithPassword({ email: email.trim(), password });
-      if (result.error) throw result.error;
+      const result = await callAuth(
+        database.auth.signInWithPassword({ email: email.trim(), password }),
+      );
+      if (result.error) throw new Error(describeSupabaseError(result.error));
     },
     onSuccess: () => {
       setPassword("");
@@ -34,8 +37,8 @@ export function InvitationAcceptance() {
     mutationFn: async () => {
       const error = validatePassword(password, confirmation);
       if (error) throw new Error(error);
-      const result = await database.auth.updateUser({ password });
-      if (result.error) throw result.error;
+      const result = await callAuth(database.auth.updateUser({ password }));
+      if (result.error) throw new Error(describeSupabaseError(result.error));
       await acceptInvitation(database, { token });
     },
     onSuccess: async () => {

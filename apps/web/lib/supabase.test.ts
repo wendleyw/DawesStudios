@@ -1,35 +1,39 @@
-import { describe, expect, it } from "vitest";
-import { assertResult } from "./supabase";
+import { describe, expect, it, vi } from "vitest";
+import { callAuth, describeSupabaseError } from "./supabase";
 
-describe("assertResult", () => {
-  it("returns the data when there is no error", () => {
-    expect(assertResult({ data: { id: "1" }, error: null })).toEqual({ id: "1" });
+describe("describeSupabaseError", () => {
+  it("replaces a browser transport failure with a sentence a person can act on", () => {
+    // The exact strings Chromium/Firefox and Safari produce when the request never left the machine.
+    expect(describeSupabaseError({ message: "TypeError: Failed to fetch" })).toMatch(
+      /connection failed/i,
+    );
+    expect(describeSupabaseError({ message: "Load failed" })).toMatch(/connection failed/i);
   });
 
-  it("translates a Chromium/Firefox transport failure into a plain-language retry message", () => {
-    expect(() =>
-      assertResult({ data: null, error: { message: "TypeError: Failed to fetch" } }),
-    ).toThrowError("The connection failed and your changes were not saved — try again.");
+  it("passes a real server message through untouched", () => {
+    expect(describeSupabaseError({ message: "Invalid login credentials" })).toBe(
+      "Invalid login credentials",
+    );
+  });
+});
+
+describe("callAuth", () => {
+  it("resolves with the call's own result when it settles", async () => {
+    await expect(callAuth(Promise.resolve({ error: null }))).resolves.toEqual({ error: null });
   });
 
-  it("translates a Safari transport failure into the same retry message", () => {
-    expect(() =>
-      assertResult({ data: null, error: { message: "TypeError: Load failed" } }),
-    ).toThrowError("The connection failed and your changes were not saved — try again.");
-  });
-
-  it("leaves a Postgres or RLS error message untouched", () => {
-    expect(() =>
-      assertResult({
-        data: null,
-        error: { message: 'duplicate key value violates unique constraint "clients_slug_key"' },
-      }),
-    ).toThrowError('duplicate key value violates unique constraint "clients_slug_key"');
-  });
-
-  it("leaves a validation message untouched", () => {
-    expect(() =>
-      assertResult({ data: null, error: { message: "Choose a file that contains content." } }),
-    ).toThrowError("Choose a file that contains content.");
+  it("rejects with the transport sentence when the call never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      // `updateUser` refreshes the session first, and offline that refresh retries forever — the
+      // promise below stands in for it. Without the bound, the form sits on "Updating…" with its
+      // button disabled and nothing to act on.
+      const pending = callAuth(new Promise<{ error: null }>(() => {}));
+      const assertion = expect(pending).rejects.toThrow(/connection failed/i);
+      await vi.advanceTimersByTimeAsync(20_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

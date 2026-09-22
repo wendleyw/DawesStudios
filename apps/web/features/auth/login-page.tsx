@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import { safeReturnPath } from "./return-path";
 import { FormError } from "@/features/shared/form-error";
+import { describeSupabaseError } from "@/lib/supabase";
 import { markPostSignInFocus } from "./post-sign-in-focus";
 import "./auth.css";
 
@@ -35,7 +36,7 @@ export function LoginPage() {
       password: String(form.get("password")),
     });
     setPending(false);
-    if (result.error) setError(result.error.message);
+    if (result.error) setError(describeSupabaseError(result.error));
     else {
       markPostSignInFocus();
       router.replace(destination);
