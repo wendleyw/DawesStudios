@@ -1,35 +1,24 @@
 .settings-page {
-  max-width: 1240px;
+  max-width: var(--content-width);
   margin-inline: auto;
 }
 .settings-tabs {
-  display: flex;
-  gap: 28px;
-  margin-top: 32px;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-}
-.settings-tabs a {
-  font-size: var(--text-lg);
-  color: var(--muted);
-  padding: 15px 0;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.settings-tabs a.active {
-  color: #292926;
-  border-bottom-color: #292926;
+  margin-top: 0;
 }
 .settings-content {
-  padding-top: 36px;
+  padding-top: var(--space-section);
 }
 .settings-section {
   display: grid;
   grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.2fr);
-  gap: 56px;
+
+  gap: var(--space-section);
   padding-bottom: 36px;
   border-bottom: 1px solid var(--border);
+  padding: var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .settings-section h2 {
   font-size: 18px;
@@ -46,7 +35,7 @@
   max-width: 380px;
 }
 .settings-form input[readonly] {
-  background: #f7f7f3;
+  background: var(--surface-subtle);
   color: var(--muted);
 }
 /*
@@ -58,14 +47,18 @@
  */
 .settings-form textarea {
   width: 100%;
-  padding: 11px 13px;
+
+  padding: 8px var(--space-sm);
   min-height: 43px;
-  border: 1px solid #dcdcd5;
-  border-radius: 6px;
+
+  border: 1px solid var(--border-strong);
+
+  border-radius: var(--radius);
   background: var(--surface);
   font-size: var(--text-lg);
   font-weight: 400;
-  color: #30302a;
+
+  color: var(--foreground);
   resize: vertical;
   line-height: 1.7;
 }
@@ -89,7 +82,7 @@
 }
 .account-flow {
   min-height: 100dvh;
-  background: #f6f6f2;
+  background: var(--background);
   padding: 48px 24px;
   display: flex;
   flex-direction: column;
@@ -109,7 +102,7 @@
   margin: 64px auto 30px;
   padding: 38px;
   background: var(--surface);
-  border: 1px solid #e5e5df;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
 .account-flow-card h1 {

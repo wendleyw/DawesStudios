@@ -9,10 +9,9 @@ import { WorkspaceSettings } from "./workspace-settings";
 import "./settings.css";
 import { PageStatus } from "@/features/shared/page-status";
 
-type SettingsTab = "workspace" | "team" | "clients" | "presets" | "account";
+type SettingsTab = "workspace" | "clients" | "presets" | "account";
 const labels: Record<SettingsTab, string> = {
   workspace: "Studio",
-  team: "Team",
   clients: "Clients",
   presets: "Presets",
   account: "Your account",
@@ -32,9 +31,7 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
       </div>
     );
   const tabs: SettingsTab[] =
-    profile.role === "agency"
-      ? ["workspace", "team", "clients", "presets", "account"]
-      : ["account"];
+    profile.role === "agency" ? ["workspace", "clients", "presets", "account"] : ["account"];
   return (
     <div className="page-content settings-page">
       <header className="page-heading">
@@ -48,7 +45,7 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
         </div>
       </header>
       {tabs.length > 1 && (
-        <nav className="settings-tabs" aria-label="Settings sections">
+        <nav className="settings-tabs section-tabs" aria-label="Settings sections">
           {tabs.map((item) => (
             <Link
               key={item}

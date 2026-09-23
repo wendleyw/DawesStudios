@@ -3,8 +3,7 @@
 The Settings feature persists account, studio, client, campaign, and service-preset changes through the authenticated Supabase contract. Agency users have Workspace, Clients, and Presets. Every authenticated role can open Account. Backend permissions independently reject administrative mutations from clients and designers.
 
 Team moved out of this feature into `features/team/` (`team-page.tsx`, `team-data.ts`): the studio
-roster, invitations, role changes and removal. It kept its own `/settings/team` route (now rendered
-directly, not through `settings-page.tsx`'s tab shell) and its own `SettingsSuccess`/
+roster, invitations, role changes and removal. It uses `/team`, with `/settings/team` redirecting there for existing links and its own `SettingsSuccess`/
 `invitationRequestSchema` imports from this feature, since invitation validation and the shared
 "saved" banner stayed here. See `features/team/README.md` for its own documentation.
 
@@ -15,7 +14,7 @@ directly, not through `settings-page.tsx`'s tab shell) and its own `SettingsSucc
 - `account-recovery.tsx` sends a real Supabase recovery email and sets a new Auth password after its verification redirect. Invalid or expired links provide a path to request another email.
 - `invitation-acceptance.tsx` uses the invitation's opaque token and email-confirmed Auth session. It sets the user's password and calls `accept_invitation`; the backend verifies role, scope, expiry, replay, and existing access before granting membership.
 
-Routes are `/settings/{workspace,clients,presets,account}`, `/settings/team` (its own standalone page, see `features/team/README.md`), `/auth/recovery`, and `/auth/invite`. `/settings` defaults to Workspace for agency users and displays authorized account settings for other roles.
+Routes are `/settings/{workspace,clients,presets,account}`, `/team` (a separate feature with a legacy `/settings/team` redirect, see `features/team/README.md`), `/auth/recovery`, and `/auth/invite`. `/settings` defaults to Workspace for agency users and displays authorized account settings for other roles.
 
 ## Data access
 

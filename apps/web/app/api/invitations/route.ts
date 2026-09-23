@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     .from("profiles")
     .select("role")
     .eq("id", user.id)
+    .is("removed_at", null)
     .single();
   if (profileError || profile?.role !== "agency")
     return Response.json({ error: "Only the studio can send invitations." }, { status: 403 });

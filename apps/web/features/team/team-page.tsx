@@ -48,13 +48,13 @@ export function TeamPage() {
     mutationFn: async (profileId: string) => removeTeamMember(session!, { profileId }),
     onSuccess: async () => {
       setRemoving(null);
-      await invalidateTeam();
     },
+    onSettled: () => invalidateTeam(),
   });
   if (!profile) return <PageStatus>Loading the team…</PageStatus>;
   // Team is a standalone route now rather than a tab nested inside `SettingsPage`, which used to
   // gate every non-account tab (including "team") behind this same check and copy. Preserve both
-  // here so a designer or client hitting `/settings/team` directly still sees the documented
+  // here so a designer or client hitting `/team` directly still sees the documented
   // refusal (see docs/architecture/acceptance-matrix.md, D01) instead of an RLS-broken page.
   if (profile.role !== "agency")
     return (
@@ -119,9 +119,11 @@ export function TeamPage() {
                       {person.id === session?.user.id ? " (you)" : ""}
                     </strong>
                     <p>
-                      {person.role === "agency"
-                        ? "Studio team"
-                        : `Designer · ${person.activeProjectCount} active project${person.activeProjectCount === 1 ? "" : "s"}`}
+                      {person.removed_at
+                        ? "Access removed · Account block pending"
+                        : person.role === "agency"
+                          ? "Studio team"
+                          : `Designer · ${person.activeProjectCount} active project${person.activeProjectCount === 1 ? "" : "s"}`}
                     </p>
                   </div>
                   {person.id === session?.user.id ? (
@@ -130,26 +132,32 @@ export function TeamPage() {
                     </span>
                   ) : (
                     <>
-                      <select
-                        className="member-role-select"
-                        aria-label={`Change ${person.display_name}'s role`}
-                        value={person.role}
-                        disabled={changeRole.isPending}
-                        onChange={(event) =>
-                          changeRole.mutate({
-                            profileId: person.id,
-                            role: event.target.value as "agency" | "designer",
-                          })
-                        }
-                      >
-                        <option value="agency">Agency</option>
-                        <option value="designer">Designer</option>
-                      </select>
+                      {!person.removed_at && (
+                        <select
+                          className="member-role-select"
+                          aria-label={`Change ${person.display_name}'s role`}
+                          value={person.role}
+                          disabled={changeRole.isPending || remove.isPending}
+                          onChange={(event) =>
+                            changeRole.mutate({
+                              profileId: person.id,
+                              role: event.target.value as "agency" | "designer",
+                            })
+                          }
+                        >
+                          <option value="agency">Agency</option>
+                          <option value="designer">Designer</option>
+                        </select>
+                      )}
                       <button
                         className="button quiet"
-                        onClick={() => setRemoving({ id: person.id, name: person.display_name })}
+                        disabled={remove.isPending || changeRole.isPending}
+                        onClick={() => {
+                          remove.reset();
+                          setRemoving({ id: person.id, name: person.display_name });
+                        }}
                       >
-                        Remove
+                        {person.removed_at ? "Finish removal" : "Remove"}
                       </button>
                     </>
                   )}

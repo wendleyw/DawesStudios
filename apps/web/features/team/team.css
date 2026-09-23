@@ -1,9 +1,16 @@
 .member-role-select {
+  width: auto;
+  flex-shrink: 0;
   font-size: var(--text-sm);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 4px 8px;
   background: var(--surface);
+}
+@media (max-width: 520px) {
+  .member-role-select {
+    width: 100%;
+  }
 }
 /*
  * Moved here (verbatim) from `features/settings/settings.css` rather than into `app/globals.css`:
@@ -14,7 +21,7 @@
 .settings-avatar {
   width: 37px;
   height: 37px;
-  border: 1px solid #deded7;
+  border: 1px solid var(--border-strong);
   border-radius: 50%;
   display: grid;
   place-items: center;

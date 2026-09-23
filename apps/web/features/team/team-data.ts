@@ -7,17 +7,19 @@ import type { Invitation } from "@/features/settings/settings-model";
 import type { Session } from "@supabase/supabase-js";
 
 export function useTeamMembers() {
-  const { database, session } = useAuth();
+  const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["studio-team", session?.user.id],
+    enabled: profile?.role === "agency",
     queryFn: async () => {
       const members = assertResult(
         await database
           .from("profiles")
-          .select("id,display_name,role,avatar_url")
+          .select("id,display_name,role,avatar_url,removed_at")
           .in("role", ["agency", "designer"])
+          .is("removal_completed_at", null)
           .order("display_name"),
-      ) as Profile[];
+      ) as (Profile & { removed_at: string | null })[];
       // One query for the whole list's workload rather than one per row: active-project counts,
       // grouped by designer, over every non-delivered project they are assigned to.
       const counts = assertResult(
@@ -38,9 +40,10 @@ export function useTeamMembers() {
 }
 
 export function useInvitations() {
-  const { database, session } = useAuth();
+  const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["invitations", session?.user.id],
+    enabled: profile?.role === "agency",
     queryFn: async () =>
       assertResult(
         await database.from("invitations").select("*").order("created_at", { ascending: false }),

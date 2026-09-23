@@ -1,5 +1,5 @@
-import { TeamPage } from "@/features/team/team-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <TeamPage />;
+  redirect("/team");
 }
