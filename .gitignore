@@ -21,3 +21,7 @@ __pycache__/
 *.pyc
 supabase/.restore-drill/
 .superpowers/
+
+# deploy/staging: vendored upstream checkout and the generated, secret-bearing working copy
+deploy/staging/.upstream/
+deploy/staging/.work/

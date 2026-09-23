@@ -1,0 +1,67 @@
+# Staging web/media containers — a standalone compose file, not a layer on top of the repo-root
+# compose.yaml, so this task never edits or depends on that file's contents (see
+# .claude/agents/implementer.md owned paths). It otherwise mirrors compose.yaml service-for-service
+# (same build context, ports, read-only/cap_drop/security_opt hardening, media-scratch volume,
+# host.docker.internal gateway alias) with only the values production.md calls out as staging-
+# specific: image tags, ports, SUPABASE_INTERNAL_URL via host.docker.internal to the staging
+# Supabase gateway, APP_ORIGIN, and an empty MEDIA_ALLOWED_ORIGINS.
+#
+# Values come from the same deploy/staging/.work/.env that scripts/stage.sh prepare generates
+# (mode 0600, gitignored) — the "compose_app" values documented in deploy/staging/README.md.
+
+name: dawes-staging-app
+
+services:
+  web:
+    image: dawes-studios-web:staging
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Set the public Supabase URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set the public Supabase key}
+        NEXT_PUBLIC_MEDIA_URL: ${NEXT_PUBLIC_MEDIA_URL:?Set the public media URL}
+    environment:
+      SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:?Set the server-accessible Supabase URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set the private server credential}
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact browser origin}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3103}:3003"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,size=64m
+      - /app/apps/web/.next/cache:rw,nosuid,size=128m,uid=1000,gid=1000,mode=0700
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  media:
+    image: dawes-studios-media:staging
+    build:
+      context: ../../apps/media
+    ports:
+      - "127.0.0.1:${MEDIA_PORT:-56020}:55430"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,size=16m,mode=1777
+    volumes:
+      - media-scratch-staging:/scratch
+    environment:
+      SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?Set the server-accessible Supabase URL}
+      SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set the public Supabase key}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set the private server credential}
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact browser origin}
+      MEDIA_ALLOWED_ORIGINS: ${MEDIA_ALLOWED_ORIGINS:-}
+      MEDIA_HOST: 0.0.0.0
+      MEDIA_PORT: 55430
+      TMPDIR: /scratch
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  media-scratch-staging: {}

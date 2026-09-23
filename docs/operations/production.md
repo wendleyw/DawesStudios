@@ -10,7 +10,7 @@ and is never promoted to production.
 ```text
 Browser ── HTTPS ──► reverse proxy (TLS)
                       ├─ app.example.com   → web container       127.0.0.1:3003
-                      ├─ api.example.com   → Supabase gateway    127.0.0.1:8000
+                      ├─ api.example.com   → Supabase gateway    127.0.0.1:8000 (Envoy by default)
                       └─ media.example.com → media container     127.0.0.1:55430
 
 Self-hosted Supabase (official Docker distribution)
@@ -58,8 +58,11 @@ created by the migrations. Do not create them by hand.
 ### R2 as the Storage backend
 
 Create a **private** R2 bucket. Do not enable `r2.dev` or public custom-domain access. Create an R2
-API token with object read and write access to that bucket only. Then set these on the `storage`
-service:
+API token with object read and write access to that bucket only. Then set these in the `storage`
+service's `environment` through a Compose override file. The upstream `.env` does not expose
+`FILE_SIZE_LIMIT` (the upstream compose hardcodes 50 MB) or `TUS_ALLOW_S3_TAGS`, so editing `.env`
+alone is not enough. [`deploy/staging/compose.supabase.override.yml`](../../deploy/staging/compose.supabase.override.yml)
+is a tested example:
 
 ```yaml
 STORAGE_BACKEND: s3
@@ -80,13 +83,31 @@ resumable uploads leave those parts behind.
 
 ### Migrations
 
-Apply only `supabase/migrations/`, in order, from a trusted machine over a private connection:
+Apply only `supabase/migrations/`, in order, from a trusted machine. Publish the database port on
+the server's `127.0.0.1` only, and reach it through an SSH tunnel. The connection pooler expects a
+tenant-qualified user (`postgres.<tenant-id>`), so the direct port is simpler for this one-off step:
 
 ```bash
-supabase db push --db-url "postgresql://postgres:<password>@<private-host>:5432/postgres"
+PGSSLMODE=disable supabase db push --db-url "postgresql://postgres:<password>@127.0.0.1:<tunnel-port>/postgres"
 ```
 
-Take a database dump first (see backups). Migrations are forward-only.
+The upstream database has no TLS; the SSH tunnel provides the encryption. `PGSSLMODE=disable` must
+be an environment variable: the rehearsal showed that `?sslmode=disable` in the URL alone is not
+honoured. Take a database dump first (see backups). Migrations are forward-only.
+
+### First agency account
+
+A new database has no agency member, and the application has no public sign-up. From a trusted
+machine, create the first account through the Auth admin API with the service key
+(`POST /auth/v1/admin/users` with `email_confirm: true`). The `on_auth_user_created` trigger creates
+its profile as a client. Promote it with SQL as `postgres`:
+
+```sql
+update public.profiles set role = 'agency' where id = '<new user id>';
+```
+
+That agency then invites everyone else from Settings. The rehearsal verified both steps, an
+agency-only read with the resulting token, and that `POST /auth/v1/signup` is refused.
 
 **Never apply** `supabase/seed.sql`, anything under `supabase/scripts/` or `supabase/demo/`
 (provisioning, reset, SABRE demo), fixture passwords, or the local `supautils.hint_roles`
@@ -151,7 +172,10 @@ Record the results in `docs/verification/` before serving clients. This is the J
 
 1. `npm run check`, `npm --prefix apps/media test` and `npm run db:test` pass on the release commit.
 2. `npm run build` and `docker compose build` succeed. Both containers report healthy.
-3. Staging uses this exact topology: self-hosted Supabase, R2 backend, and the proxy.
+3. Staging uses this exact topology: self-hosted Supabase, R2 backend, and the proxy. The
+   [local rehearsal](../../deploy/staging/README.md) proves everything except R2 itself, the TLS
+   proxy and email delivery. MinIO accepts object tagging, so only a real R2 bucket proves
+   `TUS_ALLOW_S3_TAGS`.
 4. The browser suite runs against staging with `ACCEPTANCE_SUPABASE_URL` set, because the tests
    refuse an undeclared backend. Use a disposable staging dataset, never production data.
 5. Invitation and password recovery emails arrive on the real domain. Sign-up is refused.

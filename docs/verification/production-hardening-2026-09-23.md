@@ -57,8 +57,19 @@ production, team and console-error scenarios passed under the new CSP.
 The notification feed has no pagination beyond its latest 100 items. That is a product limitation
 worth a later decision, not a defect found by these checks.
 
+## Staging rehearsal
+
+[`deploy/staging/`](../../deploy/staging/README.md) runs the production topology locally, with MinIO
+standing in for R2 ([report](../engineering/handoffs/2026-09-23-staging-rehearsal.md)). Twelve of
+twelve Supabase containers were healthy; all 50 migrations applied to an empty database; the web
+and media images served `/login` and `/health` with the staging CSP, HSTS and no `X-Powered-By`;
+the first agency account was created and promoted by SQL; sign-up returned 422; and a 55 MiB TUS
+upload and a standard upload both round-tripped with matching SHA-256, with anonymous reads
+denied. The rehearsal corrected the production guide (storage override, `PGSSLMODE`, pooler user,
+Envoy gateway, agency bootstrap).
+
 ## Not verified here
 
-- A container build and a staging installation with the production topology (release checklist
-  in the production guide).
+- A real R2 bucket (object tagging), the TLS proxy, SMTP delivery, and a restore drill on the
+  production topology.
 - The J10 release audit and the full browser suite.

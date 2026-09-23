@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 19:05 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
+Updated: 2026-09-23 19:15 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
 orchestrator since 17:50 EDT.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -79,11 +79,21 @@ All four parts of the user's request are done. The evidence is in the
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
+## In progress
+
+- **Video upload lifecycle:** the spec is written and committed
+  ([design](../superpowers/specs/2026-09-23-video-upload-lifecycle-design.md), `fc1a23a`) and waits
+  for the user's review. The implementation plan and the code come only after that approval.
+- **Staging rehearsal: done.** [`deploy/staging/`](../../deploy/staging/README.md) runs the
+  official self-hosted Supabase (pinned `d51ed9f`) with MinIO as the S3 backend, on ports
+  56010–56014 and 3103. All 50 migrations apply to an empty database; the web and media images
+  are healthy with CSP and HSTS; the first agency account is bootstrapped; sign-up is refused;
+  and a 55 MiB TUS upload round-trips with a matching SHA-256. The containers are stopped, with
+  volumes kept. See the [report](handoffs/2026-09-23-staging-rehearsal.md).
+
 ## Next actions
 
-1. **Video upload lifecycle (user-approved):** cancel during transfer, resume after reload,
-   retry processing without re-uploading, and clean up abandoned raw files. Design first.
-2. **Staging rehearsal (user-approved):** official self-hosted Supabase on separate ports, with
-   MinIO standing in for R2, migrations only, the web and media images, and the production
-   checklist. Then the J10 audit.
+1. After the user reviews the spec: write the video lifecycle plan, then implement it.
+2. J10: seed a disposable dataset on the staging rehearsal and run the browser suite against it
+   (`ACCEPTANCE_SUPABASE_URL`). A real R2 bucket, the TLS proxy and SMTP remain for a server run.
 3. Start a fresh session so the project agents load by name.
