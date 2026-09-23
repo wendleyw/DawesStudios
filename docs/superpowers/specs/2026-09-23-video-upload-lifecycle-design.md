@@ -129,8 +129,9 @@ A forward migration, numbered after the latest migration at implementation time:
   - (b) attested video outputs in `internal-assets` older than 24 hours that no
     `designs.internal_asset_path` references.
 
-Age is always measured by the object's `storage.objects.created_at`, because
-`private.sanitized_assets` has no timestamp of its own. Before writing case (b), the implementation
+Age is always measured by the object's `storage.objects.created_at`, so both branches use one rule.
+(`private.sanitized_assets` also has a `created_at`; an earlier draft of this spec wrongly said it
+did not.) Before writing case (b), the implementation
 must confirm that `designs.internal_asset_path` is the only column that references video objects
 in `internal-assets`. Any other referencing column joins the exclusion.
 
