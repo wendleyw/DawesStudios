@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@database";
 import { invitationRequestSchema } from "@/features/settings/settings-model";
+import { readCappedBody } from "@/features/settings/invitation-body";
 
 export async function POST(request: Request) {
   // A standalone Node.js server derives request.url from its listening address, so in a container
@@ -40,13 +41,18 @@ export async function POST(request: Request) {
     .single();
   if (profileError || profile?.role !== "agency")
     return Response.json({ error: "Only the studio can send invitations." }, { status: 403 });
+  // The Content-Length check above is a fast rejection for a declared-size request; it is absent
+  // under chunked transfer encoding, so this streams the body and stops as soon as the 4096-byte
+  // cap is crossed, rather than buffering the whole request before measuring it.
   let raw: unknown;
   try {
-    const text = await request.text();
-    if (text.length > 4096)
+    const body = await readCappedBody(request, 4096);
+    if (body.tooLarge)
       return Response.json({ error: "Invitation request is too large." }, { status: 413 });
-    raw = JSON.parse(text);
+    raw = JSON.parse(body.text);
   } catch {
+    // An unreadable stream (such as a dropped connection) is answered like malformed JSON, as
+    // it was before the streamed cap.
     return Response.json({ error: "Send a valid invitation request." }, { status: 400 });
   }
   const parsed = invitationRequestSchema.safeParse(raw);

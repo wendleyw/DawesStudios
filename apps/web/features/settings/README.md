@@ -136,6 +136,8 @@ class, which is the resting `neutral` tone.) No file was moved or split for this
 
 `app/api/invitations/route.ts` accepts an authenticated Bearer token, validates it with Auth `getUser`, reads the caller's protected agency role, validates a bounded request body and same-origin browser requests, then creates the invitation through the caller-scoped RPC. The service credential is used only on the server for `inviteUserByEmail`; role metadata never authorizes membership. The backend serializes rate limits of 20 creations per sender per hour and 50 unexpired pending invitations per installation.
 
+The request body cap (4096 bytes) is enforced by `readCappedBody` (`invitation-body.ts`), which reads the stream incrementally and cancels it as soon as the cap is crossed. A `Content-Length` precheck alone cannot catch a chunked-encoded request (no `Content-Length` header), and measuring `request.text()`'s result after the fact means the oversized body was already fully buffered; `readCappedBody` mirrors `readBody` in `apps/media/src/server.js` for the same reason.
+
 Email failure revokes the pending database invitation and returns an explicit failure. Existing Auth accounts are not silently reassigned or elevated. The interface reports that their access needs studio administration; it does not claim an email was delivered. A revocation failure is surfaced for manual cleanup.
 
 The server needs `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_INTERNAL_URL` (or `NEXT_PUBLIC_SUPABASE_URL` as fallback). Inside Docker, the internal URL must resolve the backend from the application container; the public URL remains browser-reachable. Never prefix the service credential with `NEXT_PUBLIC_` or expose it in a browser bundle. Supabase Auth's redirect allowlist must include the deployed `/auth/invite?token=...` and `/auth/recovery?mode=update` URLs. The local inbox is available at `http://127.0.0.1:55424`; production email delivery requires configured SMTP.
@@ -145,7 +147,7 @@ The server needs `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, a
 From `apps/web`:
 
 ```sh
-npm run test -- features/settings/settings-model.test.ts features/settings/settings-data.test.ts
+npm run test -- features/settings/settings-model.test.ts features/settings/settings-data.test.ts features/settings/invitation-body.test.ts
 npm run test:e2e -- tests/e2e/intake-admin.spec.ts
 npm run typecheck
 npx eslint features/settings app/api/invitations app/auth 'app/(workspace)/settings'
@@ -154,7 +156,9 @@ npx eslint features/settings app/api/invitations app/auth 'app/(workspace)/setti
 Unit coverage exercises invitation normalization/scope, password rules, client slugs, and website
 validation (`settings-model.test.ts`), and every relocated write function's exact table/procedure
 name, argument shape and database-error surfacing (`settings-data.test.ts`, 18 tests, using the same
-Proxy call-recording stub as `features/projects/project-data.test.ts`). The E2E suite creates an
+Proxy call-recording stub as `features/projects/project-data.test.ts`), and `readCappedBody`
+rejecting an oversized chunked body mid-stream, before it is fully buffered
+(`invitation-body.test.ts`). The E2E suite creates an
 isolated acceptance client, exercises actual invitation/recovery mail and settings mutations, and
 removes its resources afterward. It restores the studio/preset values it changes; preset history
 intentionally records those revisions. Run it against the isolated local backend without resetting
