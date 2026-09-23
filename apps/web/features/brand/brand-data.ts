@@ -102,30 +102,36 @@ export function useBrandAssetPreviewUrl(
 }
 
 const logoImageTypes = ["image/svg+xml", "image/png", "image/webp", "image/jpeg"];
-/** Resolves the client's approved brand mark so the workspace can show the client's own logo. */
-export function useClientLogo(clientId: string | undefined) {
+/**
+ * Resolves the client's mark so the workspace can show the client's own logo: the logo the agency
+ * set in Settings > Clients when there is one, otherwise the first image in the Brand Hub's Logo
+ * category.
+ */
+export function useClientLogo(clientId: string | undefined, logoPath?: string | null) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["client-logo", session?.user.id, clientId],
+    queryKey: ["client-logo", session?.user.id, clientId, logoPath ?? null],
     enabled: !!session && !!clientId,
     retry: false,
     staleTime: 240_000,
     queryFn: async () => {
-      const assets = assertResult(
-        await database
-          .from("brand_assets")
-          .select("storage_path, mime_type")
-          .eq("client_id", clientId!)
-          .eq("category", "Logo")
-          .order("name"),
-      );
-      const mark = logoImageTypes.flatMap((type) =>
-        assets.filter((asset) => asset.storage_path && asset.mime_type === type),
-      )[0];
-      if (!mark?.storage_path) return null;
-      return assertResult(
-        await database.storage.from("brand-assets").createSignedUrl(mark.storage_path, 600),
-      ).signedUrl;
+      let path = logoPath;
+      if (!path) {
+        const assets = assertResult(
+          await database
+            .from("brand_assets")
+            .select("storage_path, mime_type")
+            .eq("client_id", clientId!)
+            .eq("category", "Logo")
+            .order("name"),
+        );
+        path = logoImageTypes.flatMap((type) =>
+          assets.filter((asset) => asset.storage_path && asset.mime_type === type),
+        )[0]?.storage_path;
+      }
+      if (!path) return null;
+      return assertResult(await database.storage.from("brand-assets").createSignedUrl(path, 600))
+        .signedUrl;
     },
   });
 }

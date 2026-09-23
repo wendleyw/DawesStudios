@@ -96,6 +96,44 @@ export async function saveClient(
   );
 }
 
+/**
+ * Uploads a client's workspace logo to `brand-assets` under the client's scope. The caller chooses
+ * the opaque path, so a retried upload of the same selection targets the same object.
+ */
+export async function uploadClientLogoFile(
+  database: SupabaseDatabase,
+  input: { path: string; file: File },
+) {
+  const result = await database.storage
+    .from("brand-assets")
+    .upload(input.path, input.file, { contentType: input.file.type, upsert: false });
+  // A retry after a committed upload finds its own object already there.
+  if (result.error && !/already exists|duplicate/i.test(result.error.message)) assertResult(result);
+}
+
+/** Points the client at a new logo, or clears it with `null`. */
+export async function saveClientLogo(
+  database: SupabaseDatabase,
+  input: { clientId: string; path: string | null },
+) {
+  assertResult(
+    await database
+      .from("clients")
+      .update({ logo_path: input.path })
+      .eq("id", input.clientId)
+      .select("id")
+      .single(),
+  );
+}
+
+/**
+ * Removes a logo file the client no longer references. Storage refuses to delete a file that is
+ * still referenced, and a failure here only leaves an unused object behind, so it is best effort.
+ */
+export async function removeClientLogoFile(database: SupabaseDatabase, input: { path: string }) {
+  await database.storage.from("brand-assets").remove([input.path]);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Campaigns: a client's campaigns (`campaign-settings.tsx`). `useCampaigns` is read from
 // `features/briefings/briefing-data.ts`, which already owns it for the briefing flow; this module

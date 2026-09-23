@@ -471,6 +471,7 @@ export type Database = {
           id: string
           industry: string
           initials: string
+          logo_path: string | null
           name: string
           slug: string
           updated_at: string
@@ -483,6 +484,7 @@ export type Database = {
           id?: string
           industry?: string
           initials?: string
+          logo_path?: string | null
           name: string
           slug: string
           updated_at?: string
@@ -495,6 +497,7 @@ export type Database = {
           id?: string
           industry?: string
           initials?: string
+          logo_path?: string | null
           name?: string
           slug?: string
           updated_at?: string

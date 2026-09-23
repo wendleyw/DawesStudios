@@ -8,16 +8,26 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useClients, type Client } from "@/features/workspace/workspace-data";
 import { clientSlug, validWebsite } from "./settings-model";
-import { saveClient, useInvalidateClients } from "./settings-data";
+import {
+  removeClientLogoFile,
+  saveClient,
+  saveClientLogo,
+  uploadClientLogoFile,
+  useInvalidateClients,
+} from "./settings-data";
 import { CampaignSettings } from "./campaign-settings";
 import { InvitePerson } from "@/features/team/team-page";
 import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
+import { ClientMark } from "@/features/workspace/client-mark";
 
 export function ClientSettings() {
   const clients = useClients();
   const [editing, setEditing] = useState<Client | "new" | null>(null);
   const [campaignClient, setCampaignClient] = useState<Client | null>(null);
+  const [logoClientId, setLogoClientId] = useState<string | null>(null);
+  // Read from the live list, so the dialog shows the logo that was just saved.
+  const logoClient = clients.data?.find((client) => client.id === logoClientId);
   const [inviting, setInviting] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   return (
@@ -46,6 +56,14 @@ export function ClientSettings() {
         <div className="settings-list">
           {clients.data?.map((client) => (
             <div className="settings-list-row settings-client-row" key={client.id}>
+              <button
+                className="settings-client-logo"
+                aria-label={`Change ${client.name} logo`}
+                title="Change logo"
+                onClick={() => setLogoClientId(client.id)}
+              >
+                <ClientMark client={client} className="settings-client-mark" />
+              </button>
               <div>
                 <strong>{client.name}</strong>
                 <p>{client.industry || "Client"}</p>
@@ -75,6 +93,16 @@ export function ClientSettings() {
           clientId={campaignClient.id}
           clientName={campaignClient.name}
           onClose={() => setCampaignClient(null)}
+        />
+      )}
+      {logoClient && (
+        <ClientLogoDialog
+          client={logoClient}
+          onClose={() => setLogoClientId(null)}
+          onSaved={(message) => {
+            setLogoClientId(null);
+            setNotice(message);
+          }}
         />
       )}
       {editing && (
@@ -232,6 +260,112 @@ function ClientEditor({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+const logoFileTypes: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+
+function ClientLogoDialog({
+  client,
+  onClose,
+  onSaved,
+}: {
+  client: Client;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const { database } = useAuth();
+  const invalidateClients = useInvalidateClients();
+  const upload = useMutation({
+    mutationFn: async (selection: { file: File; path: string }) => {
+      await uploadClientLogoFile(database, selection);
+      await saveClientLogo(database, { clientId: client.id, path: selection.path });
+      if (client.logo_path) await removeClientLogoFile(database, { path: client.logo_path });
+    },
+    onSuccess: async () => {
+      await invalidateClients();
+      onSaved(`${client.name} logo updated.`);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: async () => {
+      await saveClientLogo(database, { clientId: client.id, path: null });
+      if (client.logo_path) await removeClientLogoFile(database, { path: client.logo_path });
+    },
+    onSuccess: async () => {
+      await invalidateClients();
+      onSaved(`${client.name} logo removed.`);
+    },
+  });
+  const [fileError, setFileError] = useState("");
+  const busy = upload.isPending || remove.isPending;
+  const error = fileError || upload.error?.message || remove.error?.message;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Client logo"
+      description={`Shown beside ${client.name} on the board and across the workspace.`}
+    >
+      <div className="settings-logo-dialog">
+        <ClientMark client={client} className="settings-logo-mark" alt={`${client.name} logo`} />
+        <label className="button primary settings-logo-upload" aria-disabled={busy}>
+          {upload.isPending ? "Uploading…" : client.logo_path ? "Replace logo" : "Upload logo"}
+          <input
+            className="visually-hidden"
+            type="file"
+            accept={Object.keys(logoFileTypes).join(",")}
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              setFileError("");
+              const extension = logoFileTypes[file.type];
+              if (!extension) return setFileError("Use a PNG, JPG, WebP or SVG image.");
+              if (file.size > LOGO_MAX_BYTES) return setFileError("Use an image under 5 MB.");
+              upload.mutate({ file, path: `${client.id}/${crypto.randomUUID()}.${extension}` });
+            }}
+          />
+        </label>
+        <span className="settings-note">
+          PNG, JPG, WebP or SVG, up to 5 MB. Square images fit best.
+        </span>
+        {error && <FormError>{error}</FormError>}
+        <div className="settings-dialog-actions">
+          {upload.error && upload.variables && (
+            // Retries the same path, so a committed upload is reused rather than duplicated.
+            <button
+              className="button quiet"
+              type="button"
+              disabled={busy}
+              onClick={() => upload.mutate(upload.variables!)}
+            >
+              Try again
+            </button>
+          )}
+          {client.logo_path && (
+            <button
+              className="button quiet"
+              type="button"
+              disabled={busy}
+              onClick={() => remove.mutate()}
+            >
+              {remove.isPending ? "Removing…" : "Remove logo"}
+            </button>
+          )}
+          <button className="button" type="button" onClick={onClose} disabled={busy}>
+            Done
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 }

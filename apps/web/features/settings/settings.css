@@ -128,6 +128,43 @@
   font-size: var(--text-base);
   line-height: 1.6;
 }
+.settings-client-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+.settings-client-mark {
+  --client-mark-size: 36px;
+}
+.settings-client-logo:hover .client-mark {
+  opacity: 0.8;
+}
+.settings-logo-dialog {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+}
+.settings-logo-mark {
+  --client-mark-size: 96px;
+}
+.settings-logo-upload {
+  cursor: pointer;
+}
+.settings-logo-upload:focus-within {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.settings-logo-upload[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.settings-logo-dialog .settings-dialog-actions {
+  justify-self: stretch;
+}
 @media (max-width: 800px) {
   .settings-section {
     grid-template-columns: 1fr;
@@ -155,7 +192,7 @@
     gap: 18px;
   }
   .settings-client-row > div {
-    flex-basis: 100%;
+    flex-basis: calc(100% - 36px - var(--space-lg));
   }
   .account-flow {
     padding: 32px 16px;

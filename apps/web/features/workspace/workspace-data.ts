@@ -37,6 +37,8 @@ export type Client = {
   website: string;
   description: string;
   archived: boolean;
+  /** The agency-chosen workspace logo in `brand-assets`, preferred over any Brand Hub logo. */
+  logo_path: string | null;
   /** The revision the client-settings editor opens on, so a stale save can be refused. */
   updated_at: string;
 };

@@ -2,8 +2,9 @@
 
 This feature holds the application chrome (`app-shell.tsx`), the home overview
 (`home-page.tsx`), the global cross-entity search page (`search-page.tsx`), and notifications
-(`notifications-page.tsx`, `notifications-bell.tsx`). `client-mark.tsx` renders a client's approved
-brand mark and is used by both this feature's shell and `features/board`.
+(`notifications-page.tsx`, `notifications-bell.tsx`). `client-mark.tsx` renders a client's mark — the logo the agency set in
+Settings > Clients (`clients.logo_path`), else the first Brand Hub Logo image, else initials — and
+is used by this feature's shell, `features/board` and `features/settings`.
 
 ## One client navigation across the workspace
 

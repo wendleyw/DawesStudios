@@ -19,7 +19,7 @@ export function ClientMark({
   className?: string;
   alt?: string;
 }) {
-  const logo = useClientLogo(client.id);
+  const logo = useClientLogo(client.id, client.logo_path);
   const classes = `client-mark ${className}`.trim();
   if (logo.data)
     // Keep expiring, caller-scoped signed URLs out of Next.js's shared image optimization cache.

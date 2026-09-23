@@ -552,7 +552,7 @@ select {
   background: rgb(255 255 255 / 96%);
 }
 .client-mark {
-  /* One mark, two scales: the topbar marker and the board's identity header. */
+  /* One mark at several scales: each surface sets `--client-mark-size` on its own class. */
   --client-mark-size: 26px;
 
   width: var(--client-mark-size);
