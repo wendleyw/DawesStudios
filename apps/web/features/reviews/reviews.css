@@ -9,15 +9,18 @@
 .review-card {
   display: flex;
   align-items: flex-start;
-  gap: 22px;
-  padding: 25px;
+
+  gap: var(--space-lg);
+
+  padding: var(--space-lg);
   border: 1px solid var(--border);
-  border-radius: 9px;
+
+  border-radius: var(--radius-lg);
   background: var(--surface);
   transition: border-color 0.15s;
 }
 .review-card:hover {
-  border-color: #b8b8af;
+  border-color: var(--border-strong);
 }
 .review-card > div {
   flex: 1;
@@ -38,10 +41,12 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius);
-  background: #f2f3ee;
+
+  background: var(--surface-subtle);
   width: 48px;
   height: 48px;
-  color: #66715c;
+
+  color: var(--muted);
   flex-shrink: 0;
 }
 .review-date {

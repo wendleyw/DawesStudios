@@ -4,7 +4,7 @@ import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-quer
 import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
 import { useInvalidateNotifications } from "@/features/workspace/workspace-data";
@@ -23,10 +23,15 @@ import {
   type ServiceDefinition,
 } from "./briefing-model";
 import { BriefingEditorDetails } from "./briefing-editor-details";
+import { BriefingServicePicker } from "./briefing-service-picker";
 import { BriefingAttachments } from "./briefing-attachments";
 import { BriefingSummary } from "./briefing-summary";
 import { FormError } from "@/features/shared/form-error";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
+
+export type BriefingDialogOptions = {
+  onStateChange: (state: { busy: boolean; dirty: boolean }) => void;
+  onSubmitted: () => void;
+};
 
 /**
  * The three-step briefing editor: choosing a service, filling in details (delegated to
@@ -41,6 +46,7 @@ export function BriefingEditor({
   campaigns,
   defaults,
   serviceCatalog,
+  dialog,
 }: {
   clientId: string;
   clientName: string;
@@ -48,6 +54,7 @@ export function BriefingEditor({
   campaigns: Campaign[];
   defaults: BriefingDirection;
   serviceCatalog: ServiceDefinition[];
+  dialog?: BriefingDialogOptions;
 }) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
@@ -62,11 +69,16 @@ export function BriefingEditor({
   const [campaignSearch, setCampaignSearch] = useState("");
   const [typeNote, setTypeNote] = useState("");
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const editor = useRef<HTMLDivElement>(null);
+  const validation = useRef<HTMLDivElement>(null);
   const fileWrites = useIsMutating({ mutationKey: ["briefing-file", savedId] });
   const service = serviceCatalog.find((item) => item.id === draft.serviceId);
   const update = (patch: Partial<BriefingDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
+    if (errors.length) setErrors([]);
     setSaved(false);
+    setDirty(true);
   };
   const updateDirection = (patch: Partial<BriefingDirection>) =>
     update({ direction: { ...draft.direction, ...patch } });
@@ -103,6 +115,7 @@ export function BriefingEditor({
     },
     onSuccess: ({ id, submit }) => {
       setSaved(true);
+      setDirty(false);
       setErrors([]);
       // Saving or submitting changes the briefing row and, on submit, notifies the studio. The
       // briefing's own attachments and brand guidance are untouched, so only `briefings` is taken
@@ -111,10 +124,26 @@ export function BriefingEditor({
       // already invalidated — so its helper is non-widening here, as in `briefing-detail.tsx`.
       void queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] });
       void invalidateNotifications();
-      if (submit) router.push(`/clients/${clientId}/briefings/${id}`);
+      if (dialog) {
+        if (submit) dialog.onSubmitted();
+      } else if (submit) router.push(`/clients/${clientId}/briefings/${id}`);
       else router.replace(`/clients/${clientId}/briefings/${id}/edit`);
     },
   });
+  const busy = save.isPending || !!fileWrites;
+  const onStateChange = dialog?.onStateChange;
+  const inDialog = !!dialog;
+  useEffect(() => {
+    onStateChange?.({ busy, dirty });
+  }, [onStateChange, busy, dirty]);
+  useEffect(() => {
+    if (inDialog) editor.current?.closest(".modal-body")?.scrollTo({ top: 0 });
+  }, [step, inDialog]);
+  useEffect(() => {
+    if (!errors.length) return;
+    validation.current?.scrollIntoView({ block: "start" });
+    validation.current?.focus({ preventScroll: true });
+  }, [errors]);
   function selectService(id: string) {
     const next = serviceCatalog.find((item) => item.id === id)!;
     const compatible = draft.deliverables.filter((item) => next.formats.includes(item.format));
@@ -147,32 +176,45 @@ export function BriefingEditor({
     setErrors(validation);
     if (!validation.length) {
       setStep(2);
-      window.scrollTo({ top: 0, behavior: "instant" });
+      if (!dialog) editor.current?.scrollIntoView({ block: "start", behavior: "instant" });
     }
   }
 
   return (
-    <div className="page-content briefing-editor">
-      <header className="briefing-editor-header">
-        <Link href={`/clients/${clientId}/briefings`} className="button quiet">
-          <ArrowLeft size={16} />
-          Briefings
-        </Link>
-        <span className="eyebrow">{clientName}</span>
+    <div
+      ref={editor}
+      className={`page-content briefing-editor ${dialog ? "briefing-editor-modal" : ""}`}
+    >
+      <header className={dialog ? "briefing-editor-header" : "page-heading client-page-heading"}>
+        {dialog ? (
+          <span className="eyebrow">{clientName}</span>
+        ) : (
+          <div className="briefing-title-row">
+            <Link
+              href={`/clients/${clientId}/briefings`}
+              className="icon-button"
+              aria-label="Briefings"
+              title="Briefings"
+            >
+              <ArrowLeft size={16} />
+            </Link>
+            <h1>{briefing ? "Edit briefing" : "New briefing"}</h1>
+          </div>
+        )}
         <div className="page-actions">
-          <button
-            className="button"
-            disabled={save.isPending || !!fileWrites || !service}
-            onClick={() => save.mutate(false)}
-          >
-            {save.isPending ? "Saving…" : "Save draft"}
-          </button>
-          <NotificationsBell className="page-bell" />
+          {service && (
+            <button
+              className="button"
+              disabled={save.isPending || !!fileWrites || !service}
+              onClick={() => save.mutate(false)}
+            >
+              {save.isPending ? "Saving…" : "Save draft"}
+            </button>
+          )}
         </div>
       </header>
-      <h1 className="briefing-editor-title">{briefing ? "Edit briefing" : "New briefing"}</h1>
       <nav className="briefing-progress" aria-label="Briefing steps">
-        {["Type", "Details", "Review"].map((label, index) => (
+        {["Service", "Details", "Review"].map((label, index) => (
           <button
             key={label}
             aria-current={step === index ? "step" : undefined}
@@ -192,7 +234,7 @@ export function BriefingEditor({
       )}
       {save.error && <FormError>{save.error.message}</FormError>}
       {errors.length > 0 && (
-        <div className="briefing-validation" role="alert">
+        <div className="briefing-validation" role="alert" ref={validation} tabIndex={-1}>
           <strong>A few details need your attention.</strong>
           <ul>
             {errors.map((error) => (
@@ -207,24 +249,11 @@ export function BriefingEditor({
         </p>
       )}
       {step === 0 ? (
-        <div className="service-grid">
-          {serviceCatalog.map((item) => (
-            <button
-              key={item.id}
-              className={`service-card ${draft.serviceId === item.id ? "selected" : ""}`}
-              aria-pressed={draft.serviceId === item.id}
-              onClick={() => selectService(item.id)}
-            >
-              <span className="eyebrow">{item.category}</span>
-              <h2>{item.name}</h2>
-              <p>{item.description}</p>
-              <span className="service-card-meta">
-                {estimateLabel(item)}
-                <span>{item.days ? `${item.days} days` : "Timing to be agreed"}</span>
-              </span>
-            </button>
-          ))}
-        </div>
+        <BriefingServicePicker
+          catalog={serviceCatalog}
+          selectedId={draft.serviceId}
+          onSelect={selectService}
+        />
       ) : step === 1 ? (
         <BriefingEditorDetails
           service={service}
@@ -239,9 +268,18 @@ export function BriefingEditor({
           onUpdateDeliverable={updateDeliverable}
           defaults={defaults}
           savedId={savedId}
+          onSaveDraft={() => save.mutate(false)}
+          saving={busy}
         />
       ) : (
         <div className="briefing-review">
+          <div className="briefing-step-intro">
+            <h2>Ready to send?</h2>
+            <p>
+              Check the details below. The studio will review your request before confirming the
+              budget.
+            </p>
+          </div>
           <BriefingSummary
             draft={draft}
             campaignName={campaigns.find((item) => item.id === draft.campaignId)?.title}

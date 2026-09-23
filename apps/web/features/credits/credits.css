@@ -1,5 +1,5 @@
 .credits-page {
-  max-width: 1320px;
+  max-width: var(--content-width);
   width: 100%;
   min-width: 0;
   margin-inline: auto;
@@ -7,19 +7,26 @@
 .credit-overview {
   display: grid;
   grid-template-columns: 1fr 1fr 1.2fr;
-  gap: 32px;
-  padding: 30px 0 40px;
-  margin-top: 20px;
+
+  gap: var(--space-lg);
+
+  padding: var(--space-lg);
+
+  margin-top: 0;
   border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .credit-overview > section + section {
   border-left: 1px solid var(--border);
   padding-left: 32px;
 }
 .credit-balance {
-  font-size: 52px;
+  font-size: 40px;
   letter-spacing: -0.06em;
-  margin-top: 14px;
+
+  margin-top: var(--space-md);
   line-height: 1.1;
 }
 .credit-balance span {
@@ -29,9 +36,10 @@
   margin-left: 12px;
 }
 .credit-consumed {
-  font-size: 36px;
+  font-size: var(--text-metric);
   letter-spacing: -0.04em;
-  margin-top: 24px;
+
+  margin-top: var(--space-md);
   line-height: 1.1;
 }
 .credit-overview p {
@@ -55,22 +63,8 @@
   border-bottom: 1px solid var(--border);
 }
 .credit-tabs {
-  display: flex;
-  gap: 24px;
   margin: 0;
-  border: 0;
-}
-.credit-tabs button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 17px 0;
-  background: none;
-  font-size: var(--text-lg);
-  color: var(--muted);
-}
-.credit-tabs button.active {
-  border-bottom-color: #242424;
-  color: var(--foreground);
+  border-bottom: 0;
 }
 .credit-toolbar {
   display: flex;
@@ -101,7 +95,7 @@
 .credit-form input,
 .credit-form textarea {
   background: var(--surface);
-  border: 1px solid #deded7;
+  border: 1px solid var(--border-strong);
   padding: 10px 12px;
   border-radius: 6px;
   font-size: var(--text-lg);
@@ -119,6 +113,9 @@
   overflow: auto;
   max-width: 100%;
   min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .credit-table {
   border-collapse: collapse;
@@ -127,18 +124,22 @@
   font-size: var(--text-lg);
 }
 .credit-table th {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 500;
-  text-transform: uppercase;
+
+  text-transform: var(--eyebrow-case);
   letter-spacing: var(--eyebrow-tracking);
   color: var(--muted);
-  padding: 16px 12px;
+
+  padding: var(--space-md);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+  background: var(--surface-hover);
 }
 .credit-table td {
-  padding: 20px 12px;
-  border-bottom: 1px solid #eeede8;
+  padding: var(--space-lg) var(--space-md);
+
+  border-bottom: 1px solid var(--border);
   color: var(--muted);
 }
 .credit-table td:first-child {
@@ -147,7 +148,7 @@
 .credit-table td:first-child strong {
   display: block;
   font-weight: 500;
-  color: #30302c;
+  color: var(--foreground);
   margin-bottom: 7px;
 }
 .credit-table td:first-child span {
@@ -161,7 +162,7 @@
   white-space: nowrap;
 }
 .credit-table td.credit-number {
-  color: #393934;
+  color: var(--foreground);
 }
 .credit-requests {
   margin-top: 44px;
@@ -176,7 +177,7 @@
   gap: 20px;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 1px solid #e9e8e1;
+  border-bottom: 1px solid var(--border);
 }
 .credit-request > div {
   flex: 1;
@@ -206,13 +207,13 @@
   align-items: center;
   gap: 10px;
   padding: 22px 10px;
-  border: 1px solid #ddddd5;
+  border: 1px solid var(--border-strong);
   border-radius: 7px;
   background: var(--surface);
 }
 .credit-packages button.selected {
   border-color: #292927;
-  background: #f4f4ef;
+  background: var(--surface-subtle);
 }
 .credit-packages strong {
   font-size: 25px;

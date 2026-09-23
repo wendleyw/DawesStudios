@@ -10,7 +10,6 @@ import { briefingStatusLabels, briefingStatusTones, services } from "./briefing-
 import { statusToneClass } from "@/features/shared/status-tone";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -48,7 +47,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
   );
   return (
     <div className="page-content briefings-page">
-      <header className="page-heading">
+      <header className="page-heading client-page-heading">
         <div>
           <h1>Briefings</h1>
           <p>A clear starting point for your next project.</p>
@@ -60,28 +59,30 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
               New briefing
             </Link>
           )}
-          <NotificationsBell className="page-bell" />
         </div>
+        {profile?.role !== "designer" && (
+          <nav
+            className="briefing-tabs section-tabs client-page-tools"
+            aria-label="Filter briefings"
+          >
+            {[
+              ["all", "All briefings"],
+              ["draft", briefingStatusLabels.draft],
+              ["awaiting_review", "With the studio"],
+              ["accepted", briefingStatusLabels.accepted],
+            ].map(([value, label]) => (
+              <button
+                className={tab === value ? "active" : ""}
+                key={value}
+                aria-pressed={tab === value}
+                onClick={() => setTab(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
       </header>
-      {profile?.role !== "designer" && (
-        <nav className="briefing-tabs" aria-label="Filter briefings">
-          {[
-            ["all", "All briefings"],
-            ["draft", briefingStatusLabels.draft],
-            ["awaiting_review", "With the studio"],
-            ["accepted", briefingStatusLabels.accepted],
-          ].map(([value, label]) => (
-            <button
-              className={tab === value ? "active" : ""}
-              key={value}
-              aria-pressed={tab === value}
-              onClick={() => setTab(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      )}
       {visible.length === 0 ? (
         <div className="empty-state">
           <h2>No briefings here yet.</h2>

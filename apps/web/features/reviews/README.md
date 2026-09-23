@@ -1,5 +1,10 @@
 # Reviews
 
+The page uses the shared floating client navigation/profile above a white title/action card on
+the workspace grid. Review filters sit inside the title card; the existing scoped review cards and
+open actions remain below. The same layout adapts to desktop and mobile without duplicating client
+navigation in the sidebar.
+
 `reviews-page.tsx` lists the design versions currently in review: a designer's own in-progress
 versions, or (for an agency/client session) the published versions awaiting client review, plus,
 for an agency session, the versions a designer has submitted for internal studio review.

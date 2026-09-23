@@ -5,7 +5,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBriefingBrand, useBriefings, useCampaigns, useServicePresets } from "./briefing-data";
 import { brandDefaults, catalogWithPresets } from "./briefing-model";
-import { BriefingEditor } from "./briefing-editor-form";
+import { BriefingEditor, type BriefingDialogOptions } from "./briefing-editor-form";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
 
@@ -18,9 +18,11 @@ import { PageStatus } from "@/features/shared/page-status";
 export function BriefingEditorPage({
   clientId,
   briefingId,
+  dialog,
 }: {
   clientId: string;
   briefingId?: string;
+  dialog?: BriefingDialogOptions;
 }) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -95,6 +97,7 @@ export function BriefingEditorPage({
       campaigns={campaigns.data ?? []}
       defaults={brandDefaults(brand.data ?? [])}
       serviceCatalog={catalogWithPresets(presets.data ?? [])}
+      dialog={dialog}
     />
   );
 }

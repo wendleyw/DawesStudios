@@ -1,5 +1,10 @@
 # Credits
 
+The Credits page uses the shared floating client navigation/profile and white title/action card
+on the workspace grid. Balance, requests, ledger/report tabs and accounting actions remain in their
+existing content panels below. The layout follows the same desktop/mobile gutters as other client
+sections without changing billing or export behavior.
+
 This feature displays a real Supabase credit account, immutable ledger and additional-credit requests. Agency and client sessions read only backend-authorized records; designers have no credit interface.
 
 - `credit-data.ts` is the feature's only Supabase access point. It reads the account, requests and complete ledger in bounded pages, avoiding the default query row limit when exporting a longer history, via `useCreditAccount`, `useCreditRequests` and `useCreditLedger`. It also exports the three write functions — `requestCredits`, `adjustCredits`, `reviewCreditRequest` — each a plain `async (database, input)` function unit-tested in `credit-data.test.ts` without React, plus `creditQueryKeys` and `useInvalidateCredits()` for post-mutation cache invalidation.

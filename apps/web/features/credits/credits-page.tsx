@@ -27,7 +27,6 @@ import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
 import { saveBlob } from "@/features/shared/save-blob";
 import { statusToneClass } from "@/features/shared/status-tone";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -138,7 +137,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
   }
   return (
     <div className="page-content credits-page">
-      <header className="page-heading">
+      <header className="page-heading client-page-heading">
         <div>
           <h1>Credits</h1>
           <p>A clear view of your creative investment.</p>
@@ -151,7 +150,6 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             <Plus size={16} />
             {profile?.role === "agency" ? "Adjust credits" : "Request credits"}
           </button>
-          <NotificationsBell className="page-bell" />
         </div>
       </header>
       <div className="credit-overview">
@@ -180,7 +178,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
         </section>
       </div>
       <div className="credit-navigation">
-        <nav className="credit-tabs" aria-label="Credit views">
+        <nav className="credit-tabs section-tabs" aria-label="Credit views">
           <button
             className={tab === "activity" ? "active" : ""}
             aria-pressed={tab === "activity"}

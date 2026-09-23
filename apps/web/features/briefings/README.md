@@ -1,15 +1,45 @@
 # Briefings
 
+The listing, detail and directly opened editor use the shared floating client navigation/profile
+and a full-width white title/action card on the workspace grid. Listing filters sit inside that
+card. Detail shows the briefing title once; its summary keeps a screen-reader heading for the
+Deliverables and Creative direction hierarchy. The direct editor has a back link and one New/Edit
+briefing heading; intercepted modals retain their compact dialog layout. Editor review scrolling
+targets the editor within the shell's main scrolling region.
+
 This feature implements the client/agency service request flow against the caller's authenticated Supabase session. Designers can read only accepted briefings for their assigned projects through the safe `get_assigned_briefings` projection; raw briefing records and financial fields remain unavailable.
 
 - `service-catalog.json` contains the 20 service types and 25 formats copied from the reference catalog, with English product data and no prototype implementation dependency.
 - `briefing-model.ts` defines draft validation, catalog helpers, a validated JSON decoder, brand defaults, and the typed briefing RPC payload. New drafts have no implicit campaign.
 - `briefing-data.ts` owns every Supabase read and write for the feature, as [the data-access contract](../../../../docs/architecture/data-access.md) requires: `use<Thing>()` hooks for briefings, campaigns, brand context, service presets, the project linked from an accepted briefing, the agency's credit-balance read and a briefing's attachments; plain `async (database, input)` functions for every write (`confirmBriefingBudget`, `acceptBriefing`, `saveBriefingRevision`, `submitBriefing`, the attachment upload/register/remove/download calls); and the two reads that cannot be hooks because they run inside a mutation (`findBriefingAttachmentByPath`, `downloadBriefingAttachmentFile`). It uses a separate validated designer decoder for the safe assigned projection.
-- `briefings-page.tsx` lists drafts, pending reviews and accepted briefs. `briefing-editor.tsx` resolves the client, draft, campaigns, brand defaults and service catalog, then hands off to `briefing-editor-form.tsx`'s `BriefingEditor`, which runs the Type/Details/Review steps and the save mutation; the Details step's markup is `briefing-editor-details.tsx`'s `BriefingEditorDetails`, split out because it was the largest single piece of what had been the largest component in the repository. `briefing-detail.tsx` exposes agency budget confirmation and atomic acceptance through backend RPCs.
+- `briefings-page.tsx` lists drafts, pending reviews and accepted briefs. `briefing-editor.tsx` resolves the client, draft, campaigns, brand defaults and service catalog, then hands off to `briefing-editor-form.tsx`'s `BriefingEditor`, which runs the Service/Details/Review steps and the save mutation; the Details step's markup is `briefing-editor-details.tsx`'s `BriefingEditorDetails`, split out because it was the largest single piece of what had been the largest component in the repository. `briefing-detail.tsx` exposes agency budget confirmation and atomic acceptance through backend RPCs.
 - `briefing-attachments.tsx` uploads real private PNG/JPG/WebP/PDF files, enforces a 50 MiB client-side limit, registers them with the backend, and supports authorized download/removal. A draft must be saved before files can be attached. Backend policies independently enforce access and file constraints.
 - `briefing-summary.tsx` renders the saved scope without exposing internal project assignments.
 
 Routes live under `app/(workspace)/clients/[clientId]/briefings/`. Feature styles are local to `briefings.css`, and it holds no selector this feature owns alone that has leaked into `app/globals.css` — every `briefing-*` class is defined only in `briefings.css`, and the one shared class this feature's markup uses (`status-badge`) is defined in `globals.css` and consumed by five other features, not just this one. Shared dialogs use the common Modal component; `FormError` and `PageStatus` are used at every loading- and error-state call site that matches their shape (see the deviations below for the few that do not). Authoritative state is stored in Supabase and read through TanStack Query. Form state contains only the in-progress draft; it does not grant permissions or create credits locally.
+
+## Guided form
+
+The Service step keeps all 20 services in one searchable catalog with a category filter, compact descriptions and estimate/timing labels. The selected service remains visible above the results when a filter hides its card. Save draft appears after a service is selected; sending the request remains free.
+
+Details starts with the project title and an explicit campaign choice or creation. Campaign search is secondary and expands on demand. Creative direction and the service questions precede formats, so clients describe their request before specifying production details. Brand Hub defaults are explained and optional overrides stay collapsed. Each deliverable shows its standard size, name, quantity and plain-language Design approach choices. Size settings expand for custom/modified dimensions; standard preset sizes remain populated while collapsed. These labels still save the existing original/adaptation values.
+
+Incomplete submission focuses a visible validation summary instead of leaving errors above the scroll position. Editing clears that obsolete summary; the next review validates the complete draft again. Unsaved requests show a Save draft to add files action beside the attachment explanation. The same validation, draft revision, attachment and billing rules apply to the modal and the direct page. See the [current UI verification](../../../../docs/verification/board-header-and-briefing-2026-09-23.md).
+
+## New briefing modal
+
+In-app links to `/clients/:clientId/briefings/new` use the workspace `@modal` interception route.
+`new-briefing-modal.tsx` renders the existing editor in the shared accessible dialog, leaving the
+underlying page and board view mounted. Direct visits and reloads still render the full editor page.
+Draft saves remain inside the modal so attachments and editing can continue; successful submission
+shows a confirmation and Done returns to the previous page. Close/Escape/backdrop ask before
+discarding unsaved edits and refuse closure during saving or attachment writes. Browser history
+navigation retains native routing behavior; it is not an unsaved-draft guard.
+
+The same service, campaign, validation, revision and backend permission rules apply to both
+presentations. New campaign opens its existing dialog. The modal hides duplicate page chrome,
+contains its scrolling, and adapts to narrow screens. The editor reports dirty/busy state to its
+dialog through props; no second form store or data-access layer is introduced.
 
 Saving an incomplete draft is allowed after choosing a service. Submission requires a campaign, title, overview, at least one valid deliverable and the service-specific answers. Fixed formats require width/height, fluid formats width, and non-dimensional formats neither. Named variations preserve their own quantity and Original/Adaptation scope. Estimates apply to the service and are not multiplied by format badges. Current service presets override only the estimate and delivery timing, while questions and formats remain canonical. Saving stores the preset revision; accepted project quotes are not recalculated. Optional RPC arguments are omitted when empty, using the SQL function's nullable defaults to clear optional draft fields. The editor calls `save_briefing_revision`, captures the loaded revision with its local draft, and receives the saved ID/revision atomically. A second editor with an older revision receives a conflict; its unsaved text is preserved. Background query refreshes do not advance that local revision.
 

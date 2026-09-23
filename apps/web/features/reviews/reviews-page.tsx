@@ -7,7 +7,6 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import { useReviews } from "./review-data";
 
 /**
@@ -48,40 +47,39 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
   );
   return (
     <div className="page-content">
-      <header className="page-heading">
+      <header className="page-heading client-page-heading">
         <div>
-          <h1>Reviews.</h1>
+          <h1>Reviews</h1>
           <p>
             {profile?.role === "designer"
               ? "Keep track of work sent to the studio."
               : "Thoughtful feedback keeps good work moving."}
           </p>
         </div>
-        <NotificationsBell className="page-bell" />
+        <div className="review-filters segmented-control client-page-tools">
+          {[
+            {
+              id: "waiting",
+              label:
+                profile?.role === "client"
+                  ? "Waiting for you"
+                  : profile?.role === "designer"
+                    ? "In progress"
+                    : "In review",
+            },
+            ...(profile?.role === "agency" ? [{ id: "studio", label: "Studio review" }] : []),
+            { id: "approved", label: "Approved" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              className={filter === item.id ? "active" : ""}
+              onClick={() => setFilter(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </header>
-      <div className="review-filters segmented-control">
-        {[
-          {
-            id: "waiting",
-            label:
-              profile?.role === "client"
-                ? "Waiting for you"
-                : profile?.role === "designer"
-                  ? "In progress"
-                  : "In review",
-          },
-          ...(profile?.role === "agency" ? [{ id: "studio", label: "Studio review" }] : []),
-          { id: "approved", label: "Approved" },
-        ].map((item) => (
-          <button
-            key={item.id}
-            className={filter === item.id ? "active" : ""}
-            onClick={() => setFilter(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
       {visible.length ? (
         <div className="review-list">
           {visible.map((row) => (

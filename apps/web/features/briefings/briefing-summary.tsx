@@ -12,9 +12,11 @@ import {
 export function BriefingSummary({
   draft,
   campaignName,
+  showTitle = true,
 }: {
   draft: BriefingDraft;
   campaignName?: string;
+  showTitle?: boolean;
 }) {
   const { formatDate } = useDateFormat();
   const service = services.find((item) => item.id === draft.serviceId);
@@ -22,7 +24,9 @@ export function BriefingSummary({
     <div className="briefing-summary">
       <section>
         <span className="eyebrow">{campaignName ?? "Campaign not chosen"}</span>
-        <h2>{draft.title || "Untitled briefing"}</h2>
+        <h2 className={showTitle ? undefined : "visually-hidden"}>
+          {showTitle ? draft.title || "Untitled briefing" : "Briefing summary"}
+        </h2>
         <p>{service?.name ?? "Service not chosen"}</p>
       </section>
       <section>

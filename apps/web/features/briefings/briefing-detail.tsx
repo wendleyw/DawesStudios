@@ -31,7 +31,6 @@ import { BriefingSummary } from "./briefing-summary";
 import "./briefings.css";
 import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BriefingDetail({ clientId, briefingId }: { clientId: string; briefingId: string }) {
   const { profile } = useAuth();
@@ -53,21 +52,28 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
     );
   return (
     <div className="page-content briefing-detail">
-      <header className="briefing-detail-header">
-        <Link href={`/clients/${clientId}/briefings`} className="button quiet">
-          <ArrowLeft size={16} />
-          All briefings
-        </Link>
+      <header className="page-heading client-page-heading">
+        <div className="briefing-title-row">
+          <Link
+            href={`/clients/${clientId}/briefings`}
+            className="icon-button"
+            aria-label="All briefings"
+            title="All briefings"
+          >
+            <ArrowLeft size={16} />
+          </Link>
+          <h1>{briefing.title || "Untitled briefing"}</h1>
+        </div>
         <div className="page-actions">
           <span className={statusToneClass(briefingStatusTones[briefing.status])}>
             {briefingStatusLabels[briefing.status]}
           </span>
-          <NotificationsBell className="page-bell" />
         </div>
       </header>
       <div className="briefing-detail-layout">
         <div>
           <BriefingSummary
+            showTitle={false}
             draft={initialDraft(briefing, {})}
             campaignName={campaigns.data?.find((item) => item.id === briefing.campaign_id)?.title}
           />

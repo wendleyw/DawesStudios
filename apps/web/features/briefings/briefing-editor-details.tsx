@@ -1,9 +1,8 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   directionFields,
-  formatSize,
   formats,
   newDeliverable,
   nextVariation,
@@ -13,6 +12,7 @@ import {
   type RequestedDeliverable,
   type ServiceDefinition,
 } from "./briefing-model";
+import { BriefingDeliverableEditor } from "./briefing-deliverable-editor";
 import { BriefingAttachments } from "./briefing-attachments";
 
 /**
@@ -35,6 +35,8 @@ export function BriefingEditorDetails({
   onUpdateDeliverable,
   defaults,
   savedId,
+  onSaveDraft,
+  saving,
 }: {
   service: ServiceDefinition | undefined;
   draft: BriefingDraft;
@@ -48,6 +50,8 @@ export function BriefingEditorDetails({
   onUpdateDeliverable: (index: number, patch: Partial<RequestedDeliverable>) => void;
   defaults: BriefingDirection;
   savedId: string | null;
+  onSaveDraft: () => void;
+  saving: boolean;
 }) {
   return (
     <div className="briefing-form">
@@ -61,17 +65,18 @@ export function BriefingEditorDetails({
         </button>
       </div>
       <section className="briefing-form-section">
-        <h2>Campaign</h2>
-        <p>Choose where this project belongs.</p>
-        <div className="briefing-form-grid">
-          <label>
-            Find a campaign
-            <input
-              value={campaignSearch}
-              onChange={(event) => onCampaignSearchChange(event.target.value)}
-              placeholder="Search campaigns…"
-            />
-          </label>
+        <h2>Project basics</h2>
+        <p>Give your project a name and choose a campaign to keep related work together.</p>
+        <label>
+          Project title
+          <input
+            maxLength={200}
+            value={draft.title}
+            onChange={(event) => onUpdate({ title: event.target.value })}
+            placeholder="Give this idea a name"
+          />
+        </label>
+        <div className="briefing-campaign-field">
           <label>
             Campaign
             <select
@@ -93,6 +98,17 @@ export function BriefingEditorDetails({
             </select>
           </label>
         </div>
+        <details className="briefing-campaign-search">
+          <summary>Search campaigns</summary>
+          <label>
+            Find a campaign
+            <input
+              value={campaignSearch}
+              onChange={(event) => onCampaignSearchChange(event.target.value)}
+              placeholder="Search campaigns…"
+            />
+          </label>
+        </details>
         {campaignSearch &&
           !campaigns.some((item) =>
             item.title.toLowerCase().includes(campaignSearch.toLowerCase()),
@@ -101,140 +117,17 @@ export function BriefingEditorDetails({
           <Plus size={15} />
           New campaign
         </button>
-        <label>
-          Project title
-          <input
-            maxLength={200}
-            value={draft.title}
-            onChange={(event) => onUpdate({ title: event.target.value })}
-            placeholder="Give this idea a name"
-          />
-        </label>
       </section>
       <section className="briefing-form-section">
-        <h2>Deliverables</h2>
-        <p>Choose your formats, then define each piece.</p>
-        <div className="format-badges">
-          {service?.formats.map((id) => (
-            <button
-              className="button"
-              key={id}
-              onClick={() =>
-                onUpdate({
-                  deliverables: [
-                    ...draft.deliverables,
-                    newDeliverable(id, nextVariation(draft.deliverables, id)),
-                  ],
-                })
-              }
-            >
-              <Plus size={13} />
-              {formats.find((item) => item.id === id)?.name}
-            </button>
-          ))}
-        </div>
-        {draft.deliverables.length === 0 && <p className="briefing-note">No formats added yet.</p>}
-        {draft.deliverables.map((item, index) => {
-          const format = formats.find((value) => value.id === item.format);
-          return (
-            <div className="deliverable-editor" key={item.id ?? `${item.format}-${index}`}>
-              <div className="deliverable-editor-heading">
-                <span className="eyebrow">
-                  {format?.name ?? item.format} · {formatSize(item)}
-                </span>
-                <button
-                  className="button quiet"
-                  aria-label={`Remove ${item.name}`}
-                  onClick={() =>
-                    onUpdate({
-                      deliverables: draft.deliverables.filter((_, position) => position !== index),
-                    })
-                  }
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              <label>
-                Custom name
-                <input
-                  value={item.name}
-                  onChange={(event) => onUpdateDeliverable(index, { name: event.target.value })}
-                />
-              </label>
-              <div className="deliverable-fields">
-                {format?.layout !== "none" && (
-                  <label>
-                    Width ({format?.unit})
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={item.width ?? ""}
-                      onChange={(event) =>
-                        onUpdateDeliverable(index, {
-                          width: event.target.value ? Number(event.target.value) : undefined,
-                        })
-                      }
-                    />
-                  </label>
-                )}
-                {format?.layout === "fixed" && (
-                  <label>
-                    Height ({format.unit})
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={item.height ?? ""}
-                      onChange={(event) =>
-                        onUpdateDeliverable(index, {
-                          height: event.target.value ? Number(event.target.value) : undefined,
-                        })
-                      }
-                    />
-                  </label>
-                )}
-                <label>
-                  Quantity
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={item.quantity}
-                    onChange={(event) =>
-                      onUpdateDeliverable(index, { quantity: Number(event.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Creative scope
-                  <select
-                    value={item.scope}
-                    onChange={(event) =>
-                      onUpdateDeliverable(index, {
-                        scope: event.target.value as RequestedDeliverable["scope"],
-                      })
-                    }
-                  >
-                    <option value="original">Original</option>
-                    <option value="adaptation">Adaptation</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-      <section className="briefing-form-section">
-        <h2>Briefing</h2>
+        <h2>Tell us what you have in mind</h2>
+        <p>A short description is enough to start. Goals are optional.</p>
         <label>
           Overview
           <textarea
             rows={4}
             value={draft.overview}
             onChange={(event) => onUpdate({ overview: event.target.value })}
-            placeholder="What are we creating, and what should it achieve?"
+            placeholder="What should we create, who is it for, and what should it communicate?"
           />
         </label>
         <label>
@@ -284,6 +177,10 @@ export function BriefingEditorDetails({
             )}
           </label>
         ))}
+        <p className="briefing-note">
+          Your Brand Hub guidance is already included. Add references or adjust it below only if
+          needed.
+        </p>
         <details className="briefing-direction">
           <summary>Brand direction & additional details</summary>
           <div className="briefing-brand-note">
@@ -322,6 +219,47 @@ export function BriefingEditorDetails({
         </details>
       </section>
       <section className="briefing-form-section">
+        <h2>What do you need?</h2>
+        <p>Add a format for each piece. Standard sizes and names are filled in for you.</p>
+        <div className="format-badges">
+          {service?.formats.map((id) => (
+            <button
+              className="button"
+              key={id}
+              onClick={() =>
+                onUpdate({
+                  deliverables: [
+                    ...draft.deliverables,
+                    newDeliverable(id, nextVariation(draft.deliverables, id)),
+                  ],
+                })
+              }
+            >
+              <Plus size={13} />
+              {formats.find((item) => item.id === id)?.name}
+            </button>
+          ))}
+        </div>
+        {draft.deliverables.length === 0 && (
+          <p className="briefing-note">
+            Choose at least one format above. You can add the same format again for another
+            variation.
+          </p>
+        )}
+        {draft.deliverables.map((item, index) => (
+          <BriefingDeliverableEditor
+            key={item.id ?? `${item.format}-${index}`}
+            item={item}
+            onChange={(patch) => onUpdateDeliverable(index, patch)}
+            onRemove={() =>
+              onUpdate({
+                deliverables: draft.deliverables.filter((_, position) => position !== index),
+              })
+            }
+          />
+        ))}
+      </section>
+      <section className="briefing-form-section">
         <h2>Timing & files</h2>
         <label>
           Target due date <span className="muted">(optional)</span>
@@ -334,9 +272,15 @@ export function BriefingEditorDetails({
         {savedId ? (
           <BriefingAttachments briefingId={savedId} editable />
         ) : (
-          <p className="briefing-note">
-            Save your draft to attach files. Reference links can be added under Resources.
-          </p>
+          <div className="briefing-file-prompt">
+            <p className="briefing-note">
+              Have reference images or documents? Save your progress to add them. You can continue
+              editing afterward.
+            </p>
+            <button className="button" disabled={saving} onClick={onSaveDraft}>
+              {saving ? "Saving…" : "Save draft to add files"}
+            </button>
+          </div>
         )}
       </section>
     </div>
