@@ -1,0 +1,51 @@
+{
+  "capturedAt": "2026-09-23T07:40:35.641Z",
+  "baselineRef": "c2eaac7",
+  "command": "node apps/media/src/upload-io.benchmark.js",
+  "transport": "In-process fetch mock; no live network or user data",
+  "metric": "Application file bytes read by upload plus attestation only; not physical disk I/O, latency, or the whole sanitization pipeline",
+  "fixture": "4 MiB of byte 73; temporary file removed after measurement",
+  "results": [
+    {
+      "version": "baseline",
+      "mode": "sanitize",
+      "fileBytes": 4194304,
+      "fileReadStreams": 2,
+      "applicationReadBytes": 8388608,
+      "uploadBytes": 4194304,
+      "sha256": "5a88cdf6f17b946f505ab4774fed05e88d6d8d5d99d087dac4593425893c09d2",
+      "attestedFileSize": 4194304
+    },
+    {
+      "version": "baseline",
+      "mode": "publish",
+      "fileBytes": 4194304,
+      "fileReadStreams": 2,
+      "applicationReadBytes": 8388608,
+      "uploadBytes": 4194304,
+      "sha256": "5a88cdf6f17b946f505ab4774fed05e88d6d8d5d99d087dac4593425893c09d2",
+      "attestedFileSize": 4194304
+    },
+    {
+      "version": "optimized",
+      "mode": "sanitize",
+      "fileBytes": 4194304,
+      "fileReadStreams": 1,
+      "applicationReadBytes": 4194304,
+      "uploadBytes": 4194304,
+      "sha256": "5a88cdf6f17b946f505ab4774fed05e88d6d8d5d99d087dac4593425893c09d2",
+      "attestedFileSize": 4194304
+    },
+    {
+      "version": "optimized",
+      "mode": "publish",
+      "fileBytes": 4194304,
+      "fileReadStreams": 1,
+      "applicationReadBytes": 4194304,
+      "uploadBytes": 4194304,
+      "sha256": "5a88cdf6f17b946f505ab4774fed05e88d6d8d5d99d087dac4593425893c09d2",
+      "attestedFileSize": 4194304
+    }
+  ],
+  "applicationReadReductionPercent": 50
+}

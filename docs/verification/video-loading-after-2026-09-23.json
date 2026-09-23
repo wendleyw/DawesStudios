@@ -1,0 +1,48 @@
+{
+  "phase": "after",
+  "fixture": {
+    "clips": 20,
+    "versions": 4,
+    "bytesPerClip": 27682
+  },
+  "beforeOpen": {
+    "signingRequests": 0,
+    "mediaRequests": 0,
+    "mediaResponseBytes": 0,
+    "videoElements": 0,
+    "metadataPreloads": 0,
+    "assignedSources": 0,
+    "observationMs": 2109
+  },
+  "afterOpen": {
+    "signingRequests": 1,
+    "mediaRequests": 1,
+    "mediaResponseBytes": 27682,
+    "metadataReadyMs": 56,
+    "currentTime": 2,
+    "duration": 4
+  },
+  "verified": {
+    "paused_url_renewal_retains_time": true,
+    "playing_url_renewal_retains_time_and_state": true,
+    "pins_disabled_during_delayed_metadata_restore": true,
+    "main_board_video_skips_signing_and_media_requests": true,
+    "responsive_video_containment_over_98_percent": true,
+    "mobile_player_width_over_300px_at_390px": true
+  },
+  "environment": {
+    "baseURL": "http://localhost:3003",
+    "browser": "Chromium",
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "webImageDigest": "sha256:70bf6e15151a00d0a5b6dcab496373da0e2cca9ff3848d5b7066429a776596e9",
+    "mediaImageDigest": "sha256:5f207952d772c86c29a23cddc0aa9384cc188d0fffb4c53fc15a3aaab526f438",
+    "refreshTest": "Only the 55-minute video interval is compressed to 2 seconds; Auth clock is unchanged.",
+    "responsiveViewport": {
+      "width": 390,
+      "height": 844
+    }
+  }
+}

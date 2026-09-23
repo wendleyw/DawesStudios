@@ -1,0 +1,36 @@
+{
+  "phase": "baseline",
+  "fixture": {
+    "clips": 20,
+    "versions": 4,
+    "bytesPerClip": 27682
+  },
+  "beforeOpen": {
+    "signingRequests": 20,
+    "mediaRequests": 20,
+    "mediaResponseBytes": 553640,
+    "videoElements": 20,
+    "metadataPreloads": 20,
+    "assignedSources": 20,
+    "observationMs": 2113
+  },
+  "afterOpen": {
+    "signingRequests": 20,
+    "mediaRequests": 20,
+    "mediaResponseBytes": 553640,
+    "metadataReadyMs": 58,
+    "currentTime": 2,
+    "duration": 4
+  },
+  "environment": {
+    "baseURL": "http://localhost:3003",
+    "browser": "Chromium",
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "webImageDigest": "sha256:8d21d8756d68777999a7671fd1ef43e980e1b2aaae6aadb0e98a6df22ed8e617",
+    "imageEvidence": "Pre-rebuild Docker evidence supplied by the orchestrator",
+    "baselineCompletedBefore": "2026-09-23T07:27:00Z"
+  }
+}

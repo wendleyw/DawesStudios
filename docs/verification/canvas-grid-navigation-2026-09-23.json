@@ -1,0 +1,46 @@
+{
+  "surfaces": [
+    {
+      "name": "client-board",
+      "background": "rgb(245, 245, 242)",
+      "line": "rgb(221, 221, 214)",
+      "patternId": "pattern-1_r_f_",
+      "twoAxisPan": true,
+      "directDrag": true,
+      "animatedZoomSteps": 13,
+      "reducedMotionZoom": true
+    },
+    {
+      "name": "project",
+      "background": "rgb(245, 245, 242)",
+      "line": "rgb(221, 221, 214)",
+      "patternId": "pattern-1_r_2_",
+      "twoAxisPan": true,
+      "directDrag": true,
+      "animatedZoomSteps": 13,
+      "reducedMotionZoom": true
+    },
+    {
+      "name": "playground",
+      "background": "rgb(233, 233, 226)",
+      "line": "rgb(205, 205, 195)",
+      "patternId": "pattern-1_r_8_",
+      "twoAxisPan": true,
+      "directDrag": true,
+      "animatedZoomSteps": 14,
+      "reducedMotionZoom": true
+    },
+    {
+      "name": "design-viewer",
+      "background": "rgb(245, 245, 242)",
+      "line": "rgb(221, 221, 214)",
+      "patternId": "pattern-1_r_9_",
+      "twoAxisPan": true,
+      "directDrag": true,
+      "animatedZoomSteps": 13,
+      "reducedMotionZoom": true
+    }
+  ],
+  "errors": [],
+  "simultaneousPatternIdsUnique": true
+}

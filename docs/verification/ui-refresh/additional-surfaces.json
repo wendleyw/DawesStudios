@@ -1,0 +1,44 @@
+[
+  {
+    "name": "login",
+    "width": 320,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "login",
+    "width": 768,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "team",
+    "width": 390,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "client-settings",
+    "width": 390,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "presets",
+    "width": 390,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "playground",
+    "width": 1600,
+    "overflow": false,
+    "violations": []
+  },
+  {
+    "name": "playground",
+    "width": 390,
+    "overflow": false,
+    "violations": []
+  }
+]

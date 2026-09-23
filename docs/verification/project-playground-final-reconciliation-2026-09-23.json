@@ -1,0 +1,45 @@
+{
+  "clients": 10,
+  "projects": 25,
+  "auth_users": 13,
+  "playground_boards": 4,
+  "playground_items": 32,
+  "storage_objects": 149,
+  "studio_name": "Offline probe",
+  "projects_per_client": {
+    "Acme": 2,
+    "SABRE": 7,
+    "Kestrel Outdoor": 2,
+    "Northfield Bank": 2,
+    "Vela Skincare": 2,
+    "Sablefish Provisions": 2,
+    "Pelagic": 2,
+    "Rune Fitness": 2,
+    "Otto & Sons": 2,
+    "Harbor & Pine": 2
+  },
+  "acceptance_clients_remaining": 0,
+  "acceptance_projects_remaining": 0,
+  "credit_accounts_match_ledger": true,
+  "unchanged_public_tables": 31,
+  "changed_public_tables": {
+    "credit_accounts": {
+      "before_count": 10,
+      "after_count": 10
+    },
+    "service_preset_history": {
+      "before_count": 53,
+      "after_count": 55
+    },
+    "service_presets": {
+      "before_count": 20,
+      "after_count": 20
+    },
+    "workspace_settings": {
+      "before_count": 1,
+      "after_count": 1
+    }
+  },
+  "all_stored_file_hashes_unchanged": true,
+  "playground_table_digests_unchanged": true
+}

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-21T16:11:11.995Z",
+  "capturedAt": "2026-09-23T15:06:45.140Z",
   "surfaces": [
     {
       "name": "login",
@@ -74,6 +74,12 @@
       "violations": []
     },
     {
+      "name": "board-list",
+      "width": 1600,
+      "overflow": false,
+      "violations": []
+    },
+    {
       "name": "board-timeline",
       "width": 1600,
       "overflow": false,
@@ -86,7 +92,7 @@
       "violations": []
     },
     {
-      "name": "board-list",
+      "name": "board-calendar",
       "width": 1600,
       "overflow": false,
       "violations": []
@@ -170,6 +176,12 @@
       "violations": []
     },
     {
+      "name": "board-list",
+      "width": 390,
+      "overflow": false,
+      "violations": []
+    },
+    {
       "name": "board-timeline",
       "width": 390,
       "overflow": false,
@@ -182,7 +194,7 @@
       "violations": []
     },
     {
-      "name": "board-list",
+      "name": "board-calendar",
       "width": 390,
       "overflow": false,
       "violations": []

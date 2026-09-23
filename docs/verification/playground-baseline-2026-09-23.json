@@ -1,0 +1,24 @@
+{
+  "clients": 10,
+  "projects": 25,
+  "auth_users": 13,
+  "stored_objects": 117,
+  "playground_boards": 0,
+  "playground_items": 0,
+  "playground_files": 0,
+  "board_preferences": 0,
+  "permission_hint_workaround_active": true,
+  "projects_by_client": {
+    "Acme": 2,
+    "SABRE": 7,
+    "Kestrel Outdoor": 2,
+    "Northfield Bank": 2,
+    "Vela Skincare": 2,
+    "Sablefish Provisions": 2,
+    "Pelagic": 2,
+    "Rune Fitness": 2,
+    "Otto & Sons": 2,
+    "Harbor & Pine": 2
+  },
+  "measured_at": "2026-09-23T06:27:44.060496+00:00"
+}

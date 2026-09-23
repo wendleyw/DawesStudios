@@ -1285,7 +1285,7 @@ exactly 1.
 
 | Row | Verdict | Why |
 |---|---|---|
-| I01 | Unverified | [I-1](#defect-i-1-npm-run-dbstart-always-exits-non-zero-on-the-documented-dataset): the documented start command exits 1 on every run |
+| I01 | **Verified — 2026-09-23** | [Repair and lifecycle evidence](#repair-2026-09-23--startup-preserves-existing-artwork): warm start and cold restart pass with a noncanonical artwork overlay; 32 public tables and 117 file hashes unchanged |
 | I02 | **Verified** | [I-2](#defect-i-2-the-browser-suite-has-been-red-since-54645f1) repaired this pass: 25/25 browser tests pass; checks, 449 unit tests and the build pass |
 | I04 | **Verified** | I-3 closed and re-verified 2026-09-21 (all four forms show the translated sentence once bounded); [I-6](#defect-i-6-a-genuinely-offline-browser-pauses-every-mutation-with-no-message-and-no-bound) repaired 2026-09-22: `networkMode: "always"` on the mutation defaults makes a genuinely offline browser dispatch and fail fast (307 ms) instead of pausing forever with no message |
 | I05 | **Verified** | I-4 closed and re-verified 2026-09-21 (exactly one row, same idempotency key, on the exact interrupted-write repro); [I-7](#defect-i-7-request_credits-carries-no-idempotency-protection-at-all) repaired 2026-09-22: `request_credits` now carries the same idempotency protection `post_comment` and `adjust_credits` do — the identical interruption pattern produces exactly one row, not two |
@@ -1297,3 +1297,18 @@ restore drill was run in this pass — `restore_drill.py` builds and tears down 
 `dawes-studios-restore-drill` project and never touches the source stack, but I03's evidence is
 already recorded in [`../operations/restore-evidence.json`](../operations/restore-evidence.json) and
 re-running it would have proved nothing this pass needed.
+
+## Repair, 2026-09-23 — startup preserves existing artwork
+
+I-1 is closed. Normal provisioning now reads existing Storage objects without replacing their bytes. Only recognized missing-object responses trigger a create, and creates use `x-upsert: false`; a duplicate-create race re-reads the winner. Authentication, transport, malformed and unrelated failures remain failures. Existing divergent publications and their attestations are retained. Canonical bytes can still be registered on retry. The separate `verify_seed.py` remains unchanged and strict.
+
+Executed against the local stack after all browser mutation suites finished:
+
+```bash
+python3 -m unittest discover -s supabase/tests -p test_fixture_provisioning.py -v
+python3 supabase/tests/startup_preservation_test.py exercise /tmp/dawes-startup-original-20260923.json --output docs/operations/startup-evidence.json
+```
+
+The 12 isolated tests passed. The integrated check captured every public table and stored file, temporarily changed one internal fixture PNG to different bytes at the same dimensions, and executed `db:start`, `db:stop`, `db:start`, and `db:status`. Every command exited 0. During the restart, the noncanonical image was preserved byte for byte. All **32 public-table row digests** and **117 stored-file hashes** remained unchanged. The temporary image was restored to its original bytes in cleanup; the original snapshot then matched again. The baseline remains **10 clients and 25 projects**. No reset, seed reapplication or destruction of user work was used.
+
+The temporary image is a synthetic byte-level analogue of the photographic overlay, not a new downloaded photograph. It exercises the actual divergent-bytes condition that used to fail. See [machine-readable startup evidence](../operations/startup-evidence.json) and [implementation report](../engineering/handoffs/2026-09-23-startup-preservation.md). Container web/media builds also passed and returned healthy; these are local operational checks, not public hosting or SMTP verification.
