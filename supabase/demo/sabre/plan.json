@@ -1,0 +1,1326 @@
+{
+  "id": "sabre-demo-2026-v1",
+  "client_slug": "sabre",
+  "target_projects": 50,
+  "campaigns": [
+    {
+      "key": "campaign-1",
+      "title": "Fresh Start",
+      "image": "everyday-kit",
+      "start": "2026-01-12",
+      "end": "2026-03-10",
+      "headline": "Small essentials.\nA fresh start.",
+      "body": "Create a thoughtful everyday routine.",
+      "description": "A fictional SABRE demonstration campaign: Create a thoughtful everyday routine."
+    },
+    {
+      "key": "campaign-2",
+      "title": "City Confidence",
+      "image": "city-confidence",
+      "start": "2026-02-16",
+      "end": "2026-04-03",
+      "headline": "Your city.\nYour rhythm.",
+      "body": "Bring confidence to everyday moments.",
+      "description": "A fictional SABRE demonstration campaign: Bring confidence to everyday moments."
+    },
+    {
+      "key": "campaign-3",
+      "title": "Move Together",
+      "image": "run-club",
+      "start": "2026-04-06",
+      "end": "2026-06-12",
+      "headline": "Find your pace.\nTogether.",
+      "body": "A fresh perspective on your daily movement.",
+      "description": "A fictional SABRE demonstration campaign: A fresh perspective on your daily movement."
+    },
+    {
+      "key": "campaign-4",
+      "title": "Weekend Outside",
+      "image": "weekend-trail",
+      "start": "2026-05-18",
+      "end": "2026-07-24",
+      "headline": "Make room\nfor the outdoors.",
+      "body": "A little preparation. More room to explore.",
+      "description": "A fictional SABRE demonstration campaign: A little preparation. More room to explore."
+    },
+    {
+      "key": "campaign-5",
+      "title": "Campus Connections",
+      "image": "campus-days",
+      "start": "2026-08-03",
+      "end": "2026-10-16",
+      "headline": "New places.\nNew possibilities.",
+      "body": "Everyday essentials for a new chapter.",
+      "description": "A fictional SABRE demonstration campaign: Everyday essentials for a new chapter."
+    },
+    {
+      "key": "campaign-6",
+      "title": "Everyday Essentials",
+      "image": "personal-alarm",
+      "start": "2026-09-07",
+      "end": "2026-11-06",
+      "headline": "Small detail.\nEveryday companion.",
+      "body": "Designed to go along with your day.",
+      "description": "A fictional SABRE demonstration campaign: Designed to go along with your day."
+    },
+    {
+      "key": "campaign-7",
+      "title": "Welcome Home",
+      "image": "home-arrival",
+      "start": "2026-10-05",
+      "end": "2026-12-04",
+      "headline": "The little things\nthat come home.",
+      "body": "Considered essentials for your daily routine.",
+      "description": "A fictional SABRE demonstration campaign: Considered essentials for your daily routine."
+    },
+    {
+      "key": "campaign-8",
+      "title": "Thoughtful Giving",
+      "image": "gift-ready",
+      "start": "2026-11-02",
+      "end": "2026-12-23",
+      "headline": "A little care.\nThoughtfully given.",
+      "body": "A considered gift for the people in your world.",
+      "description": "A fictional SABRE demonstration campaign: A considered gift for the people in your world."
+    }
+  ],
+  "projects": [
+    {
+      "key": "project-01",
+      "title": "Everyday Essentials Launch",
+      "campaign": 0,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "delivered",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create everyday essentials launch for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-02",
+      "title": "Personal Alarm Product Story",
+      "campaign": 0,
+      "service": "social",
+      "credits": 1,
+      "stage": "approved",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create personal alarm product story for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-03",
+      "title": "New Year Retail Posters",
+      "campaign": 0,
+      "service": "print",
+      "credits": 6,
+      "stage": "delivered",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "A5",
+          "format": "a5",
+          "width": 148,
+          "height": 210,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create new year retail posters for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-04",
+      "title": "Everyday Carry Carousel",
+      "campaign": 0,
+      "service": "social",
+      "credits": 1,
+      "stage": "approved",
+      "revision": false,
+      "designs": 3,
+      "deliverables": [
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create everyday carry carousel for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-05",
+      "title": "Welcome Email Journey",
+      "campaign": 0,
+      "service": "email",
+      "credits": 4,
+      "stage": "delivered",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Responsive Email",
+          "format": "email",
+          "width": 600,
+          "height": 1500,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create welcome email journey for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-06",
+      "title": "Retail Partner Introduction",
+      "campaign": 0,
+      "service": "deck",
+      "credits": 5,
+      "stage": "approved",
+      "revision": true,
+      "designs": 3,
+      "deliverables": [
+        {
+          "name": "Presentation 16:9",
+          "format": "slides",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 3,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create retail partner introduction for the Fresh Start campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-07",
+      "title": "City Confidence Paid Social",
+      "campaign": 1,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "delivered",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Landscape Ad",
+          "format": "landscape",
+          "width": 1200,
+          "height": 628,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create city confidence paid social for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-08",
+      "title": "Morning Commute Stories",
+      "campaign": 1,
+      "service": "social",
+      "credits": 1,
+      "stage": "approved",
+      "revision": false,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create morning commute stories for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-09",
+      "title": "Community Landing Page",
+      "campaign": 1,
+      "service": "web",
+      "credits": 10,
+      "stage": "delivered",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Desktop Layout",
+          "format": "desktop",
+          "width": 1440,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Mobile Layout",
+          "format": "mobile",
+          "width": 390,
+          "height": 1600,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create community landing page for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-10",
+      "title": "City Stories Editorial",
+      "campaign": 1,
+      "service": "blog",
+      "credits": 3,
+      "stage": "approved",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Blog Article",
+          "format": "article",
+          "width": 1200,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Infographic",
+          "format": "infographic",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create city stories editorial for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-11",
+      "title": "Transit Campaign Posters",
+      "campaign": 1,
+      "service": "print",
+      "credits": 6,
+      "stage": "delivered",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "US Letter",
+          "format": "letter",
+          "width": 216,
+          "height": 279,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create transit campaign posters for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-12",
+      "title": "Community Newsletter Hero",
+      "campaign": 1,
+      "service": "email-hero",
+      "credits": 1,
+      "stage": "approved",
+      "revision": true,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Email Hero",
+          "format": "email-hero",
+          "width": 1200,
+          "height": 600,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create community newsletter hero for the City Confidence campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-13",
+      "title": "Run Club Launch Kit",
+      "campaign": 2,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "approved",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        },
+        {
+          "name": "Landscape Ad",
+          "format": "landscape",
+          "width": 1200,
+          "height": 628,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create run club launch kit for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-14",
+      "title": "Saturday Run Motion Reel",
+      "campaign": 2,
+      "service": "reel",
+      "credits": 3,
+      "stage": "client_review",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Instagram Reels",
+          "format": "reel",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": true,
+      "overview": "Create saturday run motion reel for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-15",
+      "title": "Runner Essentials Guide",
+      "campaign": 2,
+      "service": "whitepaper",
+      "credits": 5,
+      "stage": "approved",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create runner essentials guide for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-16",
+      "title": "Run Club Event Invitations",
+      "campaign": 2,
+      "service": "email",
+      "credits": 4,
+      "stage": "client_review",
+      "revision": false,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Responsive Email",
+          "format": "email",
+          "width": 600,
+          "height": 1500,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create run club event invitations for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-17",
+      "title": "Community Event Signage",
+      "campaign": 2,
+      "service": "print",
+      "credits": 6,
+      "stage": "approved",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "US Letter",
+          "format": "letter",
+          "width": 216,
+          "height": 279,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create community event signage for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-18",
+      "title": "Spring Content Shot List",
+      "campaign": 2,
+      "service": "production",
+      "credits": 3,
+      "stage": "client_review",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Shot List",
+          "format": "shot-list",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Custom Deliverable",
+          "format": "custom",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create spring content shot list for the Move Together campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-19",
+      "title": "Trail Weekend Social Series",
+      "campaign": 3,
+      "service": "social",
+      "credits": 1,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create trail weekend social series for the Weekend Outside campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-20",
+      "title": "Outdoor Essentials Landing",
+      "campaign": 3,
+      "service": "web",
+      "credits": 10,
+      "stage": "client_review",
+      "revision": false,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Desktop Layout",
+          "format": "desktop",
+          "width": 1440,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Mobile Layout",
+          "format": "mobile",
+          "width": 390,
+          "height": 1600,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create outdoor essentials landing for the Weekend Outside campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-21",
+      "title": "Weekend Packing Checklist",
+      "campaign": 3,
+      "service": "blog",
+      "credits": 3,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Infographic",
+          "format": "infographic",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create weekend packing checklist for the Weekend Outside campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-22",
+      "title": "Adventure Partner Deck",
+      "campaign": 3,
+      "service": "deck",
+      "credits": 5,
+      "stage": "client_review",
+      "revision": false,
+      "designs": 3,
+      "deliverables": [
+        {
+          "name": "Presentation 16:9",
+          "format": "slides",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 3,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create adventure partner deck for the Weekend Outside campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-23",
+      "title": "Summer Campaign Art Direction",
+      "campaign": 3,
+      "service": "direction",
+      "credits": 3,
+      "stage": "internal_review",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Creative Direction",
+          "format": "direction",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Custom Deliverable",
+          "format": "custom",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create summer campaign art direction for the Weekend Outside campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-24",
+      "title": "Campus Welcome Campaign",
+      "campaign": 4,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "client_review",
+      "revision": true,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create campus welcome campaign for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-25",
+      "title": "Student Starter Email",
+      "campaign": 4,
+      "service": "email",
+      "credits": 4,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Responsive Email",
+          "format": "email",
+          "width": 600,
+          "height": 1500,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create student starter email for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-26",
+      "title": "Campus Ambassador Toolkit",
+      "campaign": 4,
+      "service": "deck",
+      "credits": 5,
+      "stage": "client_review",
+      "revision": false,
+      "designs": 3,
+      "deliverables": [
+        {
+          "name": "Presentation 16:9",
+          "format": "slides",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 3,
+          "scope": "original"
+        },
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create campus ambassador toolkit for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-27",
+      "title": "Welcome Week Motion Ad",
+      "campaign": 4,
+      "service": "animated-ad",
+      "credits": 3,
+      "stage": "internal_review",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Instagram Reels",
+          "format": "reel",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Custom Digital Size",
+          "format": "custom-px",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": true,
+      "overview": "Create welcome week motion ad for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-28",
+      "title": "Campus Event Flyers",
+      "campaign": 4,
+      "service": "print",
+      "credits": 6,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "A5",
+          "format": "a5",
+          "width": 148,
+          "height": 210,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "US Letter",
+          "format": "letter",
+          "width": 216,
+          "height": 279,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create campus event flyers for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-29",
+      "title": "Student Resource Microsite",
+      "campaign": 4,
+      "service": "web",
+      "credits": 10,
+      "stage": "in_progress",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Desktop Layout",
+          "format": "desktop",
+          "width": 1440,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Mobile Layout",
+          "format": "mobile",
+          "width": 390,
+          "height": 1600,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create student resource microsite for the Campus Connections campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-30",
+      "title": "Personal Alarm Detail Study",
+      "campaign": 5,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "client_review",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create personal alarm detail study for the Everyday Essentials campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-31",
+      "title": "Product Collection Page",
+      "campaign": 5,
+      "service": "web",
+      "credits": 10,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Desktop Layout",
+          "format": "desktop",
+          "width": 1440,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Mobile Layout",
+          "format": "mobile",
+          "width": 390,
+          "height": 1600,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create product collection page for the Everyday Essentials campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-32",
+      "title": "Essentials Product Cards",
+      "campaign": 5,
+      "service": "social",
+      "credits": 1,
+      "stage": "internal_review",
+      "revision": false,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create essentials product cards for the Everyday Essentials campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-33",
+      "title": "Collection Packaging Concept",
+      "campaign": 5,
+      "service": "specialty",
+      "credits": 6,
+      "stage": "in_progress",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Production Template",
+          "format": "dieline",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Custom Print Size",
+          "format": "custom-mm",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create collection packaging concept for the Everyday Essentials campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-34",
+      "title": "Product Photography Exploration",
+      "campaign": 5,
+      "service": "ai",
+      "credits": 1,
+      "stage": "in_progress",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Custom Digital Size",
+          "format": "custom-px",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create product photography exploration for the Everyday Essentials campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-35",
+      "title": "Homecoming Campaign Launch",
+      "campaign": 6,
+      "service": "static-ad",
+      "credits": 2,
+      "stage": "internal_review",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Landscape Ad",
+          "format": "landscape",
+          "width": 1200,
+          "height": 628,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create homecoming campaign launch for the Welcome Home campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-36",
+      "title": "Home Essentials Email",
+      "campaign": 6,
+      "service": "email",
+      "credits": 4,
+      "stage": "in_progress",
+      "revision": true,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Responsive Email",
+          "format": "email",
+          "width": 600,
+          "height": 1500,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create home essentials email for the Welcome Home campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-37",
+      "title": "Autumn Brand Guidelines",
+      "campaign": 6,
+      "service": "guidelines",
+      "credits": 10,
+      "stage": "internal_review",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Brand Guidelines",
+          "format": "guidelines",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Presentation 16:9",
+          "format": "slides",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 3,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create autumn brand guidelines for the Welcome Home campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-38",
+      "title": "Community Brand Refresh",
+      "campaign": 6,
+      "service": "branding",
+      "credits": 12,
+      "stage": "in_progress",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Brand Kit",
+          "format": "brand-kit",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Brand Guidelines",
+          "format": "guidelines",
+          "width": null,
+          "height": null,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create community brand refresh for the Welcome Home campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-39",
+      "title": "Home Routine Explainer",
+      "campaign": 6,
+      "service": "animated-ad",
+      "credits": 3,
+      "stage": "client_review",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Horizontal Video",
+          "format": "video",
+          "width": 1920,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": true,
+      "overview": "Create home routine explainer for the Welcome Home campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-40",
+      "title": "Holiday Gift Guide",
+      "campaign": 7,
+      "service": "blog",
+      "credits": 3,
+      "stage": "in_progress",
+      "revision": false,
+      "designs": 2,
+      "deliverables": [
+        {
+          "name": "Blog Article",
+          "format": "article",
+          "width": 1200,
+          "height": 1800,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "A4",
+          "format": "a4",
+          "width": 210,
+          "height": 297,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create holiday gift guide for the Thoughtful Giving campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-41",
+      "title": "Gift Collection Hero",
+      "campaign": 7,
+      "service": "email-hero",
+      "credits": 1,
+      "stage": "internal_review",
+      "revision": false,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Email Hero",
+          "format": "email-hero",
+          "width": 1200,
+          "height": 600,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create gift collection hero for the Thoughtful Giving campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-42",
+      "title": "Holiday Social Countdown",
+      "campaign": 7,
+      "service": "social",
+      "credits": 1,
+      "stage": "client_review",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "Portrait Feed",
+          "format": "feed",
+          "width": 1080,
+          "height": 1350,
+          "quantity": 1,
+          "scope": "original"
+        },
+        {
+          "name": "Instagram Story",
+          "format": "story",
+          "width": 1080,
+          "height": 1920,
+          "quantity": 1,
+          "scope": "adaptation"
+        },
+        {
+          "name": "Square",
+          "format": "square",
+          "width": 1080,
+          "height": 1080,
+          "quantity": 1,
+          "scope": "adaptation"
+        }
+      ],
+      "motion": false,
+      "overview": "Create holiday social countdown for the Thoughtful Giving campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    },
+    {
+      "key": "project-43",
+      "title": "Gift Box Insert Cards",
+      "campaign": 7,
+      "service": "print",
+      "credits": 6,
+      "stage": "changes_requested",
+      "revision": true,
+      "designs": 1,
+      "deliverables": [
+        {
+          "name": "A5",
+          "format": "a5",
+          "width": 148,
+          "height": 210,
+          "quantity": 1,
+          "scope": "original"
+        }
+      ],
+      "motion": false,
+      "overview": "Create gift box insert cards for the Thoughtful Giving campaign. This is fictional demonstration work for testing the studio workflow.",
+      "goals": "Keep the product easy to recognize, establish a calm visual hierarchy, and adapt the message clearly to each requested format."
+    }
+  ]
+}
