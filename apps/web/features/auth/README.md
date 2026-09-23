@@ -44,12 +44,14 @@ it is outside the data-access contract's scope and stays in the component (match
 
 ## CSS boundary
 
-`.spin` (the loading-spinner animation) is defined in `app/globals.css` but has exactly one consumer
-in the whole app: `login-page.tsx`'s `<LoaderCircle className="spin" />`. Verified with:
+`.spin` and `@keyframes spin` (the loading-spinner animation) moved from `app/globals.css` to
+`auth.css` (structural-refactor cleanup, 2026-09-23). Its only consumer in the whole app is
+`login-page.tsx`'s `<LoaderCircle className="spin" />`; no other stylesheet declares `@keyframes
+spin`, so the move carries no cross-file cascade dependency to preserve. Verified with:
 
 ```sh
 grep -rn '\bspin\b' --include='*.tsx' --include='*.ts' --include='*.css' . --exclude-dir=node_modules --exclude-dir=.next
 ```
 
-Reported per the migration's CSS-boundary check rather than edited, because `globals.css` is out of
-scope for this migration.
+Previously reported rather than edited, because `globals.css` was out of scope for that migration;
+this task's scope includes it, so the rule moved with the same one-consumer justification.

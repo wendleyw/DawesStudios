@@ -38,6 +38,47 @@
   scrollbar-width: thin;
   scrollbar-color: var(--sidebar-border) transparent;
 }
+/*
+ * Relocated from `app/globals.css` (structural-refactor cleanup, 2026-09-23). Its only consumer in
+ * the whole tree is `app-shell.tsx` (`className="icon-button sidebar-collapse"`), and this file
+ * already loads after `globals.css` on every route that renders it — the same relationship
+ * `board.css` and `auth.css` rely on for their own `globals.css` overrides.
+ *
+ * The toggle also carries `icon-button`, whose `globals.css` rules set the same width/height/
+ * flex-basis this rule does: an unconditional base rule and a `@media (max-width: 640px)` override.
+ * Both still live in `globals.css`, so both still load before this rule, and this rule's own 28px
+ * sizing keeps winning at every width where the toggle is actually rendered — unchanged from when
+ * the three rules shared one file.
+ *
+ * The one thing the move does not preserve is source order against that 640px `.icon-button`
+ * override specifically: it used to sit after this rule in `globals.css` (so it would have won a
+ * same-specificity tie, had the tie ever been contestable) and now sits before it. That tie is never
+ * actually contested: the `@media (max-width: 900px)` rule below sets `.sidebar-collapse` to
+ * `display: none`, a superset of the 640px range the `.icon-button` override targets, so the toggle
+ * is already unrendered by the time that override could apply. A `display: none` element has no
+ * rendered box, so no other declaration on it can be observed to "win" — the flip is real in source
+ * order and inert in every rendered pixel.
+ */
+.sidebar-collapse {
+  position: absolute;
+  right: -14px;
+
+  top: 72px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+
+  border: 1px solid var(--sidebar-border);
+  background: var(--sidebar);
+
+  color: var(--sidebar-muted);
+  border-radius: 50%;
+}
+.sidebar-collapse:hover:not(:disabled) {
+  background: #3b3d35;
+  color: #fff;
+}
 .client-initials {
   display: inline-flex;
   width: 25px;
@@ -594,6 +635,9 @@
   }
   .sidebar .brand-logo {
     width: 166px;
+  }
+  .sidebar-collapse {
+    display: none;
   }
   .workspace {
     margin-left: 0;

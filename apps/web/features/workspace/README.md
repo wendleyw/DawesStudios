@@ -152,17 +152,22 @@ module's `useInvalidateWorkspace()` keeps the shorter name.
 namespace change was made here. Auditing every class name this feature's markup uses against
 `app/globals.css` found exactly one namespace used only by this feature that still lives there:
 
-- **`.sidebar-collapse`** — its only consumer in the whole tree is `app-shell.tsx`
-  (`className="icon-button sidebar-collapse"`, and `workspace.css`'s `.sidebar-collapsed` state rules
-  reference it). It stays in `globals.css`, but not for the reason originally recorded here: commit
-  `af9acf1` ("refactor(styles): move feature rules out of the global stylesheet") had claimed the
-  shared 640px `.icon-button` breakpoint rule must keep winning over `.sidebar-collapse` in source
-  order. The final structural-refactor fix wave found that claim does not hold — `.sidebar-collapse`
-  is already `display: none` under `@media (max-width: 900px)`, a superset of the 640px range, so the
-  element is already hidden before the 640px rule could apply, and corrected `docs/architecture/
-design-system.md` accordingly. The rule still stays in `globals.css`: it carries `icon-button` on
-  the same element, a grouped dual-class selector whose placement is intertwined with that shared
-  primitive.
+- **`.sidebar-collapse`** moved to `workspace.css` (structural-refactor cleanup, 2026-09-23). Its
+  only consumer in the whole tree is `app-shell.tsx` (`className="icon-button sidebar-collapse"`, and
+  `workspace.css`'s `.sidebar-collapsed` state rules reference it). The "grouped dual-class selector"
+  reason recorded here before this move described the toggle carrying `icon-button` on the same
+  element, not the CSS actually grouping the two selectors into one rule — it never did;
+  `.sidebar-collapse` and `.icon-button` were always separate rules. `workspace.css` already loads
+  after `globals.css` on every route that renders the toggle, the same relationship `board.css` and
+  `auth.css` rely on for their own `globals.css` overrides, so the move preserves every cascade
+  outcome that was ever visible. The one source-order relationship the move does not preserve —
+  `globals.css`'s `.icon-button` 640px override no longer comes after this rule's base declaration —
+  is inert rather than a regression: `.sidebar-collapse` is `display: none` under a
+  `@media (max-width: 900px)` rule that moved with it, and 900px is a superset of 640px, so the
+  toggle is already unrendered before that override could ever apply to it. The full reasoning is
+  recorded above `.sidebar-collapse` in `workspace.css`. `docs/architecture/design-system.md`'s
+  styling-boundary section still records the pre-move reasoning and needs the same correction; that
+  file is outside this feature's README and this task's write scope.
 
 `.project-row` / `.project-table` (shared with `board`) and `.topbar` (shared with `brand`'s draft
 editor) are the deliberately global namespaces named in this task's brief; both were re-verified with

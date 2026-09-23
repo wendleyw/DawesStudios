@@ -326,24 +326,20 @@ two cases, not established at all. The corrected breakdown:
   board and projects. The identity/profile namespace (including `.board-identity-mark`) now also
   belongs in `globals.css` because these two features share it. The mark's size override follows
   the base `.client-mark` rule so equal-specificity declarations remain deterministic.
-- **Grouped selectors binding a single-feature namespace to a multi-feature or shared rule (4):
-  `.project-title`, `.board-canvas`, `.project-canvas`, `.sidebar-collapse`.** `.project-title`'s
+- **Grouped selectors binding a single-feature namespace to a multi-feature or shared rule (3):
+  `.project-title`, `.board-canvas`, `.project-canvas`.** `.project-title`'s
   only consumer is `workspace/home-page.tsx`, but `globals.css` groups it with `.project-row` in one
   rule (`.project-title strong, .project-row > strong { … }`), and `.project-row` is multi-feature —
   splitting the group would duplicate the rule or change its specificity. `.board-canvas` (`board`
   only) and `.project-canvas` (`projects` only) are each single-feature, but `globals.css` groups
   both (with `.design-viewport`, also `projects`-owned) into one `.react-flow__attribution` rule
-  spanning `board` and `projects`. `.sidebar-collapse`'s only consumer, `workspace/app-shell.tsx`,
-  renders it with `className="icon-button sidebar-collapse"` — the toggle carries both classes on
-  one element, so the rule stays grouped with a shared primitive rather than moving cleanly to a
-  single feature's stylesheet. An earlier draft of this document justified that placement by a
-  cascade dependency: the shared `.icon-button` rule at the 640px breakpoint (`globals.css:911`,
-  `width: 40px`) supposedly had to keep winning over `.sidebar-collapse`'s own sizing there. The
-  final structural-refactor fix wave found that reasoning does not hold — `.sidebar-collapse` is
-  already `display: none` under `@media (max-width: 900px)` (`globals.css:886`), a superset of the
-  640px range, so the element is already hidden by the time the viewport reaches 640px and there is
-  no sizing conflict left for that rule to win. `.sidebar-collapse` still belongs in `globals.css`,
-  but for the grouped dual-class-selector reason above, not the cascade-order one.
+  spanning `board` and `projects`.
+- **Moved to their feature on 2026-09-23 (2): `.sidebar-collapse` and `.spin`.** No grouped rule
+  ever bound `.sidebar-collapse` to `.icon-button`; the toggle only carries both classes on one
+  element. Its rules now live in `features/workspace/workspace.css`, which loads after
+  `globals.css`. The one source-order flip against the 640px `.icon-button` override is inert,
+  because the toggle is already `display: none` at 900px and below. `.spin` and its keyframes moved
+  to `features/auth/auth.css`, the stylesheet of their only consumer, `login-page.tsx`.
 - **Removed (1): `.workspace-status`.** Zero consumers were left in any `.tsx` file, and Task 5 left
   the rule in place because its own mandate was relocation, not cleanup. The final
   structural-refactor fix wave re-verified the zero-consumer finding and deleted the rule (the base
