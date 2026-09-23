@@ -138,7 +138,7 @@
   cursor: pointer;
 }
 .settings-client-mark {
-  --client-mark-size: 36px;
+  --client-mark-size: 44px;
 }
 .settings-client-logo:hover .client-mark {
   opacity: 0.8;
@@ -192,7 +192,7 @@
     gap: 18px;
   }
   .settings-client-row > div {
-    flex-basis: calc(100% - 36px - var(--space-lg));
+    flex-basis: calc(100% - 44px - var(--space-lg));
   }
   .account-flow {
     padding: 32px 16px;

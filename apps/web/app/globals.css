@@ -1420,7 +1420,7 @@ select {
   flex-shrink: 0;
 }
 .board-identity-mark {
-  --client-mark-size: 36px;
+  --client-mark-size: 48px;
 }
 .board-identity :is(h1, .canvas-client-name) {
   min-width: 0;
@@ -1507,7 +1507,7 @@ select {
     font-size: 15px;
   }
   .board-identity-mark {
-    --client-mark-size: 26px;
+    --client-mark-size: 34px;
   }
   .board-account {
     min-height: 46px;
