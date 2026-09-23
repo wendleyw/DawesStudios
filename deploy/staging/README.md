@@ -19,6 +19,7 @@ described in `docs/operations/production.md` before that guide is followed for r
 | `compose.supabase.override.yml` | yes | ports (127.0.0.1, reserved range), container names, the two storage settings upstream hardcodes/omits — layered on the upstream compose files |
 | `compose.app.yml` | yes | standalone `web`/`media` staging services (does not read or depend on the repo-root `compose.yaml`) |
 | `scripts/stage.sh` | yes | the setup/run/verify script — see `./scripts/stage.sh` with no arguments for the command list |
+| `scripts/provision_fixtures.py` | yes | fixture Auth passwords + Storage objects for the canonical dataset, run after `supabase/seed.sql` is applied with `psql`; see "Canonical dataset" below |
 | `.upstream/` | **no** (gitignored) | pristine sparse checkout of `supabase/supabase`'s `docker/` directory at the pinned commit — reference only, never run in place |
 | `.work/` | **no** (gitignored) | generated working copy: `.work/docker/` (a disposable copy of `.upstream/docker/`, including the Postgres/MinIO bind-mount data), `.work/.env` (mode 0600, every generated secret), `.work/artifacts/` (test outputs, response headers, downloaded objects) |
 
@@ -70,6 +71,7 @@ cd deploy/staging
 ./scripts/stage.sh verify                  # header/health checks (release checklist step 4)
 ./scripts/stage.sh bootstrap               # first agency account, the way production creates one
 ./scripts/stage.sh storage-test            # TUS + standard upload through MinIO, SHA-256, anon-denied
+./scripts/stage.sh provision-fixtures      # fixture Auth passwords + Storage objects (run supabase/seed.sql with psql first)
 
 ./scripts/stage.sh status                  # docker compose ps for both projects
 ./scripts/stage.sh down                    # stop (not remove) both projects; prints teardown commands
@@ -171,7 +173,37 @@ comments for the exact evidence):
   attempt. `bootstrap` avoids this entirely (admin-created user, `email_confirm: true`, password
   grant), matching the task's instructions, but it means email delivery itself stays unrehearsed.
 
+## Canonical dataset (release checklist step 4)
+
+`supabase/seed.sql` applies cleanly to this rehearsal's self-hosted `auth` schema with plain
+`psql` — its `insert into auth.users`/`auth.identities` column lists are a subset of what
+`supabase/gotrue:v2.196.0` (the pinned staging Auth image) actually has, so nothing was rejected:
+
+```bash
+docker exec -i dawes-staging-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 -1 -f /dev/stdin < supabase/seed.sql
+./scripts/stage.sh provision-fixtures
+```
+
+`provision_fixtures.py` is a thin wrapper, not a copy: it imports `ensure_fixture_object`
+(`supabase/scripts/fixture_provisioning.py`) and the content generators
+(`supabase/scripts/fixture_media.py`) read-only. It does not call
+`supabase/scripts/provision_local_auth.py` itself — that script calls `supabase status` (the
+CLI-tracked local project only) and hard-refuses any URL other than the local stack or its
+restore-drill copy, neither of which is this staging rehearsal. The one secret it mints (the
+fixture password) is written to `.work/fixtures.env` (mode 0600, gitignored) *before* it is PUT to
+any user, so an interrupted run is always safely resumable. Verified: 10 clients / 25 projects,
+13 fixture Auth passwords, 70 brand assets, 27 working assets (18 published).
+
+**Pointing the browser suite at staging.** `apps/web/tests/e2e/test-support.ts` uses
+`supabase/.env.local` only for the local stack. When `ACCEPTANCE_SUPABASE_URL` declares another
+backend, every credential must come from the environment: `ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY`,
+`ACCEPTANCE_SUPABASE_ANON_KEY` and `ACCEPTANCE_DEMO_PASSWORD`. Local credentials are never mixed
+with another backend's URL. Set `PLAYWRIGHT_BASE_URL=http://localhost:3103` for the staging web
+container, and exclude `sabre-demo.spec.ts`, which needs the local demo overlay.
+
 ## Results
 
 See `docs/engineering/handoffs/2026-09-23-staging-rehearsal.md` for the pass/fail results of
-`verify`, `bootstrap` and `storage-test`, the exact commands run, and what remains unproven.
+`verify`, `bootstrap` and `storage-test`, the exact commands run, and what remains unproven, and
+`docs/engineering/handoffs/2026-09-23-staging-j10-browser.md` for the canonical dataset and J10
+browser-suite rehearsal in this section.

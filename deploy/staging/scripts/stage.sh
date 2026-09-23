@@ -16,6 +16,10 @@
 #                  and that public sign-up is refused
 #   storage-test   TUS + standard upload through the S3/MinIO backend, SHA-256 compare, confirm
 #                  the objects in MinIO, confirm an anonymous read is denied
+#   provision-fixtures
+#                  after supabase/seed.sql is applied with psql: fixture Auth passwords + Storage
+#                  objects (brand/working assets), via scripts/provision_fixtures.py; checks the
+#                  10 clients/25 projects canonical counts
 #   status         docker compose ps for both projects
 #   down           stop (not remove) both projects; prints the real teardown commands
 #
@@ -522,6 +526,19 @@ cmd_storage_test() {
 }
 
 # ---------------------------------------------------------------------------------------------
+# provision-fixtures — fixture Auth passwords + Storage objects for the canonical dataset
+# (supabase/seed.sql, applied separately with psql) via a thin wrapper that imports the reusable
+# helpers in supabase/scripts read-only. See scripts/provision_fixtures.py for why it does not
+# call supabase/scripts/provision_local_auth.py directly (that script only ever targets the
+# CLI-tracked local stack).
+# ---------------------------------------------------------------------------------------------
+cmd_provision_fixtures() {
+  load_env
+  command -v python3 >/dev/null || die "python3 is required"
+  python3 "$SCRIPT_DIR/provision_fixtures.py"
+}
+
+# ---------------------------------------------------------------------------------------------
 # status / down
 # ---------------------------------------------------------------------------------------------
 cmd_status() {
@@ -564,6 +581,9 @@ Usage: $0 <command>
   verify         header/health checks (production checklist step 4)
   bootstrap      create + promote the first agency user; prove login, agency-only REST, no sign-up
   storage-test   TUS + standard upload through MinIO; SHA-256 compare; anon read denied
+  provision-fixtures
+                 fixture Auth passwords + Storage objects for supabase/seed.sql's canonical
+                 dataset (apply the seed with psql first); checks the 10 clients/25 projects counts
   status         docker compose ps for both projects
   down           stop (not remove) both projects; prints teardown commands
 EOF
@@ -582,6 +602,7 @@ main() {
     verify) cmd_verify "$@" ;;
     bootstrap) cmd_bootstrap "$@" ;;
     storage-test) cmd_storage_test "$@" ;;
+    provision-fixtures) cmd_provision_fixtures "$@" ;;
     status) cmd_status "$@" ;;
     down) cmd_down "$@" ;;
     *) usage; exit 1 ;;

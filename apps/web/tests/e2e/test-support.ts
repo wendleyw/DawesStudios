@@ -1,24 +1,31 @@
 import { expect, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { readFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { fileURLToPath } from "node:url";
 import type { Database } from "@database";
 
-const environment = parseEnv(
-  readFileSync(new URL("../../../../supabase/.env.local", import.meta.url), "utf8"),
-);
+// The local stack's credentials live in supabase/.env.local. Any other backend (a staging
+// rehearsal, CI) must be declared with ACCEPTANCE_SUPABASE_URL and must supply every credential as
+// ACCEPTANCE_<NAME>, so local credentials are never mixed with another backend's URL.
+const localFile = new URL("../../../../supabase/.env.local", import.meta.url);
+const localEnvironment: Record<string, string | undefined> = existsSync(localFile)
+  ? parseEnv(readFileSync(localFile, "utf8"))
+  : {};
+const acceptanceBackend = process.env.ACCEPTANCE_SUPABASE_URL ?? "http://127.0.0.1:55421";
+const declaredElsewhere = localEnvironment.SUPABASE_URL !== acceptanceBackend;
 function required(name: string): string {
-  const value = environment[name];
-  if (!value) throw new Error(`Missing local acceptance configuration: ${name}`);
+  if (name === "SUPABASE_URL" && declaredElsewhere) return acceptanceBackend;
+  const value = declaredElsewhere ? process.env[`ACCEPTANCE_${name}`] : localEnvironment[name];
+  if (!value)
+    throw new Error(
+      declaredElsewhere
+        ? `Acceptance tests mutate data; set ACCEPTANCE_${name} for the declared backend (${acceptanceBackend}).`
+        : `Missing local acceptance configuration: ${name}`,
+    );
   return value;
 }
 export const password = required("DEMO_PASSWORD");
-const acceptanceBackend = process.env.ACCEPTANCE_SUPABASE_URL ?? "http://127.0.0.1:55421";
-if (required("SUPABASE_URL") !== acceptanceBackend)
-  throw new Error(
-    `Acceptance tests mutate data and must run against the declared backend (${acceptanceBackend}). Set ACCEPTANCE_SUPABASE_URL to run them elsewhere.`,
-  );
 // Evidence (screenshots and JSON measurements) lands in the ignored outputs/ directory, so an
 // ordinary run never rewrites committed records. Set WRITE_EVIDENCE=1 when a run should refresh
 // the files a verification record in docs/verification cites.

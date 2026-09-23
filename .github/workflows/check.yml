@@ -30,7 +30,8 @@ jobs:
 # runner has. Adding a job that starts them is real work, not a config tweak, and a workflow that
 # silently skipped the suite would read as coverage it does not have.
 #
-# When that job is added it must set ACCEPTANCE_SUPABASE_URL to the throwaway stack it provisions
+# When that job is added it must set ACCEPTANCE_SUPABASE_URL to the throwaway stack it provisions,
+# with ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY, ACCEPTANCE_SUPABASE_ANON_KEY and ACCEPTANCE_DEMO_PASSWORD
 # (tests/e2e/test-support.ts refuses to run against an undeclared backend) and PLAYWRIGHT_BASE_URL
 # to the app it starts, then assert the eight-table before/after count that section B of the
 # acceptance matrix records.

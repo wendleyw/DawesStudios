@@ -176,8 +176,10 @@ Record the results in `docs/verification/` before serving clients. This is the J
    [local rehearsal](../../deploy/staging/README.md) proves everything except R2 itself, the TLS
    proxy and email delivery. MinIO accepts object tagging, so only a real R2 bucket proves
    `TUS_ALLOW_S3_TAGS`.
-4. The browser suite runs against staging with `ACCEPTANCE_SUPABASE_URL` set, because the tests
-   refuse an undeclared backend. Use a disposable staging dataset, never production data.
+4. The browser suite runs against staging with `ACCEPTANCE_SUPABASE_URL` plus
+   `ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY`, `ACCEPTANCE_SUPABASE_ANON_KEY` and
+   `ACCEPTANCE_DEMO_PASSWORD` set, because the tests refuse an undeclared backend and never mix it
+   with local credentials. Use a disposable staging dataset, never production data.
 5. Invitation and password recovery emails arrive on the real domain. Sign-up is refused.
 6. A video larger than 50 MB uploads, publishes and plays for a client. This proves
    `FILE_SIZE_LIMIT`, TUS on R2 and media scratch space.
