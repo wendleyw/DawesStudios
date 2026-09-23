@@ -17,7 +17,7 @@
 const unsafeFilenameCharacters = /[<>:"/\\|?*\u0000-\u001f]/g;
 
 /** A filename the browser and the filesystem will both accept. */
-export function safeFilename(name: string): string {
+function safeFilename(name: string): string {
   return name.replace(unsafeFilenameCharacters, "_");
 }
 

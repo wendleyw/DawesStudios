@@ -20,8 +20,8 @@ export const CARD_W = 280;
  */
 export const CARD_H = 324;
 export const CARD_GAP = 20;
-export const NOTICE_H = 168;
-export const ADD_CAMPAIGN_H = 76;
+const NOTICE_H = 168;
+const ADD_CAMPAIGN_H = 76;
 /**
  * The row width every campaign frame starts from. A campaign carries its projects plus a briefing
  * slot, so the common two-project campaign already fills this and the column reads as one straight
@@ -90,7 +90,7 @@ export function campaignDateRange(campaign: BoardCampaign, format: (v: string | 
   return "No dates set";
 }
 
-export type StackFrame = {
+type StackFrame = {
   id: string;
   kind: "notice" | "campaign" | "addCampaign";
   x: number;
@@ -104,7 +104,7 @@ export type StackFrame = {
   briefingSlot?: boolean;
 };
 
-export type StackInput = {
+type StackInput = {
   projects: Project[];
   campaigns: BoardCampaign[];
   /** Only the agency and the client may start new work from the board. */

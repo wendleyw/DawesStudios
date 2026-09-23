@@ -64,6 +64,15 @@ shared editor over the current route; direct URL loads use the full page. See th
 four queries that built `search-page.tsx`'s cross-entity result list and the one mutation in
 `notifications-page.tsx`.
 
+`workspace-settings.ts` is this feature's one documented exception to that rule, listed in the
+contract's [Exceptions section](../../../../docs/architecture/data-access.md#exceptions): it calls
+Supabase directly (`.from("workspace_settings")`) for the singleton studio-settings read,
+`useWorkspaceSettings()`, instead of living in `workspace-data.ts`. It stays a separate file so the
+settings editor, this shell (`useDateFormat()` above) and notifications can all consume the same
+read without a workspace → settings dependency, and so that neither `workspace-data.ts` nor
+`settings/settings-data.ts` has to import the other feature to reach it — see
+[`features/settings/README.md`](../settings/README.md) for the full reasoning.
+
 | Source (component)                     | Destination in `workspace-data.ts`        | Table, columns, filters and order                                                                                                      | Unchanged? |
 | -------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | `search-page.tsx` — clients query      | `useWorkspaceSearch()` (clients branch)   | `clients`, `.select("id,name,industry")`, `.eq("archived", false)`, `.ilike("name", pattern)`, `.limit(30)`                            | Yes        |

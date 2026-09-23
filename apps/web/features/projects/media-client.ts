@@ -90,7 +90,7 @@ async function requestMedia<T>(
   return validated.data;
 }
 
-export const sanitizedVideoSchema = z.object({
+const sanitizedVideoSchema = z.object({
   path: z.string().min(1),
   durationSeconds: z.number().positive(),
   width: z.number().int().positive(),

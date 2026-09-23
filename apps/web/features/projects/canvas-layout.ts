@@ -61,7 +61,7 @@ export const HEAD_GAP = 16;
 /** Space between two versions of the same deliverable, tight enough to read as one list. */
 export const VERSION_GAP = 12;
 /** The full-width creation row below a deliverable's existing versions. */
-export const ADD_VERSION_H = 76;
+const ADD_VERSION_H = 76;
 /** Sections are set further apart than versions are, so each deliverable reads as one group. */
 export const SECTION_GAP = 40;
 /**
@@ -79,7 +79,7 @@ export const ARTWORK_MIN_H = 140;
 /** A story or a poster would otherwise make a tile taller than the line can show. */
 export const ARTWORK_MAX_H = 300;
 /** Deliverables such as a brand kit carry no dimensions, so their previews stay square. */
-export const DEFAULT_ARTWORK_RATIO = 1;
+const DEFAULT_ARTWORK_RATIO = 1;
 
 /**
  * The artwork box for one deliverable, in its own proportions: a 1080 x 1080 square is shown
@@ -159,7 +159,7 @@ export function deliverableHeadWidth(versions: CanvasLayoutVersion[]): number {
   return Math.min(sectionWidth(versions), DELIVERABLE_HEAD_W);
 }
 
-export type CanvasLayoutDeliverable = {
+type CanvasLayoutDeliverable = {
   id: string;
   width: number | null;
   height: number | null;

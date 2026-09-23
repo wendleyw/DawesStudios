@@ -46,8 +46,7 @@
   font-size: var(--text-base);
   color: var(--muted);
 }
-.briefing-editor-header,
-.briefing-detail-header {
+.briefing-editor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -60,12 +59,6 @@
   gap: var(--space-lg);
 
   margin: var(--space-section) 0;
-}
-.briefing-editor-title {
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  margin: 32px 0 0;
 }
 .briefing-progress button {
   display: flex;
@@ -199,11 +192,6 @@
   color: var(--muted);
   margin: -8px 0 0;
 }
-.briefing-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
 .format-badges {
   display: flex;
   flex-wrap: wrap;
@@ -333,12 +321,6 @@
   line-height: 1.7;
   color: var(--muted);
   margin-bottom: 0;
-}
-.briefing-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
 }
 .briefing-validation {
   scroll-margin-top: 16px;
@@ -471,9 +453,6 @@
   }
   .briefing-review-aside {
     position: static;
-  }
-  .briefing-form-grid {
-    grid-template-columns: 1fr;
   }
   .deliverable-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));

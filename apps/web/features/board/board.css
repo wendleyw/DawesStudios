@@ -101,9 +101,6 @@
   flex: 1;
   flex-direction: column;
 }
-.shows-canvas .board-work-area {
-  background: var(--canvas-background);
-}
 .board-notices {
   position: absolute;
   z-index: 22;

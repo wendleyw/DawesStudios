@@ -39,13 +39,13 @@ export type DeliverableArtwork = {
 };
 
 /** A numbered version and the artwork-bearing rows inside it. */
-export type VersionArtwork = {
+type VersionArtwork = {
   versionNumber: number;
   designs: { id: string; sortOrder: number; path: string }[];
 };
 
 /** What one card needs, before the storage path has been signed. */
-export type ProjectArtwork = {
+type ProjectArtwork = {
   path: string | null;
   version: number | null;
   typeLabel: string | null;
@@ -66,7 +66,7 @@ export type SignedProjectArtwork = {
 export type ProjectArtworkMap = Record<string, SignedProjectArtwork>;
 
 /** A project with no readable deliverable at all: nothing to show, nothing to claim. */
-export const NO_ARTWORK: SignedProjectArtwork = { url: null, version: null, typeLabel: null };
+const NO_ARTWORK: SignedProjectArtwork = { url: null, version: null, typeLabel: null };
 
 /** Reading a card's artwork without having to spell out the missing case at every call site. */
 export function artworkFor(map: ProjectArtworkMap | undefined, projectId: string) {

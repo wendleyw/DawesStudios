@@ -1119,12 +1119,6 @@
   width: 30px;
   height: 30px;
 }
-.project-panel-footer {
-  padding: 16px 20px;
-  text-align: center;
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
 @media (max-width: 720px) {
   .project-inspector {
     right: 12px;

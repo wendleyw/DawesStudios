@@ -349,7 +349,7 @@ export function useInvalidateProject() {
  * same shape as `assetQueryKeys`, rather than folded into `projectQueryKeys`, precisely so the two
  * call sites can invalidate only what they dirty.
  */
-export const commentsQueryKeys = ["comments"] as const;
+const commentsQueryKeys = ["comments"] as const;
 
 export function useInvalidateComments() {
   const queryClient = useQueryClient();

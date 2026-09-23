@@ -19,11 +19,11 @@ export const brandNavigation = [
   { id: "messaging", label: "Messaging", group: "Guidance" },
   { id: "ai", label: "Brand context", group: "Guidance" },
 ] as const;
-export type BrandSectionId = (typeof brandNavigation)[number]["id"];
+type BrandSectionId = (typeof brandNavigation)[number]["id"];
 export type EditableSectionId = Exclude<BrandSectionId, "assets">;
-export type ColorSwatch = { name: string; hex: string };
-export type BrandProduct = { name: string; description: string; specs: string; rules: string };
-export type SectionField = {
+type ColorSwatch = { name: string; hex: string };
+type BrandProduct = { name: string; description: string; specs: string; rules: string };
+type SectionField = {
   key: string;
   label: string;
   kind?: "multiline" | "lines" | "scale" | "url";
@@ -91,7 +91,7 @@ const fontSource = z
   .max(2048)
   .refine((value) => !value || !!safeFontSource(value), "Use a complete HTTPS font source URL.");
 const lines = z.array(shortText.min(1)).max(30);
-export const hexColor = z
+const hexColor = z
   .string()
   .trim()
   .regex(/^#(?:[a-f\d]{3}|[a-f\d]{6})$/i, "Use a HEX color such as #191919.")
@@ -159,7 +159,7 @@ const sectionSchemas = {
 export function isBrandSection(value: string): value is BrandSectionId {
   return brandNavigation.some((item) => item.id === value);
 }
-export function contentRecord(content: Json | undefined): Record<string, Json | undefined> {
+function contentRecord(content: Json | undefined): Record<string, Json | undefined> {
   return content && typeof content === "object" && !Array.isArray(content) ? content : {};
 }
 export function textValue(content: Json | undefined, key: string, fallback = "") {
