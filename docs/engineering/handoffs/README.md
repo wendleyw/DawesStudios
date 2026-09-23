@@ -1,41 +1,36 @@
 # Delegated handoff reports
 
-Each delegated worker owns one report in this directory, assigned before work begins. Use an English filename such as `2026-09-20-backend-foundation.md`; add a suffix for later assignments rather than overwriting historical reports. The orchestrator links accepted reports from [the shared checkpoint](../handoff.md).
+Each delegated worker owns one report in this directory. The orchestrator assigns it before the
+work begins. Use an English, dated filename such as `2026-09-20-backend-foundation.md`, and add a
+suffix for later assignments rather than overwriting a report. The orchestrator links accepted
+reports from [the shared checkpoint](../handoff.md).
 
-Save a report at a meaningful checkpoint and before returning, stopping, or transferring work. If interrupted, a later reconstruction must name its actual author and evidence sources. Do not impersonate the unavailable worker or treat reconstructed context as proof that tests passed.
+Save the report before you return, stop or transfer work. **Keep it to 30 lines or fewer.** Link
+evidence on disk instead of pasting logs, diffs or long test output. If you were interrupted, a
+later reconstruction must name its actual author and evidence sources. Never treat reconstructed
+context as proof that tests passed.
 
 ```markdown
 # <Task name>
 
-- Updated at: <ISO timestamp with timezone>
-- Reporting agent and tool: <name / Codex or Claude Code>
+- Updated: <ISO timestamp with timezone> · Agent: <name / Codex or Claude Code> · Model: <tier>
 - State: <planned / implemented / tested / verified / blocked / interrupted>
-- Objective: <bounded task>
-- Owned paths: <code paths and this report path>
-- Dependencies: <contracts, reports, environment requirements>
-- Acceptance criteria: <observable completion criteria>
+- Objective and owned paths: <one line each>
 
-## Completed work and changed files
-
-<Describe what is on disk and what remains incomplete.>
+## Changes
+- <path — what changed and why, one line each>
 
 ## Decisions and interface changes
+- <decision — affected consumers; "none" if none>
 
-<Rationale, affected consumers, and orchestrator coordination.>
+## Checks actually run
+- `<command or scenario>` — <pass/fail, counts> — <evidence path if any>
 
-## Checks actually executed
-
-| Command or scenario | Environment and time | Observed result | Evidence |
-| --- | --- | --- | --- |
-| <exact check> | <context> | <pass/fail/not run> | <path> |
-
-## Remaining risks and next action
-
-<Missing checks, failures, unfinished edits, and the next concrete step.>
-
-## Ownership at handoff
-
-<Released paths, any still-active writers/processes, and intended recipient.>
+## Risks and next action
+- <missing checks, failures, unfinished edits; the next concrete step>
+- Ownership: <paths released; any still-active writer or process>
 ```
 
-Keep credentials, environment values, private service keys, and raw agent session transcripts out of these reports. A task report does not approve production release.
+Keep credentials, environment values, private service keys and raw agent transcripts out of these
+reports. Save screenshots to the ignored `outputs/` directory unless a verification record needs a
+final-state image. A task report does not approve a production release.

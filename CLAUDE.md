@@ -20,11 +20,20 @@
 
 - The primary agent is the orchestrator. Every delegated agent reports to it; agents do not independently redefine scope, approve releases, or declare the overall goal complete.
 - Before delegation, define the task, owned paths, dependencies, acceptance criteria, and expected evidence. Keep write ownership disjoint and report cross-domain interface changes before implementation.
-- Every report includes completed work, changed files, decisions, checks actually executed with results, unresolved risks, and the next required action. Distinguish planned, implemented, tested, and verified states.
+- Every report includes completed work, changed files, decisions, checks actually executed with results, unresolved risks, and the next required action. Distinguish planned, implemented, tested, and verified states. Keep reports to 30 lines or fewer.
 - The orchestrator integrates results, resolves conflicts, redirects work, updates the implementation plan, and owns the final security, functional, visual, and release audit.
 - Apply installed skills by responsibility: project-structure for boundaries; setup for tooling; testing for unit/integration verification; security for authorization and dependency review; codebase-review and first-principles-review for independent audits; refactor for maintainability; update-project for documentation.
 - Keep feature code, data access, validation, and unit tests colocated. Share code only when multiple consumers need it. Avoid duplicate domain rules, catch-all modules, competing state stores, and unnecessary services.
 - Do not run permanent background AI agents as product infrastructure merely to implement this development workflow. Persistent agent orchestration is documented in docs/engineering/agent-orchestration.md.
+
+## Development Efficiency
+
+- Delegate only bounded work, to the project agents in `.claude/agents/` (Codex: the equivalent model tier). Use the cheapest model that fits: Haiku for code search and for running named checks, Sonnet for bounded implementation and review. Keep the top tier for orchestration, cross-domain design and the release audit. Do not use general-purpose agents for routine work, and run at most three agents at once unless the user asks for more.
+- Give every delegation an output cap and a list of what not to read (history, verification records, screenshots, `docs/ref`). Read large files by excerpt, compact at task milestones, and start a fresh session between unrelated tasks.
+- Keep `docs/engineering/handoff.md` at or under 100 lines of current state. Move superseded entries to `docs/engineering/history/` and read them only when a task needs earlier evidence.
+- Finish every integrated task with a passing gate and a Conventional Commit of that task's files. Do not let unrelated work accumulate uncommitted. Pushing, pull requests and deployment still need an explicit request.
+- Capture screenshots only when a task changes UI. Save working captures to the ignored `outputs/` directory, and commit only the final-state images a verification record cites.
+- See `docs/engineering/agent-orchestration.md#efficient-delegation`.
 
 ## Codebase Architecture Boundaries
 
@@ -36,13 +45,14 @@
 
 - Read `docs/engineering/handoff.md` before resuming work in either Codex or Claude Code. Preserve the current objective, accepted decisions, unfinished changes, and verification gaps.
 - The orchestrator updates that checkpoint after each integrated task and before ending a session or transferring control. Record actual checks and the next concrete action; distinguish historical evidence from checks executed in the current session.
-- Each delegated agent saves its report under `docs/engineering/handoffs/` using the documented template before returning. Assign a unique report path with its owned code paths. Chat-only reports and `/root/...` thread names are not portable project memory.
+- Each delegated agent saves its report under `docs/engineering/handoffs/` using the documented template (30 lines or fewer) before returning. Assign a unique report path with its owned code paths. Chat-only reports and `/root/...` thread names are not portable project memory.
 - Only one orchestrator owns shared integration files at a time. During transfer, stop or collect outgoing workers, preserve their changes, and record the incoming owner before it writes. A read-only Claude acknowledgement does not transfer ownership or authorize a release.
 - If interrupted before a checkpoint, the incoming orchestrator reconciles the working tree and saved reports first, marks missing evidence as unknown, and continues the existing plan. Never discard uncommitted or untracked work to recreate an older checkpoint.
 
 ## Product and Delivery Requirements
 
 - Run `apps/web` directly with the Next.js App Router and its standard CLI. The web application uses a Node.js server; authentication, data, storage and realtime remain in Supabase. Keep hosting-provider integrations out of the application unless explicitly requested.
+- Production target: the official self-hosted Supabase Docker distribution, with Cloudflare R2 as its S3 Storage backend, plus the `web` and `media` containers from `compose.yaml` behind a TLS reverse proxy. R2 is Supabase Storage configuration, not an application integration. See `docs/operations/production.md`.
 - Build a real application using xyflow for the board and project canvas, with Supabase running in Docker for authentication, PostgreSQL, storage, and realtime capabilities.
 - Treat docs/ref as inspiration and workflow evidence, not a specification to reproduce screen by screen. Build a minimalist, lightweight, modern interface with the supplied branding in brand; consolidate duplicate controls and reveal secondary actions contextually. Preserve these original source artifacts; write new implementation documentation and all product content in English.
 - The user's production request supersedes the reference package's earlier wireframe-only limitations. Prototype simulations, role previews, browser filters, and toast-only actions are not production implementations.

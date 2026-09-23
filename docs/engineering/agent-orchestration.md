@@ -14,11 +14,28 @@ Each assignment names the objective, allowed paths, dependencies, acceptance cri
 4. Remaining gaps, risks, blocked dependencies, and recommendations.
 5. Whether the deliverable is planned, implemented, tested, or verified.
 
-An agent cannot declare the whole system complete. The orchestrator compares reports with current files, database results, browser behavior, and the acceptance matrix before integrating and closing a task.
+An agent cannot declare the whole system complete. The orchestrator compares reports with current files, database results, browser behavior, and the acceptance matrix before integrating and closing a task. Reports stay at 30 lines or fewer, using the [template](handoffs/README.md).
+
+## Efficient delegation
+
+Most of this project's model usage came from delegated agents and from sessions running above 150k tokens of context. These rules keep both down without weakening verification.
+
+| Agent (`.claude/agents/`) | Model | Use it for | Writes |
+| --- | --- | --- | --- |
+| `explorer` | Haiku | Locating code and answering where-and-how questions, as `path:line` pointers | No |
+| `verifier` | Haiku | Running an already-decided list of checks and reporting exact results | No |
+| `implementer` | Sonnet | One bounded change with owned paths, acceptance criteria and a report path | Owned paths only |
+| `reviewer` | Sonnet | Independent audits of a diff, feature or concern, with verified and ranked findings | No |
+
+- **Pick the cheapest model that fits.** The orchestrator keeps cross-domain design, integration, and the release audit. A single known file or symbol is a direct search, not a delegation. Do not use general-purpose agents for routine work. Codex applies the same tiers with its own subagent configuration.
+- **Delegate with a bounded prompt.** Name the objective, owned or read paths, what not to read (history, verification records, screenshots, `docs/ref`), the checks to run, and an output cap. Run at most three agents at once unless the user asks for more.
+- **Watch context size.** Read large files by excerpt. Summarize long command output instead of printing it. Compact at task milestones and start a fresh session between unrelated tasks. Only the current [checkpoint](handoff.md) is read by default. The [history](history/) is for evidence lookup.
+- **Commit per task.** Every integrated task ends with a passing gate and a Conventional Commit of that task's files. The hooks run gitleaks, lint-staged and commitlint. Pushing, pull requests and deployment still need an explicit request.
+- **Keep evidence lean.** Capture screenshots only when a task changes UI. Save working captures to the ignored `outputs/` directory, and commit only the few final-state images a verification record cites.
 
 ## Codex and Claude continuity
 
-The durable entry point is [handoff.md](handoff.md). Both root instruction files require the incoming orchestrator to read it and the outgoing orchestrator to update it. Save individual reports using the [handoff report template](handoffs/README.md); keep each agent's report path disjoint from other agents' paths. Only the orchestrator edits the shared checkpoint and implementation plan.
+The durable entry point is [handoff.md](handoff.md), a current-state checkpoint of 100 lines or fewer. Superseded entries move to [history](history/). Both root instruction files require the incoming orchestrator to read the checkpoint and the outgoing orchestrator to update it. Save individual reports using the [handoff report template](handoffs/README.md); keep each agent's report path disjoint from other agents' paths. Only the orchestrator edits the shared checkpoint and implementation plan.
 
 The Codex [subagent workflow](https://learn.chatgpt.com/docs/agent-configuration/subagents) gives delegated work its own thread and returns summaries to the main thread. Names such as `/root/product_architecture` are useful provenance labels. This repository does not connect those threads to Claude or configure automatic takeover when a quota is exhausted. Shared skills and instruction files do not transfer unsaved conversation state.
 
