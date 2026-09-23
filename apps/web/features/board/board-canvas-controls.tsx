@@ -1,8 +1,9 @@
 "use client";
 
-import { ControlButton, Controls, useReactFlow, useStore } from "@xyflow/react";
+import { useReactFlow, useStore } from "@xyflow/react";
 import { CornerUpLeft } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
+import { CanvasControls } from "@/features/shared/canvas-controls";
 import { boardFit } from "./board-layout";
 
 /**
@@ -15,22 +16,29 @@ export function BoardCanvasControls({
   content,
   view,
   fitKey,
+  portalTarget,
 }: {
   content: { width: number; height: number };
   view: { width: number; height: number };
-  /** Changes whenever the board being shown changes, which is when the view is fitted again. */
+  /** Identifies the board and its measured viewport size; content edits do not change this key. */
   fitKey: string;
+  portalTarget: HTMLElement | null;
 }) {
   const { setViewport } = useReactFlow();
+  const canvas = useStore((state) => state.domNode);
   const fit = useCallback(
-    (animate: boolean) => {
+    (duration = 0) => {
       if (content.width <= 0 || view.width <= 0) return;
-      void setViewport(boardFit(content, view), animate ? { duration: 200 } : undefined);
+      // Keep the opening content below the floating identity/profile cards while the grid stays full bleed.
+      const topInset = canvas
+        ? Number.parseFloat(getComputedStyle(canvas).getPropertyValue("--board-header-space")) || 88
+        : 88;
+      void setViewport(boardFit(content, view, topInset), { duration });
     },
-    [content.width, content.height, view.width, view.height, setViewport],
+    [content, view, canvas, setViewport],
   );
   // Entering a board — or returning to one — shows all of it. Refitting on every geometry change
-  // would fight the viewer, so this runs once per board and then only on request.
+  // would fight the viewer, so only board entry, viewport resizing or an explicit request refits.
   // The pan/zoom instance is created in its own effect, and setting a viewport before it exists is
   // silently dropped — which left a board wider than the canvas opening clipped at the far left.
   const ready = useStore((state) => !!state.panZoom);
@@ -39,17 +47,14 @@ export function BoardCanvasControls({
     if (!ready || !fitKey || fitted.current === fitKey || content.width <= 0 || view.width <= 0)
       return;
     fitted.current = fitKey;
-    fit(false);
+    fit();
   }, [ready, fitKey, content.width, view.width, fit]);
   return (
-    <Controls showInteractive={false} showFitView={false}>
-      <ControlButton
-        onClick={() => fit(true)}
-        title="Fit board to view"
-        aria-label="Fit board to view"
-      >
-        <CornerUpLeft size={13} />
-      </ControlButton>
-    </Controls>
+    <CanvasControls
+      onFit={fit}
+      fitLabel="Fit board to view"
+      fitIcon={<CornerUpLeft size={13} />}
+      portalTarget={portalTarget}
+    />
   );
 }

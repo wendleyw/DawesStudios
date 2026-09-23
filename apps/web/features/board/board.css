@@ -1,77 +1,90 @@
+/* The header floats over the board; structured views reserve room for its controls. */
 .board-page {
   display: flex;
   min-width: 0;
-  min-height: calc(100dvh - var(--topbar-height));
-  flex-direction: column;
-}
-/*
- * Showing the canvas, the page takes the viewport exactly and the canvas takes whatever the
- * identity header above it leaves — so the header stays free to grow a second row of controls on a
- * narrow screen without a height being restated anywhere. React Flow sizes itself with
- * `height: 100%` inline, which only resolves against a definite height, which is why this is
- * `height` rather than another `min-height`. The floor keeps the canvas usable on a short window.
- * The list scrolls with the page instead, so it keeps the flexible box.
- */
-.board-page.shows-canvas {
+  min-height: 0;
   height: calc(100dvh - var(--topbar-height));
-  min-height: 568px;
+  flex-direction: column;
+  container-type: inline-size;
+  container-name: board;
 }
-.board-identity {
+.board-period-picker {
+  flex-shrink: 0;
+}
+.board-period-short-label {
+  display: none;
+}
+.board-period-trigger {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  padding: 4px 2px;
+  color: var(--foreground);
+  background: transparent;
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+.board-period-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  width: 288px;
+  max-width: calc(100vw - 24px);
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+}
+.board-period-year {
   display: flex;
-  min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 24px var(--space-page) 20px;
-}
-.board-identity-name {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 18px;
-}
-.board-identity-mark {
-  --client-mark-size: 58px;
-}
-.board-identity-text {
-  min-width: 0;
-}
-/* The board's own controls, on the header's row rather than in the shared topbar above it. */
-.board-tools {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-}
-.board-tools .search-field {
-  width: 236px;
-}
-.board-tools select {
-  min-height: 38px;
-  width: 132px;
-  border-color: var(--border);
   font-size: var(--text-base);
 }
-.board-filter-menu {
-  position: relative;
+.board-period-year .icon-button {
+  width: 32px;
+  height: 32px;
 }
-.board-identity h1 {
+.board-period-quarters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.board-period-quarters button,
+.board-period-all {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 10px 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+}
+.board-period-quarters small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.board-period-panel button[aria-pressed="true"],
+.board-period-panel button:hover:not([aria-disabled="true"]) {
+  border-color: var(--border-strong);
+  background: var(--surface-subtle);
+}
+.board-period-year button[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+.board-period-panel > p {
   margin: 0;
-  overflow: hidden;
-  font-size: 34px;
-  font-weight: 500;
-  letter-spacing: -0.9px;
-  line-height: 1.12;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.board-identity p {
-  margin: 3px 0 0;
   color: var(--muted);
   font-size: var(--text-xs);
-  font-weight: 500;
-  letter-spacing: var(--eyebrow-tracking);
-  text-transform: uppercase;
+  line-height: 1.5;
 }
 .board-result-count {
   color: var(--muted);
@@ -79,51 +92,32 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.board-filters {
-  position: absolute;
-  top: calc(100% + 9px);
-  right: 0;
-  z-index: 30;
+.board-work-area {
+  --board-header-space: 88px;
+  position: relative;
   display: flex;
-  width: 264px;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: 0 14px 34px rgb(0 0 0 / 9%);
-}
-.board-filters label {
-  font-size: var(--text-sm);
-}
-.board-filters select {
-  min-height: 38px;
-  width: 100%;
-  font-size: var(--text-base);
-}
-.board-filter-actions {
-  display: flex;
-  gap: 8px;
-}
-.filter-indicator {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-.board-page > .form-error {
-  margin: 16px var(--space-page) 0;
-}
-.board-page > .empty-state {
-  margin: 8px var(--space-page) 36px;
+  min-width: 0;
+  min-height: 0;
   flex: 1;
+  flex-direction: column;
+}
+.shows-canvas .board-work-area {
+  background: var(--canvas-background);
+}
+.board-notices {
+  position: absolute;
+  z-index: 22;
+  top: var(--board-header-space);
+  right: var(--space-page);
+  left: 92px;
+  display: grid;
+  gap: 8px;
 }
 .board-canvas {
   min-width: 0;
   min-height: 0;
   flex: 1;
-  background: #f0f0ed;
+  background: var(--canvas-background);
 }
 .board-canvas .react-flow__node {
   border-radius: var(--radius-lg);
@@ -135,25 +129,6 @@
 .board-canvas .react-flow__node.selected .board-card {
   border-color: #888b7d;
   box-shadow: 0 0 0 1px #888b7d;
-}
-.board-canvas .react-flow__controls {
-  display: flex;
-  gap: 2px;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  box-shadow: 0 3px 12px rgb(0 0 0 / 4%);
-}
-.board-canvas .react-flow__controls-button {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 5px;
-  background: var(--surface);
-}
-.board-canvas .react-flow__controls-button:hover {
-  background: var(--surface-subtle);
 }
 .board-card {
   position: relative;
@@ -182,7 +157,7 @@
   padding-top: 6px;
 }
 .board-card-body:hover {
-  background: #fdfdfb;
+  background: var(--surface-hover);
 }
 .board-card :is(h2, h3, h4) {
   font-size: 15px;
@@ -224,8 +199,7 @@
 }
 .kanban-column {
   display: flex;
-  /* Matches KANBAN_COLUMN_W in board-layout.ts, which sizes the frame around seven of these. */
-  min-width: 176px;
+  min-width: 200px;
   flex: 1 1 0;
   flex-direction: column;
   gap: 10px;
@@ -235,6 +209,7 @@
   background: var(--surface-subtle);
 }
 .kanban-heading {
+  min-height: 60px;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -260,6 +235,8 @@
   overflow-wrap: anywhere;
 }
 .kanban-column .eyebrow {
+  padding-right: 20px;
+  overflow-wrap: anywhere;
   margin-bottom: 8px;
 }
 .kanban-column .board-card-body > p {
@@ -268,128 +245,12 @@
   font-size: var(--text-xs);
 }
 .board-list {
-  margin: 8px var(--space-page) 36px;
+  min-height: 0;
+  margin: var(--space-lg) var(--space-page);
+  overflow: auto;
 }
-@media (max-width: 1200px) {
-  .board-tools .search-field {
-    width: 196px;
-  }
-  .board-tools .board-result-count {
-    display: none;
-  }
-}
-@media (max-width: 1100px) {
-  /* The controls take their own row under the client's name rather than crowding it. */
-  .board-identity {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 18px;
-  }
-  .board-tools {
-    width: 100%;
-  }
-  .board-tools .search-field {
-    width: auto;
-    min-width: 0;
-    flex: 1;
-  }
-}
-@media (max-width: 640px) {
-  .board-identity {
-    padding-block: 18px 14px;
-    gap: 14px;
-  }
-  .board-identity-name {
-    gap: 13px;
-  }
-  .board-identity-mark {
-    --client-mark-size: 42px;
-  }
-  .board-identity h1 {
-    font-size: 23px;
-    letter-spacing: -0.5px;
-  }
-  .board-identity p {
-    font-size: var(--text-xs);
-  }
-  .board-tools {
-    gap: 8px;
-    row-gap: 8px;
-    flex-wrap: wrap;
-  }
-  /* Below this width the row can no longer hold the field beside the view switcher and the primary
-     action without squeezing it past use; let it claim the row and push those controls to a second
-     line instead. */
-  .board-tools .search-field {
-    min-width: 140px;
-    flex: 1 1 auto;
-  }
-  .board-tools select {
-    width: 116px;
-  }
-  .board-tools .button-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-  .board-tools .button {
-    padding-inline: 13px;
-  }
-  .board-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 20px;
-    padding-top: 24px;
-  }
-  .board-header h1 {
-    font-size: 26px;
-  }
-  .board-header-actions {
-    width: 100%;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .board-header-actions select {
-    width: 138px;
-  }
-  .board-toolbar {
-    gap: 4px;
-  }
-  .board-toolbar .search-field {
-    width: auto;
-    min-width: 0;
-  }
-  .board-toolbar .button {
-    padding-inline: 10px;
-  }
-  .board-result-count {
-    display: none;
-  }
-  .board-filters {
-    align-items: stretch;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .board-filters label {
-    flex: 1;
-    min-width: 120px;
-  }
-  .board-filters > .button {
-    align-self: flex-end;
-  }
-  .board-canvas {
-    height: max(400px, calc(100dvh - 291px));
-  }
-}
+/* The canvas contains only campaign and project frames. */
 
-/* Stacked board canvas: a Planning frame above one frame per campaign, in a single column. */
-
-.board-canvas .react-flow__node-planning,
 .board-canvas .react-flow__node-campaign,
 .board-canvas .react-flow__node-notice,
 .board-canvas .react-flow__node-addCampaign {
@@ -401,7 +262,6 @@
  * which is every frame in this stack. The frames still hold real controls, so their content opts
  * back in; the frame element itself stays transparent to the pane.
  */
-.board-planning,
 .board-campaign,
 .board-slot,
 .board-add-campaign,
@@ -409,39 +269,20 @@
   pointer-events: auto;
 }
 
-.board-planning {
-  display: flex;
-  height: 100%;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
 .board-planning-head {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: 10px;
-  height: 56px;
-  padding: 0 14px 0 8px;
+  min-height: 56px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
 }
 .board-planning-head h2 {
   flex: 1;
   font-size: 14px;
 }
-.board-planning-body {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-  border-top: 1px solid var(--border);
-}
-.board-planning-body > * {
-  min-height: 0;
-  flex: 1;
-}
+
 .board-campaign {
   height: 100%;
   border: 1px solid var(--border);
@@ -522,7 +363,7 @@
   min-height: 84px;
 }
 
-.board-planning-body .project-timeline {
+.board-planning-view .project-timeline {
   padding: 16px;
   border: 0;
 }
@@ -536,13 +377,6 @@
 }
 
 @media (max-width: 640px) {
-  .board-planning-head {
-    gap: 6px;
-    padding-right: 8px;
-  }
-  .board-planning-head h2 {
-    font-size: var(--text-lg);
-  }
   .board-campaign-dates {
     display: none;
   }
@@ -608,7 +442,6 @@
   color: var(--muted);
   font-size: var(--text-xs);
   letter-spacing: 0.01em;
-  opacity: 0.75;
 }
 .board-card-media > img {
   /* The whole design, not a crop of its middle. A reel is 1080x1920, and covering a wide box with
@@ -654,17 +487,17 @@
 }
 
 /* The stage list scrolls under its own pinned heading rather than pushing it out of the frame. */
-.board-planning-body .kanban-board {
+.board-planning-view .kanban-board {
   min-height: 0;
   align-items: stretch;
 }
-.board-planning-body .kanban-column {
+.board-planning-view .kanban-column {
   min-height: 0;
   overflow: hidden auto;
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
 }
-.board-planning-body .kanban-column > * {
+.board-planning-view .kanban-column > * {
   flex: 0 0 auto;
 }
 
@@ -713,4 +546,507 @@
   font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.02em;
+}
+
+/* One compact view selector; every icon keeps its accessible name and native tooltip. */
+.board-view-picker {
+  flex: 0 0 auto;
+}
+.board-view-picker button {
+  display: inline-flex;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+}
+.board-view-picker button[aria-pressed="true"] {
+  color: var(--foreground);
+}
+.board-planning-view {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  margin: var(--space-lg) var(--space-page);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.board-planning-view > .kanban-board {
+  flex: 1;
+}
+.board-planning-view .board-planning-head {
+  border-bottom: 1px solid var(--border);
+}
+.board-calendar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  margin: var(--space-lg) var(--space-page);
+}
+.board-calendar-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.board-calendar-head h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.board-calendar-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.board-calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.board-calendar-grid {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--calendar-weeks, 5), minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--border);
+}
+.board-calendar-weekday {
+  padding: 12px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+.board-calendar-day {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 6px;
+  background: var(--surface);
+}
+.board-calendar-day.outside-month {
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+.board-calendar-day > time {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 4px auto;
+  border-radius: 50%;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.board-calendar-day > time[aria-current="date"] {
+  background: var(--ink);
+  color: var(--surface);
+}
+.board-calendar-project {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.board-calendar-project:hover {
+  background: var(--surface-hover);
+}
+.board-calendar-project.selected {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+.board-calendar-project > strong {
+  max-width: 100%;
+  padding-right: 18px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.board-calendar-campaign {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-calendar-project .status-badge {
+  max-width: 100%;
+  white-space: normal;
+}
+.board-calendar-open {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--muted);
+}
+.board-calendar-open:hover {
+  background: var(--surface-subtle);
+  color: var(--foreground);
+}
+.board-calendar-agenda {
+  display: none;
+}
+.board-calendar-undated {
+  max-height: 22dvh;
+  flex: 0 1 auto;
+  margin-top: 20px;
+  overflow: auto;
+}
+.board-calendar-undated > h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+.board-calendar-undated > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 12px;
+}
+.board-calendar-empty {
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: var(--text-base);
+}
+@container board (max-width: 900px) {
+  .board-calendar {
+    overflow: auto;
+  }
+  .board-calendar-undated {
+    max-height: none;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+  .board-calendar-grid {
+    display: none;
+  }
+  .board-calendar-agenda {
+    display: grid;
+    flex: 0 0 auto;
+    align-content: start;
+    gap: 20px;
+  }
+  .board-calendar-agenda h3 {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+  }
+}
+
+/* Compact event labels keep every week in view; details remain in the tooltip and open link. */
+.board-calendar-grid .board-calendar-project {
+  gap: 0;
+  margin-top: 3px;
+  padding: 4px 6px;
+  background: var(--surface-subtle);
+}
+.board-calendar-grid .board-calendar-project > strong {
+  width: 100%;
+  overflow: hidden;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-calendar-events {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.board-calendar-grid .board-calendar-campaign,
+.board-calendar-grid .status-badge {
+  display: none;
+}
+.board-calendar-grid .board-calendar-open {
+  top: 2px;
+  right: 0;
+}
+@container board (min-width: 1100px) {
+  .kanban-column {
+    min-width: 0;
+  }
+}
+
+/* Tools overlay the canvas; structured views reserve a gutter for their content. */
+.board-work-area > .board-canvas {
+  margin: 0;
+}
+.board-work-area > :is(.board-list, .board-planning-view, .board-calendar) {
+  margin: var(--board-header-space) var(--space-page) 24px 92px;
+}
+.board-tool-dock {
+  --board-tool-size: 40px;
+  position: absolute;
+  z-index: 20;
+  top: var(--board-header-space);
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.board-tool-dock > * {
+  pointer-events: auto;
+}
+.board-floating-toolbar {
+  position: relative;
+  display: flex;
+  width: max-content;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+}
+.board-tool-group,
+.board-floating-toolbar .board-view-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.board-floating-toolbar .board-view-picker {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.board-floating-toolbar :is(.board-tool, .notifications-bell),
+.board-floating-toolbar .board-view-picker button {
+  position: relative;
+  width: var(--board-tool-size);
+  height: var(--board-tool-size);
+  min-height: var(--board-tool-size);
+  flex: 0 0 var(--board-tool-size);
+  border-radius: 8px;
+}
+.board-floating-toolbar .board-view-picker button[aria-pressed="true"],
+.board-tool[aria-expanded="true"] {
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.board-tool-indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.board-tool-divider {
+  width: 24px;
+  height: 1px;
+  flex: 0 0 auto;
+  background: var(--border);
+}
+.board-tool-panel {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12px);
+  display: flex;
+  width: 304px;
+  max-height: min(440px, calc(100dvh - 160px));
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
+}
+.board-tool-panel > header,
+.board-tool-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.board-tool-panel h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.board-tool-panel > header .icon-button {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+}
+.board-tool-panel .search-field {
+  width: 100%;
+}
+.board-tool-panel > label {
+  font-size: var(--text-sm);
+}
+.board-tool-panel select {
+  width: 100%;
+  min-height: 38px;
+  font-size: var(--text-base);
+}
+@media (max-width: 900px), (max-height: 700px) {
+  .board-tool-dock {
+    --board-tool-size: clamp(32px, 9vw, 36px);
+    top: auto;
+    bottom: 12px;
+    left: 50%;
+    max-width: calc(100% - 24px);
+    gap: 8px;
+    transform: translateX(-50%);
+  }
+  .board-floating-toolbar {
+    flex-direction: row;
+    gap: 5px;
+    padding: 6px;
+  }
+  .board-tool-group,
+  .board-floating-toolbar .board-view-picker {
+    flex-direction: row;
+    gap: 2px;
+  }
+  .board-tool-divider {
+    width: 1px;
+    height: 22px;
+  }
+  .board-tool-panel {
+    top: auto;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    width: min(320px, calc(100vw - 24px));
+    transform: translateX(-50%);
+  }
+  .board-work-area > .board-canvas {
+    margin: 0;
+  }
+  .board-work-area > :is(.board-list, .board-planning-view, .board-calendar) {
+    margin: var(--board-header-space) var(--space-page) 76px;
+  }
+  .board-notices {
+    top: var(--board-header-space);
+    left: var(--space-page);
+  }
+}
+@media (max-height: 650px) {
+  .board-work-area {
+    --board-header-space: 78px;
+  }
+  .board-planning-head {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
+  .board-planning-view .kanban-board {
+    padding: 8px;
+  }
+  .kanban-heading {
+    min-height: 44px;
+  }
+  .board-work-area > :is(.board-list, .board-planning-view, .board-calendar) {
+    margin-bottom: 68px;
+  }
+  .board-calendar-head {
+    margin-bottom: 12px;
+  }
+}
+
+/* The canvas remains full bleed beneath two floating control cards. */
+.board-zoom-dock .react-flow__controls {
+  display: flex;
+  width: max-content;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+}
+.board-zoom-dock .react-flow__controls-button {
+  width: var(--board-tool-size);
+  height: var(--board-tool-size);
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.board-zoom-dock .react-flow__controls-button:hover {
+  background: var(--surface-subtle);
+  color: var(--foreground);
+}
+.board-zoom-dock .react-flow__controls-button svg {
+  width: 16px;
+  height: 16px;
+  max-width: none;
+  max-height: none;
+}
+@media (max-width: 900px), (max-height: 700px) {
+  .board-zoom-dock .react-flow__controls {
+    flex-direction: row;
+    gap: 2px;
+    padding: 6px;
+  }
+}
+@media (max-width: 640px), (max-height: 650px) {
+  .board-period-trigger {
+    font-size: var(--text-sm);
+  }
+}
+@media (max-width: 480px) {
+  .board-period-label {
+    display: none;
+  }
+  .board-period-short-label {
+    display: inline;
+  }
+}
+
+@container board (max-width: 700px) {
+  .board-work-area {
+    --board-header-space: 132px;
+  }
+}
+@container board (max-width: 480px) {
+  .board-work-area {
+    --board-header-space: 164px;
+  }
 }

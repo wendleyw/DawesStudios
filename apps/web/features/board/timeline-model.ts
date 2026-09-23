@@ -16,10 +16,8 @@ export function mondayOf(date: string) {
 /**
  * How far a window reaches, and how much of it one column is worth.
  *
- * Planning is pinned to 880px in split mode, which leaves 624px of day tracks beside the 220px
- * label column. Reaching past a fortnight therefore has to buy the days with a coarser column
- * rather than with more columns: a day-labelled column stops being readable past roughly 21-24 of
- * them (44.6px each at 14 columns, 29.7px at 21, 20.8px at 30, 14.9px at 42).
+ * The view can grow to fill the board, but the minimum grid width still needs readable columns.
+ * Longer periods therefore use coarser date units instead of squeezing more day labels into it.
  *
  * A window starts on a Monday and holds a whole number of columns, so paging by one window lands
  * on another Monday and never half-steps a column. That makes every span a multiple of both 7 and

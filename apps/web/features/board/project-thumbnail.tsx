@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Play } from "lucide-react";
 import { formats } from "@/features/briefings/briefing-model";
 
 /**
@@ -55,7 +55,9 @@ export type ProjectArtwork = {
 export type SignedProjectArtwork = {
   /** A short-lived signed URL for the artwork, or null when the card has none to show. */
   url: string | null;
-  /** The version number that `url` belongs to. Null whenever `url` is null. */
+  /** Video tiles load only in the project viewer and therefore have no signed thumbnail URL. */
+  isVideo?: boolean;
+  /** The selected artwork version; absent when no video or successfully signed image exists. */
   version: number | null;
   /** The leading deliverable's format, as a human label. Present even without artwork. */
   typeLabel: string | null;
@@ -224,13 +226,18 @@ export function fromPublishedRows(rows: PublishedRow[]): DeliverableArtwork[] {
  * already named by its title — so it stays out of the accessibility tree, and the image is not
  * natively draggable so it can never compete with dragging the card.
  */
-export function ProjectThumbnail({ src }: { src?: string }) {
+export function ProjectThumbnail({ src, video = false }: { src?: string; video?: boolean }) {
   return (
     // The box keeps its size either way so cards in a row line up, but an empty one says what it
     // is rather than sitting there as a filled grey block that reads like a broken image. Every
     // project starts without artwork, so this is a normal state, not a fault.
     <div className={`board-card-media ${src ? "" : "empty"}`} aria-hidden="true">
-      {src ? (
+      {video ? (
+        <>
+          <Play size={18} />
+          <span>Video</span>
+        </>
+      ) : src ? (
         // Keep expiring, caller-scoped signed URLs out of Next.js's shared image optimization cache.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" loading="lazy" draggable={false} />

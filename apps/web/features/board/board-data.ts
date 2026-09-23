@@ -2,9 +2,11 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { isVideoAsset } from "@/features/shared/upload-rules";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { BoardCampaign } from "./board-layout";
+import { normalizeBoardView, type BoardView } from "./board-views";
 import {
   fromInternalRows,
   fromPublishedRows,
@@ -59,6 +61,36 @@ export function useBoardCampaigns(clientId: string) {
   });
 }
 
+export function useBoardPreferences(clientId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["board-preferences", session?.user.id, clientId],
+    enabled: !!session,
+    queryFn: async () => {
+      const result = await database
+        .from("board_preferences")
+        .select("active_view")
+        .eq("user_id", session!.user.id)
+        .eq("client_id", clientId)
+        .maybeSingle();
+      if (result.error) throw result.error;
+      return normalizeBoardView(result.data?.active_view ?? null);
+    },
+  });
+}
+
+export async function saveBoardView(
+  database: SupabaseDatabase,
+  input: { clientId: string; view: BoardView },
+) {
+  return assertResult(
+    await database.rpc("save_board_view", {
+      p_client_id: input.clientId,
+      p_active_view: input.view,
+    }),
+  );
+}
+
 /**
  * Shared options for the board's artwork read, so the hooks below are two views of one request.
  *
@@ -101,7 +133,7 @@ function useBoardArtworkQuery(projectIds: string[]) {
         ...new Set(
           Object.values(chosen)
             .map((item) => item.path)
-            .filter((path): path is string => !!path),
+            .filter((path): path is string => !!path && !isVideoAsset(path)),
         ),
       ];
       const urlByPath = new Map<string, string>();
@@ -117,11 +149,13 @@ function useBoardArtworkQuery(projectIds: string[]) {
       const artwork: ProjectArtworkMap = {};
       for (const [projectId, item] of Object.entries(chosen)) {
         const url = item.path ? (urlByPath.get(item.path) ?? null) : null;
-        // A version is a claim about an image. Without the image the claim is dropped rather than
-        // shown over an empty tile, which is the mismatch this whole path exists to prevent.
+        const video = isVideoAsset(item.path);
+        // A video tile names the selected version without downloading the movie. Image signing
+        // failures still drop the version claim rather than labeling an empty image.
         artwork[projectId] = {
           url,
-          version: url ? item.version : null,
+          version: url || video ? item.version : null,
+          ...(video ? { isVideo: true } : {}),
           typeLabel: item.typeLabel,
         };
       }

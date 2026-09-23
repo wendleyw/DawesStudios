@@ -1,8 +1,7 @@
 /**
  * How a project is selected and opened from the board.
  *
- * Three surfaces show projects — the campaign card, the calendar lane and the Kanban card — and all
- * three obey one rule: a single click selects, a double click opens that project's own canvas.
+ * Canvas cards, Timeline lanes, Kanban cards and Calendar entries all obey one rule: a single click selects, a double click opens that project's own canvas.
  * Defining it once is what keeps them from drifting apart.
  *
  * A double click is invisible to the keyboard and to assistive technology, so a surface that uses
@@ -40,7 +39,7 @@ export function selectOrOpen(handlers: { onSelect: () => void; onOpen: () => voi
   return {
     onClick: handlers.onSelect,
     onDoubleClick: (event) => {
-      // A lane sits inside the Planning frame, which the canvas would otherwise also act on.
+      // Opening a project must not also trigger an enclosing surface action.
       event.stopPropagation();
       handlers.onOpen();
     },

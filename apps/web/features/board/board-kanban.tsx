@@ -9,7 +9,7 @@ import { distinctTitle, sharedTitlePrefix } from "./timeline-model";
 import { boardStatuses } from "./planning-view";
 
 /**
- * Groups the same filtered projects by status inside the Planning frame.
+ * Groups the same filtered projects by status in the Kanban view.
  *
  * Cards navigate but do not change status: `status` is absent from the only column grant on
  * public.projects and no RPC accepts an arbitrary target status, so a drag-to-transition control

@@ -1,17 +1,13 @@
 "use client";
 
-import {
-  Background,
-  BackgroundVariant,
-  PanOnScrollMode,
-  ReactFlow,
-  type Node,
-  type NodeChange,
-} from "@xyflow/react";
+import { CanvasBackground } from "@/features/shared/canvas-background";
+import { canvasNavigation } from "@/features/shared/canvas-navigation";
+
+import { ReactFlow, type Node, type NodeChange } from "@xyflow/react";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowUpRight, Plus, SlidersHorizontal } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
@@ -25,62 +21,75 @@ import {
 } from "@/features/workspace/workspace-data";
 import { statusToneClass } from "@/features/shared/status-tone";
 
-import {
-  FRAME_HEAD,
-  FRAME_PAD,
-  MAX_COLUMN,
-  MAX_SPLIT,
-  isTwoColumn,
-  orderCampaigns,
-} from "./board-layout";
+import { FRAME_HEAD, FRAME_PAD, orderCampaigns } from "./board-layout";
 import { projectHref } from "./project-open";
-import { smallestScaleFor, type TimelineScale } from "./timeline-model";
+import { smallestScaleFor, timelineScales, type TimelineScale } from "./timeline-model";
 import { mondayOf } from "./timeline-model";
 import { boardNodeTypes } from "./board-nodes";
-import { boardStatuses, selectionFromChanges, type PlanningMode } from "./planning-view";
-import { useBoardCampaigns, useProjectArtwork, moveProjectPosition } from "./board-data";
+import { selectionFromChanges } from "./planning-view";
+import {
+  useBoardCampaigns,
+  useBoardPreferences,
+  useProjectArtwork,
+  moveProjectPosition,
+  saveBoardView,
+} from "./board-data";
+import type { BoardView } from "./board-views";
+import { BoardToolbar } from "./board-toolbar";
+import { BoardHeader } from "./board-header";
+import { periodStart, projectInPeriod } from "./board-period";
+import { ProjectTimeline } from "./project-timeline";
+import { BoardKanban } from "./board-kanban";
+import { BoardCalendar } from "./board-calendar";
+import { monthStart } from "./calendar-model";
 import { BoardCanvasControls } from "./board-canvas-controls";
 import { useBoardCanvasNodes } from "./board-canvas-nodes";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
-import { ClientMark } from "@/features/workspace/client-mark";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 import "./board.css";
 import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
-import { SearchField } from "@/features/shared/search-field";
-
-type BoardLayout = "canvas" | "list";
-const GUTTER = 24;
 
 export function BoardPage({ clientId }: { clientId: string }) {
+  return <ClientBoard key={clientId} clientId={clientId} />;
+}
+
+function ClientBoard({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
   const { formatDate } = useDateFormat();
   const invalidateWorkspace = useInvalidateWorkspace();
   const router = useRouter();
   const clients = useClients();
   const projects = useProjects(clientId);
+  const preferences = useBoardPreferences(clientId);
+  const [pendingView, setPendingView] = useState<BoardView | null>(null);
+  const [defaultView, setDefaultView] = useState<BoardView>("canvas");
+  const persistView = useMutation({
+    mutationFn: async (view: BoardView) => saveBoardView(database, { clientId, view }),
+    onSuccess: async () => {
+      await preferences.refetch();
+    },
+    onSettled: () => setPendingView(null),
+  });
+  const layout = pendingView ?? preferences.data ?? defaultView;
+  const chooseLayout = (view: BoardView) => {
+    setPendingView(view);
+    persistView.mutate(view);
+  };
+  const viewsDisabled = preferences.isPending || !!preferences.error || pendingView !== null;
   // A callback ref rather than a `useRef`: the canvas only exists once the board's data has
   // arrived, and an effect that reads a ref filled after its own run would observe nothing and
   // leave the board measured at the opening guess for good.
   const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);
+  const [zoomDock, setZoomDock] = useState<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState({ width: 1280, height: 800 });
   // The board is only fitted once the canvas has actually been measured; fitting against the
   // initial guess would frame the board for a viewport that never existed.
-  const [measured, setMeasured] = useState(false);
-  const [layout, setLayout] = useState<BoardLayout>("canvas");
-  // Screen width picks the opening layout; once the viewer chooses one it stands, so crossing the
-  // breakpoint and back no longer discards the choice and Canvas stays reachable on a phone.
-  const layoutChosen = useRef(false);
-  const chooseLayout = (next: BoardLayout) => {
-    layoutChosen.current = true;
-    setLayout(next);
-  };
-  const [planningOpen, setPlanningOpen] = useState(true);
-  const [planningMode, setPlanningMode] = useState<PlanningMode>("timeline");
+  const [measuredCanvas, setMeasuredCanvas] = useState<HTMLDivElement | null>(null);
   // Which card is selected is board state; opening one leaves the board for the project's own
   // canvas, so there is nothing else to remember.
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  // The period lives here so switching to Kanban and back does not silently jump to today.
+  // Each planning view keeps its period while the viewer switches views.
+  const [month, setMonth] = useState(() => monthStart(new Date().toISOString().slice(0, 10)));
   const [period, setPeriod] = useState(() => mondayOf(new Date().toISOString().slice(0, 10)));
   // Null means the viewer has not chosen, so the board follows the work. Deriving this rather than
   // syncing state to it in an effect keeps the opening scale correct on the very first render.
@@ -88,8 +97,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
   const [search, setSearch] = useState("");
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const filterMenu = useRef<HTMLDivElement>(null);
+  const [quarter, setQuarter] = useState("");
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -98,7 +106,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
   useEffect(() => {
     const narrow = window.matchMedia("(max-width: 640px)");
     const apply = () => {
-      if (!layoutChosen.current) setLayout(narrow.matches ? "list" : "canvas");
+      setDefaultView(narrow.matches ? "list" : "canvas");
     };
     apply();
     narrow.addEventListener("change", apply);
@@ -109,7 +117,7 @@ export function BoardPage({ clientId }: { clientId: string }) {
     if (!canvas) return;
     const observer = new ResizeObserver(([entry]) => {
       setViewport({ width: entry.contentRect.width, height: entry.contentRect.height });
-      setMeasured(true);
+      setMeasuredCanvas(canvas);
     });
     observer.observe(canvas);
     return () => observer.disconnect();
@@ -130,24 +138,29 @@ export function BoardPage({ clientId }: { clientId: string }) {
         return next;
       }),
   });
-  useEffect(() => {
-    if (!filtersOpen) return;
-    function dismiss(event: Event) {
-      if (event.target instanceof globalThis.Node && !filterMenu.current?.contains(event.target))
-        setFiltersOpen(false);
+  const currentYear = new Date().getUTCFullYear();
+  const periodYears = [
+    ...new Set([
+      currentYear - 1,
+      currentYear,
+      currentYear + 1,
+      ...(projects.data ?? []).flatMap((project) =>
+        [project.start_date, project.due_date]
+          .filter((date): date is string => !!date)
+          .map((date) => Number(date.slice(0, 4))),
+      ),
+    ]),
+  ].sort((a, b) => a - b);
+  function choosePeriod(value: string) {
+    setQuarter(value);
+    const start = periodStart(value);
+    if (start) {
+      setMonth(start);
+      setPeriod(mondayOf(start));
+      setChosenScale("quarter");
     }
-    function close(event: KeyboardEvent) {
-      if (event.key === "Escape") setFiltersOpen(false);
-    }
-    document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", close);
-    };
-  }, [filtersOpen]);
-
-  const filtered = Boolean(search || campaign || status);
+  }
+  const filtered = Boolean(search || campaign || status || quarter);
   const filteredProjects = useMemo(
     () =>
       (projects.data ?? []).filter(
@@ -157,9 +170,10 @@ export function BoardPage({ clientId }: { clientId: string }) {
               .toLowerCase()
               .includes(search.toLowerCase())) &&
           (!campaign || project.campaign_id === campaign) &&
-          (!status || project.status === status),
+          (!status || project.status === status) &&
+          projectInPeriod(project, quarter),
       ),
-    [projects.data, search, campaign, status],
+    [projects.data, search, campaign, status, quarter],
   );
   const campaignName = useCallback(
     (id: string | null) =>
@@ -174,10 +188,11 @@ export function BoardPage({ clientId }: { clientId: string }) {
     setCampaign("");
     setStatus("");
     setSearch("");
+    setQuarter("");
   }, []);
 
   // Both records are resolved against the board's own scope rather than trusted from state, so
-  // moving to another workspace cannot leave a stranger's project open inside Planning. Filters
+  // moving to another workspace cannot leave a stranger's project selected. Filters
   // narrow what is drawn, not what may be open, so hiding a card does not close it.
   const scope = useMemo(() => projects.data ?? [], [projects.data]);
   const selectedProject = useMemo(
@@ -196,37 +211,20 @@ export function BoardPage({ clientId }: { clientId: string }) {
   const projectIds = useMemo(() => scope.map((item) => item.id), [scope]);
   const artwork = useProjectArtwork(projectIds);
 
-  // Two columns need more room than a single reading column, so the cap is raised once the board
-  // is wide enough to split — while still leaving a gutter the zoom controls sit clear of.
-  const usable = viewport.width - GUTTER * 2;
-  const column = Math.max(320, Math.min(isTwoColumn(usable) ? MAX_SPLIT : MAX_COLUMN, usable));
   const { nodes, content } = useBoardCanvasNodes({
     filteredProjects,
     campaigns: campaigns.data,
-    column,
-    viewportWidth: viewport.width,
-    planningOpen,
-    planningMode,
-    period,
-    setPeriod,
-    scale,
-    setChosenScale,
-    setPlanningOpen,
-    setPlanningMode,
-    campaignOrder,
     canCreate,
     canMove,
     filtered,
     selectedCampaignId: campaign || undefined,
     hasSearch: Boolean(search),
     positions,
-    campaignName,
     clearFilters,
     clientId,
     setCreatingCampaign,
     openProject,
     selectedProjectId,
-    setSelectedProjectId,
     artwork: artwork.data,
   });
 
@@ -250,189 +248,224 @@ export function BoardPage({ clientId }: { clientId: string }) {
     });
   }
 
-  if (clients.isPending || projects.isPending) return <PageStatus>Loading the board…</PageStatus>;
-  if (!client || projects.error)
+  // Campaign frames determine the opening bounds; fitting before they arrive uses an empty stack.
+  if (clients.isPending || projects.isPending || campaigns.isPending)
+    return <PageStatus>Loading the board…</PageStatus>;
+  if (!client || clients.error || projects.error || campaigns.error)
     return (
       <div className="page-content">
         <h1>Board unavailable.</h1>
         <p>This client is unavailable or you do not have access.</p>
+        <button
+          className="button"
+          onClick={() => {
+            void clients.refetch();
+            void projects.refetch();
+            void campaigns.refetch();
+          }}
+        >
+          Try again
+        </button>
         <Link href="/home" className="button">
           Back to your work
         </Link>
       </div>
     );
+  if (preferences.isPending) return <PageStatus>Loading the board…</PageStatus>;
 
   return (
-    <div className={`board-page ${layout === "canvas" ? "shows-canvas" : ""}`}>
-      {/* The board opens on whose work it is: the client's own mark and name, large enough to read
-          as the title of the surface below it, with the board's own controls on the same row. The
-          topbar above carries nothing but the global actions. */}
-      <header className="board-identity">
-        <div className="board-identity-name">
-          <ClientMark client={client} className="board-identity-mark" />
-          <div className="board-identity-text">
-            <h1>{client.name}</h1>
-            <p>Project board</p>
-          </div>
-        </div>
-        <div className="board-tools">
-          <SearchField
-            label="Search projects"
-            value={search}
-            onChange={setSearch}
-            placeholder="Find a project…"
-            iconSize={16}
+    <div className={`board-page shows-${layout}`}>
+      <div className="board-work-area">
+        <BoardHeader
+          client={client}
+          viewer={profile}
+          period={quarter}
+          years={periodYears}
+          onPeriod={choosePeriod}
+        />
+        <div className="board-tool-dock">
+          <BoardToolbar
+            clientId={clientId}
+            view={layout}
+            onView={chooseLayout}
+            disabled={viewsDisabled}
+            canCreate={canCreate}
+            search={search}
+            onSearch={setSearch}
+            campaign={campaign}
+            onCampaign={setCampaign}
+            status={status}
+            onStatus={setStatus}
+            campaigns={campaigns.data ?? []}
+            resultCount={filteredProjects.length}
+            onClear={clearFilters}
           />
-          <div className="board-filter-menu" ref={filterMenu}>
-            <button
-              className={`button quiet ${filtersOpen ? "selected" : ""}`}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              aria-expanded={filtersOpen}
-              aria-label="Filters"
-            >
-              <SlidersHorizontal size={15} />
-              <span className="button-label">Filters</span>
-              {(campaign || status) && <span className="filter-indicator" />}
-            </button>
-            {filtersOpen && (
-              <div className="board-filters">
-                <label>
-                  Campaign
-                  <select value={campaign} onChange={(event) => setCampaign(event.target.value)}>
-                    <option value="">All campaigns</option>
-                    {campaigns.data?.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Status
-                  <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                    <option value="">All statuses</option>
-                    {boardStatuses.map((item) => (
-                      <option key={item} value={item}>
-                        {statusLabels[item]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="board-filter-actions">
-                  <button className="button quiet" onClick={clearFilters}>
-                    Clear filters
-                  </button>
-                </div>
-              </div>
+          {layout === "canvas" && <div className="board-zoom-dock" ref={setZoomDock} />}
+        </div>
+        {/* A click selects and a double click leaves the board, so selection is the only outcome
+          that stays here to be announced. */}
+        <p className="visually-hidden" role="status">
+          {selectedProject ? `${selectedProject.title} selected.` : ""}
+        </p>
+        {(moveProject.error || preferences.error || persistView.error) && (
+          <div className="board-notices">
+            {moveProject.error && (
+              <FormError>The new position could not be saved. Please try again.</FormError>
+            )}
+            {preferences.error && (
+              <FormError>
+                Your board view could not be loaded.{" "}
+                <button className="button quiet" onClick={() => void preferences.refetch()}>
+                  Try again
+                </button>
+              </FormError>
+            )}
+            {persistView.error && (
+              <FormError>
+                Your board view could not be saved.{" "}
+                <button
+                  className="button quiet"
+                  disabled={persistView.isPending}
+                  onClick={() => persistView.variables && chooseLayout(persistView.variables)}
+                >
+                  Try again
+                </button>
+              </FormError>
             )}
           </div>
-          <span className="board-result-count">
-            {filteredProjects.length} project{filteredProjects.length === 1 ? "" : "s"}
-          </span>
-          <div className="segmented-control" role="group" aria-label="Board layout">
-            <button aria-pressed={layout === "canvas"} onClick={() => chooseLayout("canvas")}>
-              Canvas view
-            </button>
-            <button aria-pressed={layout === "list"} onClick={() => chooseLayout("list")}>
-              List view
-            </button>
-          </div>
-          {canCreate && (
-            <Link
-              href={`/clients/${clientId}/briefings/new`}
-              className="button primary"
-              aria-label="New briefing"
+        )}
+        <p className="visually-hidden" role="status">
+          {persistView.isPending ? "Saving board view…" : ""}
+        </p>
+        {layout === "canvas" ? (
+          <div className="board-canvas" aria-label="Project canvas" ref={setCanvas}>
+            <ReactFlow
+              {...canvasNavigation}
+              nodes={nodes}
+              edges={[]}
+              nodeTypes={boardNodeTypes}
+              proOptions={{ hideAttribution: true }}
+              onNodesChange={changeNodes}
+              onNodeDragStop={(_event, node) =>
+                moveProject.mutate({ id: node.id, position: node.position })
+              }
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              minZoom={0.1}
+              maxZoom={1.5}
+              nodeDragThreshold={4}
+              nodesConnectable={false}
+              deleteKeyCode={null}
             >
-              <Plus size={16} />
-              <span className="button-label">New briefing</span>
-            </Link>
-          )}
-          {/* The board takes the top of the workspace, so it also carries the global marker the
-              topbar would have held. Below 901px the topbar is still there and hides this one. */}
-          <NotificationsBell className="page-bell" />
-        </div>
-      </header>
-      {/* A click selects and a double click leaves the board, so selection is the only outcome
-          that stays here to be announced. */}
-      <p className="visually-hidden" role="status">
-        {selectedProject ? `${selectedProject.title} selected.` : ""}
-      </p>
-      {moveProject.error && (
-        <FormError>The new position could not be saved. Please try again.</FormError>
-      )}
-      {layout === "canvas" ? (
-        <div className="board-canvas" aria-label="Project canvas" ref={setCanvas}>
-          <ReactFlow
-            nodes={nodes}
-            edges={[]}
-            nodeTypes={boardNodeTypes}
-            proOptions={{ hideAttribution: true }}
-            onNodesChange={changeNodes}
-            onNodeDragStop={(_event, node) =>
-              moveProject.mutate({ id: node.id, position: node.position })
-            }
-            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-            minZoom={0.4}
-            maxZoom={1.5}
-            nodeDragThreshold={4}
-            nodesConnectable={false}
-            deleteKeyCode={null}
-            panOnScroll
-            panOnScrollMode={PanOnScrollMode.Vertical}
-            zoomOnScroll={false}
-            zoomOnDoubleClick={false}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d4d4d0" />
-            <BoardCanvasControls
-              content={content}
-              view={viewport}
-              fitKey={measured ? clientId : ""}
-            />
-          </ReactFlow>
-        </div>
-      ) : (
-        <div className="board-list project-table">
-          <div className="table-head">
-            <span>PROJECT</span>
-            <span>CAMPAIGN</span>
-            <span>STATUS</span>
-            <span>DUE</span>
-            <span />
+              <CanvasBackground />
+              <BoardCanvasControls
+                content={content}
+                view={viewport}
+                portalTarget={zoomDock}
+                fitKey={
+                  canvas && measuredCanvas === canvas
+                    ? `${clientId}:${viewport.width}:${viewport.height}`
+                    : ""
+                }
+              />
+            </ReactFlow>
           </div>
-          {/* The head stays put when nothing matches, so a filtered table still reads as the same
-              table rather than as a different screen. */}
-          {filteredProjects.length === 0 && (
-            <div className="empty-state board-list-empty">
-              <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
-              <p>
-                {filtered
-                  ? search
-                    ? "Try a different search or clear your filters."
-                    : "Try a different filter or clear your filters."
-                  : "Start with a briefing. We’ll take it from there."}
-              </p>
-              {filtered && (
-                <button className="button" onClick={clearFilters}>
-                  Clear filters
-                </button>
-              )}
+        ) : layout === "list" ? (
+          <div className="board-list project-table">
+            <div className="table-head">
+              <span>PROJECT</span>
+              <span>CAMPAIGN</span>
+              <span>STATUS</span>
+              <span>DUE</span>
+              <span />
             </div>
-          )}
-          {filteredProjects.map((project: Project) => (
-            <Link key={project.id} href={projectHref(project.id)} className="project-row">
-              <strong title={project.title}>{project.title}</strong>
-              <span>{campaignName(project.campaign_id)}</span>
-              <span>
-                <span className={statusToneClass(projectStatusTones[project.status])}>
-                  {statusLabels[project.status]}
+            {/* The head stays put when nothing matches, so a filtered table still reads as the same
+              table rather than as a different screen. */}
+            {filteredProjects.length === 0 && (
+              <div className="empty-state board-list-empty">
+                <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
+                <p>
+                  {filtered
+                    ? search
+                      ? "Try a different search or clear your filters."
+                      : "Try a different filter or clear your filters."
+                    : "Start with a briefing. We’ll take it from there."}
+                </p>
+                {filtered && (
+                  <button className="button" onClick={clearFilters}>
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+            {filteredProjects.map((project: Project) => (
+              <Link key={project.id} href={projectHref(project.id)} className="project-row">
+                <strong title={project.title}>{project.title}</strong>
+                <span>{campaignName(project.campaign_id)}</span>
+                <span>
+                  <span className={statusToneClass(projectStatusTones[project.status])}>
+                    {statusLabels[project.status]}
+                  </span>
                 </span>
-              </span>
-              <span>{formatDate(project.due_date, "No due date")}</span>
-              <ArrowUpRight size={16} />
-            </Link>
-          ))}
-        </div>
-      )}
+                <span>{formatDate(project.due_date, "No due date")}</span>
+                <ArrowUpRight size={16} />
+              </Link>
+            ))}
+          </div>
+        ) : layout === "calendar" ? (
+          <BoardCalendar
+            projects={filteredProjects}
+            campaignName={campaignName}
+            month={month}
+            onMonth={setMonth}
+            selectedId={selectedProjectId}
+            onSelect={setSelectedProjectId}
+            onOpen={openProject}
+          />
+        ) : (
+          <section
+            className="board-planning-view"
+            aria-label={`${layout === "timeline" ? "Timeline" : "Kanban"} view`}
+          >
+            <header className="board-planning-head">
+              <h2>{layout === "timeline" ? "Timeline" : "Kanban"}</h2>
+              {layout === "timeline" && (
+                <div className="segmented-control" role="group" aria-label="Timeline scale">
+                  {timelineScales.map((item) => (
+                    <button
+                      key={item.id}
+                      aria-pressed={item.id === scale}
+                      onClick={() => setChosenScale(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </header>
+            {layout === "timeline" ? (
+              <ProjectTimeline
+                projects={filteredProjects}
+                campaignName={campaignName}
+                campaignOrder={campaignOrder}
+                start={period}
+                onStart={setPeriod}
+                scale={scale}
+                selectedId={selectedProjectId}
+                onSelect={setSelectedProjectId}
+                onOpen={openProject}
+              />
+            ) : (
+              <BoardKanban
+                projects={filteredProjects}
+                campaignName={campaignName}
+                selectedId={selectedProjectId}
+                onSelect={setSelectedProjectId}
+                onOpen={openProject}
+              />
+            )}
+          </section>
+        )}
+      </div>
       {creatingCampaign && (
         <CampaignDialog
           clientId={clientId}

@@ -6,7 +6,6 @@ import {
   CARD_W,
   FRAME_HEAD,
   FRAME_PAD,
-  MAX_COLUMN,
   STACK_GAP,
   buildStack,
   campaignDateRange,
@@ -14,24 +13,13 @@ import {
   cardWidth,
   hasStoredPosition,
   orderCampaigns,
-  planningHeight,
   slotPosition,
   type BoardCampaign,
-  MAX_SPLIT,
-  TWO_COLUMN_MIN,
-  COLUMN_GAP,
-  PLANNING_MIN_H,
-  PLANNING_HEAD,
-  isTwoColumn,
   campaignColumnWidth,
   MIN_ROW_CARDS,
-  LANE_H,
-  KANBAN_MIN_H,
   boardFit,
-  planningContentHeight,
   FIT_PAD,
   MIN_FIT_ZOOM,
-  PLANNING_MIN_W,
 } from "./board-layout";
 
 function project(id: string, campaignId: string | null, extra: Partial<Project> = {}): Project {
@@ -55,12 +43,7 @@ function project(id: string, campaignId: string | null, extra: Partial<Project> 
 function campaign(id: string, title: string, start: string | null, end: string | null = null) {
   return { id, title, start_date: start, end_date: end } satisfies BoardCampaign;
 }
-// The component caps the column at MAX_COLUMN (board-page.tsx), so the fixture must model a width
-// the board can actually render — at 1312 these assertions described a layout that never ships.
 const base = {
-  columnWidth: MAX_COLUMN,
-  viewportWidth: 1600,
-  planningOpen: true,
   canCreate: true,
   keepEmptyCampaigns: true,
   filtered: false,
@@ -127,12 +110,6 @@ describe("frame geometry", () => {
     expect(hasStoredPosition({ x: 0, y: 0 })).toBe(false);
     expect(hasStoredPosition({ x: 0, y: 80 })).toBe(true);
   });
-
-  it("shortens the planning frame on narrow viewports and collapses to its header", () => {
-    expect(planningHeight(true, 1600)).toBe(380);
-    expect(planningHeight(true, 390)).toBe(320);
-    expect(planningHeight(false, 1600)).toBe(56);
-  });
 });
 
 describe("campaign date range", () => {
@@ -148,23 +125,17 @@ describe("campaign date range", () => {
 });
 
 describe("stack assembly", () => {
-  it("puts planning first and stacks the campaigns by date, add-campaign last", () => {
+  it("stacks only campaigns by date, with add-campaign last", () => {
     const frames = buildStack({
       ...base,
       projects: [project("p1", "c1"), project("p2", "c2")],
       campaigns: [campaign("c2", "Second", "2026-10-01"), campaign("c1", "First", "2026-09-01")],
     });
-    expect(frames.map((frame) => frame.id)).toEqual([
-      "planning",
-      "campaign:c1",
-      "campaign:c2",
-      "addCampaign",
-    ]);
+    expect(frames.map((frame) => frame.id)).toEqual(["campaign:c1", "campaign:c2", "addCampaign"]);
     expect(frames[0].y).toBe(0);
-    // The campaigns run down their own column, each below the previous one.
-    expect(frames[1].y).toBe(0);
+    expect(frames[1].y).toBe(frames[0].height + STACK_GAP);
     expect(frames[2].y).toBe(frames[1].y + frames[1].height + STACK_GAP);
-    expect(frames[3].y).toBe(frames[2].y + frames[2].height + STACK_GAP);
+    expect(frames.every((frame) => frame.x === 0)).toBe(true);
   });
 
   it("groups every project under its own campaign", () => {
@@ -198,12 +169,12 @@ describe("stack assembly", () => {
       projects: [],
       campaigns: [campaign("c1", "First", "2026-09-01")],
     });
-    expect(frames.map((frame) => frame.id)).toEqual(["planning", "campaign:c1", "addCampaign"]);
+    expect(frames.map((frame) => frame.id)).toEqual(["campaign:c1", "addCampaign"]);
   });
 
   it("falls back to the notice only when there is nothing at all to render", () => {
     const frames = buildStack({ ...base, projects: [], campaigns: [] });
-    expect(frames.map((frame) => frame.id)).toEqual(["planning", "notice", "addCampaign"]);
+    expect(frames.map((frame) => frame.id)).toEqual(["notice", "addCampaign"]);
   });
 
   it("shows a single notice instead of empty frames when nothing matches", () => {
@@ -213,7 +184,7 @@ describe("stack assembly", () => {
       campaigns: [campaign("c1", "First", "2026-09-01")],
       filtered: true,
     });
-    expect(frames.map((frame) => frame.id)).toEqual(["planning", "notice"]);
+    expect(frames.map((frame) => frame.id)).toEqual(["notice"]);
   });
 
   it("hides campaigns with no match once a filter is applied", () => {
@@ -258,7 +229,7 @@ describe("stack assembly", () => {
       filtered: true,
       selectedCampaignId: "c2",
     });
-    expect(frames.map((frame) => frame.id)).toEqual(["planning", "campaign:c2"]);
+    expect(frames.map((frame) => frame.id)).toEqual(["campaign:c2"]);
   });
 
   it("gives a designer no briefing slot, no add-campaign frame and no empty campaigns", () => {
@@ -269,8 +240,8 @@ describe("stack assembly", () => {
       canCreate: false,
       keepEmptyCampaigns: false,
     });
-    expect(frames.map((frame) => frame.id)).toEqual(["planning", "campaign:c1"]);
-    expect(frames[1].briefingSlot).toBe(false);
+    expect(frames.map((frame) => frame.id)).toEqual(["campaign:c1"]);
+    expect(frames[0].briefingSlot).toBe(false);
   });
 
   it("reserves a slot for the briefing placeholder when sizing a frame", () => {
@@ -285,8 +256,8 @@ describe("stack assembly", () => {
       campaigns: [campaign("c1", "First", "2026-09-01")],
     });
     // Four cards plus the placeholder stay on one row, so the frame widens instead of growing.
-    expect(withSlot[1].height).toBe(campaignFrameHeight());
-    expect(withSlot[1].width).toBe(campaignColumnWidth(5));
+    expect(withSlot[0].height).toBe(campaignFrameHeight());
+    expect(withSlot[0].width).toBe(campaignColumnWidth(5));
   });
 
   it("sizes a frame from an unsaved drag exactly like a persisted one", () => {
@@ -301,98 +272,17 @@ describe("stack assembly", () => {
       projects: [project("p1", "c1")],
       overrides: { p1: { x: 20, y: 500 } },
     });
-    expect(dragged[1].height).toBe(persisted[1].height);
-    expect(persisted[1].height).toBeGreaterThan(campaignFrameHeight());
-  });
-
-  it("moves every frame down when planning expands in the stacked layout", () => {
-    const shared = {
-      ...base,
-      columnWidth: TWO_COLUMN_MIN - 1,
-      projects: [project("p1", "c1")],
-      campaigns: [campaign("c1", "First", "2026-09-01")],
-    };
-    const open = buildStack(shared);
-    const closed = buildStack({ ...shared, planningOpen: false });
-    expect(open[1].y - closed[1].y).toBe(380 - 56);
+    expect(dragged[0].height).toBe(persisted[0].height);
+    expect(persisted[0].height).toBeGreaterThan(campaignFrameHeight());
   });
 });
 
-describe("two-column split", () => {
+describe("campaign widths", () => {
   const split = {
     ...base,
-    columnWidth: MAX_SPLIT,
     projects: [project("p1", "c1"), project("p2", "c2")],
     campaigns: [campaign("c1", "First", "2026-09-01"), campaign("c2", "Second", "2026-10-01")],
   };
-
-  it("puts planning beside the campaigns rather than above them", () => {
-    const frames = buildStack(split);
-    const planning = frames[0];
-    const campaigns = frames.filter((frame) => frame.kind === "campaign");
-    expect(planning.x).toBe(0);
-    expect(planning.y).toBe(0);
-    for (const frame of campaigns) {
-      expect(frame.x).toBe(planning.width + COLUMN_GAP);
-      // Beside, not below: the first campaign starts level with planning.
-      expect(frame.y).toBeGreaterThanOrEqual(0);
-    }
-    expect(campaigns[0].y).toBe(0);
-  });
-
-  it("never overlaps the two columns", () => {
-    // The columns hold their own widths and the canvas pans when they exceed the viewport, so the
-    // invariant is that they do not collide — not that they fit on screen.
-    for (const columnWidth of [TWO_COLUMN_MIN, 1100, MAX_SPLIT, 2200]) {
-      const frames = buildStack({ ...split, columnWidth });
-      const planning = frames[0];
-      expect(planning.x + planning.width).toBeLessThanOrEqual(frames[1].x);
-      for (const frame of frames.slice(1)) expect(frame.x).toBe(frames[1].x);
-    }
-  });
-
-  it("grows planning with its lanes so the calendar shows real rows", () => {
-    const heights = [6, 7, 8].map((count) => {
-      const frames = buildStack({
-        ...split,
-        projects: Array.from({ length: count }, (_, i) => project(`p${i}`, "c1")),
-      });
-      return frames[0].height;
-    });
-    // Each extra project adds exactly one lane, rather than the frame holding a fixed height.
-    expect(heights[1] - heights[0]).toBe(LANE_H);
-    expect(heights[2] - heights[1]).toBe(LANE_H);
-    expect(heights[0]).toBe(planningContentHeight(6));
-  });
-
-  it("stops growing at the campaign column instead of running past the board", () => {
-    // A hundred lanes would make Planning far taller than everything beside it, leaving the board
-    // mostly empty; past the column's height the calendar scrolls inside its own frame.
-    const crowd = Array.from({ length: 100 }, (_, i) => project(`p${i}`, "c1"));
-    const frames = buildStack({ ...split, projects: crowd });
-    const last = frames[frames.length - 1];
-    expect(frames[0].height).toBe(last.y + last.height);
-    expect(frames[0].height).toBeLessThan(planningContentHeight(crowd.length));
-  });
-
-  it("does not stretch an almost empty calendar to match a taller column", () => {
-    const frames = buildStack(split);
-    const last = frames[frames.length - 1];
-    expect(frames[0].height).toBe(PLANNING_MIN_H);
-    expect(frames[0].height).toBeLessThan(last.y + last.height);
-  });
-
-  it("keeps a readable calendar when the campaign column is nearly empty", () => {
-    const frames = buildStack({ ...split, projects: [], campaigns: [], canCreate: false });
-    expect(frames[0].height).toBe(PLANNING_MIN_H);
-  });
-
-  it("collapses planning to its header without disturbing the campaign column", () => {
-    const open = buildStack(split);
-    const closed = buildStack({ ...split, planningOpen: false });
-    expect(closed[0].height).toBe(PLANNING_HEAD);
-    expect(closed.map((frame) => frame.y)).toEqual(open.map((frame) => frame.y).slice());
-  });
 
   it("keeps the ordinary campaigns on one straight edge", () => {
     // Two projects plus the briefing slot is the shape of a seeded campaign, and it lands exactly
@@ -424,24 +314,6 @@ describe("two-column split", () => {
     const frames = buildStack({ ...split, projects: [project("p1", "c1")], canCreate: false });
     for (const frame of frames.slice(1))
       expect(frame.width).toBeGreaterThanOrEqual(campaignColumnWidth(MIN_ROW_CARDS));
-  });
-
-  it("keeps the calendar at its usable width even when the campaigns are wide", () => {
-    const frames = buildStack({
-      ...split,
-      projects: Array.from({ length: 6 }, (_, i) => project(`p${i}`, "c1")),
-      campaigns: [campaign("c1", "First", "2026-09-01")],
-    });
-    expect(frames[0].width).toBe(PLANNING_MIN_W);
-    expect(frames[1].x).toBe(PLANNING_MIN_W + COLUMN_GAP);
-  });
-
-  it("falls back to one column when neither side would be readable", () => {
-    const frames = buildStack({ ...split, columnWidth: TWO_COLUMN_MIN - 1 });
-    expect(isTwoColumn(TWO_COLUMN_MIN - 1)).toBe(false);
-    for (const frame of frames) expect(frame.x).toBe(0);
-    expect(frames[0].width).toBe(TWO_COLUMN_MIN - 1);
-    expect(frames[1].y).toBeGreaterThan(frames[0].height);
   });
 });
 
@@ -491,48 +363,5 @@ describe("fitting the view to the board", () => {
 
   it("returns a usable viewport before the board has been measured", () => {
     expect(boardFit({ width: 0, height: 0 }, view)).toEqual({ x: FIT_PAD, y: FIT_PAD, zoom: 1 });
-  });
-});
-
-describe("Planning sized for the view it holds", () => {
-  const two = {
-    ...base,
-    columnWidth: MAX_SPLIT,
-    projects: [project("p1", "c1"), project("p2", "c1")],
-    campaigns: [campaign("c1", "A", "2026-09-01")],
-  };
-
-  it("gives Kanban the room a column of cards needs, not a calendar's", () => {
-    // Sizing Kanban from the lane count gave a two-project board 280px while its column needed
-    // 299, which cut the second card in half.
-    const calendar = buildStack(two);
-    const kanban = buildStack({ ...two, planningKanban: true });
-    expect(calendar[0].height).toBeLessThan(KANBAN_MIN_H);
-    expect(kanban[0].height).toBe(KANBAN_MIN_H);
-  });
-
-  it("keeps Kanban at its working height rather than following a tall campaign column", () => {
-    const campaigns = Array.from({ length: 10 }, (_, i) =>
-      campaign(`c${i}`, `C${i}`, `2026-0${(i % 9) + 1}-01`),
-    );
-    const crowd = campaigns.map((c, i) => project(`p${i}`, c.id));
-    const frames = buildStack({ ...two, campaigns, projects: crowd, planningKanban: true });
-    const last = frames[frames.length - 1];
-    expect(last.y + last.height).toBeGreaterThan(KANBAN_MIN_H);
-    expect(frames[0].height).toBe(KANBAN_MIN_H);
-  });
-
-  it("reserves the same room in the stacked layout, pushing the campaigns down", () => {
-    const narrow = { ...two, columnWidth: TWO_COLUMN_MIN - 1 };
-    const calendar = buildStack(narrow);
-    const kanban = buildStack({ ...narrow, planningKanban: true });
-    expect(kanban[0].height).toBe(KANBAN_MIN_H);
-    expect(kanban[1].y).toBeGreaterThan(calendar[1].y);
-    expect(kanban[1].y).toBeGreaterThanOrEqual(kanban[0].height);
-  });
-
-  it("still collapses to the header when Planning is shut", () => {
-    const frames = buildStack({ ...two, planningKanban: true, planningOpen: false });
-    expect(frames[0].height).toBe(PLANNING_HEAD);
   });
 });

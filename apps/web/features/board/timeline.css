@@ -315,7 +315,7 @@
 .timeline-unscheduled {
   grid-column: 2 / -1;
   padding-left: 12px;
-  color: #9a9a92;
+  color: var(--muted);
   font-size: var(--text-xs);
 }
 .timeline-no-work {

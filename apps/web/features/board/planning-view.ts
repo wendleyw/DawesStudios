@@ -1,13 +1,10 @@
 /**
- * What the Planning frame is showing, and the pure rules behind it.
+ * Shared project stages and selection rules for the board and its planning views.
  *
  * Kept free of React and xyflow so the board's selection and sizing rules can be unit tested
  * without rendering a canvas.
  */
 import type { ProjectStatus } from "@/features/workspace/workspace-data";
-
-/** The two planning layouts the viewer chooses between. */
-export type PlanningMode = "timeline" | "kanban";
 
 /**
  * The stages the Kanban lays out, in the order work moves through them. It lives here rather than

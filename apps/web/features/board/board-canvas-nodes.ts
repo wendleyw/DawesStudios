@@ -9,8 +9,7 @@ import {
   slotPosition,
   type BoardCampaign,
 } from "./board-layout";
-import type { PlanningMode } from "./planning-view";
-import { sharedTitlePrefix, type TimelineScale } from "./timeline-model";
+import { sharedTitlePrefix } from "./timeline-model";
 import { artworkFor, type ProjectArtworkMap } from "./project-thumbnail";
 
 /** The box the built nodes occupy, which is what a fit has to cover. */
@@ -41,7 +40,7 @@ function sized(width: number, height: number) {
 }
 
 /**
- * Builds the board canvas's xyflow node array — the planning frame, the notice and add-campaign
+ * Builds the board canvas's xyflow node array — notice and add-campaign
  * frames, and every campaign's project cards — from the board's filtered projects and campaigns.
  *
  * Kept as its own hook so `BoardPage` reads as page orchestration (state, effects, chrome) rather
@@ -50,17 +49,6 @@ function sized(width: number, height: number) {
 export function useBoardCanvasNodes(input: {
   filteredProjects: Project[];
   campaigns: BoardCampaign[] | undefined;
-  column: number;
-  viewportWidth: number;
-  planningOpen: boolean;
-  planningMode: PlanningMode;
-  period: number;
-  setPeriod: (start: number) => void;
-  scale: TimelineScale;
-  setChosenScale: (scale: TimelineScale) => void;
-  setPlanningOpen: (update: (open: boolean) => boolean) => void;
-  setPlanningMode: (mode: PlanningMode) => void;
-  campaignOrder: string[];
   canCreate: boolean;
   canMove: boolean;
   filtered: boolean;
@@ -69,42 +57,27 @@ export function useBoardCanvasNodes(input: {
   /** Whether a search term is what is filtering, as opposed to only a campaign or status. */
   hasSearch: boolean;
   positions: Record<string, { x: number; y: number }>;
-  campaignName: (id: string | null) => string;
   clearFilters: () => void;
   clientId: string;
   setCreatingCampaign: (creating: boolean) => void;
   openProject: (projectId: string) => void;
   selectedProjectId: string | null;
-  setSelectedProjectId: (projectId: string | null) => void;
   artwork: ProjectArtworkMap | undefined;
 }): { nodes: Node[]; content: { width: number; height: number } } {
   const {
     filteredProjects,
     campaigns,
-    column,
-    viewportWidth,
-    planningOpen,
-    planningMode,
-    period,
-    setPeriod,
-    scale,
-    setChosenScale,
-    setPlanningOpen,
-    setPlanningMode,
-    campaignOrder,
     canCreate,
     canMove,
     filtered,
     selectedCampaignId,
     hasSearch,
     positions,
-    campaignName,
     clearFilters,
     clientId,
     setCreatingCampaign,
     openProject,
     selectedProjectId,
-    setSelectedProjectId,
     artwork,
   } = input;
   return useMemo(() => {
@@ -116,10 +89,6 @@ export function useBoardCanvasNodes(input: {
     const frames = buildStack({
       projects: filteredProjects,
       campaigns: campaigns ?? [],
-      columnWidth: column,
-      viewportWidth,
-      planningOpen,
-      planningKanban: planningMode === "kanban",
       canCreate,
       keepEmptyCampaigns: canCreate,
       filtered,
@@ -137,31 +106,7 @@ export function useBoardCanvasNodes(input: {
         className: "nopan",
         ...sized(frame.width, frame.height),
       };
-      if (frame.kind === "planning")
-        built.push({
-          ...shared,
-          id: frame.id,
-          type: "planning",
-          ariaLabel: "Planning",
-          ...sized(frame.width, frame.height),
-          data: {
-            open: planningOpen,
-            mode: planningMode,
-            projects: filteredProjects,
-            campaignName,
-            campaignOrder,
-            period,
-            onPeriod: setPeriod,
-            scale,
-            onScale: setChosenScale,
-            onToggle: () => setPlanningOpen((open) => !open),
-            onMode: setPlanningMode,
-            selectedId: selectedProjectId,
-            onSelect: setSelectedProjectId,
-            onOpen: openProject,
-          },
-        });
-      else if (frame.kind === "notice")
+      if (frame.kind === "notice")
         built.push({
           ...shared,
           id: frame.id,
@@ -236,30 +181,17 @@ export function useBoardCanvasNodes(input: {
   }, [
     filteredProjects,
     campaigns,
-    column,
-    viewportWidth,
-    planningOpen,
-    planningMode,
-    period,
-    setPeriod,
-    scale,
-    setChosenScale,
-    setPlanningOpen,
-    setPlanningMode,
-    campaignOrder,
     canCreate,
     canMove,
     filtered,
     selectedCampaignId,
     hasSearch,
     positions,
-    campaignName,
     clearFilters,
     clientId,
     setCreatingCampaign,
     openProject,
     selectedProjectId,
-    setSelectedProjectId,
     artwork,
   ]);
 }

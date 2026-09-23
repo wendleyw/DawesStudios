@@ -25,12 +25,9 @@ import "./timeline.css";
 const LABELLED_BAR_COLUMNS = 2;
 
 /**
- * A fortnight of project bars with a fixed identity column.
- *
- * Every in-scope project keeps a lane whether or not it has a bar in this window, so paging through
- * the calendar shows what is *not* scheduled rather than silently dropping the row. The period
- * control sits in the calendar's own corner instead of on a row above it: Planning shares the
- * canvas with the campaign column, so a row of chrome costs a lane of work.
+ * Project schedules at Fortnight, Month and Quarter scales with a fixed identity column.
+ * Every in-scope project keeps a lane, including work outside the period or without dates.
+ * The sticky header keeps period navigation available while the work area scrolls.
  */
 export function ProjectTimeline({
   projects,

@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  Folder,
-  GripHorizontal,
-  Plus,
-} from "lucide-react";
+import { ArrowUpRight, CalendarDays, Folder, GripHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
@@ -20,35 +11,11 @@ import {
   type Project,
 } from "@/features/workspace/workspace-data";
 import { statusToneClass } from "@/features/shared/status-tone";
-import { BoardKanban } from "./board-kanban";
-import { ProjectTimeline } from "./project-timeline";
 import { campaignDateRange, type BoardCampaign } from "./board-layout";
 import { openLabel } from "./project-open";
 import { distinctTitle } from "./timeline-model";
-import { timelineScales, type TimelineScale } from "./timeline-model";
-import { type PlanningMode } from "./planning-view";
 import { ProjectThumbnail, type SignedProjectArtwork } from "./project-thumbnail";
 
-export type PlanningNode = Node<
-  {
-    open: boolean;
-    mode: PlanningMode;
-    /** The project opened from a card, which is Planning's third state. */
-    projects: Project[];
-    campaignName: (id: string | null) => string;
-    campaignOrder: string[];
-    period: number;
-    onPeriod: (start: number) => void;
-    scale: TimelineScale;
-    onScale: (scale: TimelineScale) => void;
-    onToggle: () => void;
-    onMode: (mode: PlanningMode) => void;
-    selectedId: string | null;
-    onSelect: (projectId: string) => void;
-    onOpen: (projectId: string) => void;
-  },
-  "planning"
->;
 export type NoticeNode = Node<
   { filtered: boolean; hasSearch: boolean; onClear: () => void },
   "notice"
@@ -68,73 +35,6 @@ export type ProjectCardNode = Node<
 >;
 export type BriefingSlotNode = Node<{ href: string; campaign: string }, "briefingSlot">;
 export type AddCampaignNode = Node<{ onCreate: () => void }, "addCampaign">;
-
-const PlanningFrame = memo(function PlanningFrame({ data }: NodeProps<PlanningNode>) {
-  return (
-    <section className="board-planning">
-      <header className="board-planning-head">
-        <button
-          className="icon-button"
-          aria-expanded={data.open}
-          aria-controls="board-planning-body"
-          aria-label={data.open ? "Collapse planning" : "Expand planning"}
-          onClick={data.onToggle}
-        >
-          {data.open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
-        </button>
-        <h2>Planning</h2>
-        {/* The scale is what makes work outside a fortnight reachable at all, so it sits beside the
-            view it belongs to rather than inside the calendar's narrow label column. */}
-        {data.mode === "timeline" && (
-          <div className="segmented-control" role="group" aria-label="Timeline scale">
-            {timelineScales.map((item) => (
-              <button
-                key={item.id}
-                aria-pressed={item.id === data.scale}
-                onClick={() => data.onScale(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="segmented-control" role="group" aria-label="Planning view">
-          <button aria-pressed={data.mode === "timeline"} onClick={() => data.onMode("timeline")}>
-            Timeline
-          </button>
-          <button aria-pressed={data.mode === "kanban"} onClick={() => data.onMode("kanban")}>
-            Kanban
-          </button>
-        </div>
-      </header>
-      {data.open && (
-        <div id="board-planning-body" className="board-planning-body nowheel nopan nodrag">
-          {data.mode === "timeline" ? (
-            <ProjectTimeline
-              projects={data.projects}
-              campaignName={data.campaignName}
-              campaignOrder={data.campaignOrder}
-              start={data.period}
-              onStart={data.onPeriod}
-              scale={data.scale}
-              selectedId={data.selectedId}
-              onSelect={data.onSelect}
-              onOpen={data.onOpen}
-            />
-          ) : (
-            <BoardKanban
-              projects={data.projects}
-              campaignName={data.campaignName}
-              selectedId={data.selectedId}
-              onSelect={data.onSelect}
-              onOpen={data.onOpen}
-            />
-          )}
-        </div>
-      )}
-    </section>
-  );
-});
 
 const NoticeFrame = memo(function NoticeFrame({ data }: NodeProps<NoticeNode>) {
   return (
@@ -188,7 +88,7 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
        * every surface.
        */}
       <div className="nodrag board-card-body" onDoubleClick={() => data.onOpen(data.project.id)}>
-        <ProjectThumbnail src={data.artwork.url ?? undefined} />
+        <ProjectThumbnail src={data.artwork.url ?? undefined} video={data.artwork.isVideo} />
         <div className="board-card-head">
           {/* The full title stays the card's accessible name and its tooltip. */}
           <h2 title={data.project.title}>{distinctTitle(data.project.title, data.titlePrefix)}</h2>
@@ -249,7 +149,6 @@ const AddCampaignFrame = memo(function AddCampaignFrame({ data }: NodeProps<AddC
 });
 
 export const boardNodeTypes = {
-  planning: PlanningFrame,
   notice: NoticeFrame,
   campaign: CampaignFrame,
   project: ProjectCard,
