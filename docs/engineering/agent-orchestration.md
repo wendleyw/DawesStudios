@@ -27,6 +27,7 @@ Most of this project's model usage came from delegated agents and from sessions 
 | `implementer` | Sonnet | One bounded change with owned paths, acceptance criteria and a report path | Owned paths only |
 | `reviewer` | Sonnet | Independent audits of a diff, feature or concern, with verified and ranked findings | No |
 
+- **Agents load when a session starts.** A session that creates or edits these files cannot call them by name until the next session. Until then, use a built-in agent with the same rules in its prompt and an explicit `model`.
 - **Pick the cheapest model that fits.** The orchestrator keeps cross-domain design, integration, and the release audit. A single known file or symbol is a direct search, not a delegation. Do not use general-purpose agents for routine work. Codex applies the same tiers with its own subagent configuration.
 - **Delegate with a bounded prompt.** Name the objective, owned or read paths, what not to read (history, verification records, screenshots, `docs/ref`), the checks to run, and an output cap. Run at most three agents at once unless the user asks for more.
 - **Watch context size.** Read large files by excerpt. Summarize long command output instead of printing it. Compact at task milestones and start a fresh session between unrelated tasks. Only the current [checkpoint](handoff.md) is read by default. The [history](history/) is for evidence lookup.

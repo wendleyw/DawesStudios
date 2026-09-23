@@ -164,3 +164,21 @@ Record the results in `docs/verification/` before serving clients. This is the J
 
 There is no payment processor. Client credit requests and agency ledger allocations never
 charge a card.
+
+## Known gaps to close before or at launch
+
+The 2026-09-23 security audit found no dependency advisories (`npm audit`: 0 for web and media)
+and no leaked secrets in the 155 commits of history (gitleaks). These operational gaps remain:
+
+- **Rate limiting.** Nothing throttles requests per IP apart from the media worker's concurrency
+  cap and the database limit on invitations. Add per-IP limits at the proxy, especially for
+  `/auth/v1/token` and the media host.
+- **Health depth.** The container health checks (web `/login`, media `/health`) prove the process
+  is running, not that Supabase is reachable. Monitor the Supabase gateway separately.
+- **Logging.** Both services log only to stdout and stderr. Ship container logs to a central
+  store with alerting.
+- **Server environment.** Compose `:?` guards reject missing variables, but a plain `next start`
+  outside Compose boots without validating them. Always deploy through Compose.
+- **Host gateway alias.** Both services declare `host.docker.internal` for local development. In
+  production, point `SUPABASE_INTERNAL_URL` at the Supabase gateway on a shared Docker network
+  and remove the alias if nothing uses it.
