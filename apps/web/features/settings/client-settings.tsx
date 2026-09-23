@@ -268,7 +268,6 @@ const logoFileTypes: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
-  "image/svg+xml": "svg",
 };
 const LOGO_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -329,15 +328,13 @@ function ClientLogoDialog({
               if (!file) return;
               setFileError("");
               const extension = logoFileTypes[file.type];
-              if (!extension) return setFileError("Use a PNG, JPG, WebP or SVG image.");
+              if (!extension) return setFileError("Use a PNG, JPG or WebP image.");
               if (file.size > LOGO_MAX_BYTES) return setFileError("Use an image under 5 MB.");
               upload.mutate({ file, path: `${client.id}/${crypto.randomUUID()}.${extension}` });
             }}
           />
         </label>
-        <span className="settings-note">
-          PNG, JPG, WebP or SVG, up to 5 MB. Square images fit best.
-        </span>
+        <span className="settings-note">PNG, JPG or WebP, up to 5 MB. Square images fit best.</span>
         {error && <FormError>{error}</FormError>}
         <div className="settings-dialog-actions">
           {upload.error && upload.variables && (
