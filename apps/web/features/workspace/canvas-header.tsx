@@ -30,7 +30,12 @@ export function CanvasHeader({
     <header className="board-header">
       <div className="board-identity">
         <div className="board-client-context">
-          <ClientMark client={client} className="board-identity-mark" />
+          <ClientMark
+            client={client}
+            className={
+              heading ? "board-identity-mark board-identity-mark-large" : "board-identity-mark"
+            }
+          />
           {heading ? (
             <h1 title={client.name}>{client.name}</h1>
           ) : (

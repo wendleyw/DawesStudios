@@ -1420,7 +1420,14 @@ select {
   flex-shrink: 0;
 }
 .board-identity-mark {
-  --client-mark-size: 48px;
+  --client-mark-size: 36px;
+}
+/* The client board's own header shows a larger logo where it has room; project headers keep 36px so
+   the feedback panel below them keeps its reading space. */
+@media (min-width: 901px) and (min-height: 651px) {
+  .board-identity-mark-large {
+    --client-mark-size: 48px;
+  }
 }
 .board-identity :is(h1, .canvas-client-name) {
   min-width: 0;
@@ -1507,7 +1514,7 @@ select {
     font-size: 15px;
   }
   .board-identity-mark {
-    --client-mark-size: 34px;
+    --client-mark-size: 26px;
   }
   .board-account {
     min-height: 46px;
