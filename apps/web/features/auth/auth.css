@@ -25,7 +25,7 @@
 }
 .login-story .eyebrow {
   margin-bottom: 24px;
-  color: #b8b9af;
+  color: var(--sidebar-muted);
 }
 .login-story h1 {
   font-size: clamp(42px, 4.7vw, 72px);
@@ -35,12 +35,12 @@
 }
 .login-story p {
   margin-top: 28px;
-  color: #bfc0b7;
+  color: var(--sidebar-muted);
   font-size: 14px;
   line-height: 1.85;
 }
 .login-caption {
-  color: #a3a59a;
+  color: var(--sidebar-muted);
   font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 1.2px;
@@ -50,20 +50,29 @@
   justify-content: center;
   align-items: center;
   padding: 64px 36px;
-  background: #fafaf7;
+
+  background: var(--background);
 }
 .login-form {
   width: 100%;
-  max-width: 360px;
+
+  max-width: 420px;
+  padding: var(--space-section);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .login-form .eyebrow {
   margin-bottom: 17px;
 }
 .login-form h2 {
   margin-bottom: 12px;
-  font-size: 32px;
-  font-weight: 500;
-  letter-spacing: -1px;
+
+  font-size: var(--text-title);
+
+  font-weight: 600;
+
+  letter-spacing: -0.035em;
 }
 .login-form > p:not(.form-error):not(.form-help) {
   margin-bottom: 36px;

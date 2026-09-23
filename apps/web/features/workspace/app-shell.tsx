@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  ChevronDown,
-  ChevronRight,
   CircleHelp,
   Home,
   Layers3,
@@ -16,13 +14,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
+import { CanvasHeader } from "./canvas-header";
 import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
 import { useClients, useProjectClient } from "./workspace-data";
 import "./workspace.css";
@@ -33,6 +33,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const clients = useClients();
   const settings = useWorkspaceSettings();
   const pathname = usePathname();
+  // Read the primary slot: opening an intercepted briefing must keep the board shell underneath.
+  const segments = useSelectedLayoutSegments();
+  const boardRoute = segments[0] === "clients" && segments.at(-1) === "board";
+  const canvasRoute = boardRoute || segments[0] === "projects";
   // Every project link in the product targets /projects/:id, which carries no client segment, so
   // the workspace has to be resolved from the project or the sidebar folds shut on arrival.
   const projectClient = useProjectClient(pathname.match(/^\/projects\/([^/]+)/)?.[1]);
@@ -42,9 +46,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLDivElement>(null);
-  const activeEntry = useRef<HTMLDivElement>(null);
   const mainContent = useRef<HTMLElement>(null);
   const focusHandled = useRef(false);
+
+  useEffect(() => {
+    if (!canvasRoute) mainContent.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [pathname, canvasRoute]);
 
   // Only the redirect out of /login sets the flag this reads, so a direct reload or an in-app
   // navigation (the shell persists across those, re-rendering only `children`) leaves focus alone.
@@ -81,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const focusable = () =>
       Array.from(
         panelRef()?.querySelectorAll<HTMLElement>(
-          'a[href],button:not([disabled]),[tabindex="0"]',
+          'a[href],button:not([disabled]),input:not([disabled]),[tabindex="0"]',
         ) ?? [],
       ).filter(
         (element) =>
@@ -93,7 +100,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       focusable()[0]?.focus({ preventScroll: true });
     }
     function keydown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       if (event.key === "Escape") {
+        if (event.target instanceof Element && event.target.closest(".client-switcher-panel"))
+          return;
         event.preventDefault();
         setMobileOpen(false);
       }
@@ -152,11 +162,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [mobileOpen]);
 
-  // With ten clients the expanded one can open below the fold, hiding its own destinations.
-  useEffect(() => {
-    activeEntry.current?.scrollIntoView({ block: "nearest" });
-  }, [pathname]);
-
   useEffect(() => {
     if (!loading && !session)
       router.replace(`/login?returnTo=${encodeURIComponent(pathname + window.location.search)}`);
@@ -185,18 +190,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const homeLabel =
     profile.role === "agency" ? "Overview" : profile.role === "designer" ? "My work" : "Home";
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
-  const clientTabs = [
-    { path: "board", label: "Board" },
-    { path: "briefings", label: "Briefings" },
-    { path: "reviews", label: "Reviews" },
-    { path: "assets", label: "Files" },
-    { path: "brand/overview", label: "Brand Hub" },
-    ...(profile.role !== "designer" ? [{ path: "credits", label: "Credits" }] : []),
-  ];
 
   return (
     <div
-      className={`application ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}
+      className={`application ${activeClient ? "has-client-context" : ""} ${canvasRoute ? "board-workspace" : ""} ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}
     >
       <nav aria-label="Accessibility">
         <a className="skip-link" href="#main-content">
@@ -247,6 +244,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <PanelLeftClose size={17} />
         </button>
+        <ClientSwitcher
+          key={pathname}
+          clients={clients.data ?? []}
+          activeClientId={activeClientId}
+          loading={clients.isPending}
+          failed={clients.isError}
+          onRetry={() => void clients.refetch()}
+        />
         <nav aria-label="Main navigation">
           <Link
             className={`nav-item ${pathname === "/home" ? "active" : ""}`}
@@ -265,70 +270,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Search</span>
             <kbd>⌘ K</kbd>
           </Link>
-          <div className="nav-section-label">Clients</div>
-          <div className="client-navigation">
-            {clients.data?.map((client) => {
-              const open = activeClientId === client.id;
-              return (
-                <div
-                  key={client.id}
-                  ref={open ? activeEntry : undefined}
-                  className={`client-entry ${open ? "expanded" : ""}`}
-                >
-                  <Link
-                    href={`/clients/${client.id}/board`}
-                    title={client.name}
-                    className={`nav-item client-nav ${open ? "active" : ""}`}
-                    aria-current={open ? "location" : undefined}
-                  >
-                    <span className="client-initials" aria-hidden="true">
-                      {client.initials || client.name.slice(0, 2)}
-                    </span>
-                    <span>{client.name}</span>
-                    <span className="client-chevron" aria-hidden="true">
-                      {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                    </span>
-                  </Link>
-                  {open && (
-                    <nav className="client-destinations" aria-label={`${client.name} navigation`}>
-                      {clientTabs.map((item) => {
-                        const active = pathname.includes(
-                          `/clients/${client.id}/${item.path.split("/")[0]}`,
-                        );
-                        return (
-                          <Link
-                            key={item.path}
-                            href={`/clients/${client.id}/${item.path}`}
-                            className={`client-destination ${active ? "active" : ""}`}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            {item.label}
-                          </Link>
-                        );
-                      })}
-                    </nav>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </nav>
         <div className="sidebar-footer">
           {profile.role === "agency" && (
             <Link
               href="/settings"
-              className={`nav-item ${pathname === "/settings" ? "active" : ""}`}
+              className={`nav-item ${pathname.startsWith("/settings") && pathname !== "/settings/account" ? "active" : ""}`}
+              aria-current={
+                pathname.startsWith("/settings") && pathname !== "/settings/account"
+                  ? "location"
+                  : undefined
+              }
             >
               <Settings2 size={17} />
               <span>Studio settings</span>
             </Link>
           )}
           {profile.role === "agency" && (
-            /* The same page Studio settings opens on its Team tab, given a way in of its own:
-               who is in the studio is a thing you look for by name, not a setting you tune. */
             <Link
-              href="/settings/team"
-              className={`nav-item ${pathname === "/settings/team" ? "active" : ""}`}
+              href="/team"
+              className={`nav-item ${pathname === "/team" ? "active" : ""}`}
+              aria-current={pathname === "/team" ? "page" : undefined}
             >
               <Users size={17} />
               <span>Team</span>
@@ -382,10 +344,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </div>
-      {/* Inside a client workspace every page carries its own header row, so the bar above it
-          would be an empty strip; the class lets `workspace.css` stand it down at ≥901px. */}
+      {/* All client routes share floating navigation; each canvas owns its own placement. */}
       <div
-        className={`workspace ${activeClient ? "client-workspace" : ""}`}
+        className={`workspace ${activeClient ? "client-workspace" : ""} ${activeClient && !canvasRoute ? "client-page-workspace" : ""}`}
         inert={mobileOpen || undefined}
       >
         <header className="topbar">
@@ -399,19 +360,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          {/* Inside a client workspace the page titles itself — the board with that client's own
-              mark and name — so the topbar carries only the global actions. */}
           {!activeClient && (
             <div className="topbar-identity">
               <Layers3 size={16} />
               <strong>{studioName}</strong>
             </div>
           )}
-          <div className="topbar-actions">
-            <NotificationsBell />
-          </div>
+          <div className="topbar-actions">{!activeClient && <NotificationsBell />}</div>
         </header>
         <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
+          {activeClient && !canvasRoute && (
+            <div className="client-page-chrome">
+              <CanvasHeader client={activeClient} viewer={profile} />
+            </div>
+          )}
           {children}
         </main>
       </div>

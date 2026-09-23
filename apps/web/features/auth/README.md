@@ -5,6 +5,10 @@ in the app (48 call sites at the time of this migration). It creates the browser
 subscribes to `onAuthStateChange`, resolves the initial session with `getSession()`, and clears the
 query cache when the signed-in user changes.
 
+## Removed membership
+
+`useProfile` reads `removed_at` with the caller's own identity fields and reports `Your studio access has been removed.` when the marker is set. Authorization is enforced in PostgreSQL independently of this message: `private.current_role()` returns no role for a removed profile. The marker is not writable by authenticated clients. Historical profile references remain intact.
+
 ## The one query: moved, not exempted
 
 `auth-provider.tsx` held one `.from(`/`.rpc(`/`.storage.` query: the signed-in user's own profile

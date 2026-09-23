@@ -1,6 +1,7 @@
 .stack-form {
   display: grid;
-  gap: 18px;
+
+  gap: var(--space-lg);
 }
 .stack-form > p {
   margin: 0;
@@ -34,6 +35,7 @@
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 9px;
+
+  gap: var(--space-xs);
   margin-top: 8px;
 }

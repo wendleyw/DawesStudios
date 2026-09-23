@@ -21,13 +21,16 @@ export function useProfile(database: SupabaseDatabase, session: Session | null) 
   return useQuery({
     queryKey: ["profile", session?.user.id],
     enabled: !!session,
-    queryFn: async () =>
-      assertResult(
+    queryFn: async () => {
+      const profile = assertResult<Profile & { removed_at: string | null }>(
         await database
           .from("profiles")
-          .select("id, display_name, role, avatar_url")
+          .select("id, display_name, role, avatar_url, removed_at")
           .eq("id", session!.user.id)
           .single(),
-      ) as Profile,
+      );
+      if (profile.removed_at) throw new Error("Your studio access has been removed.");
+      return profile;
+    },
   });
 }

@@ -85,13 +85,15 @@ export function HomePage() {
               : "Your projects and next steps."}
           </p>
         </div>
-        <span className="home-date">{today}</span>
-        {profile?.role === "agency" && (
-          <Link className="button" href="/settings/clients">
-            <Plus size={16} />
-            New client
-          </Link>
-        )}
+        <div className="home-actions">
+          <span className="home-date">{today}</span>
+          {profile?.role === "agency" && (
+            <Link className="button" href="/settings/clients">
+              <Plus size={16} />
+              New client
+            </Link>
+          )}
+        </div>
       </div>
       <div className="overview-stats">
         {tiles.map((tile) => (
@@ -112,10 +114,10 @@ export function HomePage() {
         {reviewProjects.length ? (
           <div className="project-table">
             <div className="table-head">
-              <span>PROJECT</span>
-              <span>CLIENT</span>
-              <span>STATUS</span>
-              <span>DUE</span>
+              <span>Project</span>
+              <span>Client</span>
+              <span>Status</span>
+              <span>Due</span>
               <span />
             </div>
             {reviewProjects.map((project) => (

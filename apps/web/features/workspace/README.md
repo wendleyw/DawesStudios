@@ -5,18 +5,56 @@ This feature holds the application chrome (`app-shell.tsx`), the home overview
 (`notifications-page.tsx`, `notifications-bell.tsx`). `client-mark.tsx` renders a client's approved
 brand mark and is used by both this feature's shell and `features/board`.
 
-## The topbar stands down inside a client workspace
+## One client navigation across the workspace
 
-`app-shell.tsx` adds `client-workspace` to `.workspace` whenever the route resolves to a client
-(`/clients/:id/*`, and `/projects/:id` through `useProjectClient`). Every page in that set carries a
-header row of its own — the board's identity header, the project's title row, the briefing editor and
-detail headers, the draft editor's toolbar, and `page-heading` everywhere else — so at ≥901px
-`workspace.css` hides the bar and zeroes `--topbar-height` rather than leaving a 64px strip holding
-nothing but the bell. Those pages render `NotificationsBell` themselves, as the last item in their own
-header row, with `className="page-bell"`; `app/globals.css` hides `page-bell` below 901px, where the
-topbar returns and carries the bell again (it also holds the only way to open the navigation drawer).
-`page-actions` is the shared wrapper for a header row that has other actions beside the bell; it
-becomes `display: contents` below 901px so the heading stacks as it always did.
+`app-shell.tsx` resolves the active client from `/clients/:id/*` or through `useProjectClient`
+for `/projects/:id`. Client destinations appear once, as visible text links at the top, with an
+underline on the active section. `client-navigation.tsx` owns their shared routing and role rules:
+Board, Briefings, Reviews, Files, Brand Hub and Credits (hidden for designers). Projects keep Board
+active. No client destinations remain in the sidebar on any route.
+
+All client routes share `canvas-header.tsx`: floating client identity/navigation on the left
+and the signed-in viewer’s profile with a notification bell on its left in one account card. Only the board supplies the quarter control.
+Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
+Reviews, Files, Brand Hub and Credits receive the same header from the shell, positioned sticky
+inside the main scrolling region. Their white title/action cards and contextual tools sit below it
+on the same subtle grid, using the full available width with 16 px desktop and 12 px mobile gutters.
+Route changes reset this region's scroll position.
+
+All desktop client routes hide the shell topbar and set `--topbar-height` to zero. On phones the
+64 px shell topbar carries the navigation-drawer button. Client routes show one bell beside the
+profile across all sizes; non-client routes retain their topbar link. No board toolbar or client
+page title repeats the notification action. Client links wrap without menu scrolling.
+
+`notifications-popover.tsx` uses the native nonmodal Popover API so the feed opens above canvas and
+sticky containers. It is anchored below the account card, bounded to the viewport, and slides down
+briefly (no animation with reduced motion). Escape/close returns focus; an outside click dismisses
+without stealing focus, and route changes close it. The scrolling feed reuses recipient-scoped reads
+and explicit read mutations from `workspace-data.ts`; opening alone does not mark activity as read.
+The full notifications page remains available from its footer. No new notification backend exists.
+
+## Visual layout and active navigation
+
+The shell and overview consume the shared neutral palette, typography and spacing tokens in
+`app/globals.css`. Non-client document pages use a 1280 px maximum wrapper and 40 px desktop gutter; client sections use the full-width layout above.
+Overview metrics are individual bordered panels, with an even two-column arrangement on phones;
+the date and creation action share one header group.
+
+The sidebar shows one client workspace at a time. `client-switcher.tsx` consumes the shell's
+existing authorized query and provides a searchable client picker above the global navigation.
+Accounts with one client get a direct workspace link. Search is case-insensitive, the current
+client is marked, and empty/error states remain actionable. Escape closes the picker and returns
+focus; on mobile it leaves the containing navigation drawer open until the next Escape.
+
+The selected route determines client context, including directly opened project links. The sidebar
+retains client switching, Overview/My work, Search, studio controls, support and account/sign out.
+It uses tighter spacing in short client-workspace windows so those global actions fit without
+scrolling. Client links stay in the top navigation when the sidebar is collapsed or opened as a
+mobile drawer.
+
+The workspace layout also renders the briefing `@modal` slot. In-app New briefing links open the
+shared editor over the current route; direct URL loads use the full page. See the
+[briefing feature](../briefings/README.md) and [current verification](../../../../docs/verification/board-views-2026-09-23.md).
 
 ## Data access
 
@@ -67,7 +105,7 @@ Following `settings-data.ts`'s reasoning: this module's domains do not want each
 invalidated by their own mutation. It exports two separate pairs instead of one:
 
 - `notificationsQueryKeys = ["notifications"]` / `useInvalidateNotifications()` — called from
-  `notifications-page.tsx`'s mark-read mutation, exactly reproducing its pre-migration
+  `notification-feed.tsx`'s mark-read mutation, exactly reproducing its pre-migration
   `invalidateQueries({ queryKey: ["notifications"] })`.
 - `workspaceQueryKeys = ["projects"]` / `useInvalidateWorkspace()` — see below.
 
@@ -122,51 +160,12 @@ a consumer grep and are unchanged. `.brand-logo` (shared with `auth/login-page.t
 (shared with `board/board-page.tsx`, which imports the `ClientMark` component from this feature) are
 likewise genuinely multi-feature and untouched.
 
-## App shell caution — and a discrepancy found while honoring it
-
-This task's brief describes a topbar consolidation that must not be disturbed: the client's brand
-mark and name in the topbar in place of a studio/client breadcrumb, the board's header and toolbar
-folded into the topbar, a portal slot in `topbar-tools.tsx`, a `--workspace-chrome` measured-height
-variable, and a reserved second tool row below 1100px.
-
-**That consolidation does not exist in the current working tree.** It was implemented in commit
-`198e3c9` ("feat(workspace): carry the client identity and board controls in one topbar row"), which
-added `client-identity.tsx` and `topbar-tools.tsx` and folded the board's header into the topbar. A
-later commit, `31a2f7a` ("chore: commit the in-flight workspace and board work as a refactor
-baseline"), replaced `app-shell.tsx` with an earlier shape that has neither file and a plain
-`topbar-identity`/`NotificationsBell` topbar, while keeping unrelated accessibility work from the
-same period (the mobile-sidebar focus trap, `useProjectClient`). Neither `topbar-tools.tsx` nor
-`client-identity.tsx` exists anywhere in the current tree (`git log --all` finds them only in
-`198e3c9`), there is no `--workspace-chrome` variable anywhere in the codebase, and
-`board/board-page.tsx` currently renders its own `board-identity` header with `board-tools` inline,
-with a comment reading "The topbar above carries nothing but the global actions" — the reverse of
-what the brief describes.
-
-Given this, `app-shell.tsx` was left exactly as found: no topbar/portal/chrome-measurement structure
-was touched because none is present to disturb, and the file was not split (see below). This is
-flagged for the orchestrator to reconcile — restoring or re-implementing the lost consolidation is a
-product decision and a behavior change, outside a behavior-preserving data-access refactor.
-
-### Why `app-shell.tsx` (416 lines) was not split
-
-Independent of the discrepancy above, the file holds one export whose largest piece — the
-mobile-sidebar focus trap `useEffect` — is a single cohesive, carefully-commented stateful unit
-(focus containment, `MutationObserver`, `focusout`/`focusin` listeners, media-query close-on-desktop,
-cleanup) that reads and writes several `ref`s and pieces of local state together. Splitting it into a
-separate hook or component is mechanically possible, but the two required Playwright specs
-(`workspace`, `workspace-actions`) exercise this exact shell (sign-in, sidebar navigation, the mobile
-menu is not exercised by them but the desktop chrome is on every page they touch), and the explicit
-instruction for this task is: if a split would touch the topbar/portal/chrome-measurement area, don't
-— and the safest reading of that caution, given the shell is more fragile than its behavior
-description suggests, is to leave the whole file alone rather than split around a consolidation that
-turned out to be missing.
-
 ## Shared primitives
 
 `search-page.tsx` already uses the shared `SearchField` (`@/features/shared/search-field`);
-`notifications-page.tsx` already uses `FormError` for its mutation error and `PageStatus` is used by
+`notification-feed.tsx` uses `FormError` for its mutation error and `PageStatus` is used by
 `home-page.tsx`. Nothing in this feature held a local copy of markup extracted into
-`features/shared/`. `search-page.tsx`'s and `notifications-page.tsx`'s inline `role="alert"` blocks
+`features/shared/`. `search-page.tsx`'s and `notification-feed.tsx`'s inline `role="alert"` blocks
 around a `<p className="form-error">` are the two deliberate non-`FormError` exceptions already
 recorded in [`features/shared/README.md`](../shared/README.md).
 
@@ -179,7 +178,7 @@ fix wave re-verified the zero-consumer finding and deleted the rule from `global
 
 ## Verification
 
-Executed for this migration:
+Historical data-access migration evidence (not the current UI verification):
 
 - `npm run check` from the repository root reaches `format:check` and fails there on a pre-existing,
   untracked file unrelated to this feature (`apps/web/tests/e2e/tmp-repro-add-design.spec.ts`, not
@@ -192,3 +191,13 @@ Executed for this migration:
 - `grep -rn '\.from(\|\.rpc(\|\.storage\.' apps/web/features/workspace --include='*.tsx' | grep -v 'Array\.from('`
   returns no output.
 - `npm --prefix apps/web run test:e2e -- workspace.spec.ts workspace-actions.spec.ts`: 5/5 pass.
+
+Current navigation and creation-card evidence: [verification record](../../../../docs/verification/client-menu-and-project-creation-2026-09-23.md).
+
+## Notification surfaces
+
+`notification-feed.tsx` owns the list, loading/retry and authenticated read mutations. The full
+notifications page and compact account popover consume it. `notifications-bell.tsx` retains a link
+on non-client topbars and accepts a callback/ref for the account popover. Shared feed styles live
+in `app/globals.css`; popover layout stays in `workspace.css`. Backend RLS scopes the latest 100
+notifications to the signed-in viewer. Opening the popover does not mark them read.

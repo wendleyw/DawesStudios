@@ -3,6 +3,8 @@ import path from "node:path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Keep the development overlay from covering the mobile board toolbar.
+  devIndicators: false,
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   async headers() {
     return [

@@ -58,8 +58,7 @@ export function LoginPage() {
         <div>
           <span className="eyebrow">A little structure. More room to create.</span>
           <h1>
-            Good work,
-            <br />
+            Good work, <br />
             in good company.
           </h1>
           <p>

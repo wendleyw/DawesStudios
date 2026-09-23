@@ -127,11 +127,11 @@ describe("query key ownership", () => {
    * merely referenced, because renaming one is how a call site silently starts invalidating a cache
    * entry nothing reads — or stops invalidating one something does.
    */
-  it("names brand's four write-dirtied keys", () => {
+  it("names brand's write-dirtied keys", () => {
     expect(brandQueryKeys).toEqual({
       sections: "brand-sections",
       assets: "brand-assets",
-      templateDrafts: "template-drafts",
+      folders: "brand-asset-folders",
       templateDraft: "template-draft",
     });
   });

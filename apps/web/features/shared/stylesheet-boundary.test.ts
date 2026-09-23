@@ -35,7 +35,8 @@ function extractSelectorHeads(css: string): string[] {
     if (!raw || raw.startsWith("@") || raw.startsWith("--")) continue;
     for (const part of raw.split(",")) {
       const selector = part.trim();
-      if (selector) heads.push(selector);
+      // Keyframe offsets describe animation steps, not competing element selectors.
+      if (selector && !/^(from|to|\d+(?:\.\d+)?%)$/.test(selector)) heads.push(selector);
     }
   }
   return heads;
@@ -118,6 +119,16 @@ describe("the parser finds a plausible number of selectors", () => {
     expect(distinctAcrossAll).toBeLessThan(1500);
 
     expect(globalSelectors.size).toBeGreaterThan(50);
+  });
+});
+
+describe("animation selector extraction", () => {
+  it("ignores keyframe offsets while retaining adjacent feature selectors", () => {
+    expect(
+      extractSelectorHeads(
+        "@keyframes slide { from { transform: none; } 50%, to { transform: none; } } .board { display: flex; }",
+      ),
+    ).toEqual([".board"]);
   });
 });
 

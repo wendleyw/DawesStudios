@@ -14,7 +14,36 @@ Each primitive reproduces the markup, class names and accessibility attributes
 its consumers used before extraction, exactly. Where consumers differ, the
 difference is a prop, never a normalisation.
 
+## Shared visual contracts
+
+`app/globals.css` owns shared tokens and primitives. Standard page wrappers use the 1280 px content token, responsive page gutters and a 32 px section rhythm. Panel padding is 24 px, panel radius 12 px, and control radius 8 px. Supporting text uses the 11/12/13/14 px token scale; page titles use 28 px.
+
+The CSS-only `.section-tabs` primitive is consumed by `brand/brand-page`, `briefings/briefings-page`, `credits/credits-page`, and `settings/settings-page`. It shares target size, spacing, horizontal scrolling and the active underline while leaving link/button markup, accessibility state and route/filter behavior with each owner. Existing feature classes remain for placement and test locators; they do not redeclare the shared item appearance.
+
 ## Components
+
+### Canvas background and controls
+
+`CanvasBackground` (`canvas-background.tsx`) renders a 24-unit line grid using
+`--canvas-background` and `--canvas-grid`. Each instance has a unique SVG pattern
+ID so the mounted project and Playground backgrounds remain independent. The
+Playground feature overrides the tokens locally for a slightly darker surface.
+
+`CanvasControls` (`canvas-controls.tsx`) provides zoom and fit buttons with 200 ms
+transitions, or immediate movement when reduced motion is requested. Zoom buttons
+respect the current canvas limits. The optional `onFit(duration)`, `fitLabel` and
+`fitIcon` preserve the board's custom readable framing and return icon.
+The optional `portalTarget` mounts the same controls in the board's floating dock
+while retaining its xyflow context. A null target waits for the dock to mount;
+omitting it keeps the default in-canvas position for the other consumers.
+
+Consumers: `board/board-page` and `board/board-canvas-controls`,
+`projects/project-page`, `projects/design-viewer`, `playground/playground-board`.
+
+These canvases also use `canvasNavigation` (`canvas-navigation.ts`): two-axis
+scroll panning at native delta speed, pinch zoom, and no accidental wheel or
+double-click zoom. Direct dragging, node selection and pin-mode restrictions
+remain owned by each feature. No transform easing is applied to pointer gestures.
 
 ### `Modal` — `modal.tsx`
 
@@ -64,9 +93,10 @@ paragraph used by forms, dialogs and data-loading failures. It pairs the
 | ---------- | ----------- | ------- |
 | `children` | `ReactNode` | —       |
 
-Consumers (44 call sites in 27 files): `assets/assets-page`,
+Consumers include: `assets/assets-page`,
 `assets/upload-file-dialog`, `auth/login-page`, `board/board-page`,
-`brand/brand-asset-upload`, `brand/brand-assets`, `brand/brand-templates`,
+`brand/brand-asset-upload`, `brand/brand-assets`, `brand/brand-folder-dialog`,
+`brand/brand-asset-folder-picker`,
 `brand/draft-editor`,
 `brand/section-editor`, `briefings/briefing-attachments`,
 `briefings/briefing-detail`, `briefings/briefing-editor-form`,
@@ -105,7 +135,7 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-page`,
 
 ### `SearchField` — `search-field.tsx`
 
-The search input of the board and the list pages: a `label.search-field`
+The search input of the board, service chooser and list pages: a `label.search-field`
 wrapping the magnifier icon and the input, so the whole control is clickable and
 the input always carries its own accessible name.
 
@@ -119,8 +149,9 @@ the input always carries its own accessible name.
 | `className`   | `string`                              | —       | Appended to `search-field`.                                                                             |
 | `inputRef`    | `RefObject<HTMLInputElement \| null>` | —       | For pages that focus the field on mount.                                                                |
 
-Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-assets`,
-`brand/brand-templates`, `credits/credits-page`, `workspace/search-page`.
+Consumers: `assets/assets-page`, `board/board-toolbar`, `brand/brand-assets`,
+`briefings/briefing-service-picker`, `credits/credits-page`,
+`workspace/search-page`.
 
 ## Non-component modules
 

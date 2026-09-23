@@ -199,3 +199,12 @@ export function acceptedExtensions(mimes: readonly UploadMime[], mime: string): 
   const allowed: readonly string[] = mimes;
   return allowed.includes(mime) ? uploadExtensions[mime as UploadMime] : [];
 }
+
+/** Stored video extensions come from the media service's verified container type. */
+const videoExtensions = ["mp4", "webm"];
+
+export function isVideoAsset(path: string | null): boolean {
+  if (!path) return false;
+  const extension = path.split(".").pop()?.toLowerCase() ?? "";
+  return videoExtensions.includes(extension);
+}

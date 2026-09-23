@@ -2,26 +2,49 @@
 
 import { Bell } from "lucide-react";
 import Link from "next/link";
+import type { Ref } from "react";
 import { useNotifications } from "./workspace-data";
 
-/**
- * The workspace's unread marker, rendered by whichever surface holds the global actions: the
- * topbar on a page that has no header row of its own, the page's own header row inside a client
- * workspace, where the topbar stands down. Pages pass `page-bell`, which hides this copy below
- * 901px, where the topbar returns and carries the marker again. The query behind it is shared, so
- * two mounted copies still make one request.
- */
-export function NotificationsBell({ className = "" }: { className?: string }) {
+/** Shared unread indicator for the account popover and global notification page link. */
+export function NotificationsBell({
+  className = "",
+  onClick,
+  expanded,
+  buttonRef,
+  controls,
+}: {
+  className?: string;
+  onClick?: () => void;
+  expanded?: boolean;
+  buttonRef?: Ref<HTMLButtonElement>;
+  controls?: string;
+}) {
   const notifications = useNotifications();
   const unread = notifications.data?.filter((item) => !item.read_at).length ?? 0;
-  return (
-    <Link
-      href="/notifications"
-      className={`icon-button notifications-bell ${className} ${unread ? "has-unread" : ""}`}
-      aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
-    >
+  const classNames = `icon-button notifications-bell ${className} ${unread ? "has-unread" : ""} ${expanded ? "selected" : ""}`;
+  const label = unread ? `Notifications, ${unread} unread` : "Notifications";
+  const icon = (
+    <>
       <Bell size={17} />
       {unread > 0 && <span className="unread-dot" aria-hidden="true" />}
+    </>
+  );
+  return onClick ? (
+    <button
+      ref={buttonRef}
+      aria-controls={controls}
+      aria-haspopup={controls ? "dialog" : undefined}
+      className={classNames}
+      aria-label={label}
+      title="Notifications"
+      aria-expanded={expanded}
+      onClick={onClick}
+    >
+      {icon}
+    </button>
+  ) : (
+    <Link href="/notifications" className={classNames} aria-label={label} title="Notifications">
+      {icon}
     </Link>
   );
 }
