@@ -50,8 +50,8 @@ production, team and console-error scenarios passed under the new CSP.
 
 | Failure | Root cause (evidence) | Status |
 | --- | --- | --- |
-| `board-views.spec.ts:343`, 768×1024 canvas | `c529671` (another session) enlarged the header client mark from 36 to 48px. Measured in the browser: "SABRE" has scrollWidth 57 but clientWidth 47 at 48px, and 57/57 when only the mark is forced back to 36px. | Open. Reported to the logo owner. |
-| `project-feedback.spec.ts:205`, reading space | Same commit: `canvas-header.tsx` uses the same mark. The project header grows from 58 to 70px at 1600px and from 120 to 128px at 390px, leaving the feedback list at 221px where more than 223 is required. | Open. Reported to the logo owner. |
+| `board-views.spec.ts:343`, 768×1024 canvas | `c529671` (another session) enlarged the header client mark from 36 to 48px. Measured in the browser: "SABRE" has scrollWidth 57 but clientWidth 47 at 48px, and 57/57 when only the mark is forced back to 36px. | Fixed by `8506306`; reported 13 of 13 passing by the owning session. |
+| `project-feedback.spec.ts:205`, reading space | Same commit: `canvas-header.tsx` uses the same mark. The project header grows from 58 to 70px at 1600px and from 120 to 128px at 390px, leaving the feedback list at 221px where more than 223 is required. | Fixed by `8506306`; reported 13 of 13 passing by the owning session. |
 | `intake-admin.spec.ts:424`, timezone notice | Test data dependency: the feed shows the latest 100 notifications, and the SABRE overlay gives the agency 271 newer ones, so the notice dated 2026-09-20 was never rendered. | Fixed in `3b8f890`: the notice is dated ahead of real notifications. |
 
 The notification feed has no pagination beyond its latest 100 items. That is a product limitation

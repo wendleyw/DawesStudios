@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 18:55 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
+Updated: 2026-09-23 19:05 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
 orchestrator since 17:50 EDT.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -12,8 +12,7 @@ history only when a task needs earlier evidence.
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
 - Other interactive Claude sessions of the user's also ran here this evening. `dawesstudios-3b`
-  owns the client logo feature and has open regressions from it (below). Every session stages
-  explicit paths only; never run `git add -A`.
+  owns the client logo feature. Every session stages explicit paths only; never run `git add -A`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
@@ -33,9 +32,11 @@ All four parts of the user's request are done. The evidence is in the
 
 ## Integrated from another session
 
-- **Client logo** (`47b47d1`, `3650c2a`, `c529671`, by `dawesstudios-3b`). The agency sets a logo
+- **Client logo** (`47b47d1`, `3650c2a`, `c529671`, `8506306`, by `dawesstudios-3b`). The agency sets a logo
   in Settings > Clients, and it appears in the board and project header as `<img>`. Migrations
   `202609230010` (`clients.logo_path`, protected from deletion) and `202609230012` (raster only).
+  The 48px mark applies only to the wide client board header (`8506306`). That session reported
+  `board-views` and `project-feedback` passing 13 of 13 after I restarted the stuck dev server.
 
 ## Accepted decisions
 
@@ -62,7 +63,7 @@ All four parts of the user's request are done. The evidence is in the
 
 - `npm run check`: 607 tests / 52 files, clean. `npm run build`: exit 0.
 - Browser, 44 scenarios: 37 passed, 3 failed, 4 skipped after a serial failure. `intake-admin`
-  passes 6 of 6 after its fix. Both remaining failures trace to `c529671` (below).
+  passes 6 of 6 after its fix. The other two traced to `c529671` and are fixed by `8506306`.
   `content-security-policy.spec.ts` passes with no violations for three roles.
 - `npm run db:test`: 17 of 18 files pass. `access_and_workflows` fails 6 of 55 canonical-count
   assertions because the SABRE overlay is active, which is expected.
@@ -70,9 +71,6 @@ All four parts of the user's request are done. The evidence is in the
 
 ## Open gaps
 
-- **Logo regressions (owner `dawesstudios-3b`, notified):** the 48px header mark truncates
-  "SABRE" at 768px (`board-views.spec.ts:343`) and shrinks the feedback list below half the
-  panel (`project-feedback.spec.ts:205`). Measurements are in the verification record.
 - The J10 final release audit is unverified; it needs a staging installation with the
   production topology.
 - Video attempts still lack recovery, cancellation and staging cleanup ([plan](../architecture/implementation-plan.md)).
@@ -83,7 +81,9 @@ All four parts of the user's request are done. The evidence is in the
 
 ## Next actions
 
-1. Confirm the logo owner's fix with `npm --prefix apps/web run test:e2e -- board-views project-feedback`.
-2. Start a fresh session so the project agents load. Then stand up staging, run the production
-   checklist and the J10 audit.
-3. Implement video attempt recovery and cancellation.
+1. **Video upload lifecycle (user-approved):** cancel during transfer, resume after reload,
+   retry processing without re-uploading, and clean up abandoned raw files. Design first.
+2. **Staging rehearsal (user-approved):** official self-hosted Supabase on separate ports, with
+   MinIO standing in for R2, migrations only, the web and media images, and the production
+   checklist. Then the J10 audit.
+3. Start a fresh session so the project agents load by name.
