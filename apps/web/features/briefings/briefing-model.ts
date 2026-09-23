@@ -1,6 +1,6 @@
 import type { StatusTone } from "@/features/shared/status-tone";
 import catalog from "./service-catalog.json";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import type { Database } from "@database";
 
 export type ServiceQuestion = {

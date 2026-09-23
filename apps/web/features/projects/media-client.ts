@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import type { Database } from "@database";
 import {
   BUCKET_MAX_BYTES,
