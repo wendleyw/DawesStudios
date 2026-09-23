@@ -19,8 +19,15 @@ if (required("SUPABASE_URL") !== acceptanceBackend)
   throw new Error(
     `Acceptance tests mutate data and must run against the declared backend (${acceptanceBackend}). Set ACCEPTANCE_SUPABASE_URL to run them elsewhere.`,
   );
+// Captures land in the ignored outputs/ directory, so an ordinary run never rewrites committed
+// evidence. Set EVIDENCE_SCREENSHOTS=1 when a run should refresh the images a verification record cites.
 export const screenshotDirectory = fileURLToPath(
-  new URL("../../../../docs/verification/screenshots/", import.meta.url),
+  new URL(
+    process.env.EVIDENCE_SCREENSHOTS === "1"
+      ? "../../../../docs/verification/screenshots/"
+      : "../../../../outputs/screenshots/",
+    import.meta.url,
+  ),
 );
 mkdirSync(screenshotDirectory, { recursive: true });
 export const credentials = {

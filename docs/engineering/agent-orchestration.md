@@ -32,7 +32,7 @@ Most of this project's model usage came from delegated agents and from sessions 
 - **Delegate with a bounded prompt.** Name the objective, owned or read paths, what not to read (history, verification records, screenshots, `docs/ref`), the checks to run, and an output cap. Run at most three agents at once unless the user asks for more.
 - **Watch context size.** Read large files by excerpt. Summarize long command output instead of printing it. Compact at task milestones and start a fresh session between unrelated tasks. Only the current [checkpoint](handoff.md) is read by default. The [history](history/) is for evidence lookup.
 - **Commit per task.** Every integrated task ends with a passing gate and a Conventional Commit of that task's files. The hooks run gitleaks, lint-staged and commitlint. Pushing, pull requests and deployment still need an explicit request.
-- **Keep evidence lean.** Capture screenshots only when a task changes UI. Save working captures to the ignored `outputs/` directory, and commit only the few final-state images a verification record cites.
+- **Keep evidence lean.** Capture screenshots only when a task changes UI. Save working captures to the ignored `outputs/` directory, and commit only the few final-state images a verification record cites. The browser suite does this by default; `EVIDENCE_SCREENSHOTS=1` writes to `docs/verification/screenshots/` instead.
 
 ## Codex and Claude continuity
 
