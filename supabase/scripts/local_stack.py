@@ -26,6 +26,25 @@ def assert_project():
     import tomllib
     if tomllib.loads((ROOT/'supabase/config.toml').read_text())['project_id']!='dawes-studios':raise RuntimeError('Refusing to operate on a different Supabase project.')
 
+def configure_database_compatibility():
+    # This image crashes while adding an enhanced permission-error hint. Keep every ACL/RLS
+    # check, disabling only that optional hint hook. See supabase/postgres#2112.
+    container='supabase_db_dawes-studios'
+    image=run(['docker','inspect','--format','{{.Config.Image}}',container]).strip()
+    if not image.endswith('/supabase/postgres:17.6.1.106'):return
+    # Read the container's existing local password inside it; do not expose credentials in argv,
+    # tool output, project files, or the host environment.
+    psql=['docker','exec',container,'sh','-c','PGPASSWORD="$POSTGRES_PASSWORD" exec psql "$@"','psql','-U','supabase_admin','-d','postgres','-X','-A','-t','-v','ON_ERROR_STOP=1']
+    current=run(psql+['-c',"select current_setting('supautils.hint_roles',true)"]).strip()
+    if current:
+        run(psql+['-c',"alter system set supautils.hint_roles = ''"])
+        run(psql+['-c','select pg_reload_conf()'])
+        for attempt in range(20):
+            if not run(psql+['-c',"select current_setting('supautils.hint_roles',true)"]).strip():break
+            time.sleep(0.1)
+        else:raise RuntimeError('The local database permission-error compatibility setting did not reload.')
+    print('Local database permission-error compatibility enabled; authorization remains enforced.')
+
 def media_running():
     try:
         with urllib.request.urlopen('http://127.0.0.1:55430/health',timeout=2) as response:return json.load(response).get('service')=='dawes-media'
@@ -58,6 +77,7 @@ def start_media():
 
 def start(provision=True):
     run(['supabase','start'])
+    configure_database_compatibility()
     run(['supabase','migration','up','--local'])
     if provision:run([sys.executable,'supabase/scripts/provision_local_auth.py'],sensitive=False)
     start_media()

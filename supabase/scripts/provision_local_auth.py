@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 import uuid
 from fixture_media import png_card, monogram_svg, monogram_png, monogram_pdf, simple_pdf
+from fixture_provisioning import ensure_fixture_object
 
 ROOT = Path(__file__).resolve().parents[2]
 parser=argparse.ArgumentParser();parser.add_argument('--workdir',type=Path,default=ROOT);parser.add_argument('--files-only',action='store_true');arguments=parser.parse_args()
@@ -63,15 +64,7 @@ if not arguments.files_only:
 session=request('/auth/v1/token?grant_type=password',{'email':agency['email'],'password':password})
 agency_token=session['access_token']
 def fixture_object(bucket,path,content,mime):
-    req=urllib.request.Request(status['API_URL']+'/storage/v1/object/authenticated/'+bucket+'/'+path,headers={'apikey':status['ANON_KEY'],'Authorization':'Bearer '+status['SERVICE_ROLE_KEY']})
-    try:
-        with urllib.request.urlopen(req,timeout=30) as response:existing_bytes=response.read()
-        if hashlib.sha256(existing_bytes).digest()!=hashlib.sha256(content).digest():raise RuntimeError('Fixture object differs from deterministic bytes; reset the local fixture project.')
-        return
-    except urllib.error.HTTPError as exc:
-        exc.close()
-        if exc.code not in (400,404):raise
-    request('/storage/v1/object/'+bucket+'/'+path,content,content_type=mime)
+    return ensure_fixture_object(status['API_URL'],status['ANON_KEY'],status['SERVICE_ROLE_KEY'],bucket,path,content,mime)
 
 brand_count=0
 for asset in fixtures.get('brand_assets',[]):
@@ -87,6 +80,7 @@ for asset in fixtures.get('brand_assets',[]):
     fixture_object('brand-assets',asset['storage_path'],content,asset['mime_type']);brand_count+=1
 working_count=0
 publication_count=0
+preserved_publication_count=0
 for asset in fixtures.get('working_assets',[]):
     design=request('/rest/v1/designs?id=eq.'+asset['design_id'],method='GET')
     if not design or design[0]['internal_asset_path']!=asset['source_path']:continue
@@ -96,8 +90,13 @@ for asset in fixtures.get('working_assets',[]):
     # has not been shared yet must stay in the internal bucket alone.
     if not asset['published_path']:continue
     clean=png_card(asset['index'],asset['width'],asset['height'])
-    fixture_object('published-assets',asset['published_path'],clean,'image/png')
-    request('/rest/v1/rpc/register_sanitized_asset',{'p_project_id':asset['project_id'],'p_bucket_id':'published-assets','p_storage_path':asset['published_path'],'p_sha256':hashlib.sha256(clean).hexdigest(),'p_mime_type':'image/png','p_file_size':len(clean),'p_prepared_by':agency['id'],'p_source_design_id':asset['design_id'],'p_source_path':asset['source_path']})
+    published=fixture_object('published-assets',asset['published_path'],clean,'image/png')
+    if published.content==clean:
+        # Also retry registration after an earlier successful upload was interrupted.
+        request('/rest/v1/rpc/register_sanitized_asset',{'p_project_id':asset['project_id'],'p_bucket_id':'published-assets','p_storage_path':asset['published_path'],'p_sha256':hashlib.sha256(clean).hexdigest(),'p_mime_type':'image/png','p_file_size':len(clean),'p_prepared_by':agency['id'],'p_source_design_id':asset['design_id'],'p_source_path':asset['source_path']})
+    else:
+        # Preserve a divergent snapshot and its attestation without asserting unverified bytes.
+        preserved_publication_count+=1
     publication_count+=1
 
 project=fixtures['delivery_project_id']
@@ -122,3 +121,4 @@ fd=os.open(env_path, os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
 with os.fdopen(fd,'w') as file:file.write(content)
 os.chmod(env_path,0o600)
 print(f'Provisioned {0 if arguments.files_only else len(fixtures["users"])} Auth accounts, {brand_count} brand files, {working_count} internal working files, {publication_count} published copies and the delivery fixture. Credentials: supabase/.env.local')
+if preserved_publication_count:print(f'Preserved {preserved_publication_count} existing published objects with non-canonical bytes; their attestations were not changed.')
