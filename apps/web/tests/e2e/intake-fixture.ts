@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { localAdmin, localAgency, password } from "./test-support";
+import { localAdmin, localAgency, password, runPrivilegedSql } from "./test-support";
 
 export type IntakeFixture = {
   clientId: string;
@@ -109,22 +108,7 @@ delete from public.brand_sections where client_id=${id};
 delete from public.client_memberships where client_id=${id};
 delete from public.clients where id=${id};
 commit;`;
-  execFileSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "supabase_db_dawes-studios",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-v",
-      "ON_ERROR_STOP=1",
-    ],
-    { input: sql, stdio: ["pipe", "pipe", "pipe"] },
-  );
+  runPrivilegedSql(sql);
   for (const userId of fixture.userIds) {
     const removed = await localAdmin.auth.admin.deleteUser(userId);
     if (removed.error) throw removed.error;

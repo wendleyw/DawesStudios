@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,22 @@ function required(name: string): string {
   return value;
 }
 export const password = required("DEMO_PASSWORD");
+// Privileged cleanup SQL runs inside the declared backend's database container: the local stack's
+// by default, and ACCEPTANCE_DB_CONTAINER for any other backend, never the local one by accident.
+export function runPrivilegedSql(sql: string, timeout?: number) {
+  const container = declaredElsewhere
+    ? process.env.ACCEPTANCE_DB_CONTAINER
+    : "supabase_db_dawes-studios";
+  if (!container)
+    throw new Error(
+      `Acceptance tests mutate data; set ACCEPTANCE_DB_CONTAINER for the declared backend (${acceptanceBackend}).`,
+    );
+  execFileSync(
+    "docker",
+    ["exec", "-i", container, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"],
+    { input: sql, stdio: ["pipe", "pipe", "pipe"], timeout },
+  );
+}
 // Evidence (screenshots and JSON measurements) lands in the ignored outputs/ directory, so an
 // ordinary run never rewrites committed records. Set WRITE_EVIDENCE=1 when a run should refresh
 // the files a verification record in docs/verification cites.

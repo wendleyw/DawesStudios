@@ -1,7 +1,6 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cleanupTestProject } from "./project-fixture";
-import { localAdmin, localAgency, password } from "./test-support";
+import { localAdmin, localAgency, password, runPrivilegedSql } from "./test-support";
 
 export type TeamMemberFixture = { id: string; email: string; name: string };
 
@@ -91,28 +90,12 @@ export function createTeamFixture() {
       for (const projectId of projects) await cleanupTestProject(projectId);
       if (members.length) {
         const ids = members.map((member) => uuid(member.id)).join(",");
-        execFileSync(
-          "docker",
-          [
-            "exec",
-            "-i",
-            "supabase_db_dawes-studios",
-            "psql",
-            "-U",
-            "postgres",
-            "-d",
-            "postgres",
-            "-v",
-            "ON_ERROR_STOP=1",
-          ],
-          {
-            input: `begin;
+        runPrivilegedSql(
+          `begin;
 delete from private.audit_events where actor_id in (${ids}) or entity_id in (${ids});
 delete from public.notifications where user_id in (${ids});
 commit;`,
-            stdio: ["pipe", "pipe", "pipe"],
-            timeout: 20_000,
-          },
+          20_000,
         );
       }
       for (const client of clients) {

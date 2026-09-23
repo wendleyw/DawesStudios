@@ -1,7 +1,6 @@
-import { execFileSync } from "node:child_process";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@database";
-import { localAdmin } from "./test-support";
+import { localAdmin, runPrivilegedSql } from "./test-support";
 
 function value<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (result.error) throw new Error(result.error.message);
@@ -104,20 +103,5 @@ delete from public.projects where id in (select id from acceptance_target);
 delete from public.briefings where id in (select briefing_id from acceptance_target);
 update public.credit_accounts a set balance=(select coalesce(sum(amount),0) from public.credit_ledger l where l.client_id=a.client_id) where client_id in(select client_id from acceptance_target);
 commit;`;
-  execFileSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "supabase_db_dawes-studios",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-v",
-      "ON_ERROR_STOP=1",
-    ],
-    { input: sql, stdio: ["pipe", "pipe", "pipe"], timeout: 20_000 },
-  );
+  runPrivilegedSql(sql, 20_000);
 }

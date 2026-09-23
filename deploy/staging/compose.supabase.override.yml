@@ -39,6 +39,13 @@ services:
 
   realtime:
     container_name: dawes-staging-realtime
+    # The gateway's realtime cluster (volumes/api/envoy/cds.yaml) targets the upstream container
+    # name, whose first label is also the Realtime tenant (`realtime-dev`). Renaming the container
+    # removed that hostname and every WebSocket handshake got a 503, so keep it as a network alias.
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
 
   imgproxy:
     container_name: dawes-staging-imgproxy

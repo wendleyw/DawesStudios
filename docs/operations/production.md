@@ -55,6 +55,11 @@ The local `supabase/config.toml` values are the tested behaviour. Carry them ove
 Buckets, per-bucket size and MIME limits, RLS policies and the Realtime publication are all
 created by the migrations. Do not create them by hand.
 
+Keep the upstream Realtime hostname `realtime-dev.supabase-realtime`, either as the container name
+or as a network alias. The gateway routes WebSocket traffic to that host, and Realtime derives its
+tenant (`realtime-dev`) from it. The staging rehearsal renamed the container without an alias, and
+every Realtime handshake failed with 503.
+
 ### R2 as the Storage backend
 
 Create a **private** R2 bucket. Do not enable `r2.dev` or public custom-domain access. Create an R2
