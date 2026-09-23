@@ -1,3 +1,4 @@
+import { uploadExtensions } from "@/features/shared/upload-rules";
 import {
   PLAYGROUND_FILE_MIMES,
   PLAYGROUND_MAX_FILE_BYTES,
@@ -6,22 +7,33 @@ import {
 } from "./playground-types";
 
 export const PLAYGROUND_MAX_ITEMS = 500;
+
+/** The message shown for a failed save, delete or upload attempt when the error carries none. */
+export const messageOf = (error: unknown) =>
+  error instanceof Error ? error.message : "The change could not be saved. Please try again.";
+
+// Each entry's extensions come from the shared `uploadExtensions` vocabulary
+// (`features/shared/upload-rules.ts`) rather than restating them; only the set of mime types
+// accepted here — the Playground board's own allow-list — is specific to this feature.
 export const playgroundFormats: Record<string, readonly string[]> = {
-  "image/png": ["png"],
-  "image/jpeg": ["jpg", "jpeg"],
-  "image/webp": ["webp"],
-  "image/gif": ["gif"],
-  "application/pdf": ["pdf"],
-  "text/plain": ["txt"],
-  "text/csv": ["csv"],
-  "application/msword": ["doc"],
-  "application/vnd.ms-excel": ["xls"],
-  "application/vnd.ms-powerpoint": ["ppt"],
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"],
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation": ["pptx"],
-  "application/rtf": ["rtf"],
-  "text/rtf": ["rtf"],
+  "image/png": uploadExtensions["image/png"],
+  "image/jpeg": uploadExtensions["image/jpeg"],
+  "image/webp": uploadExtensions["image/webp"],
+  "image/gif": uploadExtensions["image/gif"],
+  "application/pdf": uploadExtensions["application/pdf"],
+  "text/plain": uploadExtensions["text/plain"],
+  "text/csv": uploadExtensions["text/csv"],
+  "application/msword": uploadExtensions["application/msword"],
+  "application/vnd.ms-excel": uploadExtensions["application/vnd.ms-excel"],
+  "application/vnd.ms-powerpoint": uploadExtensions["application/vnd.ms-powerpoint"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    uploadExtensions["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+    uploadExtensions["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    uploadExtensions["application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+  "application/rtf": uploadExtensions["application/rtf"],
+  "text/rtf": uploadExtensions["text/rtf"],
 };
 export const playgroundFileAccept = [...new Set(Object.values(playgroundFormats).flat())]
   .map((extension) => `.${extension}`)

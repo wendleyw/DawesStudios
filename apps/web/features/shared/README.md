@@ -155,11 +155,12 @@ Consumers: `assets/assets-page`, `board/board-toolbar`, `brand/brand-assets`,
 
 ## Non-component modules
 
-| Module           | Purpose                                                                                                                                                     | Consumers                                                                                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `canvas-fit.ts`  | Viewport fit maths for the board and project canvases.                                                                                                      | `board/board-layout`, `projects/canvas-layout`                                                                                                                           |
-| `forms.css`      | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes.                                                                           | Loaded once globally by `app/layout.tsx`.                                                                                                                                |
-| `status-tone.ts` | The `StatusTone` vocabulary (`neutral`, `active`, `attention`, `complete`) and `statusToneClass()`, which turns a tone into the `.status-badge` class list. | `board/board-nodes`, `board/board-page`, `briefings/briefing-detail`, `briefings/briefings-page`, `credits/credits-page`, `projects/project-page`, `workspace/home-page` |
+| Module            | Purpose                                                                                                                                                                                                                                                              | Consumers                                                                                                                                                                                                                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `canvas-fit.ts`   | Viewport fit maths for the board and project canvases.                                                                                                                                                                                                               | `board/board-layout`, `projects/canvas-layout`                                                                                                                                                                                                                                                               |
+| `forms.css`       | The `stack-form`, `form-row`, `checkbox-label` and `form-actions` layout classes.                                                                                                                                                                                    | Loaded once globally by `app/layout.tsx`.                                                                                                                                                                                                                                                                    |
+| `status-tone.ts`  | The `StatusTone` vocabulary (`neutral`, `active`, `attention`, `complete`) and `statusToneClass()`, which turns a tone into the `.status-badge` class list.                                                                                                          | `board/board-nodes`, `board/board-page`, `briefings/briefing-detail`, `briefings/briefings-page`, `credits/credits-page`, `projects/project-page`, `workspace/home-page`                                                                                                                                     |
+| `upload-rules.ts` | The shared MIME/extension vocabulary (`uploadExtensions`), the per-path byte ceilings (`BUCKET_MAX_BYTES`, `ARTWORK_MAX_BYTES`, `VIDEO_MAX_BYTES`) mirrored from the Storage bucket migrations, and the allow-list/message/accept-attribute helpers built from them. | `assets/upload-file-dialog`, `board/board-data`, `brand/brand-asset-upload`, `brand/brand-model`, `briefings/briefing-attachments`, `playground/playground-model`, `playground/playground-types`, `projects/artwork-files`, `projects/media-client`, `projects/project-action-dialog`, `projects/video-pins` |
 
 `status-tone.ts` holds the vocabulary, not the mappings. Each domain maps its own
 enum onto a tone beside its label map — `projectStatusTones` in
@@ -169,6 +170,17 @@ enum onto a tone beside its label map — `projectStatusTones` in
 stylesheet selector and a new domain needs no new CSS. `neutral` is the badge's
 base appearance and adds no modifier class, which is why a badge with no status
 at all (`team/team-page.tsx`) still writes `className="status-badge"`.
+
+`upload-rules.ts` holds a vocabulary (`uploadExtensions`, keyed by MIME type), not one allow-list:
+each uploader declares its own subset (`standardUploadMimes`, `brandUploadMimes`,
+`videoUploadMimes`, `designUploadMimes`), so widening the vocabulary grants nothing on its own.
+Playground is the one consumer whose allow-list — `PLAYGROUND_IMAGE_MIMES` /
+`PLAYGROUND_FILE_MIMES` in `playground/playground-types.ts` — needs GIF, plain text/CSV, RTF and
+the legacy and OOXML Office document types; those extensions live only in `uploadExtensions`, kept
+apart from the buckets the other allow-lists mirror, and `playground/playground-model.ts` builds
+its own `playgroundFormats` map from that shared source rather than a second copy.
+`PLAYGROUND_MAX_FILE_BYTES` (25 MiB) stays declared in `playground-types.ts` rather than as a
+fourth shared ceiling here, since Storage's `playground-assets` bucket is the only one it bounds.
 
 ## Repository-wide invariant tests
 

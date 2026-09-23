@@ -81,6 +81,21 @@ export const uploadExtensions = {
   "application/pdf": ["pdf"],
   "video/mp4": ["mp4"],
   "video/webm": ["webm"],
+  // Playground-only: its board is the one uploader that accepts raster GIFs, plain text/CSV and
+  // office documents, so these extensions exist here — and only here — for
+  // `features/playground/playground-types.ts` to check its own allow-list against instead of
+  // restating each extension.
+  "image/gif": ["gif"],
+  "text/plain": ["txt"],
+  "text/csv": ["csv"],
+  "application/rtf": ["rtf"],
+  "text/rtf": ["rtf"],
+  "application/msword": ["doc"],
+  "application/vnd.ms-excel": ["xls"],
+  "application/vnd.ms-powerpoint": ["ppt"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"],
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": ["pptx"],
 } as const satisfies Record<string, readonly [string, ...string[]]>;
 
 export type UploadMime = keyof typeof uploadExtensions;
@@ -149,6 +164,17 @@ const mimeLabels: Record<UploadMime, string> = {
   "application/pdf": "PDF",
   "video/mp4": "MP4",
   "video/webm": "WebM",
+  "image/gif": "GIF",
+  "text/plain": "Text",
+  "text/csv": "CSV",
+  "application/rtf": "RTF",
+  "text/rtf": "RTF",
+  "application/msword": "Word",
+  "application/vnd.ms-excel": "Excel",
+  "application/vnd.ms-powerpoint": "PowerPoint",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "Word",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint",
 };
 
 /** The ceiling as it is shown to a person: `50` for 52428800. */

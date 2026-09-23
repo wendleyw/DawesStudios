@@ -18,10 +18,20 @@ mounted form and selected file; it reopens after Playground exits. Consumers own
 that round trip. This feature owns fullscreen framing, animation, state, validation, styles and
 data access.
 
+`playground-board.tsx` composes three colocated hooks for its cross-cutting concerns:
+`use-playground-close-lifecycle.ts` (the dialog's open/close animation phase, focus and
+body-scroll lock/restore), `use-playground-navigation-guard.ts` (the unsaved/busy same-tab
+navigation guard covering Escape, the close button, same-tab link clicks and the browser's
+reload/close prompt, all routed through one `requestClose` gate) and `use-playground-drop.ts`
+(the canvas drop target, file-picker input and the bounded 3-transfer upload queue). Item drafts,
+persistence, selection and the remove/download flows stay in `playground-board.tsx` itself, since
+nearly every action reads or writes them. `playground-node.tsx` renders a canvas item and
+`playground-viewport.tsx` keeps the selected item framed; both are unchanged by this split.
+
 ## Working on the canvas
 
 - Add notes and edit their title/text in the item editor. **Save note** persists the changes; unsaved copy remains visible until saved or explicitly discarded.
-- Add or drop multiple raster images, PDF, text/CSV, Word, Excel, PowerPoint and RTF documents. The shared backend contract in `playground-types.ts` allows up to 25 MiB per file. Invalid entries are listed individually while valid entries continue. The upload queue allows three transfers per batch.
+- Add or drop multiple raster images, PDF, text/CSV, Word, Excel, PowerPoint and RTF documents. `playground-types.ts` allows up to 25 MiB (`PLAYGROUND_MAX_FILE_BYTES`) per file, matching the effective `file_size_limit` (26214400 bytes) that `supabase/migrations/202609230003_playground.sql` sets on the `playground-assets` Storage bucket; `202609230007_project_playground.sql` only changes project scoping and does not touch that bucket. The board's own allow-list stays in `playground-types.ts`, typed as `satisfies readonly UploadMime[]`; its MIME/extension vocabulary is the shared one in `features/shared/upload-rules.ts`, extended there with the document types only this board accepts, and `playground-model.ts` builds `playgroundFormats` from that shared map rather than a second copy. Invalid entries are listed individually while valid entries continue. The upload queue allows three transfers per batch.
 - Drag and resize items. These operations save when the gesture finishes. The **Position and size** fields provide the same controls with a keyboard; save the item after editing those fields. Shift selection supports moving several items together. The canvas uses the shared 24-unit line grid with a slightly darker background and grid than the project beneath it. Scroll/trackpad gestures pan in both axes and pinching zooms. Zoom/fit buttons animate over 200 ms unless reduced motion is requested; direct dragging stays immediate. When the usable canvas changes size, a selected item that would be clipped is fitted back into view. Typing does not recenter the canvas.
 - Images use private signed previews. Documents remain download-only. **Download file** obtains a fresh signed download URL. **Remove item** asks for confirmation before deleting the item and its file.
 - Each board allows 500 active items. Title, note length, coordinates and dimensions are checked before saving and independently validated by the database.

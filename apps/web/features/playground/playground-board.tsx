@@ -4,9 +4,9 @@ import { CanvasBackground } from "@/features/shared/canvas-background";
 import { canvasNavigation } from "@/features/shared/canvas-navigation";
 import { CanvasControls } from "@/features/shared/canvas-controls";
 
-import { ReactFlow, type NodeChange, type ReactFlowInstance } from "@xyflow/react";
+import { ReactFlow, type NodeChange } from "@xyflow/react";
 import { FilePlus2, LockKeyhole, Plus, RefreshCw, X } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { FormError } from "@/features/shared/form-error";
 import {
@@ -23,21 +23,21 @@ import {
   isPlaygroundBusy,
   itemInput,
   mergePlaygroundDrafts,
+  messageOf,
   PLAYGROUND_MAX_ITEMS,
   playgroundFileAccept,
-  playgroundStorageName,
-  preparePlaygroundFile,
   validatePlaygroundItem,
   type PlaygroundDraft,
 } from "./playground-model";
 import { PlaygroundNode, type PlaygroundCanvasNode } from "./playground-node";
 import { PlaygroundViewport } from "./playground-viewport";
+import { usePlaygroundCloseLifecycle } from "./use-playground-close-lifecycle";
+import { usePlaygroundNavigationGuard } from "./use-playground-navigation-guard";
+import { usePlaygroundDrop } from "./use-playground-drop";
 import type { PlaygroundItemInput } from "./playground-types";
 import "./playground.css";
 
 const nodeTypes = { playgroundItem: PlaygroundNode };
-const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : "The change could not be saved. Please try again.";
 
 export function PlaygroundBoard({
   clientId,
@@ -53,32 +53,19 @@ export function PlaygroundBoard({
   const { database, profile } = useAuth();
   const query = usePlayground({ clientId, projectId });
   const invalidate = useInvalidatePlayground();
-  const layer = useRef<HTMLDialogElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
-  const canvas = useRef<HTMLDivElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
-  const flow = useRef<ReactFlowInstance<PlaygroundCanvasNode> | null>(null);
   const titleId = useId();
   const descriptionId = useId();
   const noteTextId = useId();
   const [drafts, setDrafts] = useState<Record<string, PlaygroundDraft>>({});
   const draftsRef = useRef(drafts);
   const locks = useRef(new Set<string>());
-  const objectUrls = useRef(new Set<string>());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState(new Set<string>());
   const [hiddenIds, setHiddenIds] = useState(new Set<string>());
-  const [issues, setIssues] = useState<{ id: string; name: string; message: string }[]>([]);
-  const [closeRequested, setCloseRequested] = useState(false);
-  const [navigationBlocked, setNavigationBlocked] = useState(false);
   const [closing, setClosing] = useState(false);
   const [removeRequested, setRemoveRequested] = useState(false);
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const [phase, setPhase] = useState<"entering" | "active" | "exiting">("entering");
-  const closeCompleted = useRef(false);
-  const restoreFocusAfterExit = useRef(false);
   const items = mergePlaygroundDrafts(query.data?.items ?? [], drafts, query.dataUpdatedAt).filter(
     (draft) => !hiddenIds.has(draft.item.id),
   );
@@ -86,11 +73,19 @@ export function PlaygroundBoard({
   const busy = closing || items.some(isPlaygroundBusy);
   const unsaved = items.filter((draft) => draft.status !== "saved");
   const boardId = query.data?.boardId;
-  const completeClose = useCallback(() => {
-    if (closeCompleted.current) return;
-    closeCompleted.current = true;
-    onClose();
-  }, [onClose]);
+
+  const { layer, heading, phase, beginExit, handleAnimationEnd } = usePlaygroundCloseLifecycle({
+    onClose,
+  });
+  const { closeRequested, setCloseRequested, navigationBlocked, requestClose } =
+    usePlaygroundNavigationGuard({
+      busy,
+      unsavedCount: unsaved.length,
+      phase,
+      beginExit,
+      locks,
+      layer,
+    });
 
   const writeDraft = useCallback((draft: PlaygroundDraft) => {
     draftsRef.current = { ...draftsRef.current, [draft.item.id]: draft };
@@ -123,89 +118,6 @@ export function PlaygroundBoard({
     }
     return fresh;
   }
-
-  useEffect(() => {
-    const element = layer.current;
-    if (!element) return;
-    const previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    // The native top layer escapes the project's canvas clipping and makes the covered app inert.
-    element.showModal();
-    document.body.style.overflow = "hidden";
-    heading.current?.focus({ preventScroll: true });
-    const urls = objectUrls.current;
-    return () => {
-      const focusStayedInLayer =
-        element.contains(document.activeElement) ||
-        (restoreFocusAfterExit.current && document.activeElement === document.body);
-      element.close();
-      document.body.style.overflow = previousOverflow;
-      if (focusStayedInLayer && previousFocus?.isConnected) {
-        // The project removes its underlay's inert state in the same unmount. A suspended
-        // upload dialog may already restore focus itself; never override that destination.
-        requestAnimationFrame(() => {
-          if (document.activeElement === document.body && previousFocus.isConnected)
-            previousFocus.focus({ preventScroll: true });
-        });
-      }
-      for (const url of urls) URL.revokeObjectURL(url);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (phase === "active") return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // animationend is authoritative; the timer also completes when CSS is unavailable or
-    // an accessibility preference cancels an animation before its event is dispatched.
-    const timer = window.setTimeout(
-      () => (phase === "exiting" ? completeClose() : setPhase("active")),
-      reducedMotion ? 0 : 300,
-    );
-    return () => window.clearTimeout(timer);
-  }, [phase, completeClose]);
-
-  useEffect(() => {
-    if (!unsaved.length) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [unsaved.length]);
-
-  useEffect(() => {
-    if (!busy && !unsaved.length) return;
-    const guardNavigation = (event: MouseEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      )
-        return;
-      const link =
-        event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
-      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self"))
-        return;
-      const destination = new URL(link.href, window.location.href);
-      if (
-        destination.origin !== window.location.origin ||
-        (destination.pathname === window.location.pathname &&
-          destination.search === window.location.search)
-      )
-        return;
-      event.preventDefault();
-      event.stopPropagation();
-      setNavigationBlocked(true);
-      setCloseRequested(true);
-    };
-    document.addEventListener("click", guardNavigation, true);
-    return () => document.removeEventListener("click", guardNavigation, true);
-  }, [busy, unsaved.length]);
 
   async function persist(id: string) {
     if (!boardId || locks.current.has(id)) return;
@@ -274,12 +186,18 @@ export function PlaygroundBoard({
     void persist(id);
   }
 
-  function origin() {
-    const bounds = canvas.current?.getBoundingClientRect();
-    return bounds && flow.current
-      ? flow.current.screenToFlowPosition({ x: bounds.left + 48, y: bounds.top + 48 })
-      : { x: 40, y: 40 };
-  }
+  const {
+    canvas,
+    fileInput,
+    flow,
+    setFlowInstance,
+    dragOver,
+    setDragOver,
+    issues,
+    setIssues,
+    origin,
+    addFiles,
+  } = usePlaygroundDrop({ boardId, itemCount: items.length, writeDraft, select, persist });
 
   function addNote() {
     if (!boardId || items.length >= PLAYGROUND_MAX_ITEMS) return;
@@ -300,53 +218,6 @@ export function PlaygroundBoard({
       status: "dirty",
     });
     select(id);
-  }
-
-  async function addFiles(files: File[], point = origin()) {
-    if (!boardId) return;
-    const added: string[] = [];
-    const rejected: typeof issues = [];
-    const count = items.length;
-    for (const original of files) {
-      try {
-        if (count + added.length >= PLAYGROUND_MAX_ITEMS)
-          throw new Error("This Playground holds 500 items. Remove an item before adding more.");
-        const file = preparePlaygroundFile(original);
-        const id = crypto.randomUUID();
-        const image = file.type.startsWith("image/");
-        const url = image ? URL.createObjectURL(file) : undefined;
-        if (url) objectUrls.current.add(url);
-        writeDraft({
-          item: {
-            id,
-            kind: image ? "image" : "file",
-            title: file.name.slice(0, 160),
-            body: "",
-            asset_path: `${boardId}/${id}/${playgroundStorageName(file.name)}`,
-            mime_type: file.type,
-            ...batchPosition(added.length, point),
-            width: 280,
-            height: image ? 220 : 170,
-          },
-          revision: null,
-          status: "queued",
-          file,
-          url,
-        });
-        added.push(id);
-      } catch (error) {
-        rejected.push({ id: crypto.randomUUID(), name: original.name, message: messageOf(error) });
-      }
-    }
-    setIssues((current) => [...current, ...rejected]);
-    if (added.length) select(added[0]);
-    // A bounded queue keeps a large drop from starting hundreds of simultaneous requests.
-    let cursor = 0;
-    await Promise.all(
-      Array.from({ length: Math.min(3, added.length) }, async () => {
-        while (cursor < added.length) await persist(added[cursor++]);
-      }),
-    );
   }
 
   async function removeItem(id: string): Promise<boolean> {
@@ -415,34 +286,6 @@ export function PlaygroundBoard({
       setDownloadBusy(false);
     }
   }
-
-  const beginExit = useCallback(() => {
-    restoreFocusAfterExit.current =
-      document.activeElement === document.body || !!layer.current?.contains(document.activeElement);
-    setPhase("exiting");
-  }, []);
-
-  const requestClose = useCallback(() => {
-    if (busy || locks.current.size || phase === "exiting") return;
-    if (unsaved.length) {
-      setNavigationBlocked(false);
-      setCloseRequested(true);
-    } else beginExit();
-  }, [busy, phase, unsaved.length, beginExit]);
-
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      const active = document.activeElement;
-      if (active !== document.body && !layer.current?.contains(active)) return;
-      // Saving can disable the focused button and move browser focus to body. Keep Escape
-      // routed through the same unsaved/busy guard even in that case.
-      event.preventDefault();
-      requestClose();
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [requestClose]);
 
   async function discardAndClose() {
     if (busy) return;
@@ -544,12 +387,7 @@ export function PlaygroundBoard({
           requestClose();
         }
       }}
-      onAnimationEnd={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (phase === "exiting" && event.animationName === "playground-layer-exit") completeClose();
-        if (phase === "entering" && event.animationName === "playground-layer-enter")
-          setPhase("active");
-      }}
+      onAnimationEnd={handleAnimationEnd}
       onSubmit={(event) => event.stopPropagation()}
     >
       <div className="playground-shell">
@@ -748,9 +586,7 @@ export function PlaygroundBoard({
               nodes={nodes}
               edges={[]}
               nodeTypes={nodeTypes}
-              onInit={(instance) => {
-                flow.current = instance;
-              }}
+              onInit={setFlowInstance}
               onNodesChange={nodesChange}
               onNodeClick={(event, node) => {
                 if (!event.shiftKey && !event.metaKey && !event.ctrlKey) select(node.id);
