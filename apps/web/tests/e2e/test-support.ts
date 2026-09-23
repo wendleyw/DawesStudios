@@ -67,3 +67,41 @@ export const sectionLabels: Record<string, string> = {
   messaging: "Messaging",
   ai: "Brand context",
 };
+
+/** Restore this viewer's prior board presentation after tests that switch views on existing data. */
+export async function preserveBoardPreference(email: string, clientId: string) {
+  const caller = await localCaller(email);
+  const account = await caller.auth.getUser();
+  if (account.error || !account.data.user)
+    throw new Error("Board preference authentication failed.");
+  const userId = account.data.user.id;
+  const saved = await localAdmin
+    .from("board_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (saved.error) throw saved.error;
+  return async () => {
+    const result = saved.data
+      ? await localAdmin.from("board_preferences").upsert(saved.data)
+      : await localAdmin
+          .from("board_preferences")
+          .delete()
+          .eq("user_id", userId)
+          .eq("client_id", clientId);
+    if (result.error) throw result.error;
+  };
+}
+
+export async function openBoardSearch(page: Page) {
+  const input = page.getByRole("textbox", { name: "Search projects", exact: true });
+  if (!(await input.isVisible()))
+    await page.getByRole("button", { name: "Search projects", exact: true }).click();
+  await expect(input).toBeVisible();
+  return input;
+}
+
+export async function setBoardSearch(page: Page, value: string) {
+  await (await openBoardSearch(page)).fill(value);
+}

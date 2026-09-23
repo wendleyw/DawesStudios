@@ -60,7 +60,7 @@ test("no surface logs a console error or throws, for any role", async ({ page })
     "/notifications",
     "/settings",
     "/settings/workspace",
-    "/settings/team",
+    "/team",
     "/settings/presets",
     "/settings/clients",
     "/settings/account",

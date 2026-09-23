@@ -202,7 +202,6 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
         "visual-style",
         "products",
         "assets",
-        "templates",
         "messaging",
         "ai",
       ]) {
@@ -311,7 +310,7 @@ test("failed brand registration retries one file and cancellation removes only i
   }
 });
 
-test("all seven template types share a private CTA editor without creating production or credit records", async ({
+test("legacy drafts retain their private editor without creating production or credit records", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -350,13 +349,27 @@ test("all seven template types share a private CTA editor without creating produ
     expect(beforeCredits.error).toBeNull();
     await signIn(page, credentials.agency);
     for (const template of templates) {
-      await page.goto(base + "/templates");
-      await expect(page.locator(".brand-template-card")).toHaveCount(7);
-      await page
-        .locator(".brand-template-card")
-        .filter({ has: page.getByRole("heading", { name: template.name, exact: true }) })
-        .getByRole("button", { name: "Make it yours", exact: true })
-        .click();
+      const source = await agency
+        .from("brand_templates")
+        .select("id,content")
+        .eq("client_id", fixture.clientId)
+        .eq("name", template.name)
+        .single();
+      expect(source.error).toBeNull();
+      const owner = await agency.auth.getUser();
+      const draft = await agency
+        .from("template_drafts")
+        .insert({
+          client_id: fixture.clientId,
+          template_id: source.data!.id,
+          owner_id: owner.data.user!.id,
+          name: template.name,
+          content: source.data!.content,
+        })
+        .select("id")
+        .single();
+      expect(draft.error).toBeNull();
+      await page.goto(base + "/drafts/" + draft.data!.id);
       await page.getByLabel("Call to action", { exact: true }).fill("Discover " + template.name);
       await page.getByLabel("Headline", { exact: true }).fill("Edited " + template.name);
       await page.getByLabel("Preview zoom", { exact: true }).selectOption("125");
@@ -370,8 +383,12 @@ test("all seven template types share a private CTA editor without creating produ
       await expect(page.locator(".brand-art-cta")).toHaveText("Discover " + template.name);
     }
     await page.goto(base + "/templates");
-    await page.getByRole("button", { name: "My drafts (7)", exact: true }).click();
-    await expect(page.locator(".brand-template-card")).toHaveCount(7);
+    await expect(page).toHaveURL(base + "/assets");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Brand sections" })
+        .getByRole("link", { name: "Templates", exact: true }),
+    ).toHaveCount(0);
     const projects = await agency.from("projects").select("id").eq("client_id", fixture.clientId);
     const afterCredits = await agency
       .from("credit_ledger")

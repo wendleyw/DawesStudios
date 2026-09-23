@@ -1,3 +1,4 @@
+import { openBoardSearch, setBoardSearch } from "./test-support";
 import { test, expect } from "@playwright/test";
 import {
   credentials,
@@ -6,6 +7,7 @@ import {
   localCaller,
   password,
   signIn,
+  preserveBoardPreference,
 } from "./test-support";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 
@@ -13,13 +15,16 @@ test("board views, filters, campaign validation, movement and scoped search", as
   test.setTimeout(60_000);
   const agency = await localAgency();
   const fixture = await createProductionFixture(agency);
+  const restoreBoard = await preserveBoardPreference(credentials.agency, fixture.clientId);
   const campaignTitle = `Acceptance campaign ${crypto.randomUUID()}`;
   try {
     const project = (await agency.from("projects").select("*").eq("id", fixture.projectId).single())
       .data!;
     await signIn(page, credentials.agency);
     await page.goto(`/clients/${fixture.clientId}/board`);
-    await page.getByLabel("Search projects").fill(project.title);
+    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+    await setBoardSearch(page, project.title);
+    await openBoardSearch(page);
     await expect(page.locator(".board-result-count")).toHaveText("1 project");
     const node = page.locator(`.react-flow__node[data-id="${fixture.projectId}"]`);
     const grip = node.locator(".board-card-grip");
@@ -45,7 +50,7 @@ test("board views, filters, campaign validation, movement and scoped search", as
       await agency.from("projects").select("board_position").eq("id", fixture.projectId).single()
     ).data!.board_position as { x: number; y: number };
     await page.reload();
-    await page.getByLabel("Search projects").fill(project.title);
+    await setBoardSearch(page, project.title);
     // board_position is stored relative to the campaign frame the card now lives in, so the
     // restored placement is verified as an offset from that frame rather than as a page coordinate.
     // The stored value is in canvas coordinates while boundingBox reports rendered pixels, and the
@@ -71,15 +76,16 @@ test("board views, filters, campaign validation, movement and scoped search", as
       page.locator(`.board-list a[href="/projects/${fixture.projectId}"]`),
     ).toBeVisible();
     await page.getByRole("button", { name: "Canvas view", exact: true }).click();
-    await page.getByRole("button", { name: "Kanban", exact: true }).click();
+    await page.getByRole("button", { name: "Kanban view", exact: true }).click();
     await expect(
       page.locator(`.kanban-board a[href="/projects/${fixture.projectId}"]`),
     ).toBeVisible();
     await expect(page.locator(".kanban-column")).toHaveCount(7);
-    await page.getByRole("button", { name: "Timeline", exact: true }).click();
+    await page.getByRole("button", { name: "Timeline view", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Project timeline", exact: true })).toBeVisible();
     const periodLabel = page.locator(".project-timeline header strong");
     await expect(periodLabel).toBeVisible();
-    // innerText reports "" while the frame is still switching back from Kanban.
+    // Wait for the live timeline period to be rendered.
     await expect(periodLabel).not.toHaveText("");
     const period = (await periodLabel.textContent())!.trim();
     // The arrows page by whichever scale is chosen, so they no longer name a fortnight.
@@ -92,6 +98,7 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await page.getByRole("group", { name: "Timeline scale" }).getByText("Quarter").click();
     await expect(periodLabel).not.toHaveText(period);
     await expect(page.locator(".timeline-lane-head .timeline-day")).toHaveCount(13);
+    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("delivered");
     await expect(page.getByRole("heading", { name: "No projects match." })).toBeVisible();
@@ -100,7 +107,7 @@ test("board views, filters, campaign validation, movement and scoped search", as
       .locator(".board-stack-notice")
       .getByRole("button", { name: "Clear filters" })
       .click();
-    await expect(page.getByLabel("Search projects")).toBeEmpty();
+    await expect(await openBoardSearch(page)).toBeEmpty();
     // The seven seeded SABRE projects plus this run's own fixture project.
     await expect(page.locator(".react-flow__node-project")).toHaveCount(8);
     await expect(node).toBeVisible();
@@ -115,6 +122,7 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await page.getByLabel("End date").fill("2026-10-30");
     await page.getByRole("button", { name: "Create campaign", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await openBoardSearch(page);
     await expect(page.locator(".board-result-count")).toHaveText("0 projects");
     expect(
       (
@@ -147,6 +155,7 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await page.locator(`.search-result[href="/projects/${fixture.projectId}"]`).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(project.title);
   } finally {
+    await restoreBoard();
     await cleanupTestProject(fixture.projectId);
     const cleanup = await localAdmin.from("campaigns").delete().eq("title", campaignTitle);
     expect(cleanup.error).toBeNull();
@@ -160,6 +169,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
   test.setTimeout(60_000);
   const agency = await localAgency();
   const fixture = await createProductionFixture(agency);
+  const restoreBoard = await preserveBoardPreference(credentials.agency, fixture.clientId);
   const clientContext = await browser.newContext();
   const client = await clientContext.newPage();
   try {
@@ -283,6 +293,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(client).toHaveURL(new RegExp(`/projects/${fixture.projectId}\\?channel=client$`));
   } finally {
     await clientContext.close();
+    await restoreBoard();
     await cleanupTestProject(fixture.projectId);
   }
 });
@@ -293,13 +304,15 @@ test("one click selects and two open the project, on the card and in the calenda
   test.setTimeout(60_000);
   const agency = await localAgency();
   const fixture = await createProductionFixture(agency);
+  const restoreBoard = await preserveBoardPreference(credentials.agency, fixture.clientId);
   try {
     const project = (await agency.from("projects").select("*").eq("id", fixture.projectId).single())
       .data!;
     await signIn(page, credentials.agency);
     const board = `/clients/${fixture.clientId}/board`;
     await page.goto(board);
-    await page.getByLabel("Search projects").fill(project.title);
+    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+    await setBoardSearch(page, project.title);
     const node = page.locator(`.react-flow__node[data-id="${fixture.projectId}"]`);
     const card = node.locator(".board-card-body");
 
@@ -317,7 +330,9 @@ test("one click selects and two open the project, on the card and in the calenda
     // The calendar lane obeys the same rule, so the board reads consistently wherever a project
     // appears.
     await page.goto(board);
-    await page.getByLabel("Search projects").fill(project.title);
+    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+    await setBoardSearch(page, project.title);
+    await page.getByRole("button", { name: "Timeline view", exact: true }).click();
     // The weekday header shares the lane class, so the project rows are the ones that are not it.
     const lane = page.locator(".timeline-lane:not(.timeline-lane-head)").first();
     await lane.click();
@@ -326,6 +341,7 @@ test("one click selects and two open the project, on the card and in the calenda
     await lane.dblclick();
     await page.waitForURL(`**/projects/${fixture.projectId}`);
   } finally {
+    await restoreBoard();
     await cleanupTestProject(fixture.projectId);
   }
 });

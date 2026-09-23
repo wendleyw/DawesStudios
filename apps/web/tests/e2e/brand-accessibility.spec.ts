@@ -13,7 +13,10 @@ test.use({ reducedMotion: "reduce" });
 
 async function openBrand(page: Page) {
   await signIn(page, credentials.agency);
-  const board = await page.locator(".client-nav").filter({ hasText: "SABRE" }).getAttribute("href");
+  const board = await page
+    .locator(".workspace-card")
+    .filter({ hasText: "SABRE" })
+    .getAttribute("href");
   if (!board) throw new Error("The SABRE workspace is unavailable.");
   return board.replace(/\/board$/, "/brand");
 }
@@ -59,7 +62,6 @@ test("brand sections remain accessible across desktop, tablet, and narrow mobile
     "visual-style",
     "products",
     "assets",
-    "templates",
     "messaging",
     "ai",
   ]) {
@@ -69,7 +71,6 @@ test("brand sections remain accessible across desktop, tablet, and narrow mobile
     await sections.getByRole("link", { name: sectionLabels[section], exact: true }).click();
     await expect(page).toHaveURL(new RegExp("/brand/" + section + "$"));
     await expect(sections.locator('[aria-current="page"]')).toHaveText(sectionLabels[section]);
-    if (section === "templates") await expect(page.locator(".brand-template-card")).toHaveCount(7);
     if (section === "assets")
       await expect(page.getByRole("button", { name: "Add asset", exact: true })).toBeVisible();
     await verifySurface(page, section + "-desktop");
@@ -132,13 +133,28 @@ test("personal drafts persist privately and brand assets upload, filter, and dow
   const name = "Acceptance brand " + crypto.randomUUID();
   let draftId: string | undefined;
   try {
-    await page.goto(base + "/templates");
-    await expect(page.locator(".brand-template-card")).toHaveCount(7);
-    await page.getByLabel("Template category").selectOption("Social");
-    await expect(page.locator(".brand-template-card")).toHaveCount(1);
-    await page.getByRole("button", { name: "Make it yours", exact: true }).click();
-    await expect(page).toHaveURL(/\/brand\/drafts\//);
-    draftId = page.url().split("/").at(-1);
+    const template = await agency
+      .from("brand_templates")
+      .select("id,content")
+      .eq("client_id", clientId)
+      .limit(1)
+      .single();
+    expect(template.error).toBeNull();
+    const owner = await agency.auth.getUser();
+    const draft = await agency
+      .from("template_drafts")
+      .insert({
+        client_id: clientId,
+        template_id: template.data!.id,
+        owner_id: owner.data.user!.id,
+        name,
+        content: template.data!.content,
+      })
+      .select("id")
+      .single();
+    expect(draft.error).toBeNull();
+    draftId = draft.data!.id;
+    await page.goto(base + "/drafts/" + draftId);
     await page.getByLabel("Draft name", { exact: true }).fill(name);
     await page.getByLabel("Headline", { exact: true }).fill("A persistent private exploration.");
     await page.getByRole("button", { name: "Save draft", exact: true }).click();

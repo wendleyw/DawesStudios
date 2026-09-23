@@ -87,6 +87,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     await expect(page.getByRole("combobox", { name: "Campaign", exact: true })).toHaveValue("");
     await page.getByRole("button", { name: "Review briefing" }).click();
     await expect(page.locator(".briefing-validation")).toContainText("campaign");
+    await page.getByText("Search campaigns", { exact: true }).click();
     await page.getByLabel("Find a campaign").fill("No campaign matches this search");
     await expect(
       page.getByText("No matching campaigns. Create one below.", { exact: true }),
@@ -103,7 +104,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     await page.getByRole("button", { name: "Instagram Story", exact: true }).click();
     await page.getByLabel("Custom name").nth(0).fill("Collection launch reel");
     await page.getByLabel("Custom name").nth(1).fill("Story cutdown");
-    await page.getByLabel("Creative scope").nth(1).selectOption("adaptation");
+    await page.getByLabel("Design approach").nth(1).selectOption("adaptation");
     await page.getByRole("button", { name: "Instagram Reels", exact: true }).click();
     await page.getByLabel("Custom name").nth(2).fill("Second audience variation");
     await page.getByLabel("Quantity").nth(2).fill("2");
@@ -182,7 +183,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     ).toBeVisible();
     await page.reload();
     await expect(page.getByLabel("Project title")).toHaveValue(title);
-    await expect(page.getByLabel("Creative scope").nth(1)).toHaveValue("adaptation");
+    await expect(page.getByLabel("Design approach").nth(1)).toHaveValue("adaptation");
     await expect(page.getByLabel("Video duration")).toHaveValue("30 seconds");
     await expect(page.getByLabel("Target due date")).toHaveValue("2026-10-12");
     const staleContext = await browser.newContext();
@@ -585,7 +586,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       ).status(),
     ).toBe(403);
     await signIn(page, credentials.agency);
-    await page.goto("/settings/team");
+    await page.goto("/team");
     await page.getByRole("button", { name: "Invite someone", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Email address").fill(email);

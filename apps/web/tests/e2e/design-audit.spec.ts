@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { writeFileSync } from "node:fs";
 import { credentials, localAdmin, localAgency, screenshotDirectory, signIn } from "./test-support";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
+import { boardViews } from "../../features/board/board-views";
 
 test.use({ reducedMotion: "reduce" });
 
@@ -51,91 +52,116 @@ test("representative task surfaces pass responsive layout and accessibility chec
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Help & support", exact: true })).not.toBeVisible();
   const boardPath = await page
-    .locator(".client-nav")
+    .locator(".workspace-card")
     .filter({ hasText: "SABRE" })
     .getAttribute("href");
   if (!boardPath) throw new Error("The SABRE workspace is unavailable.");
   const clientBase = boardPath.replace(/\/board$/, "");
-  for (const width of [1600, 390]) {
-    await page.setViewportSize({ width, height: width === 1600 ? 1000 : 844 });
-    for (const [name, route] of [
-      ["home", "/home"],
-      ["search", "/search"],
-      ["notifications", "/notifications"],
-      ["account", "/settings/account"],
-      ["settings", "/settings"],
-      ["briefings", clientBase + "/briefings"],
-      ["new-briefing", clientBase + "/briefings/new"],
-      ["reviews", clientBase + "/reviews"],
-      ["assets", clientBase + "/assets"],
-      ["credits", clientBase + "/credits"],
-    ]) {
-      await page.goto(route);
+  // Campaigns can be added without changing the canonical project fixture. Verify that the
+  // canvas renders the live authorized set rather than assuming an old seed count.
+  const agency = await localAgency();
+  const campaigns = await agency
+    .from("campaigns")
+    .select("id")
+    .eq("client_id", clientBase.split("/").at(-1)!);
+  expect(campaigns.error).toBeNull();
+  const campaignCount = campaigns.data!.length;
+  const viewer = await agency.auth.getUser();
+  expect(viewer.error).toBeNull();
+  const clientId = clientBase.split("/").at(-1)!;
+  const userId = viewer.data.user!.id;
+  const saved = await localAdmin
+    .from("board_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("client_id", clientId)
+    .maybeSingle();
+  expect(saved.error).toBeNull();
+  try {
+    for (const width of [1600, 390]) {
+      await page.setViewportSize({ width, height: width === 1600 ? 1000 : 844 });
+      for (const [name, route] of [
+        ["home", "/home"],
+        ["search", "/search"],
+        ["notifications", "/notifications"],
+        ["account", "/settings/account"],
+        ["settings", "/settings"],
+        ["briefings", clientBase + "/briefings"],
+        ["new-briefing", clientBase + "/briefings/new"],
+        ["reviews", clientBase + "/reviews"],
+        ["assets", clientBase + "/assets"],
+        ["credits", clientBase + "/credits"],
+      ]) {
+        await page.goto(route);
+        await expect(
+          page.locator(name === "new-briefing" ? ".service-grid" : "#main-content h1").first(),
+        ).toBeVisible();
+        await capture(page, name);
+      }
+      await page.goto(boardPath);
+      await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+      await expect(page.locator(".react-flow__node-project")).toHaveCount(7);
+      await expect(page.locator(".react-flow__node-campaign")).toHaveCount(campaignCount);
+      await capture(page, "board-canvas");
+      for (const view of boardViews.filter((item) => item.id !== "canvas")) {
+        await page.getByRole("button", { name: view.label, exact: true }).click();
+        await expect(page.getByRole("button", { name: view.label, exact: true })).toBeEnabled();
+        await capture(page, `board-${view.id}`);
+      }
+      await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+      await page.locator(".react-flow__node-project .board-card-body").first().dblclick();
+      await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
+      await expect(page.locator(".design-preview").first()).toBeVisible();
+      await capture(page, "project");
+      await page.locator(".design-preview-artwork").first().dblclick();
+      await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
+      await expect(page.locator(".artwork-stage")).toBeVisible();
+      await page.getByRole("button", { name: "Add pin", exact: true }).click();
+      const artwork = page.getByRole("button", {
+        name: "Place a pin on this artwork. Press Enter for the center.",
+        exact: true,
+      });
+      await artwork.focus();
+      await page.keyboard.press("Enter");
       await expect(
-        page.locator(name === "new-briefing" ? ".service-grid" : "#main-content h1").first(),
+        page.getByRole("button", { name: "Remove pending pin", exact: true }),
       ).toBeVisible();
-      await capture(page, name);
+      await page
+        .getByLabel("Your message", { exact: true })
+        .fill(
+          "A long feedback draft checks reading and editing without submitting a message. ".repeat(
+            20,
+          ),
+        );
+      await capture(page, "design-pinned-draft");
     }
-    await page.goto(boardPath);
-    // The stacked canvas is the default reading surface; phones still open the table.
-    await expect(
-      page.getByRole("button", { name: width === 390 ? "List view" : "Canvas view", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
-    await expect(page.locator(".react-flow__node-project")).toHaveCount(7);
-    await expect(page.locator(".react-flow__node-campaign")).toHaveCount(3);
-    await capture(page, "board-canvas");
-    await capture(page, "board-timeline");
-    await page.getByRole("button", { name: "Kanban", exact: true }).click();
-    await expect(page.locator(".kanban-column")).toHaveCount(7);
-    await capture(page, "board-kanban");
-    await page.getByRole("button", { name: "Timeline", exact: true }).click();
-    await page.getByRole("button", { name: "List view", exact: true }).click();
-    await capture(page, "board-list");
-    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
-    await page.locator(".board-card-body").first().dblclick();
-    await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
-    await expect(page.locator(".design-preview").first()).toBeVisible();
-    await capture(page, "project");
-    await page.locator(".design-preview").first().click();
-    await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
-    await expect(page.locator(".artwork-stage")).toBeVisible();
-    await page.getByRole("button", { name: "Add pin", exact: true }).click();
-    const artwork = page.getByRole("button", {
-      name: "Place a pin on this artwork. Press Enter for the center.",
-      exact: true,
-    });
-    await artwork.focus();
-    await page.keyboard.press("Enter");
-    await expect(
-      page.getByRole("button", { name: "Remove pending pin", exact: true }),
-    ).toBeVisible();
-    await page
-      .getByLabel("Your message", { exact: true })
-      .fill(
-        "A long feedback draft checks reading and editing without submitting a message. ".repeat(
-          20,
-        ),
-      );
-    await capture(page, "design-pinned-draft");
+    for (const width of [1024, 1000, 768]) {
+      await page.setViewportSize({ width, height: width === 768 ? 1024 : 800 });
+      await page.goto(boardPath);
+      await page.getByRole("button", { name: "Canvas view", exact: true }).click();
+      await expect(page.locator(".react-flow__node-project")).toHaveCount(7);
+      await capture(page, "board-canvas");
+      await page.locator(".react-flow__node-project .board-card-body").first().dblclick();
+      await expect(page.locator(".design-preview").first()).toBeVisible();
+      await capture(page, "project");
+      await page.locator(".design-preview-artwork").first().dblclick();
+      await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
+      await capture(page, "design-viewer");
+    }
+    expect(
+      report.surfaces.filter((item) => item.overflow || item.violations.length),
+      "See docs/verification/design-audit.json for precise findings",
+    ).toEqual([]);
+  } finally {
+    const restored = saved.data
+      ? await localAdmin.from("board_preferences").upsert(saved.data)
+      : await localAdmin
+          .from("board_preferences")
+          .delete()
+          .eq("user_id", userId)
+          .eq("client_id", clientId);
+    expect(restored.error).toBeNull();
   }
-  for (const width of [1024, 1000, 768]) {
-    await page.setViewportSize({ width, height: width === 768 ? 1024 : 800 });
-    await page.goto(boardPath);
-    await page.getByRole("button", { name: "Canvas view", exact: true }).click();
-    await expect(page.locator(".react-flow__node-project")).toHaveCount(7);
-    await capture(page, "board-canvas");
-    await page.locator(".board-card-body").first().dblclick();
-    await expect(page.locator(".design-preview").first()).toBeVisible();
-    await capture(page, "project");
-    await page.locator(".design-preview").first().click();
-    await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
-    await capture(page, "design-viewer");
-  }
-  expect(
-    report.surfaces.filter((item) => item.overflow || item.violations.length),
-    "See docs/verification/design-audit.json for precise findings",
-  ).toEqual([]);
 });
 
 test("two versions with long notes remain separated on the project canvas", async ({ page }) => {
