@@ -9,12 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      board_preferences: {
+        Row: {
+          active_view: string | null
+          client_id: string
+          user_id: string
+          visible_widgets: string[]
+        }
+        Insert: {
+          active_view?: string | null
+          client_id: string
+          user_id?: string
+          visible_widgets?: string[]
+        }
+        Update: {
+          active_view?: string | null
+          client_id?: string
+          user_id?: string
+          visible_widgets?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_asset_folders: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_asset_folders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_assets: {
         Row: {
           category: string
           client_id: string
           created_at: string
           description: string
+          folder_id: string | null
           id: string
           mime_type: string | null
           name: string
@@ -26,6 +92,7 @@ export type Database = {
           client_id: string
           created_at?: string
           description?: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name: string
@@ -37,6 +104,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           description?: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name?: string
@@ -50,6 +118,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_assets_folder_client_fkey"
+            columns: ["folder_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "brand_asset_folders"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -955,12 +1030,115 @@ export type Database = {
           },
         ]
       }
+      playground_boards: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          project_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playground_boards_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playground_boards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playground_items: {
+        Row: {
+          asset_path: string | null
+          board_id: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          height: number
+          id: string
+          kind: string
+          mime_type: string | null
+          revision: number
+          title: string
+          updated_at: string
+          width: number
+          x: number
+          y: number
+        }
+        Insert: {
+          asset_path?: string | null
+          board_id: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          height: number
+          id: string
+          kind: string
+          mime_type?: string | null
+          revision?: number
+          title: string
+          updated_at?: string
+          width: number
+          x: number
+          y: number
+        }
+        Update: {
+          asset_path?: string | null
+          board_id?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          height?: number
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          revision?: number
+          title?: string
+          updated_at?: string
+          width?: number
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playground_items_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "playground_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           display_name: string
           id: string
+          removal_completed_at: string | null
+          removed_at: string | null
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
@@ -968,6 +1146,8 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
+          removal_completed_at?: string | null
+          removed_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
@@ -975,6 +1155,8 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          removal_completed_at?: string | null
+          removed_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
@@ -1499,6 +1681,15 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_playground_item: {
+        Args: {
+          p_asset_path?: string
+          p_board_id: string
+          p_expected_revision: number
+          p_item_id: string
+        }
+        Returns: string
+      }
       discard_prepared_assets: {
         Args: { p_paths: string[] }
         Returns: string[]
@@ -1531,6 +1722,16 @@ export type Database = {
           status: Database["public"]["Enums"]["briefing_status"]
           title: string
           updated_at: string
+        }[]
+      }
+      get_playground_board: {
+        Args: { p_client_id: string; p_project_id?: string }
+        Returns: string
+      }
+      get_playground_cleanup: {
+        Args: { p_board_id: string }
+        Returns: {
+          path: string
         }[]
       }
       list_stale_sanitized_assets: {
@@ -1630,6 +1831,14 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: undefined
       }
+      save_board_view: {
+        Args: { p_active_view: string; p_client_id: string }
+        Returns: string
+      }
+      save_board_widgets: {
+        Args: { p_client_id: string; p_visible_widgets: string[] }
+        Returns: string[]
+      }
       save_briefing: {
         Args: {
           p_briefing_id?: string
@@ -1662,6 +1871,10 @@ export type Database = {
           p_service_type: string
           p_title?: string
         }
+        Returns: Json
+      }
+      save_playground_item: {
+        Args: { p_board_id: string; p_expected_revision?: number; p_item: Json }
         Returns: Json
       }
       save_service_preset: {

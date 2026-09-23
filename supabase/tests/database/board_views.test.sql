@@ -1,0 +1,51 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+-- All fixture mutations are rolled back, including existing personal preferences.
+delete from public.board_preferences;
+select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
+set local role authenticated;
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'calendar'),'calendar','Agency can choose Calendar');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'timeline'),'timeline','Agency can choose Timeline');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'kanban'),'kanban','Agency can choose Kanban');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'list'),'list','Agency can choose List');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'canvas'),'canvas','Agency can choose Canvas');
+select is((select count(*)::int from public.board_preferences),1,'Retries maintain one preference');
+select is(public.save_board_view(md5('dawes:client-org-2')::uuid,'calendar'),'calendar','Client scopes have separate choices');
+select throws_ok($$select public.save_board_view(md5('dawes:client-org-1')::uuid,'unknown')$$,'23514',null,'Unknown views are rejected');
+select is(public.save_board_widgets(md5('dawes:client-org-1')::uuid,array['kanban']),array['kanban'],'Legacy writer remains compatible');
+select is((select active_view from public.board_preferences where client_id=md5('dawes:client-org-1')::uuid),'canvas','Legacy widget changes preserve the selected view');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'timeline'),'timeline','New view writer works on a legacy row');
+select is((select visible_widgets from public.board_preferences where client_id=md5('dawes:client-org-1')::uuid),array['kanban'],'View changes preserve legacy data');
+select throws_ok($$update public.board_preferences set user_id=md5('dawes:client-1')::uuid$$,'42501',null,'Owner cannot be reassigned');
+select throws_ok($$update public.board_preferences set client_id=md5('dawes:client-org-3')::uuid$$,'42501',null,'Scope cannot be reassigned');
+
+select set_config('request.jwt.claim.sub',md5('dawes:client-1')::uuid::text,true);
+select is((select count(*)::int from public.board_preferences),0,'Clients cannot read agency choices');
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'calendar'),'calendar','Client can save an independent view');
+select throws_ok($$select public.save_board_view(md5('dawes:client-org-2')::uuid,'canvas')$$,'42501',null,'Client cannot address another tenant');
+select throws_ok($$insert into public.board_preferences(user_id,client_id,active_view) values(md5('dawes:agency')::uuid,md5('dawes:client-org-3')::uuid,'list')$$,'42501',null,'Owner spoofing is rejected');
+with changed as (update public.board_preferences set active_view='list' where user_id=md5('dawes:agency')::uuid returning user_id)
+select is((select count(*)::int from changed),0,'Client cannot alter an agency view');
+
+select set_config('request.jwt.claim.sub',md5('dawes:designer-1')::uuid::text,true);
+select is(public.save_board_view(md5('dawes:client-org-1')::uuid,'kanban'),'kanban','Assigned designer can save a view');
+reset role;
+delete from public.project_assignments where designer_id=md5('dawes:designer-1')::uuid;
+set local role authenticated;
+select is((select count(*)::int from public.board_preferences),0,'Revoked designer cannot read preferences');
+select throws_ok($$select public.save_board_view(md5('dawes:client-org-1')::uuid,'calendar')$$,'42501',null,'Revoked designer cannot save a view');
+reset role;
+update public.profiles set removed_at=now() where id=md5('dawes:client-1')::uuid;
+select set_config('request.jwt.claim.sub',md5('dawes:client-1')::uuid::text,true);
+set local role authenticated;
+select is((select count(*)::int from public.board_preferences),0,'Removed client cannot read preferences');
+select throws_ok($$select public.save_board_view(md5('dawes:client-org-1')::uuid,'calendar')$$,'42501',null,'Removed client cannot save a view');
+reset role;
+set local role anon;
+select throws_ok($$select public.save_board_view(md5('dawes:client-org-1')::uuid,'calendar')$$,'42501',null,'Anonymous users cannot save views');
+reset role;
+select ok(not has_function_privilege('anon','public.save_board_view(uuid,text)','EXECUTE'),'Anonymous execute permission is revoked');
+select * from finish();
+rollback;

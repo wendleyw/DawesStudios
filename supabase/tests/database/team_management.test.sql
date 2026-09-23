@@ -42,7 +42,7 @@ select throws_ok(
 -- which key maps to which seeded row the way a hand-computed md5('dawes:client-N') can be.
 select throws_ok(
   $$select public.set_team_member_role((select id from public.profiles where role='client' limit 1),'agency')$$,
-  'P0001', 'Target is not a team member',
+  'P0001', 'Target is not an active team member',
   'Refuses a client profile as a role-change target'
 );
 select throws_ok(
