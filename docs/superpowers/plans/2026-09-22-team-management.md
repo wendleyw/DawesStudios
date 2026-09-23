@@ -16,6 +16,19 @@ pgTAP, Playwright.
 
 **Spec:** `docs/superpowers/specs/2026-09-22-team-management-design.md`
 
+## Execution reconciliation (2026-09-23)
+
+The current implementation follows the [amended design](../specs/2026-09-22-team-management-design.md). The code templates below are the original planning record, not scripts to replay over the completed files. In particular, the original removal implementation did not revoke an agency's database access, its last-agency count included banned accounts, and the seeded-account removal test lacked cleanup; those approaches were replaced.
+
+| Task | Current state |
+| --- | --- |
+| 1–4: RPCs, removal API, Team data and UI | Implemented in the earlier commits and hardened with durable removal markers, active-agency authorization and retryable Auth completion |
+| 5: Navigation | Implemented: canonical `/team`, legacy redirect, separate sidebar destination, no Settings tab |
+| 6: Browser scenarios | Implemented and executed: 9 Team tests pass against rebuilt local containers; fixtures are disposable |
+| Final verification | See the shared checkpoint for the full gate, current test totals and any remaining issue; no commit or release is implied |
+
+The original unchecked steps below include historical commit commands. Current work is intentionally uncommitted; do not infer missing implementation from those old checkboxes or mark a commit step done without a commit.
+
 ## Global Constraints
 
 - Every new `security definer` function starts with `perform private.assert_agency();` and ends with

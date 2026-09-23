@@ -18,19 +18,19 @@ The following paths are proposed canonical routes and may be consolidated during
 | `/auth/recovery` | Yes | Yes | Yes | Request a real recovery email; `?mode=update` completes the verified password reset. |
 | `/auth/invite?token=:token` | Invitee | Invitee | Invitee | Validate a time-limited, single-use invitation before joining. |
 | `/home` | Studio overview | Redirect to own client board | My work | [Home and global actions](../ref/01-agencia/01-home-e-globais/README.md). |
-| `/clients/:clientId/board` | Workspace clients | Own client | Assigned work only | [Board](../ref/01-agencia/02-board/README.md); Canvas/List and Timeline/Kanban planning. |
+| `/clients/:clientId/board` | Workspace clients | Own client | Assigned work only | [Board](../ref/01-agencia/02-board/README.md); Five icon views: Canvas, List, Timeline, Kanban and Calendar. |
 | `/clients/:clientId/briefings` | Read/create | Read/create | Assigned accepted only | [Briefing list](../ref/01-agencia/04-briefings/01-lista/README.md); All, Draft, With the studio (awaiting review and budget confirmed), In progress. |
-| `/clients/:clientId/briefings/new` | Yes | Yes | No | Start a new Type → Details → Review flow with no inherited campaign. |
+| `/clients/:clientId/briefings/new` | Yes | Yes | No | Start a new Service → Details → Review flow with no inherited campaign; in-app links open a modal, direct loads use the full page. |
 | `/clients/:clientId/briefings/:briefingId` | Read/review/accept | Read own client scope | Assigned accepted direction; no budget | Draft, submitted, quoted, insufficient balance, accepted result. |
 | `/clients/:clientId/briefings/:briefingId/edit` | Authorized drafts | Own authorized drafts | No | Resume a persisted draft; validate every step. |
-| `/projects/:projectId` | Full project | Sanitized project and publications | Assigned production | [Project canvas and inspector](../ref/01-agencia/03-projeto/README.md). |
+| `/projects/:projectId` | Full project | Sanitized project and publications | Assigned production | [Project canvas and inspector](../ref/01-agencia/03-projeto/README.md), with project/role Playground layer. |
 | `/clients/:clientId/assets` | All project files | Published files | Assigned project files | Files, as the navigation, heading and error state all name it ([reference](../ref/01-agencia/05-assets/README.md)); All/Approved, upload, detail/download. |
 | `/clients/:clientId/reviews` | Agency and client review management | Own published reviews | No separate page | [Reviews](../ref/01-agencia/06-reviews/README.md); Waiting for review/Approved. Designers submit inside the assigned project. |
 | `/clients/:clientId/brand/:section` | Read/edit | Read | Read when assigned to client work | Ten Brand Hub sections listed below. |
 | `/clients/:clientId/brand/drafts/:draftId` | Own draft | Own draft | Own draft | Personal template editor; persistent and isolated from projects, billing, and other owners. |
 | `/clients/:clientId/credits` | Read, quote, authorized adjustments | Read, request additional credits | No | [Credits](../ref/01-agencia/08-creditos/README.md); Balance & activity / Client report. |
 | `/settings/workspace` | Agency | No | No | Settings → Studio: studio name, and the timezone every instant in the product is rendered in. |
-| `/settings/team` | Agency | No | No | Team memberships, invitations, assignment availability. |
+| `/team` | Agency | No | No | Team membership, invitations, role changes, removal and active workload. `/settings/team` redirects here. |
 | `/settings/clients` | Agency | No | No | Client list and new client creation. |
 | `/settings/presets` | Agency | No | No | Versioned service estimates and timing; canonical formats/questions remain unchanged. |
 | `/settings/account` | Own account | Own account | Own account | Display name and real Auth password changes. |
@@ -43,13 +43,15 @@ Use query parameters for shareable, validated navigation state: board view/statu
 
 Board pan/zoom, inspector width, expanded sections, pending pin, unsent comment, and a template editor's current zoom are view state. Persist drafts to the signed-in owner when appropriate; clear or partition cached state when the authenticated user, workspace, client, project, design, or channel changes. A restored draft never crosses those scopes.
 
+The active board view is saved per authenticated user and client in `board_preferences.active_view`. Playground opens as a fullscreen native dialog sliding down over the entire viewport, including the sidebar and project header, without a separate route. Covered app navigation stays inert until close. Saved items persist per project/role; unfinished local drafts remain in memory and prompt before explicit close or ordinary app navigation. Opening from the design-upload dialog temporarily closes that dialog while retaining its mounted form and selected file; **Back to upload** reopens it after the layer slides up.
+
 Selecting a project version/design keeps the user inside the project canvas. The right inspector contains comments for that design and channel. Previous/Next design traverses only the same version's designs. Back to versions restores the project overview. Sharing creates a link to an authorized client destination; the link does not grant public access to private work.
 
 ## Shell and global actions
 
 | Surface | Required behavior |
 |---|---|
-| Sidebar | Studio branding, authorized client navigation, current client modules, collapse/expand, responsive navigation, active-route state, and keyboard skip-to-content. |
+| Sidebar | Studio branding, authorized client switching, global destinations, collapse/expand, responsive navigation, active-route state, and keyboard skip-to-content. |
 | Agency home | Cross-client overview with work requiring attention and links into projects; all ten seed clients are reachable. |
 | Client home | Own board; no workspace client directory, designer identity, internal assignments, administrative settings, or internal review counts. Personal account settings remain available. |
 | Designer home | My work and assigned projects; no other designers' unassigned work or client billing. |
@@ -62,7 +64,11 @@ Selecting a project version/design keeps the user inside the project canvas. The
 
 ## Board and project actions
 
-Board combines an xyflow campaign/project canvas with a collapsible planning frame. The frame offers Timeline with Previous week, Next week, and Today, plus Kanban with valid role-specific transitions. A list view shows the same scoped records. Search, status filters, Pan/Select, zoom, Fit to screen, and open-project actions work consistently. New campaign accepts a name and optional goals/dates; new project enters the briefing flow. An explicitly invoked campaign action may identify the intended campaign, but the new briefing still requires the user to confirm its campaign in Details.
+Board offers five mutually exclusive icon views: Canvas, List, Timeline, Kanban and Calendar. The selected view persists per viewer/client. Floating identity/quarter and signed-in profile cards sit at the upper left/right. Visible text links beside the quarter show all client destinations, with an underline on the active section. These links also appear at the top of projects and other client pages, never duplicated in the sidebar; global actions and client switching remain there. All periods is the default; a panel shows year arrows and all four quarters without scrolling. Q1–Q4 filter overlapping project dates and retain undated work. A floating left toolbar holds board actions; on small or short screens it moves to the bottom, and search/filters use compact panels. Canvas contains campaign/project frames only. Timeline supports period navigation and three scales; Kanban groups the same projects by status without arbitrary status transitions; Calendar shows monthly due dates, undated work and a narrow-screen agenda. Search, campaign/status filters, selection and project destinations are shared across views. Canvas continues behind the floating header; structured views reserve space below it and contain their own scrolling. Campaign creation remains in Canvas; new work enters the briefing flow with explicit campaign confirmation. See the [board feature](../../apps/web/features/board/README.md).
+
+Project creation appears as Add design cards beside editable artwork and Add version cards below each deliverable’s version stack. The agency’s shared-view cards start work in Working files; they never edit published snapshots. Actual client accounts retain review actions without production creation controls.
+
+Every role with access to a project can open its own role's **Playground**. Its canvas supports notes, multiple image/document uploads, download, drag, resize, pan and zoom, with keyboard position/size fields. It is a separate brainstorming surface: no production upload, publication, credit debit or cross-role sharing results from adding an item. Saved content survives closing and reload; failed saves/removals expose recovery actions. The [Playground contract](playground-and-board-widgets.md) defines its scope and acceptance evidence.
 
 Project columns group deliverables by format and stack versions vertically. Each version can contain multiple designs. The inspector exposes Properties, Briefing, Brand, Deliverables & credits, Files & delivery, Activity, and Messages according to permissions. Project properties include permitted status transitions, start/due dates, and internal designer assignment. Credits and assignment are never returned to a Designer and Client respectively.
 
@@ -72,17 +78,17 @@ Named dialogs/actions: Add design, New version with notes, Send to agency, Publi
 
 | Step | Sections and actions |
 |---|---|
-| Type | Paginated catalog of all 20 services; select a single primary service; show suggested formats, estimate and timing; Previous/Next types; Continue. Do not restore the removed introductory heading, search, or filter row. |
-| Details / Campaign | Choose existing campaign with search/no results or create one with name/optional goal; explicitly confirm campaign and enter project title. |
-| Details / Deliverables | Choose allowed format badges; add/remove a deliverable or named same-format variation; edit custom name, valid dimensions/units, quantity, and Original/Adaptation scope. |
+| Service | Search all 20 services and filter by category; select one primary service with a visible selection summary, estimate and timing; Continue. |
+| Details / Project basics | Enter project title; explicitly choose an existing campaign or create one with name/optional goal; expand Search campaigns when needed. |
+| Details / Deliverables | Choose allowed format badges; add/remove a deliverable or named same-format variation; edit custom name, quantity and Design approach; expand prefilled Size settings for dimension changes. |
 | Details / Briefing | Overview and Goals; optional Audience, Messaging, Resources, Inspirations, Style, Notes; service-specific questions; Brand Hub defaults with explicit project overrides and restore-defaults action. |
-| Details / Timing & files | Optional target date and attachments; add/remove files; reject unsupported or oversized files with actionable feedback. |
-| Review | Review campaign, service, deliverables, direction, date, and files; Back/Edit/Change type; Save draft or Send briefing. Sending does not debit credits. |
+| Details / Timing & files | Optional target date and attachments; Save draft to add files, then add/remove files; reject unsupported or oversized files with actionable feedback. |
+| Review | Review campaign, service, deliverables, direction, date, and files; Back/Edit/Change service; Save draft or Send briefing. Sending does not debit credits. |
 | Agency review | Confirm total project credits and explain required adjustments; show insufficient balance; accept once to create a project and debit once. Client can inspect status and open the accepted project/report. |
 
 ## Brand Hub navigation
 
-All ten sections use the selected client context. Agency edits are persisted and audited; Client and assigned Designer receive read-only canonical brand data. Copy and personal-template actions remain available to authorized readers.
+All nine sections use the selected client context. Agency edits are persisted and audited; Client and assigned Designer receive read-only canonical brand data. Copy actions remain available to authorized readers. Templates has been retired; its route redirects to Assets.
 
 | Section slug | Name | Required surfaces/actions |
 |---|---|---|
@@ -92,12 +98,11 @@ All ten sections use the selected client context. Agency edits are persisted and
 | `typography` | Typography | Primary font, hierarchy and examples; custom sample text; font source link; agency edit. |
 | `visual-style` | Visual Style | Four reference examples, photography Use/Avoid rules and direction; detail dialogs; agency edit. |
 | `products` | Product Library | Product cards and per-product Assets, Specs, Rules tabs; multiple products including the three reference examples. |
-| `assets` | Brand Assets | Search, categories, no results/clear filters, thirteen asset categories, detail with format/use guidance, copy reference, agency create. |
-| `templates` | Templates | All/Social/Commerce/Web; seven templates; Use template creates an owned draft; list own drafts and resume editing. |
+| `assets` | Brand Assets | Search/category filters; All assets, Unfiled and named folders; agency create/rename/delete folder, choose upload destination and move asset; authorized preview/download/copy reference. Folder deletion retains files. |
 | `messaging` | Copy & Messaging | Voice/tone, headlines, taglines, CTAs, product descriptions, claims, approved/forbidden terminology, avoid rules; copy reusable blocks; agency edit. |
 | `ai` | AI Brand Instructions | Brand context with Use/Never rules; agency edit; generate/copy text and manual-copy fallback. This is a context document, not an implied external AI service. |
 
-Reference template types: Instagram Post (1080 × 1350), Instagram Story (1080 × 1920), Amazon A+ (1464 × 600), Amazon Gallery (2000 × 2000), Website Hero (1920 × 1080), TikTok (1080 × 1920), Meta Ads (1080 × 1080). Use one schema-driven editor for design name, headline, body, CTA, preview and zoom, with persisted owner-scoped changes and a return link. The reference zoom choices are 50/75/100/125%; an equally usable continuous control is an intentional simplification, not missing functionality.
+Existing owner-private draft URLs remain available with the shared editor, persisted changes, revision checks and a return link to Assets. The gallery and new-draft action are removed; existing templates and drafts are retained without billing or project changes.
 
 ## Credits and administration
 
@@ -105,7 +110,7 @@ Credits contains plan information, balance/consumption, activity search, All/Pro
 
 Additional-credit packages retain the reference choices of 25, 50, and 100 credits. A production client action creates a request or invokes an explicitly configured payment flow; it does not grant itself credits. Authorized agency allocation records an audited ledger entry. Isolated test mode can exercise simulated fulfillment without claiming a real payment. A future payment integration must document and test its own settlement contract.
 
-Settings preserves Studio, Team, Clients, and Presets. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation.
+Settings contains Studio, Clients, Presets, and Your account. Team has its own agency-only route at `/team`. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation.
 
 ## Empty, error, and responsive states
 

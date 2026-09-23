@@ -16,8 +16,14 @@ Agency administration is an explicit capability for membership, workspace, prese
 |---|---|---|---|
 | Studio-wide overview/client directory | Scoped | No | No |
 | Own workspace/client session | Scoped | Own client | Assigned scope |
+| Browse brand asset folders | Scoped | Own client | Assigned client |
+| Create/rename/delete folders and move brand assets | Scoped agency capability | No | No |
 | Search and notifications | Scoped | Own client and recipient | Assigned and recipient |
 | View board/campaigns/project summaries | Scoped | Own client, sanitized | Assigned projects only |
+| Save board view | Own preference, scoped client | Own preference, own client | Own preference, assigned client |
+| Read/change another viewer's board preference | No implicit access | No | No |
+| Read/write Playground notes and files | Agency board in authorized project | Client board in own project | Designer board in assigned project |
+| Read another role's Playground | No implicit access | No | No |
 | Create campaign | Scoped | Own client, including briefing | No |
 | Edit campaign planning | Scoped | No implied production authority | No |
 | View briefing list and detail | Scoped | Own client | Safe assigned accepted list/detail; no budget |
@@ -41,7 +47,7 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Client approval/change request | Manage workflow; do not impersonate client | Published review only | No |
 | Agency internal approval/change request | Scoped | No | Receive internal result |
 | Attach and publish delivery files/mark delivered | Agency only | No | Prepare internal files only |
-| Download files | Scoped | Published/delivered files only | Assigned production files |
+| Download production files | Scoped | Published/delivered files only | Assigned production files |
 | Canonical Brand Hub read | Scoped | Own client | Brand resources for assigned client |
 | Canonical Brand Hub edit/create | Agency only | No | No |
 | Copy brand text/context/color/reference | Scoped | Own client | Assigned client |
@@ -55,13 +61,21 @@ The source [permissions guide](../ref/00-guia/PERFIS-E-PERMISSOES.md) and [contr
 
 ## Client-facing projection
 
-Client payloads contain only authorized public project metadata, approved briefing scope and credit information, published design snapshots, client-channel conversation, approved brand resources, and client-safe activity. Agency messages are presented as **Studio**.
+Client payloads contain only authorized public project metadata, approved briefing scope and credit information, published design snapshots, client-channel conversation, approved brand resources, client-safe activity, and the client's own role-scoped Playground content and personal board preferences. Agency messages are presented as **Studio**.
 
 Never serialize designer names, avatars, emails, staff membership IDs, assignment relations, internal author metadata, internal comments, unpublished versions, internal notes, internal activity, internal notification counts, or storage paths containing private identity. Do not fetch these fields and hide them with CSS. Apply the restriction to nested relations, search results, reports, CSV, notifications, realtime events, error details, file names, downloadable file metadata, and browser caches.
 
 A published design uses immutable file content and sanitized customer-visible metadata. Internal editing does not replace its bytes or mutate its snapshot. Publishing a later revision creates a new publication and keeps review/comment history bound to the prior publication. Client summaries may show that work is in progress before anything is published, with an explicit **Not shared yet** state; they must not include production design payloads.
 
 Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, assigned production versions, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
+
+## Playground and presentation preferences
+
+Playground is a role collaboration space, separate from production and publication. `private.can_access_playground` requires the board's role to equal the caller's current protected role and verifies its client/project relationship and current access. No role, including agency, has implicit access to another role's board. Removed members lose authenticated access; a designer requires current assignment access to that project. A project is mandatory; workspace-only legacy boards remain archived without authenticated RPC, table or Storage access. Note/file rows expose no author identity. See [backend contracts](backend.md#playground-and-board-preferences).
+
+The private `playground-assets` bucket uses `<board UUID>/<item UUID>/<safe filename>`. Role/scope checks protect reads and signing; unclaimed staging also requires uploader ownership. The backend independently validates supported MIME, file size, matching item/path and revisions. Storage cannot overwrite an existing attachment or delete a live attached file. Tombstoned files remain eligible for scoped cleanup; caller-owned unclaimed uploads become eligible after 24 hours. A retry cannot replace newer content or switch an item's attachment. Existing signed URLs remain subject to the expiry limitation below.
+
+The selected board view belongs to one viewer and client. `board_preferences` RLS requires `user_id = auth.uid()` and current client access for reads/writes. `save_board_view` accepts no owner parameter and validates its five identifiers in PostgreSQL. View changes affect presentation only and grant no additional project access. Legacy widget preferences remain private and preserved for compatibility.
 
 ## Comments and pins
 
@@ -130,7 +144,9 @@ from 3600. Every other signing site in the product is already short — `project
 nearest sibling and is the shortest value the board can take without a second cost: the board's React
 Query `staleTime` is derived as `THUMBNAIL_TTL - 300`, a margin that re-mints the URLs before they go
 blank, and 300 would flatten that margin to zero and re-sign on every render. The board re-mints on
-render, so a board left open longer than ten minutes simply signs again.
+render, so a board left open longer than ten minutes simply signs again. Playground uses 600-second
+image previews and 60-second download links; its open query polls every 60 seconds to renew previews
+and discover collaborator changes. These links carry the same expiry-bound authorization window.
 
 **Reference.** Measured as [Defect C-1](../verification/acceptance-family-c.md#defect-c-1--an-access-token-keeps-working-after-sign-out)
 and [Defect C-2](../verification/acceptance-family-c.md#defect-c-2--a-signed-storage-url-outlives-the-authorisation-that-minted-it);
@@ -158,3 +174,9 @@ Tests must issue direct requests as unauthenticated, Client A, Client B, assigne
 Attempt ID substitution, forged author/role/channel/client IDs, invalid parent combinations, privilege escalation, stale session reuse, duplicate/concurrent acceptance, overdraft, double fulfillment, republishing via mutable file replacement, and HTML/script injection in titles/comments/file metadata. Verify denial and unchanged persisted state. UI-only role checks do not satisfy these cases.
 
 Supabase policies, database constraints/transactions, API authorization, and storage policies must agree. Secret/service credentials remain in backend-only configuration. Privileged server code rechecks the same caller scope before operating with elevated database permissions. Audit records retain actor/action/target/time without leaking private payloads into client-readable event feeds.
+
+## Team removal
+
+Agency members manage Team at `/team`. Removing a member first sets `profiles.removed_at` in a transaction that revokes every assignment and records one audit event. Role-based database access ends immediately, including for existing JWTs; notification generation and read policies exclude removed members. Auth banning follows through the trusted server route, and only its successful completion sets `removal_completed_at`. A failed second step leaves a visible, retryable pending removal.
+
+The last-agency guard counts active members only. Role changes, removal, assignment and invitation acceptance share a transaction lock and recheck caller access after waiting. Removed profiles cannot be reactivated through those operations. Profiles and authored history are preserved. Previously issued signed file URLs remain valid until their existing expiry; this change does not claim to revoke already-delivered bytes or signed URLs.

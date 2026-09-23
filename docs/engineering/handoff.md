@@ -1,11 +1,393 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-20 (final fix wave). Maintainer: the active orchestrator.
+Updated: 2026-09-23. Maintainer: Codex, active orchestrator.
+
+## Latest completed objective — compact review, account notifications and asset folders
+
+The latest user requests are implemented. Status/due date sit beside the project title on desktop;
+review opens with desktop double-click (explicit arrow, keyboard and one touch tap supported).
+The deliverable toolbar sits directly below the title with Playground, and artwork stays above the
+design/version footer. Feedback uses a wider column, compact controls and a growing composer;
+more than half the panel height is available to its independently scrolling history at tested sizes.
+
+Notifications moved from board/project/page tools to the left of the signed-in profile on every
+client surface. The shared native nonmodal popover opens below that card with a short downward
+animation, reduced-motion support, bounded dimensions, scrollable feed, close/Escape focus return
+and outside dismissal. It reuses existing recipient-scoped reads/writes; no notification backend
+changed. The former project notification inspector component was retired.
+
+Brand Hub Templates navigation/gallery/creation UI is removed; old URLs redirect to Assets. Saved
+templates/private drafts remain in the database, and direct owner-private draft editors still work.
+Assets now supports one-level client folders, agency creation/rename/delete and per-asset moves.
+Upload defaults to the selected folder. Clients/designers browse/download without organization
+rights. Deleting a folder moves assets to Unfiled without deleting file data. The user did not answer
+the optional Brand Hub Assets versus Files question; the implementation follows the stated Brand Hub
+context. The separate Files destination retains its existing behavior.
+
+Migration **202609230009_brand_asset_folders.sql** was applied forward locally, with regenerated
+Database types. Composite folder/client FK, RLS, name constraints and column ACLs enforce the scope.
+No reset, provisioning, competing server, commit or deployment. The existing file-logged Next.js
+server remains on 3003; Codex remains sole integration owner and all prior dirty-tree work is kept.
+
+Current evidence: **590 unit/component tests / 49 files**, type/lint/format clean; **26 folder pgTAP
+assertions**; **23 board/Brand Hub/client-page/notification browser scenarios** and **14 Playground/
+project-feedback/video scenarios**, all passed. Screenshots inspected, Axe/geometry at five primary
+sizes, real uploads/downloads, lost-response retry, permissions and cleanup verified. See the
+[verification record](../verification/client-polish-and-brand-folders-2026-09-23.md).
+
+Final inventory: **10 clients / 68 projects / 50 SABRE / zero acceptance clients / zero test folders**.
+Preserve ignored demo checkpoints and newer live Playground work. The folder migration adds a null
+field to old asset JSON, so the strict old demo fingerprint also differs for this schema change.
+Do not rewrite the checkpoint or bypass removal guards; future rollback requires reconciliation.
+Next action: continue from user feedback on the live interface. Broader release acceptance remains
+separate. Earlier title/status/notification/template-gallery descriptions below are historical.
+
+## Latest completed objective — Playground covers the entire viewport
+
+The user requested the Playground to descend from the whole screen instead of the project section.
+`PlaygroundBoard` now uses a named native dialog in the browser's top layer, sized 100vw × 100dvh.
+It covers sidebar/mobile topbar/client/project headers and slides down/up with the existing reduced-
+motion fallback. The obsolete project-header top inset is removed. Covered app controls are inert;
+body scroll is locked until exit. The underlying project remains mounted, preserving its viewport.
+Escape/native cancellation retain unsaved/busy guards; close restores scroll/focus, including the
+existing upload form/file round trip. No backend or permission change.
+
+Current checks: full source gate **592 tests / 49 files**, TypeScript/lint/format clean;
+**9/9 Playground browser scenarios passed**, including full-viewport bounds and Axe at five sizes,
+slide keyframes, reduced motion, covered-control focus isolation, zoom restoration, three roles,
+real upload return/files, persistence and recovery. Desktop/mobile/landscape screenshots inspected.
+Whitespace and instruction synchronization pass. Final counts: **10 clients / 68 projects /
+50 SABRE / zero acceptance clients**. See [verification](../verification/playground-fullscreen-2026-09-23.md).
+
+Codex remains sole integration owner. Preserve all dirty-tree work, the optional demo checkpoint
+and newer live Playground content. The existing file-logged Next.js server remains on port 3003;
+no restart, reset, commit or deployment occurred. Next action: continue from user feedback. Earlier
+project-contained/nonmodal descriptions below are historical and superseded by this request.
+
+## Latest completed objective — consistent client sections and centered project header
+
+Briefings, Reviews, Files, Brand Hub and Credits now use the shared floating client navigation/
+profile over the workspace grid, with a white title/action card and contextual tools. Desktop
+client routes hide the shell topbar; mobile retains the drawer control. Navigation is not duplicated
+in the sidebar. The main client scrolling region keeps the identity header sticky and resets on
+route changes. Briefing detail/direct editor, all ten Brand Hub sections and private template drafts
+follow this layout. Intercepted briefing modals preserve their existing compact form and workflows.
+
+The user's final project decision supersedes both the connected toolbar and inline metadata:
+**center the large title, with status/date underneath**. Outside that card, Working files / Shared
+with client sits below on the left; All deliverables and the action icons form a separate floating
+group on the right. Groups wrap on phones. Canvas/Playground/inspector insets still measure all
+header controls; scoped feedback, panel alignment and focus behavior remain intact.
+
+Current verification: source gate **591 tests / 49 files**, TypeScript/lint/format clean; final
+client/project browser run **6 passed**, followed by **3 client layout scenarios passed** after
+confirming the development server compiled the shared action styles. These cover 35 primary client
+surfaces, 20 Brand Hub route/viewport cases, six detail/editor/draft cases and five project sizes,
+with relevant Axe, geometry, navigation, draft/pin, review and notification assertions. Playground
+**9 passed** and client-navigation/briefing-modal **5 passed** earlier in this revision. Screenshots
+were inspected; documentation links, whitespace and synchronized instructions pass. See the
+[verification record](../verification/client-section-layout-2026-09-23.md).
+
+Final read-only counts: **10 clients / 68 projects / 50 SABRE / zero acceptance clients**. Preserve
+the demo checkpoint and newer live data, including the Playground board noted below. No reset,
+provisioning, schema/policy change, commit or deployment occurred. Codex remains the sole integration
+owner; all earlier dirty-tree work is preserved. The existing file-logged Next.js server remains
+on port 3003. Next action: continue from user feedback on the live UI; broad release acceptance is
+separate. Earlier layout descriptions and verification below are historical.
+
+## Latest completed objective — project feedback and connected header
+
+Version cards are simplified; the design viewer separates This design from General feedback, with
+full original notes/review decisions and isolated version/design drafts. Board/projects share
+`workspace/canvas-header.tsx`. The project bar connects a larger title to its right actions.
+Conversation/details/notifications share one floating inspector with close/Escape and focus return.
+Notifications open inside the project and use the same authenticated feed/read mutations as the full
+page. Playground has a compact single header with icon tools and visible unsaved/save status.
+
+Checks: full source gate passed **591 tests / 49 files**, type/lint/format; **20 browser scenarios
+passed** across project feedback, Playground, navigation and SABRE demo. Final notification alignment
+passed 22 stylesheet assertions and the five-viewport project visual scenario again. See
+[verification](../verification/project-feedback-and-header-2026-09-23.md). Documentation is updated;
+no backend schema/policy changed. Existing dirty-tree work remains intact. Development server remains
+on port 3003; do not start a competing server or reset Supabase.
+
+Final counts remain 10 clients / 68 projects / 50 SABRE / zero acceptance clients. The demo checkpoint
+is preserved. A newly created Playground board for Retail Partner Introduction
+(`ee9b36f6-0d11-4e6a-8222-948e94659309`) is present outside that checkpoint; all other scoped tables and
+Storage inventory match. Preserve this newer work; do not rewrite the checkpoint or remove that board
+to make demo rollback pass. Origin was not established. Broader release acceptance is still separate.
+
+## Latest completed objective - populated SABRE demonstration
+
+The user requested a temporary SABRE workspace of about 50 projects for testing and an agency
+walkthrough, then confirmed all clients/data are tests. **The overlay is active: 50 SABRE projects,
+10 clients and 68 total projects.** It adds 43 and enriches the original seven, preserving the
+other nine clients and every original stored byte. Do not reset to reconcile canonical seed counts.
+The original 10-client/25-project seed remains unchanged; AGENTS.md and CLAUDE.md record the explicit
+demo exception and remain synchronized.
+
+Current inventory: 12 campaigns, 82 deliverables / 24 formats, 126 working versions / 176 designs,
+92 publications / 131 published designs, six workflow stages, 58 briefings, comments/pins, 34 final
+files (ten released, 24 staged), 463 credits with a reconciled ledger, populated Brand Hub,
+owner-private drafts and three role-specific project Playgrounds. Eight photos from the built-in
+image tool drive 158 rendered images, 56 PDF previews and five MP4s. Source photos/prompts and the
+plan/renderer live under `supabase/demo/sabre/`. These are fictional product/creative concepts.
+
+Population uses existing real client/agency/designer RPCs and trusted media preparation. Historical
+briefing/project dates use a scoped fixture backfill after acceptance; no billing, permission or
+publication rule changed. Original snapshots were not overwritten. Stationery retains its prior
+client review plus a new private working round. All 50 projects have persisted working artwork.
+
+**Checks executed:** one real delivered-project canary followed by actual removal restored all
+35 public-table digests / 183 file hashes; six rollback/plan tests passed; 29 HTTP/data/Storage checks
+passed, including all 130 file-backed client publications and ten released finals; five browser
+scenarios passed (20 board viewport/view/role surfaces, project revisions/images/video, related
+pages, role Playgrounds and designer desktop/mobile). Full web gate passed 590 tests / 49 files,
+type/lint/format; final test-only additions passed type/lint and the browser suite. Apply retry and
+guarded removal dry run made no changes. Representative screenshots, PNG layouts and a Poppler
+PDF proof were inspected; all 56 PDFs contain one page. See the
+[verification record](../verification/sabre-demo-2026-09-23.md) and
+[demo guide](../../supabase/demo/sabre/README.md).
+
+Keep ignored `supabase/.local/sabre-demo/state.json` and
+`supabase/.local/sabre-demo-baseline-integrity.json`; they contain the rollback/integrity checkpoint.
+Use `python3 supabase/scripts/sabre_demo.py status` to inspect. Removal is guarded and refuses newer
+work. Do not run the canonical exact-seven-SABRE assertions against this optional overlay, discard
+the checkpoint, or run concurrent population/removal processes. No reset, schema change, external
+message, commit or deployment occurred. The existing Next.js server on 3003 and local backend/media
+remain running. Codex is the sole integration owner; all earlier dirty-tree work is preserved.
+Next action: let the user exercise the populated client and address concrete feedback. Broader
+release acceptance remains separate; prior baseline claims below are historical.
+
+## Latest completed objective — client top navigation and project creation cards
+
+The user's final clarification supersedes the Menu dropdown: **all client destinations are visible
+text links at the top**, with the active page underlined. Board places them beside the quarter;
+projects and every other client page use the same navigation in the shell topbar. No client links
+remain in the sidebar. Global navigation, client switching, studio controls and account remain there.
+`client-navigation.tsx` owns the routing/role rules; the temporary `workspace-menu.tsx` was removed.
+Narrow screens wrap links without menu scrolling; short client windows compact sidebar spacing.
+The primary route slot preserves the board shell behind intercepted briefing modals.
+
+Project creation now uses Add design tiles at the right of artwork and Add version rows below each
+deliverable's versions. Agency Shared with client shortcuts switch to Working files and target the
+latest internal version of that deliverable. Actual clients receive no creation controls or internal
+reads, and snapshots remain immutable. Both slots participate in computed canvas geometry.
+
+Final source gate: **590 tests / 49 files**, type/lint/format clean. **31 distinct browser scenarios**
+passed across navigation, board views, briefing modal, production, recovery, Playground, video,
+workspace and the 44-surface design audit. Final follow-ups: the creation journey passed with no
+console/page errors after adding stable canvas child keys; 11/12 navigation/board scenarios passed
+after the responsive inset update, exposing an opening-fit race when campaigns loaded late. The
+campaign loading guard fixed it; the focused rerun passed all **40 viewport/view combinations** with
+an intentionally delayed campaign response. The full source gate then passed again. Final baseline:
+**10 clients / 25 projects / zero temporary acceptance clients**. Desktop/mobile screenshots were
+inspected, instructions remain synchronized and whitespace checks pass. See the
+[verification record](../verification/client-menu-and-project-creation-2026-09-23.md).
+
+Codex remains the sole integration owner. Preserve all earlier dirty-tree work. The existing Next.js
+server on port 3003 remains healthy with file-backed logs. No schema change, reset, provisioning,
+commit, production build or deployment occurred. Next action: continue from user feedback on the
+live UI. The broader release audit remains outside this feature revision; earlier evidence below is
+historical and earlier menu descriptions are superseded by this checkpoint.
+
+## Latest completed objective — floating board identity and easier briefing
+
+The current user requests are integrated: Miro-inspired floating client logo/name/quarter card
+on the left and signed-in profile on the right; a simpler briefing form with searchable services,
+project basics, creative questions before formats, prefilled expandable sizes and clearer draft/file
+and validation guidance. The final follow-up fixed the header truncating SABRE to “S…”: its period
+select no longer inherits 100% width. SABRE fits completely even at 320px; long names remain bounded
+with a full-name tooltip. Save/retry notices remain reachable below the floating header.
+
+Quarter filtering was an announced implementation assumption after no answer to the clarification:
+All periods is the default; Q1–Q4 filter project-date overlap and retain undated work. Choosing a
+quarter aligns the initial Calendar month/Timeline period, persists across view switches locally,
+and does not add a saved database preference. A later user clarification can refine this behavior.
+The right card identifies the current viewer, never an impersonated client contact.
+
+Follow-up: the user then asked to remove menu scrolling. With no clarification reply, Codex
+announced that the recent Q1–Q4 context would mean the header selector. It is now a compact
+`board-period-picker.tsx` panel with Previous/Next year, four quarter/month buttons and All periods;
+no internal scrolling, accessible focus and outside/Escape dismissal. This follow-up did not alter
+the main sidebar. Quarters are generated from project dates, not separately registered records.
+Final follow-up checks: **588 tests / 49 files**, type/lint/format clean; **9/9 board browser scenarios**
+passed, including quarter-panel containment at four sizes. Final baseline remains 10 clients /
+25 projects / zero temporary acceptance clients.
+
+Checks executed for this revision: **588 tests / 49 files**, clean type/lint/format; **19/19 browser
+scenarios** for views, modal, intake and design audit; final **2/2 modal scenarios** after clearing
+obsolete validation messages during editing. Evidence includes 40 SABRE viewport/view cases with
+client-name/header geometry assertions, 44 design-audit surfaces and desktop/mobile screenshot
+inspection. Final read-only baseline: **10 clients / 25 projects / zero temporary acceptance clients**.
+Instructions remain synchronized and diff whitespace checks pass. See the
+[verification record](../verification/board-header-and-briefing-2026-09-23.md).
+
+Codex remains sole integration owner; preserve all earlier dirty-tree work. The server recovered
+below is still running with file-backed logs. No new schema, reset, provisioning, commit, production
+build or deployment occurred. Next action: continue from user feedback on the live UI at port 3003;
+the broader release audit remains outside this feature revision. Earlier evidence below is historical.
+
+## Latest recovery — local development server stopped responding
+
+The user reported a frozen application after the feature work. Port 3003 was listening, but login
+and root HTTP requests timed out. PID 64386 was consuming one CPU core and 4–4.5 GB of memory;
+a native sample showed uncaught-exception/console handling. Its stdout/stderr were automation
+pipes. Supabase remained healthy. The precise initiating exception is unknown.
+
+Restarted only this checkout's web process tree with the same Next.js CLI. The detached npm
+supervisor is PID 72112; Next.js is PID 72150, with stdin from `/dev/null` and stdout/stderr in
+`/tmp/dawes-next-dev.log`. Keep file-backed output for automation-launched servers; do not reattach
+the long-lived process to transient output pipes or start another web server on port 3003.
+
+After recovery, repeated login/board HTTP probes returned 200 in about 11–28 ms and **5/5 focused
+browser scenarios passed** (views/zoom, client navigation, agency/client briefing modal). Final
+baseline remains **10 clients / 25 projects**, with no temporary acceptance clients. No application
+behavior or backend service changed. See [the recovery record](../verification/development-recovery-2026-09-23.md).
+Next action: continue from the working local UI; if the process hangs again, inspect the persistent
+log and process sample before attributing it to a UI component. The feature checkpoint below remains valid.
+
+## Latest completed objective — board views and workspace navigation
+
+The user's successive requests are implemented: five icon views; responsive Kanban/Calendar;
+Miro-inspired floating tools on the **left**; zoom controls immediately below with the grid behind
+both cards; manual zoom out to 10%; a cleaner sidebar with one searchable client context; and
+New briefing in a modal over the current page. The earlier widget presentation is superseded.
+
+Codex remains integration owner and the only writer for this task. Preserve all earlier uncommitted
+changes. Development continues through the existing Next.js server on port 3003; do not start a
+compiled web container over that port. Migration `202609230008_board_views.sql` is applied locally
+and database types are updated; legacy widget preferences/RPC remain intact.
+
+The briefing modal uses the workspace `@modal` interception route and the existing editor. Draft
+saves remain inside it, submission shows confirmation, and Done restores the prior view. Direct
+URLs render the full page. Close/Escape/backdrop guard dirty drafts and in-flight writes; native
+browser history is not a draft guard. The sidebar reuses scoped clients and retains role controls,
+mobile focus containment, collapsed destination icons and short-screen scrolling.
+
+Current evidence: **576 tests / 48 files**, type/lint/format clean with zero ESLint warnings;
+**53 database assertions** for view/legacy preference policies; **28/28 browser scenarios** including
+board, navigation, modal, intake, workspace, Brand Hub and design audit. After the final modal-footer, submission-close
+corrections and footer-reachability assertion, **4/4 focused modal/navigation scenarios**
+passed again. Board evidence covers 40 real SABRE viewport/view cases and the design audit covers
+44 surfaces. Final screenshots were manually reviewed. Final database count: **10 clients,
+25 projects, zero temporary acceptance clients**. Instructions remain synchronized; diff whitespace
+checks passed. See [the integration report](../verification/board-views-2026-09-23.md).
+
+No reset, canonical reprovisioning, commit or deployment occurred. Next action: address feedback on
+the current local UI. The broader J10 release audit and earlier video/hosting follow-ups remain
+outside this completed feature; previous reports below are historical evidence.
+
+## Previous completed change — unified UI and development from the repository
+
+Codex completed the visual refresh in the actual application at `/Users/wendleywilson/DawesStudios`,
+serving `http://localhost:3003`. The separate `CanvaDawes` repository is an older implementation and
+was not copied over this tree. All existing uncommitted work remains intact.
+
+The user's latest request was to run correctly from the repository. The frontend now runs directly
+with `npm run dev` from this checkout (Next.js process PID 58690 at verification time). The Compose
+web preview was stopped; Supabase and the existing healthy media container remain running. Existing
+ignored environment files point to the same backend. A browser probe verified an actual CSS change
+and its removal through live updates, restoring the stylesheet byte for byte. No database reset,
+canonical fixture provisioning, commit, push or public deployment was performed. Use this checkout
+for future UI edits; do not restart the compiled web preview over the development port.
+
+Delivered: unified neutral tokens and spacing, clearer typography, shared section tabs with four
+consumers, consistent panels/controls/forms/dialogs, even mobile metric cards, and active-client
+navigation that remains visible after asynchronous context loads. The original branding and prior
+canvas/Playground/video behavior remain intact. A mobile login word boundary was corrected during
+visual inspection. The design audit now verifies current authorized campaign and widget state
+rather than assuming old fixture values.
+
+Final source gate: **593 tests / 49 files passed**, type and format passed, zero lint errors and one
+existing board callback-dependency warning. Before the runtime switch, **7/7 focused browser
+scenarios passed**, including **38 surface/viewport captures with no overflow or axe violations**.
+After the switch, **2/2 agency/client browser journeys passed** and **7 additional visual/a11y
+combinations passed** for login, team, settings and Playground. Desktop/mobile screenshots were
+inspected. Exact scope, commands and limitations are recorded in the
+[verification report](../verification/ui-refresh-2026-09-23.md).
+
+Next concrete action: review the live UI at `http://localhost:3003` and continue any requested
+visual refinement in `apps/web`. To restart local development, run `npm run dev` from this repository;
+keep its terminal open. The optional Compose production preview must be rebuilt before reuse and
+must not run on the same port simultaneously. The broader J10 and video recovery follow-ups below
+remain outside this completed revision.
+
+## Previous completed change — canvas grid and smoother navigation
+
+The user requested a grid on every canvas, a slightly darker Playground, and smoother movement. All four surfaces now share a 24-unit line grid, two-axis native-speed scroll/trackpad panning, and 200 ms zoom/fit button transitions that honor reduced motion. Direct dragging remains immediate; existing node selection, pin mode and the board's readable fit remain intact. Shared primitives live in `features/shared/canvas-{background,controls,navigation}`. Codex retains integration ownership; no workers were delegated for this change.
+
+Current checks: `npm run check` passes **593 tests / 49 files**, type/format and lint (zero errors, one existing warning); rebuilt web is healthy; focused Playground/layout/pin browser suite passes **14/14 in 45.6 seconds**. A read-only browser probe verifies two-axis panning, empty-pane dragging, animated zoom and reduced-motion zoom across all four canvases, with unique simultaneous grid IDs and no page errors. Desktop/mobile screenshots were inspected. See the [verification report](../verification/canvas-grid-navigation-2026-09-23.md) and [interaction measurements](../verification/canvas-grid-navigation-2026-09-23.json).
+
+Latest local counts are **10 clients, 25 projects, four Playground boards, 64 Playground items and 181 stored files**, with no temporary acceptance clients/projects. The earlier 32-item/149-file snapshot below is historical; do not reset newer user content to match it. This visual change did not rerun the whole-dataset hash comparison. Final web image is `sha256:76a27542993a87621f7f5a7c776a0a0f6a8b5bc38f035cba7b77610adebc4830`. Existing uncommitted work remains preserved, with no commit or public deployment.
+
+This request is complete. Next broader work remains video attempt recovery/cancellation/staging cleanup, then the J10 release audit and production configuration described below.
+
+## Latest completed objective — project-only Playground layer and video efficiency
+
+The user's revised objective is implemented and verified locally. Playground now belongs only to a project/role and slides down over the existing work area, then up on close, without modal behavior. The project/upload state survives the round trip. Video previews defer signing and decoding until a design opens; playback survives signed-URL renewal, timed pins wait for a restored frame, and responsive resizing keeps the player visible. Media upload and attestation now share one file read. The [implementation plan](../architecture/project-playground-and-video-optimization.md) and [integrated verification report](../verification/project-playground-video-2026-09-23.md) record the exact scope and evidence.
+
+Codex retains integration ownership. All delegated workers have returned their saved reports and released their paths. Preserve the combined uncommitted tree on `main` at `c2eaac7`; no reset, commit or public deployment was performed. Migrations through `202609230007` are applied locally. The existing temporary `caffeinate -ims -t 172800` process, PID 36758, remains active; no permanent power setting changed.
+
+**Current data:** 10 clients/25 projects (SABRE seven, every other workspace two), 13 Auth users, four Playground boards, 32 saved Playground items and 149 stored files. The studio name `Offline probe` is preserved. Two legacy workspace Playgrounds remain archived and inaccessible until explicitly assigned; no arbitrary transfer or deletion occurred. The old empty-Playground/117-file snapshot below is historical. The [initial](../verification/project-playground-baseline-2026-09-23.json) and [final](../verification/project-playground-final-baseline-2026-09-23.json) snapshots prove identical Playground board/item digests and all 149 file hashes. After the focused Playground phase all 35 public tables matched; after the full browser suite 31 still match, with documented credit reconciliation/edit-restore revisions and two preserved service-preset history entries accounting for the other four. No temporary acceptance clients/projects remain; credit balances match the unchanged ledger.
+
+**Checks actually executed in this objective:**
+
+- Final `npm run check`: **593 tests / 49 files**, type/format passed, zero lint errors and one existing board hook warning.
+- Database: **337 assertions / 15 files**, public/private schema lint clean; Playground HTTP **8/8**, existing Auth/Storage HTTP **9/9**.
+- Media: **45 unit tests / three files**, **15 existing raster/PDF integration checks**; actual video sanitization/publication and three-role timed feedback/privacy verified separately by the browser scenario.
+- Playground gate: **9/9 browser scenarios**, including animation/containment/reduced motion, role/project isolation, saved viewport, real upload after returning, private bundles and conflict/retry behavior.
+- Complete browser suite: **51/51 in 3.0 minutes** before the last responsive-viewer correction. Visual inspection then exposed desktop-to-mobile video cropping. After fixing the fit, rebuilding web and inspecting desktop/mobile captures, **7/7 focused video/layout/accessibility/pin scenarios passed in 33.8 seconds**, and the final source gate passed again. The full 51-test suite was not repeated after this last correction.
+- Measured video budget: 20 passive signing calls/GETs and 553,640 bytes become **zero**; opening a design fetches one 27,682-byte clip. Upload/attestation benchmark: **8 MiB to 4 MiB application reads** for the same 4 MiB file, uploaded bytes and SHA. These are not large-file latency, physical disk I/O or whole-service memory claims.
+
+Final web/media containers are healthy. Web image: `sha256:70bf6e15151a00d0a5b6dcab496373da0e2cca9ff3848d5b7066429a776596e9`; media image: `sha256:5f207952d772c86c29a23cddc0aa9384cc188d0fffb4c53fc15a3aaab526f438`. The [independent review](handoffs/2026-09-23-project-layer-video-review.md) records the closed pin-readiness finding and responsive-fit review. All six acceptance checks for this bounded revision are satisfied.
+
+**Next concrete work outside this completed objective:** reproduce failed video sanitization after raw upload and design durable attempt recovery/cancellation/cleanup, preserving referenced or published files; then assess mixed-workload scheduling and finish the broader J10 functional/visual release audit. The previous comment-remount issue is already corrected in source and must not be treated as an open defect without reproduction. The original matrix remains **110 Verified / 111**, with J10 open; hosting, TLS and outbound SMTP are unconfigured. Browser history/programmatic navigation can still abandon in-memory Playground drafts, and archived workspace boards need an explicit project destination. Feature completion is not whole-product production approval.
+
+The sections below retain prior objectives and historical evidence. Their older next actions, counts and ownership do not supersede this checkpoint.
+
+## Previous completed objective — Playground and board widgets
+
+The user's requested [Playground and board widgets feature](../architecture/playground-and-board-widgets.md) is implemented and verified. Codex retains integration ownership; all delegated workers have finished and released their paths. Preserve the combined uncommitted Team/startup and feature changes on `main` at `c2eaac7`. No reset, commit or public deployment was performed.
+
+Delivered: persistent, role-isolated canvases above client/project boards; real image/document bundles, notes, drag/resize, keyboard geometry, private previews/downloads and retry/conflict recovery; opening from the upload form preserves its fields and selected file. Timeline and Kanban are independently selectable widgets with per-viewer/client persistence. Migrations `202609230003` through `006` are applied locally. Source/role boundaries and operational limits are recorded in the specification and feature READMEs.
+
+Final evidence is in the [integrated feature report](../verification/playground-and-widgets-2026-09-23.md): source gate **558 tests / 45 files**, type/format checks and lint (zero errors, one existing warning); production build; database **316 assertions / 15 files**; Playground HTTP **6** and existing HTTP **9**; media unit **34** and integration **15**; final complete browser suite **49/49 passed** in 2.8 minutes. New desktop/mobile screenshots and the project integration were manually inspected. Earlier failed runs led to actual fixes and are documented as history, not final failures.
+
+The final validation also fixed controlled xyflow nodes becoming hidden after project refetch: frame dimensions now populate node width/height directly. Playground mobile framing uses explicit geometry and ready pan/zoom state, avoiding the same unreliable measured flag. Independent review findings about stale removal and remote-deletion overlays are closed by source regressions and real browser recovery flows.
+
+Warm/cold lifecycle preserved **35 public tables and 117 stored-file hashes**, including a reversible noncanonical image, then restored the original fixture. See [feature startup evidence](../operations/playground-startup-evidence.json); the earlier Team artifact was preserved. The exact local PostgreSQL image needs the documented optional permission-hint workaround; actual anonymous RPC denials passed again after restart, with ACLs and RLS unchanged.
+
+Final [baseline snapshot](../verification/playground-baseline-2026-09-23.json): **10 clients / 25 projects**, SABRE 7 and every other workspace 2, 13 Auth users and 117 stored objects. Temporary Playground boards/items/files and widget preferences: zero. The studio name `Offline probe` is preserved. Web/media remain healthy. The existing `caffeinate -ims -t 172800` process (PID 36758) was kept active; permanent power settings were not changed.
+
+Next concrete action outside this completed feature: reconcile the remaining [video follow-ups](handoffs/2026-09-21-video-designs-and-feedback.md), starting with comment retry state after remount and staged-video cleanup, then complete the broader J10 release audit. The original matrix remains **110 Verified / 111**, with the eight new feature checks separately verified; production hosting, TLS and outbound SMTP remain unconfigured. Do not reinterpret this feature completion as whole-product production approval.
+
+The previous Team/startup section and all sections below retain historical evidence and old next actions; they do not supersede this checkpoint.
+
+## Previous continuation — Team management and startup preservation, verified
+
+The user explicitly instructed Codex to continue after the reconciliation. Codex owns shared integration files; earlier ownership and verification sections below are historical. Existing untracked Studio Team proposals and reports were preserved. All delegated workers completed and released their paths. No unrelated process was terminated.
+
+Current source baseline: `main` at `c2eaac7`, with this continuation uncommitted. The matrix records **110 Verified requirements of 111**, with J10 open. I01 closed through the lifecycle preservation run. See the [integrated verification report](../verification/team-and-startup-2026-09-23.md), [initial reconciliation](handoffs/2026-09-23-codex-continuity-reconciliation.md), and [source map](handoffs/2026-09-23-codex-code-map.md).
+
+Implemented and verified:
+
+- Completed the tracked 2026-09-22 Team plan: canonical `/team`, legacy redirect, separate navigation, role changes and protected removal. Durable removal immediately closes privileged database/media access, preserves history, and supports **Finish removal** after a partial Auth failure. The last active agency guard holds under concurrent requests. Both new migrations are applied locally.
+- Corrected nullable authorization helpers, removed-member invitation acceptance, and notification access/delivery after removal. API, database and real browser regressions cover these changes.
+- Fixed I01: startup preserves existing fixture artwork. Warm/cold restart with a reversible noncanonical image kept 32 public tables and 117 stored-file hashes unchanged; the original image was restored and rechecked.
+- Corrected a Team desktop selector width issue found by manual screenshot inspection and verified desktop/mobile layouts. Updated affected feature, architecture, operations and acceptance documentation.
+
+Checks executed this session: `npm run check` **510 tests / 39 files**, type/format checks and lint (zero errors, two existing warnings); production build; pgTAP **238 assertions / 13 files**; database lint (no schema errors); media unit **34**, HTTP/Auth/Storage **9**, media integration **15**, startup unit **12**, and the lifecycle preservation scenario all passed. The full browser suite passed **37 tests** before the last Team CSS correction; after that correction, rebuilding web and restarting Supabase, Team plus console checks passed **11 tests**. Final 1600 px and 390 px screenshots were inspected. See the report for exact commands and limits.
+
+Final local state: web/media healthy; **10 clients / 25 projects** (SABRE 7, each other workspace 2), 13 Auth users and 117 stored objects. Temporary Team users/clients/projects: zero. Regenerated screenshots and browser artifacts are preserved. The existing studio name `Offline probe` was not changed.
+
+Next concrete action: reconcile and reproduce the open findings in the [video handoff](handoffs/2026-09-21-video-designs-and-feedback.md), starting with comment retry state after remount and staged-video cleanup; then repair confirmed defects and complete the J10 functional/visual release audit. Hosting, TLS and outbound SMTP remain unconfigured. No commit or public release was performed. The older untracked workload/person-page proposal is preserved and is not being executed over the newer management UI.
+
+The sections below retain earlier task history. Their old counts, ownership, next actions and test results do not supersede the current continuation above.
 
 ## Final fix wave — repository structural refactor, closed
 
-Applied after the final whole-branch review, as the last code change before handover. Full report:
-[`.superpowers/sdd/2026-09-20-repository-structural-refactor/final-fix-report.md`](../../.superpowers/sdd/2026-09-20-repository-structural-refactor/final-fix-report.md).
+Applied after the final whole-branch review, as the last code change before that handover. The original report was recorded at `.superpowers/sdd/2026-09-20-repository-structural-refactor/final-fix-report.md`, which is absent from this checkout as of 2026-09-23. The historical summary below survives; the missing report is not fresh verification evidence.
 
 - **Fix 1**: `briefing-detail.tsx`'s and `assets-page.tsx`'s inline invalidation arrays now call the
   owning features' helpers (`useInvalidateWorkspace()`, `useInvalidateNotifications()`) wherever the
@@ -37,7 +419,7 @@ No unresolved risk from this wave. Next action: none required; ready for handove
 
 ## Ownership and purpose
 
-- Current writer: **Claude Code, from 2026-09-20T09:51Z**, owning `apps/web`, `compose.yaml`, `supabase/`, and the verification/acceptance documentation. Task: reconcile the tree, establish a real functional baseline, and continue the remaining acceptance work.
+- Current writer: **Codex, from 2026-09-23**, owning shared integration and the continuation described above. The previous Claude ownership from 2026-09-20T09:51Z is retained in the historical records.
 - Transfer condition was met before this session wrote to shared integration files. The outgoing Codex run (process 47025, started 03:39) was observed still creating `apps/web/features/workspace/topbar-tools.tsx` and `client-identity.tsx` at 05:48; the user stopped it and it exited at 05:51:33. Its in-progress topbar/identity refactor was preserved, not reverted, and `npm run check` passes on the combined tree.
 - Earlier transfer condition, retained for history: the outgoing Codex run and any workers editing the same paths have stopped. The incoming orchestrator records its name, time, and task here before writing.
 - Only `/root` appeared in the current conversation's agent listing. The user named `/root/product_architecture`, `/root/design_reference`, and `/root/backend_foundation`, but their original threads and final reports are unavailable in this conversation. This does not establish whether unrelated sessions are still active.
@@ -46,7 +428,7 @@ No unresolved risk from this wave. Next action: none required; ready for handove
 
 ## Objective that must survive the tool switch
 
-Finish the existing Creative Canvas application for Dawes Studios, with real persistence and complete agency/client/designer workflows. Continue the [implementation plan](../architecture/implementation-plan.md) and [acceptance matrix](../architecture/acceptance-matrix.md). The product remains in progress. As of 2026-09-20 09:55Z the matrix holds 41 Verified and 75 Unverified rows; see the state section below.
+Finish the existing Creative Canvas application for Dawes Studios, with real persistence and complete agency/client/designer workflows. Continue the [implementation plan](../architecture/implementation-plan.md) and [acceptance matrix](../architecture/acceptance-matrix.md). The product remains in progress. The current matrix holds 110 Verified requirements of 111; J10 remains open. Earlier counts in this checkpoint are historical.
 
 The root instructions and linked architecture/setup guides establish these decisions:
 
@@ -98,7 +480,7 @@ Every documented suite now passes on the current tree, including **25 of 25 brow
 
 A passing gate is not a finished product. **75 acceptance rows remain Unverified**, and deployment, TLS and outbound SMTP remain unconfigured.
 
-## Next actions, in order
+## Historical next actions — 2026-09-20
 
 1. Work through the remaining Unverified acceptance rows by domain, attaching the specific command or scenario to each row rather than citing the suite as a whole. The C, E, F and I families hold the largest gaps.
 2. Cover the states the current suite does not reach: I04 and I05 transport failure, permission loss and interrupted writes; I07 responsiveness on the full dataset; G12 manual-copy fallback.

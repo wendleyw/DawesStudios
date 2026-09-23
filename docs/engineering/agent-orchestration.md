@@ -73,7 +73,7 @@ Skills provided by Codex plugins may depend on their host's tools and connectors
 - Implementation: working behavior replaces prototype-only simulations.
 - Verification: checks include failure paths, cross-client access, retries, and reload persistence.
 - Visual audit: use the reference for workflow inspiration, evaluate the new minimalist modern design at 1600 by 1000 and verify smaller viewports, long content, empty states, spacing and focus behavior.
-- Release: no unresolved critical defects; exactly 10 seeded clients and 20 seeded projects can exercise all required flows; deployment and recovery instructions match the tested state.
+- Release: no unresolved critical defects; exactly 10 seeded clients and 25 seeded projects can exercise all required flows; deployment and recovery instructions match the tested state.
 
 ## Scope control
 

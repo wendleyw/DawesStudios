@@ -1,0 +1,16 @@
+{
+  "measured_at": "2026-09-23T05:25:10.346897+00:00",
+  "commands": [
+    "npm run db:start",
+    "npm run db:stop",
+    "npm run db:start",
+    "npm run db:status"
+  ],
+  "database_tables_unchanged": 32,
+  "stored_file_hashes_unchanged": 117,
+  "noncanonical_internal_artwork_during_restart": 1,
+  "temporary_overlay_restored": true,
+  "clients": 10,
+  "projects": 25,
+  "result": "pass"
+}
