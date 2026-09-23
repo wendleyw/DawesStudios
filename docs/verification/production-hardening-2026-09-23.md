@@ -68,6 +68,26 @@ upload and a standard upload both round-tripped with matching SHA-256, with anon
 denied. The rehearsal corrected the production guide (storage override, `PGSSLMODE`, pooler user,
 Envoy gateway, agency bootstrap).
 
+## J10 on the staging rehearsal
+
+The canonical dataset (10 clients / 25 projects, 13 fixture accounts, 116 file objects) was loaded
+into the staging database only, and the browser suite ran against the production build of the web
+image (72 scenarios; `sabre-demo.spec.ts` excluded). Three defects in the test harness surfaced
+and were fixed first: it read credentials only from the local file (`155f976`); its privileged
+cleanup ran in the local database container (`a2e7bdc`), matching only freshly generated staging IDs,
+so local data stayed intact (10 clients / 68 projects / 50 SABRE, verified); and the staging
+override had renamed the Realtime host the gateway routes to (503 on every handshake).
+
+After a clean rebuild: **63 passed, 6 failed, 3 did not run.**
+
+| Failure | Classification (evidence) |
+| --- | --- |
+| `content-security-policy.spec.ts` | Application defect: Zod 4 probes `Function("")`, which the production CSP blocks (violation source located in the Zod chunk). Fixed by jitless Zod (`712828e`); the spec passes on the rebuilt staging image. |
+| `intake-admin.spec.ts:565` | Staging gap: no SMTP. The app shows "The invitation email could not be sent… No workspace access was granted." |
+| `client-pages-layout.spec.ts:74` | Test data dependency: needs an agency-owned SABRE draft (0 in the canonical seed, 2 locally). |
+| `project-feedback.spec.ts:205`, `:458` | Test data dependency: look up "Retail Partner Introduction", which exists only in the SABRE overlay. |
+| `workspace-actions.spec.ts:14` | Test layout dependency: drags a card while the search panel covers its grip; the trace shows no write request. |
+
 ## Not verified here
 
 - A real R2 bucket (object tagging), the TLS proxy, SMTP delivery, and a restore drill on the

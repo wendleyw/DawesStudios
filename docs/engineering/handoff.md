@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 19:15 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
+Updated: 2026-09-23 20:00 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
 orchestrator since 17:50 EDT.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -11,89 +11,79 @@ history only when a task needs earlier evidence.
 
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
-- Other interactive Claude sessions of the user's also ran here this evening. `dawesstudios-3b`
-  owns the client logo feature. Every session stages explicit paths only; never run `git add -A`.
+- Other interactive Claude sessions of the user's also work here. `dawesstudios-3b` owns the
+  client logo feature. Every session stages explicit paths only; never run `git add -A`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
-## Completed in this session
+## Done in this session
 
-All four parts of the user's request are done. The evidence is in the
+The details and evidence are in the
 [verification record](../verification/production-hardening-2026-09-23.md).
 
-1. **Interrupted task:** brand-folder remote changes (unit tests plus `brand-folders.spec.ts`).
-2. **Consolidation:** 618 pending files in 13 conventional commits (`859e849..a5f610e`).
-3. **Workflow:** lean project agents, 30-line reports, this short checkpoint, commit per task
-   (`e806188`). E2e evidence goes to the ignored `outputs/` unless `WRITE_EVIDENCE=1` (`3b8f890`).
-4. **Production:** [production guide](../operations/production.md) (`6abe07f`, `0608eb6`).
-5. **Audit fixes:** cascade indexes (`9750473`); dead CSS and private exports (`80cfe7e`);
-   styling-boundary moves (`e338dd6`); full CSP, HSTS, no `X-Powered-By`, streamed invitation
-   cap (`ea4ca8f`); Playground hook split with a shared upload vocabulary (`4516409`).
+- **Interrupted task:** brand-folder remote changes, plus consolidation of 618 files (`859e849..a5f610e`).
+- **Workflow rules:** lean project agents, 30-line reports, this checkpoint, commit per task.
+  E2e evidence goes to `outputs/` unless `WRITE_EVIDENCE=1`.
+- **Production:** the [production guide](../operations/production.md) and a local
+  [staging rehearsal](../../deploy/staging/README.md) with MinIO standing in for R2.
+- **Audit fixes:** cascade indexes, dead CSS and private exports, styling moves, full CSP with
+  HSTS, a streamed invitation cap, the Playground hook split, and jitless Zod (`712828e`).
+- **Test harness:** credentials for a declared backend (`155f976`), and privileged cleanup in that
+  backend's database (`a2e7bdc`).
+- **Client logo** (from `dawesstudios-3b`: `47b47d1`, `3650c2a`, `c529671`, `8506306`): the
+  agency sets a logo in Settings > Clients; it is raster only; the 48px mark appears only on the
+  wide client board header.
 
-## Integrated from another session
+## In progress
 
-- **Client logo** (`47b47d1`, `3650c2a`, `c529671`, `8506306`, by `dawesstudios-3b`). The agency sets a logo
-  in Settings > Clients, and it appears in the board and project header as `<img>`. Migrations
-  `202609230010` (`clients.logo_path`, protected from deletion) and `202609230012` (raster only).
-  The 48px mark applies only to the wide client board header (`8506306`). That session reported
-  `board-views` and `project-feedback` passing 13 of 13 after I restarted the stuck dev server.
+- **Video upload lifecycle:** the [spec](../superpowers/specs/2026-09-23-video-upload-lifecycle-design.md)
+  is approved and the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md) is
+  written (`4e56cdb`, 9 TDD tasks). It waits for the user's plan review and choice of execution
+  method. No code yet.
+- **J10 on staging:** 63 of 72 scenarios pass on the canonical dataset. The six failures are
+  classified in the record. A Sonnet agent is making four data- or layout-dependent specs
+  dataset-independent and verifying them locally and on staging
+  (`handoffs/2026-09-23-e2e-dataset-independence.md`).
 
 ## Accepted decisions
 
 - **Production target:** the official self-hosted Supabase Docker distribution, with Cloudflare R2
   as its S3 Storage backend, plus the hardened `web` and `media` containers behind a TLS proxy.
-  R2 stays inside Supabase Storage configuration; the application has no R2 client.
-- **Development efficiency:** see the root instructions and
-  [efficient delegation](agent-orchestration.md#efficient-delegation). Project agents in
-  `.claude/agents/` load at session start, so start a new session to use them by name.
+  R2 stays inside Supabase Storage configuration. Keep the upstream Realtime hostname.
 - **SABRE demonstration overlay stays active:** 10 clients, 68 projects, 50 of them SABRE. The
   canonical seed remains 10 clients / 25 projects. Use only the guarded removal in the
   [demo guide](../../supabase/demo/sabre/README.md).
-- **Brand Hub Templates UI is retired.** Old URLs redirect to Assets; drafts remain editable.
+- **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
+  a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
 
 ## Environment (observed 2026-09-23)
 
-- Next.js dev server on `http://localhost:3003`, detached and file-logged. Do not start a
-  competing server. Next 16 builds into `.next/`, separate from dev output in `.next/dev`.
+- Next.js dev server on `http://localhost:3003`, restarted at 18:40 because its watcher had
+  stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
 - Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230012`);
   trusted media on 55430. Do not reset or re-provision.
+- Staging rehearsal is **running** on ports 56010–56014 and 3103, loaded with the canonical
+  dataset. Stop it with `deploy/staging/scripts/stage.sh down`; it is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (checks run in this session, on `4516409`)
+## Evidence (this session)
 
-- `npm run check`: 607 tests / 52 files, clean. `npm run build`: exit 0.
-- Browser, 44 scenarios: 37 passed, 3 failed, 4 skipped after a serial failure. `intake-admin`
-  passes 6 of 6 after its fix. The other two traced to `c529671` and are fixed by `8506306`.
-  `content-security-policy.spec.ts` passes with no violations for three roles.
-- `npm run db:test`: 17 of 18 files pass. `access_and_workflows` fails 6 of 55 canonical-count
-  assertions because the SABRE overlay is active, which is expected.
-- Audits: 0 npm advisories; gitleaks clean across 155 commits; no critical or high database issue.
+- `npm run check`: 609 tests / 53 files, clean after `712828e`. `npm run build`: exit 0.
+- Local browser checks after the fixes: `intake-admin` 6 of 6. The owning session reported the
+  two logo-affected specs passing 13 of 13.
+- Local `npm run db:test`: 17 of 18 files pass. The canonical-count file fails under the SABRE
+  overlay, as expected. The local data was verified intact after the staging runs.
 
 ## Open gaps
 
-- The J10 final release audit is unverified; it needs a staging installation with the
-  production topology.
-- Video attempts still lack recovery, cancellation and staging cleanup ([plan](../architecture/implementation-plan.md)).
-- The notification feed shows only the latest 100 items, with no pagination. This needs a
-  product decision.
+- Real server items: an R2 bucket (object tagging), the TLS proxy, SMTP delivery, a restore
+  drill, and rate limiting at the proxy.
+- The notification feed shows only the latest 100 items, with no pagination (product decision).
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
-## In progress
-
-- **Video upload lifecycle:** the spec is written and committed
-  ([design](../superpowers/specs/2026-09-23-video-upload-lifecycle-design.md), `fc1a23a`) and waits
-  for the user's review. The implementation plan and the code come only after that approval.
-- **Staging rehearsal: done.** [`deploy/staging/`](../../deploy/staging/README.md) runs the
-  official self-hosted Supabase (pinned `d51ed9f`) with MinIO as the S3 backend, on ports
-  56010–56014 and 3103. All 50 migrations apply to an empty database; the web and media images
-  are healthy with CSP and HSTS; the first agency account is bootstrapped; sign-up is refused;
-  and a 55 MiB TUS upload round-trips with a matching SHA-256. The containers are stopped, with
-  volumes kept. See the [report](handoffs/2026-09-23-staging-rehearsal.md).
-
 ## Next actions
 
-1. After the user reviews the spec: write the video lifecycle plan, then implement it.
-2. J10: seed a disposable dataset on the staging rehearsal and run the browser suite against it
-   (`ACCEPTANCE_SUPABASE_URL`). A real R2 bucket, the TLS proxy and SMTP remain for a server run.
-3. Start a fresh session so the project agents load by name.
+1. After the user reviews the plan, implement the video lifecycle with the chosen method.
+2. Integrate the dataset-independence fixes, rerun the full suite on staging, and update J10.
+3. Start a fresh session so the project agents load by name, and to reset context size.
