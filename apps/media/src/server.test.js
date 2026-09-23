@@ -529,8 +529,7 @@ describe('POST /publications/prepare', () => {
     expect(payload.p_source_design_id).toBe(designId);
     expect(payload.p_source_path).toBe(internalPath);
     expect(payload.p_file_size).toBe(videoBytes.length);
-    expect(typeof payload.p_sha256).toBe('string');
-    expect(payload.p_sha256).toHaveLength(64);
+    expect(payload.p_sha256).toBe(createHash('sha256').update(videoBytes).digest('hex'));
   });
 
   it('still sanitizes a raster design the existing way, unaffected by the video branch', async () => {
@@ -599,6 +598,42 @@ describe('POST /publications/prepare', () => {
     expect(response.status).toBe(502);
     // The bytes `uploadFile` copied in are removed, rather than left unreferenced and unattested.
     expect(discardedPaths.flat()).toContain(uploadedPath);
+  });
+
+  it('discards an uncertain publication upload and prior prepared copies without deleting the source', async () => {
+    const sourcePath = `${projectId}/${md5Uuid('publication-upload-failure')}.mp4`;
+    const videoBytes = await readFile(resolve(import.meta.dirname, 'fixtures/tagged.mp4'));
+    const uploadedPaths = [];
+    const discardedPaths = [];
+    const routes = withGeneratedUpload({
+      ...authRoutes,
+      ...versionRoutes([
+        { id: md5Uuid('publication-success-first'), internal_asset_path: sourcePath },
+        { id: md5Uuid('publication-failure-second'), internal_asset_path: sourcePath },
+      ]),
+      [`GET /storage/v1/object/authenticated/internal-assets/${sourcePath}`]: () =>
+        new Response(videoBytes, { status: 200, headers: { 'content-length': String(videoBytes.length) } }),
+      'POST /rest/v1/rpc/register_sanitized_asset': () => jsonResponse(200, null),
+      'POST /rest/v1/rpc/discard_sanitized_asset': () => jsonResponse(200, null),
+      'POST /rest/v1/rpc/finalize_asset_discard': () => jsonResponse(200, null),
+      'DELETE /storage/v1/object/published-assets': (_url, init) => {
+        discardedPaths.push(...JSON.parse(init.body).prefixes);
+        return jsonResponse(200, {});
+      },
+    }, 'published-assets', path => {
+      uploadedPaths.push(path);
+      return jsonResponse(uploadedPaths.length === 1 ? 200 : 502, {});
+    });
+    stubSupabase(routes);
+
+    const response = await post('/publications/prepare', { versionId });
+
+    expect(response.status).toBe(502);
+    expect(uploadedPaths).toHaveLength(2);
+    expect(discardedPaths.sort()).toEqual([...uploadedPaths].sort());
+    expect(discardedPaths).not.toContain(sourcePath);
+    expect(calls.filter(call => call.path === '/rest/v1/rpc/register_sanitized_asset')).toHaveLength(1);
+    expect(calls.some(call => call.method === 'DELETE' && call.path === '/storage/v1/object/internal-assets')).toBe(false);
   });
 
   // The realistic publication is not "all video" or "all raster" — it's a version whose designs

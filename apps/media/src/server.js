@@ -116,9 +116,18 @@ export function createMediaServer(config) {
                 const local = join(directory, `asset.${extension}`);
                 await backend.downloadToFile(design.internal_asset_path, projectId, token, local);
                 const target = `${projectId}/${randomUUID()}.${extension}`;
-                await backend.uploadFile('published-assets', target, local, mimeType);
+                let uploaded;
+                try {
+                  uploaded = await backend.uploadFile('published-assets', target, local, mimeType);
+                } catch (error) {
+                  // The upload may have committed bytes before its response was lost. This
+                  // target is not attested or returned yet, so discard it without touching the
+                  // internal source or any completed immutable publication.
+                  await backend.discard('published-assets', target).catch(() => {});
+                  throw error;
+                }
                 assets[design.id] = await backend.registerCopied(
-                  projectId, 'published-assets', target, local, mimeType, userId,
+                  projectId, 'published-assets', target, uploaded, mimeType, userId,
                   { designId: design.id, path: design.internal_asset_path },
                 );
               } finally {
@@ -165,8 +174,9 @@ export function createMediaServer(config) {
           await backend.downloadToFile(rawPath, projectId, token, input);
           const probe = await sanitizeVideo(input, output, mimeType);
           const path = `${projectId}/${randomUUID()}.${extension}`;
+          let uploaded;
           try {
-            await backend.uploadFile('internal-assets', path, output, mimeType);
+            uploaded = await backend.uploadFile('internal-assets', path, output, mimeType);
           } catch (error) {
             // The upload may have left a partial object under `path` before failing. Nothing
             // references that path yet — it was never linked to a design — so a best-effort
@@ -181,7 +191,7 @@ export function createMediaServer(config) {
           // `202609210007_video_provenance_attestation.sql`. `registerSanitizedVideo` discards
           // the object it failed to attest, the same way the `uploadFile` failure above does, so
           // an unattested object is never left reachable under a path this response returns.
-          await backend.registerSanitizedVideo(projectId, path, output, mimeType, userId);
+          await backend.registerSanitizedVideo(projectId, path, uploaded, mimeType, userId);
           try {
             // The raw object has served its purpose now that the clean one is durably stored.
             await backend.discard('internal-assets', rawPath);

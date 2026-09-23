@@ -1,8 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { finished, pipeline } from 'node:stream/promises';
 import { LIMITS, MediaError } from './sanitize.js';
 
 // A raw video lands as `<projectId>/<uuid>.raw` while `/designs/sanitize-video` still holds it,
@@ -47,7 +46,7 @@ export function createBackend(config) {
   async function identify(token) {
     if (!token) throw new MediaError('Authentication required.', 401);
     const user = await json('/auth/v1/user', { token });
-    const profiles = await json(`/rest/v1/profiles?id=eq.${user.id}&select=id,role`, { token });
+    const profiles = await json(`/rest/v1/profiles?id=eq.${user.id}&removed_at=is.null&select=id,role`, { token });
     if (profiles.length !== 1) throw new MediaError('Access denied.', 403);
     return { id: user.id, role: profiles[0].role };
   }
@@ -102,9 +101,51 @@ export function createBackend(config) {
   // bypasses `internal_storage_insert`'s RLS checks (including `opaque_storage_path`) rather than
   // depending on them.
   async function uploadFile(bucket, path, filePath, mimeType) {
-    const body = Readable.toWeb(createReadStream(filePath));
-    // Same reasoning as `downloadToFile`'s `timeoutMs`: this streams up to a gigabyte too.
-    await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half', timeoutMs: LIMITS.videoProcessMs });
+    const source = createReadStream(filePath);
+    const chunks = source[Symbol.asyncIterator]();
+    const hash = createHash('sha256');
+    let fileSize = 0;
+    let reachedEnd = false;
+    let cancelled = false;
+    let streamError;
+    // Read only when fetch requests another chunk. Hash those exact outgoing bytes while
+    // preserving backpressure; no second file pass or complete-file buffer is needed.
+    const body = new ReadableStream({
+      async pull(controller) {
+        try {
+          const next = await chunks.next();
+          if (next.done) {
+            reachedEnd = true;
+            controller.close();
+            return;
+          }
+          fileSize += next.value.byteLength;
+          if (fileSize > LIMITS.videoBytes) throw new MediaError('Source exceeds the file-size limit.', 413);
+          hash.update(next.value);
+          controller.enqueue(next.value);
+        } catch (error) {
+          streamError = error;
+          source.destroy();
+          controller.error(error);
+        }
+      },
+      cancel() { cancelled = true; source.destroy(); },
+    }, { highWaterMark: 0 });
+    try {
+      // Same transfer budget as downloadToFile. A successful early response must never attest
+      // a prefix: require the outgoing stream's EOF in addition to the HTTP success status.
+      const response = await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half', timeoutMs: LIMITS.videoProcessMs });
+      await response.body?.cancel();
+      if (!reachedEnd || cancelled || fileSize === 0) throw new MediaError('The storage upload did not finish.', 502);
+      return Object.freeze({ sha256: hash.digest('hex'), fileSize });
+    } catch (error) {
+      throw streamError ?? error;
+    } finally {
+      // Rejection/abort can arrive before fetch consumes the body. Close the file in every
+      // outcome, including that early path, and wait for descriptor cleanup before returning.
+      source.destroy();
+      await finished(source, { cleanup: true }).catch(() => {});
+    }
   }
 
   async function saveSanitized(projectId, bucket, sanitized, userId, source = {}) {
@@ -121,58 +162,27 @@ export function createBackend(config) {
     } catch (error) { await discard(bucket, path); throw error; }
   }
 
-  // Video's registration half, on its own: `uploadFile` above already copied the already-clean
-  // bytes into the target bucket, so this only attests to them, mirroring `saveSanitized`'s own
-  // `register_sanitized_asset` call exactly (same RPC, same argument names and order). The one
-  // difference is the checksum and size, which come from streaming `filePath` off disk through
-  // `createHash('sha256')` rather than hashing a buffer — the file may be a gigabyte, and holding
-  // it in memory twice (once for `uploadFile`'s read stream, once for a hashed buffer) is exactly
-  // the cost this task exists to avoid.
-  //
-  // If the copy already landed in the bucket and this registration then fails — a bad checksum,
-  // a stale byte count, a dropped connection to the RPC — the bytes are unreferenced but still
-  // present and billable, and worse, `/publish_version` would otherwise be unable to tell them
-  // apart from a legitimately attested object at that same path. So, exactly like `saveSanitized`,
-  // any failure here discards what `uploadFile` wrote before re-throwing.
-  async function registerCopied(projectId, bucket, path, filePath, mimeType, userId, source = {}) {
+  // Only server-owned uploadFile results reach these registrators. Attest the exact uploaded
+  // bytes and preserve provenance; a failed attestation discards the unreferenced copy.
+  async function registerCopied(projectId, bucket, path, uploaded, mimeType, userId, source = {}) {
     try {
-      const { size } = await stat(filePath);
-      const hash = createHash('sha256');
-      await pipeline(createReadStream(filePath), hash);
       await rpc('register_sanitized_asset', {
         p_project_id: projectId, p_bucket_id: bucket, p_storage_path: path,
-        p_sha256: hash.digest('hex'),
-        p_mime_type: mimeType, p_file_size: size, p_prepared_by: userId,
+        p_sha256: uploaded.sha256,
+        p_mime_type: mimeType, p_file_size: uploaded.fileSize, p_prepared_by: userId,
         p_source_design_id: source.designId ?? null, p_source_path: source.path ?? null,
       }, config.serviceKey);
       return path;
     } catch (error) { await discard(bucket, path); throw error; }
   }
 
-  // The provenance write for a freshly sanitised internal video (final whole-branch review,
-  // Critical 2). `uploadFile` above already wrote the clean object to `internal-assets`; this
-  // attests to it in `private.sanitized_assets` so that later, when `/publications/prepare`
-  // copies it into `published-assets`, `register_sanitized_asset`'s video branch can refuse the
-  // copy if this row is missing rather than trusting the design's own claim about its asset path.
-  //
-  // Deliberately calls `register_sanitized_video`, not `register_sanitized_asset`: the latter
-  // requires `p_prepared_by` to be an agency profile, which is wrong for a route a designer is
-  // expected to reach (`canProduce` above already authorized this exact caller for this exact
-  // project). Same streamed-hash reasoning as `registerCopied`: the file may be a gigabyte, so
-  // the checksum comes from `filePath` on disk rather than a buffer already held for the upload.
-  //
-  // On failure the object this attests to is discarded, mirroring `registerCopied` and
-  // `saveSanitized`: an unattested object left behind in `internal-assets` is not merely wasted
-  // storage here, it is exactly the gap this migration exists to close, so it must not survive a
-  // failed registration either.
-  async function registerSanitizedVideo(projectId, path, filePath, mimeType, userId) {
+  // Internal video provenance has its own RPC because assigned designers may sanitize a video,
+  // while preparing publication remains agency-only. The database still verifies both gates.
+  async function registerSanitizedVideo(projectId, path, uploaded, mimeType, userId) {
     try {
-      const { size } = await stat(filePath);
-      const hash = createHash('sha256');
-      await pipeline(createReadStream(filePath), hash);
       await rpc('register_sanitized_video', {
-        p_project_id: projectId, p_storage_path: path, p_sha256: hash.digest('hex'),
-        p_mime_type: mimeType, p_file_size: size, p_prepared_by: userId,
+        p_project_id: projectId, p_storage_path: path, p_sha256: uploaded.sha256,
+        p_mime_type: mimeType, p_file_size: uploaded.fileSize, p_prepared_by: userId,
       }, config.serviceKey);
       return path;
     } catch (error) { await discard('internal-assets', path); throw error; }
