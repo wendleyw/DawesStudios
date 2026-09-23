@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { discardUnreferencedArtwork, uploadDesignAsset } from "./artwork-files";
@@ -45,10 +45,14 @@ const titles = {
 export function ProjectActionDialog({
   action,
   projectId,
+  suspended,
+  onOpenPlayground,
   onClose,
 }: {
   action: ProjectAction | null;
   projectId: string;
+  suspended: boolean;
+  onOpenPlayground: () => void;
   onClose: () => void;
 }) {
   const { database, mediaUrl } = useAuth();
@@ -56,6 +60,8 @@ export function ProjectActionDialog({
   const [stagedArtwork, setStagedArtwork] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
+  const [returningFromPlayground, setReturningFromPlayground] = useState(false);
+  const playgroundTrigger = useRef<HTMLButtonElement>(null);
   // `null` means no upload is in flight (or none was ever started for this attempt); once an
   // upload begins it's set to 0 and tracks `uploadDesignAsset`'s `onProgress` fraction up to 1.
   // A video's own resumable transfer can run for many minutes, so this is what turns "Saving…"
@@ -226,189 +232,206 @@ export function ProjectActionDialog({
   const sanitizing = mutation.isPending && uploadProgress === 1;
 
   return (
-    <Modal
-      open={!!action}
-      onClose={() => void close()}
-      title={action ? titles[action.kind] : "Project action"}
-      closeDisabled={mutation.isPending || closing}
-    >
-      {action && (
-        <form
-          className="stack-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            mutation.mutate(new FormData(event.currentTarget));
-          }}
-        >
-          {action.kind === "version" && (
-            <>
-              <p>Keep earlier work intact while exploring what’s next.</p>
-              <label>
-                Version note
-                <textarea name="notes" rows={3} placeholder="What will this version explore?" />
-              </label>
-              {action.sourceVersionId && (
-                <label className="checkbox-label">
-                  <input name="copy" type="checkbox" defaultChecked />
-                  Start from the previous version
-                </label>
-              )}
-            </>
-          )}
-          {(action.kind === "design" || action.kind === "edit-design") && (
-            <>
-              <label>
-                Design name
-                <input
-                  name="title"
-                  defaultValue={current?.title ?? ""}
-                  required
-                  maxLength={160}
-                  placeholder="e.g. Hero — direction A"
-                />
-              </label>
-              <label>
-                Design file
-                <input
-                  name="artwork"
-                  type="file"
-                  disabled={!!stagedArtwork || mutation.isPending}
-                  accept={designUploadMimes.join(",")}
-                />
-                <small>
-                  {uploadTypesLabel(designUploadMimes)}. Images up to{" "}
-                  {uploadLimitMb(ARTWORK_MAX_BYTES)} MB, video up to{" "}
-                  {uploadLimitMb(VIDEO_MAX_BYTES)} MB.
-                </small>
-              </label>
-              {uploadProgress !== null && (
-                <p className="upload-progress" aria-live="polite">
-                  {sanitizing ? (
-                    // No `value`: an indeterminate `<progress>` renders as an animated bar in
-                    // every evergreen browser, which is the honest signal here — the transfer is
-                    // done, the server is remuxing, and there is no percentage to report for that
-                    // step. A bar pinned at 100% would say "done" for an operation that is not.
-                    <progress max={1} aria-label="Processing video" />
-                  ) : (
-                    <progress value={uploadProgress} max={1} aria-label="Upload progress" />
-                  )}
-                  <span>{sanitizing ? "Processing…" : `${Math.round(uploadProgress * 100)}%`}</span>
-                </p>
-              )}
-              <details className="design-text-options">
-                <summary>Or compose a text concept</summary>
+    <>
+      <Modal
+        open={!!action && !suspended}
+        initialFocusRef={returningFromPlayground ? playgroundTrigger : undefined}
+        onClose={() => void close()}
+        title={action ? titles[action.kind] : "Project action"}
+        closeDisabled={mutation.isPending || closing}
+      >
+        {action && (
+          <form
+            className="stack-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              mutation.mutate(new FormData(event.currentTarget));
+            }}
+          >
+            {action.kind === "version" && (
+              <>
+                <p>Keep earlier work intact while exploring what’s next.</p>
                 <label>
-                  Brand label
-                  <input name="eyebrow" defaultValue={field("eyebrow")} maxLength={80} />
+                  Version note
+                  <textarea name="notes" rows={3} placeholder="What will this version explore?" />
                 </label>
+                {action.sourceVersionId && (
+                  <label className="checkbox-label">
+                    <input name="copy" type="checkbox" defaultChecked />
+                    Start from the previous version
+                  </label>
+                )}
+              </>
+            )}
+            {(action.kind === "design" || action.kind === "edit-design") && (
+              <>
+                <button
+                  className="button quiet"
+                  type="button"
+                  disabled={mutation.isPending || closing}
+                  ref={playgroundTrigger}
+                  onClick={() => {
+                    setReturningFromPlayground(true);
+                    onOpenPlayground();
+                  }}
+                >
+                  Open Playground
+                </button>
                 <label>
-                  Headline
-                  <textarea
-                    name="headline"
-                    defaultValue={field("headline")}
-                    rows={2}
-                    maxLength={240}
+                  Design name
+                  <input
+                    name="title"
+                    defaultValue={current?.title ?? ""}
+                    required
+                    maxLength={160}
+                    placeholder="e.g. Hero — direction A"
                   />
                 </label>
                 <label>
-                  Supporting copy
-                  <textarea name="body" defaultValue={field("body")} rows={2} maxLength={1000} />
+                  Design file
+                  <input
+                    name="artwork"
+                    type="file"
+                    disabled={!!stagedArtwork || mutation.isPending}
+                    accept={designUploadMimes.join(",")}
+                  />
+                  <small>
+                    {uploadTypesLabel(designUploadMimes)}. Images up to{" "}
+                    {uploadLimitMb(ARTWORK_MAX_BYTES)} MB, video up to{" "}
+                    {uploadLimitMb(VIDEO_MAX_BYTES)} MB.
+                  </small>
                 </label>
-                <div className="form-row">
+                {uploadProgress !== null && (
+                  <p className="upload-progress" aria-live="polite">
+                    {sanitizing ? (
+                      // No `value`: an indeterminate `<progress>` renders as an animated bar in
+                      // every evergreen browser, which is the honest signal here — the transfer is
+                      // done, the server is remuxing, and there is no percentage to report for that
+                      // step. A bar pinned at 100% would say "done" for an operation that is not.
+                      <progress max={1} aria-label="Processing video" />
+                    ) : (
+                      <progress value={uploadProgress} max={1} aria-label="Upload progress" />
+                    )}
+                    <span>
+                      {sanitizing ? "Processing…" : `${Math.round(uploadProgress * 100)}%`}
+                    </span>
+                  </p>
+                )}
+                <details className="design-text-options">
+                  <summary>Or compose a text concept</summary>
                   <label>
-                    Background
-                    <input
-                      type="color"
-                      name="background"
-                      defaultValue={field("background", "#f2f0e8")}
+                    Brand label
+                    <input name="eyebrow" defaultValue={field("eyebrow")} maxLength={80} />
+                  </label>
+                  <label>
+                    Headline
+                    <textarea
+                      name="headline"
+                      defaultValue={field("headline")}
+                      rows={2}
+                      maxLength={240}
                     />
                   </label>
                   <label>
-                    Text
-                    <input
-                      type="color"
-                      name="foreground"
-                      defaultValue={field("foreground", "#20231f")}
-                    />
+                    Supporting copy
+                    <textarea name="body" defaultValue={field("body")} rows={2} maxLength={1000} />
                   </label>
-                </div>
-              </details>
-            </>
-          )}
-          {action.kind === "publish" && (
-            <>
+                  <div className="form-row">
+                    <label>
+                      Background
+                      <input
+                        type="color"
+                        name="background"
+                        defaultValue={field("background", "#f2f0e8")}
+                      />
+                    </label>
+                    <label>
+                      Text
+                      <input
+                        type="color"
+                        name="foreground"
+                        defaultValue={field("foreground", "#20231f")}
+                      />
+                    </label>
+                  </div>
+                </details>
+              </>
+            )}
+            {action.kind === "publish" && (
+              <>
+                <p>
+                  The client will receive a fixed copy of this version. Future studio edits remain
+                  private.
+                </p>
+                <label>
+                  A note for the client
+                  <textarea
+                    name="note"
+                    rows={4}
+                    placeholder="What should they look for?"
+                    maxLength={2000}
+                  />
+                </label>
+              </>
+            )}
+            {action.kind === "submit" && (
               <p>
-                The client will receive a fixed copy of this version. Future studio edits remain
-                private.
+                Send this version to the studio for an internal review. The client will see it after
+                the studio shares it.
               </p>
-              <label>
-                A note for the client
-                <textarea
-                  name="note"
-                  rows={4}
-                  placeholder="What should they look for?"
-                  maxLength={2000}
-                />
-              </label>
-            </>
-          )}
-          {action.kind === "submit" && (
-            <p>
-              Send this version to the studio for an internal review. The client will see it after
-              the studio shares it.
-            </p>
-          )}
-          {action.kind === "review" && (
-            <>
-              <label>
-                Your decision
-                <select name="decision" defaultValue="approved">
-                  <option value="approved">Approve this version</option>
-                  <option value="changes_requested">Request changes</option>
-                </select>
-              </label>
-              <label>
-                Feedback
-                <textarea
-                  name="feedback"
-                  rows={4}
-                  placeholder="Share a little context. Required when requesting changes."
-                  maxLength={5000}
-                />
-              </label>
-            </>
-          )}
-          {(mutation.error || closeError) && (
-            <FormError>{closeError || mutation.error?.message}</FormError>
-          )}
-          <div className="form-actions">
-            <button
-              className="button"
-              type="button"
-              onClick={() => void close()}
-              disabled={mutation.isPending || closing}
-            >
-              Cancel
-            </button>
-            <button className="button primary" type="submit" disabled={mutation.isPending}>
-              {mutation.isPending
-                ? sanitizing
-                  ? "Processing…"
-                  : uploadProgress !== null
-                    ? `Uploading… ${Math.round(uploadProgress * 100)}%`
-                    : "Saving…"
-                : {
-                    version: "Create version",
-                    design: "Add design",
-                    "edit-design": "Save working design",
-                    publish: "Share version",
-                    submit: "Send to studio",
-                    review: "Send review",
-                  }[action.kind]}
-            </button>
-          </div>
-        </form>
-      )}
-    </Modal>
+            )}
+            {action.kind === "review" && (
+              <>
+                <label>
+                  Your decision
+                  <select name="decision" defaultValue="approved">
+                    <option value="approved">Approve this version</option>
+                    <option value="changes_requested">Request changes</option>
+                  </select>
+                </label>
+                <label>
+                  Feedback
+                  <textarea
+                    name="feedback"
+                    rows={4}
+                    placeholder="Share a little context. Required when requesting changes."
+                    maxLength={5000}
+                  />
+                </label>
+              </>
+            )}
+            {(mutation.error || closeError) && (
+              <FormError>{closeError || mutation.error?.message}</FormError>
+            )}
+            <div className="form-actions">
+              <button
+                className="button"
+                type="button"
+                onClick={() => void close()}
+                disabled={mutation.isPending || closing}
+              >
+                Cancel
+              </button>
+              <button className="button primary" type="submit" disabled={mutation.isPending}>
+                {mutation.isPending
+                  ? sanitizing
+                    ? "Processing…"
+                    : uploadProgress !== null
+                      ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+                      : "Saving…"
+                  : {
+                      version: "Create version",
+                      design: "Add design",
+                      "edit-design": "Save working design",
+                      publish: "Share version",
+                      submit: "Send to studio",
+                      review: "Send review",
+                    }[action.kind]}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+    </>
   );
 }

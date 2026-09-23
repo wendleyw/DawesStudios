@@ -8,7 +8,7 @@ import {
   DELIVERABLE_HEAD_W,
   EMPTY_H,
   EMPTY_SLOTS,
-  FEEDBACK_H,
+  FEEDBACK_LINK_H,
   FIT_PAD,
   FOOTER_H,
   HEAD_GAP,
@@ -17,7 +17,6 @@ import {
   MAX_ROW_DESIGNS,
   MIN_FIT_ZOOM,
   MORE_W,
-  NOTE_H,
   ROW_PAD,
   SECTION_GAP,
   TILE_GAP,
@@ -41,7 +40,7 @@ import {
 } from "./canvas-layout";
 
 function version(id: string, designCount: number, extra: Partial<CanvasLayoutVersion> = {}) {
-  return { id, designCount, hasNote: false, hasFeedback: false, ...extra };
+  return { id, designCount, ...extra };
 }
 function section(
   id: string,
@@ -155,17 +154,13 @@ describe("version line height", () => {
     expect(versionCardHeight(version("v1", 0), artwork)).toBe(CARD_BORDER + ROW_PAD * 2 + EMPTY_H);
   });
 
-  it("takes the label column's height only when it outgrows the designs", () => {
-    const plain = version("v1", 1);
-    const loaded = version("v1", 1, { hasNote: true, hasFeedback: true });
-    expect(versionLabelHeight(plain)).toBe(HEADER_H + FOOTER_H);
-    expect(versionLabelHeight(loaded)).toBe(HEADER_H + NOTE_H + FEEDBACK_H + FOOTER_H);
-    // A note and client feedback still fit beside a square design, so the line does not grow.
-    expect(versionLabelHeight(loaded)).toBeLessThan(designs);
-    expect(versionCardHeight(loaded, artwork)).toBe(versionCardHeight(plain, artwork));
-    // An empty version has no artwork to hold the line open, so its meta decides.
-    const empty = version("v1", 0, { hasNote: true, hasFeedback: true });
-    expect(versionCardHeight(empty, artwork)).toBe(CARD_BORDER + versionLabelHeight(empty));
+  it("fits the compact feedback shortcut beside landscape artwork and empty invitations", () => {
+    expect(versionLabelHeight()).toBe(HEADER_H + FEEDBACK_LINK_H + FOOTER_H);
+    expect(versionLabelHeight()).toBeLessThan(ROW_PAD * 2 + ARTWORK_MIN_H + CAPTION_H);
+    expect(versionLabelHeight()).toBeLessThan(ROW_PAD * 2 + EMPTY_H);
+    expect(versionCardHeight(version("v1", 1), ARTWORK_MIN_H)).toBe(
+      CARD_BORDER + ROW_PAD * 2 + ARTWORK_MIN_H + CAPTION_H,
+    );
   });
 
   it("follows the deliverable's proportions, so a reel line is taller than a square one", () => {
@@ -193,6 +188,40 @@ describe("section width", () => {
 });
 
 describe("canvas", () => {
+  it("reserves creation cards beside artwork and below each editable section without overlap", () => {
+    const sections = [
+      { ...section("empty", []), canAddVersion: true },
+      {
+        ...section("square", [
+          version("v1", 7, { canAddDesign: true }),
+          version("v2", 0, { canAddDesign: true }),
+        ]),
+        canAddVersion: true,
+      },
+      section("readonly", [version("v3", 1)]),
+    ];
+    const frames = buildCanvas(sections);
+    const creates = frames.filter((frame) => frame.kind === "addVersion");
+    expect(creates.map((frame) => frame.deliverableId)).toEqual(["empty", "square"]);
+    const lastVersion = frames.find((frame) => frame.id === "v2")!;
+    expect(creates[1].y).toBeGreaterThanOrEqual(lastVersion.y + lastVersion.height + VERSION_GAP);
+    expect(creates[1].width).toBeGreaterThanOrEqual(lastVersion.width);
+    expect(overlapping(frames)).toEqual([]);
+    expect(canvasBounds(frames).height).toBeGreaterThan(creates[1].y + creates[1].height);
+  });
+
+  it("fits one creation tile in an empty editable row and appends it after existing designs", () => {
+    const [, empty, filled] = buildCanvas([
+      section("square", [
+        version("empty", 0, { canAddDesign: true }),
+        version("filled", 2, { canAddDesign: true }),
+      ]),
+    ]);
+    expect(empty.width).toBe(versionCardWidth(1));
+    expect(empty.height).toBe(versionCardHeight(version("artwork", 1), TILE_W));
+    expect(filled.width).toBe(versionCardWidth(3));
+  });
+
   it("stacks the versions of a deliverable under its header, in order, on one left edge", () => {
     const frames = buildCanvas([
       section("square", [version("v1", 3), version("v2", 1), version("v3", 0)]),
@@ -239,12 +268,12 @@ describe("canvas", () => {
 
   it("never lets two frames overlap, whatever the sections hold", () => {
     const frames = buildCanvas([
-      section("square", [version("v1", 5, { hasNote: true }), version("v2", 1)]),
-      section("reel", [version("v3", 2, { hasFeedback: true }), version("v4", 0)], {
+      section("square", [version("v1", 5), version("v2", 1)]),
+      section("reel", [version("v3", 2), version("v4", 0)], {
         width: 1080,
         height: 1920,
       }),
-      section("loose", [version("v5", 9, { hasNote: true, hasFeedback: true })], {
+      section("loose", [version("v5", 9)], {
         width: null,
         height: null,
       }),

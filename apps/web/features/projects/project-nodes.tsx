@@ -1,14 +1,14 @@
 "use client";
 
 import type { Node, NodeProps } from "@xyflow/react";
-import { ArrowUpRight, Check, ChevronRight, Plus, Send } from "lucide-react";
+import { ArrowUpRight, Check, ChevronRight, MessageSquare, Plus, Send } from "lucide-react";
 import { memo, type CSSProperties } from "react";
 import { Artwork } from "./artwork";
 import type { ProjectAction } from "./project-action-dialog";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import type { CanvasDesign, CanvasVersion, ProjectChannel } from "./project-data";
 
-/** The two node kinds the project canvas draws: a deliverable's heading and one of its versions. */
+/** Project canvas nodes: deliverable headings, version rows and version-creation slots. */
 export type VersionNode = Node<
   {
     version: CanvasVersion;
@@ -16,19 +16,28 @@ export type VersionNode = Node<
     channel: ProjectChannel;
     canProduce: boolean;
     canPublish: boolean;
+    commentCount?: number;
+    openFeedback: () => void;
     canReview: boolean;
     /** The artwork box every tile of this deliverable uses, in the deliverable's proportions. */
     artworkHeight: number;
     /** Designs the row shows; the rest stay behind the card's "+N more designs" control. */
     visibleDesigns: number;
+    onAddDesign?: () => void;
+    addDesignLabel: string;
+    creationHint?: string;
     openDesign: (id: string) => void;
     action: (action: ProjectAction) => void;
   },
   "version"
 >;
 export type DeliverableNode = Node<
-  { name: string; format: string; dimensions: string; canProduce: boolean; onCreate: () => void },
+  { name: string; format: string; dimensions: string },
   "deliverable"
+>;
+export type AddVersionNode = Node<
+  { name: string; onCreate: () => void; creationHint?: string },
+  "addVersion"
 >;
 
 /**
@@ -42,23 +51,20 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
         <header>
           <strong>V{data.version.number}</strong>
           <span className="version-state">{versionStatusLabel(data.version.status)}</span>
-          {data.canProduce && (
-            <button
-              className="icon-button nodrag"
-              aria-label={`Add design to version ${data.version.number}`}
-              onClick={() => data.action({ kind: "design", version: data.version })}
-            >
-              <Plus size={15} />
-            </button>
-          )}
         </header>
-        {data.version.note && <p className="version-note">{data.version.note}</p>}
-        {data.version.feedback && (
-          <p className="version-feedback">
-            <strong>Client feedback</strong>
-            <span>{data.version.feedback}</span>
-          </p>
-        )}
+        <button
+          className="version-comments nodrag"
+          onClick={data.openFeedback}
+          aria-label={`Open feedback for version ${data.version.number}`}
+          title="Open version feedback"
+        >
+          <MessageSquare size={15} aria-hidden="true" />
+          <span>
+            {data.commentCount === undefined
+              ? "Feedback"
+              : `${data.commentCount} comment${data.commentCount === 1 ? "" : "s"}`}
+          </span>
+        </button>
         <footer>
           <span>
             {data.designs.length} design{data.designs.length === 1 ? "" : "s"}
@@ -96,33 +102,45 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
       >
         {data.designs.length ? (
           data.designs.slice(0, data.visibleDesigns).map((design) => (
-            <button
-              key={design.id}
-              className="design-preview nodrag"
-              onClick={() => data.openDesign(design.id)}
-              aria-label={`Open ${design.title}`}
-            >
-              <Artwork design={design} channel={data.channel} thumbnail />
-              <span>
-                {design.title}
-                <ArrowUpRight size={13} />
-              </span>
-            </button>
+            <article className="design-preview nodrag" key={design.id}>
+              <button
+                className="design-preview-artwork"
+                aria-label={`Review ${design.title}`}
+                title="Double-click to open feedback"
+                onClick={(event) => {
+                  // Keyboard/assistive activation and touch need a direct way into feedback.
+                  if (
+                    event.detail === 0 ||
+                    ("pointerType" in event.nativeEvent &&
+                      event.nativeEvent.pointerType === "touch")
+                  )
+                    data.openDesign(design.id);
+                }}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  data.openDesign(design.id);
+                }}
+              >
+                <Artwork design={design} channel={data.channel} thumbnail />
+              </button>
+              <footer>
+                <span>{design.title}</span>
+                <button
+                  className="icon-button"
+                  aria-label={`Open ${design.title}`}
+                  title="Open feedback"
+                  onClick={() => data.openDesign(design.id)}
+                >
+                  <ArrowUpRight size={13} />
+                </button>
+              </footer>
+            </article>
           ))
-        ) : (
+        ) : !data.onAddDesign ? (
           <div className="empty-state empty-state-compact version-empty">
             <p>A space for your first design.</p>
-            {data.canProduce && (
-              <button
-                className="button quiet nodrag"
-                onClick={() => data.action({ kind: "design", version: data.version })}
-              >
-                <Plus size={14} />
-                Add design
-              </button>
-            )}
           </div>
-        )}
+        ) : null}
         {data.designs.length > data.visibleDesigns && (
           <button
             className="button quiet more-designs nodrag"
@@ -130,6 +148,18 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
           >
             +{data.designs.length - data.visibleDesigns} more designs
             <ChevronRight size={14} />
+          </button>
+        )}
+        {data.onAddDesign && (
+          <button
+            type="button"
+            className="project-add-design nodrag"
+            aria-label={data.addDesignLabel}
+            onClick={data.onAddDesign}
+          >
+            <Plus size={18} aria-hidden="true" />
+            <span>Add design</span>
+            {data.creationHint && <small>{data.creationHint}</small>}
           </button>
         )}
       </div>
@@ -144,16 +174,25 @@ function DeliverableHeader({ data }: NodeProps<DeliverableNode>) {
         <h2>{data.name}</h2>
         <p>{data.dimensions}</p>
       </div>
-      {data.canProduce && (
-        <button
-          className="icon-button nodrag"
-          aria-label={`New version for ${data.name}`}
-          onClick={data.onCreate}
-        >
-          <Plus size={16} />
-        </button>
-      )}
     </header>
   );
 }
-export const nodeTypes = { version: VersionCard, deliverable: DeliverableHeader };
+function AddVersionCard({ data }: NodeProps<AddVersionNode>) {
+  return (
+    <button
+      type="button"
+      className="project-add-version nodrag"
+      aria-label={`New version for ${data.name}`}
+      onClick={data.onCreate}
+    >
+      <Plus size={16} aria-hidden="true" />
+      <span>Add version</span>
+      {data.creationHint && <small>{data.creationHint}</small>}
+    </button>
+  );
+}
+export const nodeTypes = {
+  version: VersionCard,
+  deliverable: DeliverableHeader,
+  addVersion: AddVersionCard,
+};

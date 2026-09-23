@@ -7,11 +7,71 @@ browser filter: an agency session chooses between working files and the shared c
 designer session is always internal, and a client session is always the client channel, with
 Supabase policies rather than the interface deciding what each one may read.
 
+The client logo/name, client navigation (Board active) and signed-in profile use the same floating
+`workspace/canvas-header.tsx` as every client section and the main board. A full-width floating card
+centers the large project title with status and due date beside it; this group wraps on phones. Outside that card, a separate
+row places Working files / Shared with client on the left and All deliverables beside the action
+icons on the right. These groups wrap on narrow screens and remain reachable above the canvas.
+The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.
+The header's measured height keeps the first deliverable, Fit View and secondary panels
+clear of the floating controls. Playground independently fills the entire viewport above the app. Opening preserves a readable width-based zoom; Fit View includes
+height with the existing 20% project zoom floor. On phones and short windows the design viewer
+scrolls its artwork/feedback body while keeping the header and viewer controls accessible.
+
+Conversation and Project details open one floating inspector beneath the project controls.
+Close/Escape restores focus to the trigger without changing canvas position. Details retain real
+edit, assignment and resource actions. Notifications sit to the left of the signed-in profile in
+`workspace/canvas-header.tsx` and open the shared animated, nonmodal account popover on every client
+surface. Notification read actions remain explicit and recipient-scoped.
+
+Design previews open feedback with a desktop double-click. A single click keeps canvas interaction
+available; Enter/Space, the explicit arrow action and a single touch tap also open the design.
+The main board already uses double-click to enter a project. During design review the channel/action
+row is replaced by a compact deliverable/design toolbar directly below the title. Playground sits
+inside that toolbar. The artwork canvas is above the design/version navigation footer, so artwork
+cannot overlap the counter. Notifications remain in the account card.
+
+## Feedback inside the design viewer
+
+Version cards show their number, status, design count, available workflow actions and a feedback
+shortcut with the unresolved comment count. Long release notes and review feedback no longer
+appear as truncated blocks beside artwork. The shortcut opens the first design on General feedback;
+an empty working version opens a standalone feedback panel.
+
+The feedback column is 310–380 px on desktop. Its compact heading/scope/filter controls leave most
+of the available height for an independently scrollable, keyboard-focusable comment history.
+The composer uses a 60–120 px growing textarea and adjacent send button; privacy context is shown
+once in the heading. Phones place a taller feedback section below the artwork, within the viewer's
+scrolling body. Pending pins, long comments, errors and drafts remain accessible.
+
+The viewer separates **This design** (that design's comments and image/video pins) from **General
+feedback** (the current version's notes, client review decision and unpinned version discussion).
+Clicking a pin or moving to another design selects This design. Review decisions remain available
+for the latest pending client publication, including from General feedback. Existing release notes
+and review feedback are rendered in full from their original records, never copied into comments.
+A general comment has a version/publication ID and no design ID; queries filter both that context
+and the channel. Project Conversation retains the existing aggregate of unpinned messages.
+Draft bodies, pending pins and retry keys remain scoped to viewer/project/channel and design, or
+version for general feedback, so switching tabs or versions cannot mix unsent comments. Counts use
+only authorized unresolved comment rows and refresh with the existing comment invalidation path.
+Clients never query working versions, designs or internal comments.
+
+The **Playground** action opens a persistent brainstorm canvas for the current role and project.
+It is also available as **Open Playground** in the design upload/edit form. The form remains
+mounted while its dialog is temporarily closed. The project-owned Playground board slides down over the entire viewport, covering the header and sidebar in a native fullscreen dialog. Covered app controls are inert until it closes. Closing slides it up; **Back to upload** restores the selected file and all
+unsent fields. Brainstorm attachments stay in a separate private bucket and do not automatically
+become production designs or client publications. See the [Playground and widgets specification](../../../../docs/architecture/playground-and-board-widgets.md).
+
+The project board and single-design viewer share a subtle 24-unit line grid,
+two-axis trackpad/scroll panning and pinch zoom. Zoom/fit buttons animate over
+200 ms unless reduced motion is requested. Direct dragging remains immediate;
+pin placement still disables canvas dragging. See the
+[shared canvas primitives](../shared/README.md#canvas-background-and-controls).
+
 `project-data.ts` owns every Supabase read and write for the feature, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useProjectDetail`
 reads the internal `design_versions`/`designs` tables or the published `published_versions`/
-`published_designs` snapshot according to that channel, so a client channel never names an internal
-table. `useProjectComments` reads `internal_comments` or `client_comments` for the same reason, and
+`published_designs` snapshot according to that channel. Actual client sessions only query the published projection. The agency’s Shared with client tab also enables a separate cached working-detail read to target authorized creation actions; `useProjectDetail` takes an optional enabled gate for that read. `useProjectComments` reads `internal_comments` or `client_comments` for the same reason, and
 labels internal authors as the signed-in person or "Studio team" rather than exposing designer
 identity. `projectQueryKeys` lists the four keys every project write invalidates; `assignments` and
 `asset-url` are deliberately outside that set, because the assignment panel refetches its own read
@@ -19,10 +79,33 @@ and a signed URL expires on its own schedule.
 
 `canvas-layout.ts` computes the canvas geometry from the deliverables and their version counts, so
 the canvas lands in its final shape on first paint instead of being measured after render.
+Deliverable, version and creation nodes pass those dimensions as xyflow `width`/`height` as well as CSS.
+This keeps controlled nodes visible when a dialog or query update recreates them without a new
+DOM resize; relying on a discarded measurement can otherwise hide the completed upload's canvas.
 `project-nodes.tsx` holds what the canvas draws and `project-canvas-view.tsx` places the opening
 view once the pane knows its width. `project-events.ts` subscribes to the Postgres changes each role
 is allowed to see and polls while the socket is down, so a dropped connection degrades instead of
 silently freezing the canvas.
+
+## Creation cards
+
+Each editable version row ends with an Add design tile matching the artwork dimensions. A dashed
+Add version row sits below the versions of each deliverable, including a deliverable with no version
+yet. These replace the small header plus buttons and the duplicate empty-row action. Geometry
+includes both creation slots, so they stay outside existing artwork and clear the next deliverable.
+A row still limits previews to five, with a more-designs control before its creation tile.
+
+Agency and assigned designers use these cards in Working files. The agency also sees Add version
+and an Add design tile on the newest shared version of each deliverable. Those shared-view actions
+are labeled In Working files (and the target working version for a design); clicking switches to
+Working files and opens the existing real creation dialog. Add design targets the latest internal
+version for that deliverable, not the publication ID or a guessed number match. Adding a version
+retains the existing option to copy designs from the latest internal version.
+
+Client accounts receive the read-only published layout and their existing review actions, with no
+production creation cards or internal fetches. Creating working content never changes the published
+snapshot or sends it automatically; explicit agency publication remains required. The backend
+permissions and write commands are unchanged.
 
 `artwork-files.ts` owns an uploaded design artwork's whole lifecycle: `sanitizeArtwork` re-encodes
 the image and enforces the type, size and megapixel limits, `uploadArtwork` stores it under an
@@ -50,6 +133,32 @@ progress signal, and the remux that follows it can run for several more minutes 
 extension rather than a database column, for the same reason `apps/media` names every object after
 the container it verified: what a browser claims about a file at upload time is not what the file
 actually is.
+
+Video thumbnails are lightweight **Video** tiles beside the existing design title. They do not
+request a signed URL or mount a media element. `useDesignAssetUrl` accepts an optional `enabled`
+flag that defaults to true; inactive video thumbnails disable both signing and renewal timers.
+Image previews retain their existing behavior. Opening a video design creates the real player
+with native controls and metadata preloading.
+
+The single-design viewer refits its known artwork bounds when its actual canvas dimensions
+change, including sidebar transitions and desktop/mobile resizing, with a maximum zoom of 1.
+Playback, comments and ordinary rerenders do not reset manual pan or zoom. Explicit node
+dimensions preserve the artwork frame across controlled-node updates.
+
+`video-player.tsx` keeps one video element for a design, channel and asset path. A signed URL
+renewal snapshots the playhead, playback rate and paused/playing state before replacing the
+source, then restores them after metadata loads. Overlapping renewals keep the original pending
+snapshot. Muting and volume remain on the same element, and ordinary query/callback rerenders do
+not reload it. `onVideoReadyChange` keeps timed pin actions unavailable until metadata and any
+restoration seek finish. Changing design, channel or asset starts a fresh viewing session.
+
+Failed background signing leaves an already usable source visible. A transient range error with
+buffered media also leaves controls and the frame intact. An unusable source exposes **Retry
+preview**, which renews or reloads the source while retaining the last usable playhead. If the
+browser refuses automatic playback resumption, the player explains that it is paused and leaves
+native Play available. Video signatures retain their one-hour expiry and 55-minute renewal,
+with the same user-scoped cache and channel-selected private bucket. These display changes do
+not alter sanitization, publication, uploads or file metadata.
 
 Publishing is the agency's alone and produces an immutable snapshot. `publishVersion` passes no
 submission key, which makes one internal version map to exactly one client publication: reopening
@@ -85,6 +194,21 @@ the `.is("internal_asset_path", null)` branch — and the surfacing of the datab
 
 ## Verification
 
+`npx playwright test tests/e2e/project-feedback.spec.ts` verifies persisted review decisions,
+version/design comment isolation, draft restoration, client-only reads and five viewport sizes.
+The mutation scenario uses a disposable isolated client; the populated SABRE scenario is read-only.
+
+Video loading and playback-state regressions can be run from `apps/web` with:
+
+```sh
+npx vitest run features/projects/artwork.test.tsx features/projects/project-asset-url.test.tsx features/projects/video-pins.test.ts features/projects/project-data.test.ts
+```
+
+These tests exercise real query activation against mocked Storage and media-element lifecycle
+behavior. Browser decoding, actual network cost and timed-pin interactions require the separate
+browser scenarios. The repeatable loading baseline and its limits are recorded in the
+[video baseline report](../../../../docs/engineering/handoffs/2026-09-23-video-optimization-baseline.md).
+
 Executed for the data-access migration of this feature:
 
 - `npm run check` from the repository root: typecheck, eslint, prettier and the unit suites.
@@ -101,3 +225,5 @@ These tests use stubbed Supabase clients and prove argument shape, not authoriza
 isolation, real storage transport and the publish flow end to end are proved only by the
 orchestrator's database and browser suites in
 [the acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+
+Current navigation and creation-card evidence: [verification record](../../../../docs/verification/client-menu-and-project-creation-2026-09-23.md).

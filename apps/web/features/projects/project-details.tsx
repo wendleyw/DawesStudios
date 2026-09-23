@@ -17,16 +17,19 @@ import {
   type TableRow,
   type CanvasVersion,
 } from "./project-data";
+import { ProjectPanelHeader } from "./project-panel";
 import { FormError } from "@/features/shared/form-error";
 
 export function ProjectDetails({
   project,
   deliverables,
   versions,
+  onClose,
 }: {
   project: TableRow<"projects">;
   deliverables: TableRow<"deliverables">[];
   versions: CanvasVersion[];
+  onClose?: () => void;
 }) {
   const { database, profile } = useAuth();
   const { formatDate } = useDateFormat();
@@ -83,108 +86,114 @@ export function ProjectDetails({
       : `${window.location.origin}/projects/${project.id}?channel=client`;
 
   return (
-    <aside className="project-details">
-      <div className="details-heading">
-        <h2>Project details</h2>
+    <aside className="project-details" aria-label="Project details">
+      <ProjectPanelHeader
+        title="Project details"
+        subtitle="Scope, timing and resources"
+        onClose={onClose}
+        actions={
+          profile?.role === "agency" ? (
+            <button
+              className="icon-button"
+              aria-label="Edit project details"
+              onClick={() => {
+                setEditRevision(project.updated_at);
+                save.reset();
+                setEditing(true);
+              }}
+            >
+              <Pencil size={15} />
+            </button>
+          ) : undefined
+        }
+      />
+      <div className="project-details-content">
+        <p>{project.description || "No additional project notes yet."}</p>
+        <dl>
+          <dt>Service</dt>
+          <dd>{project.service_type.replaceAll("-", " ")}</dd>
+          <dt>Starts</dt>
+          <dd>{formatDate(project.start_date, "To be planned")}</dd>
+          <dt>Due date</dt>
+          <dd>{formatDate(project.due_date, "No due date")}</dd>
+          <dt>Deliverables</dt>
+          <dd>{deliverables.length}</dd>
+        </dl>
         {profile?.role === "agency" && (
-          <button
-            className="icon-button"
-            aria-label="Edit project details"
-            onClick={() => {
-              setEditRevision(project.updated_at);
-              save.reset();
-              setEditing(true);
-            }}
-          >
-            <Pencil size={15} />
-          </button>
+          <div className="assignment-section">
+            <h3>Designer</h3>
+            {assignments.error ? (
+              <p role="alert">Assignments could not be loaded.</p>
+            ) : (
+              <div>
+                {assignments.data?.members
+                  .filter((member) => assignments.data.assigned.includes(member.id))
+                  .map((member) => (
+                    <div className="details-heading" key={member.id}>
+                      <span>{member.display_name}</span>
+                      <button
+                        className="button quiet"
+                        aria-label={`Remove ${member.display_name} from project`}
+                        disabled={revoke.isPending}
+                        onClick={() => {
+                          revoke.reset();
+                          setRevoking({ id: member.id, name: member.display_name });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
+              </div>
+            )}
+            <button className="button quiet" onClick={() => setAssigning(true)}>
+              Assign a designer
+            </button>
+          </div>
         )}
-      </div>
-      <p>{project.description || "No additional project notes yet."}</p>
-      <dl>
-        <dt>Service</dt>
-        <dd>{project.service_type.replaceAll("-", " ")}</dd>
-        <dt>Starts</dt>
-        <dd>{formatDate(project.start_date, "To be planned")}</dd>
-        <dt>Due date</dt>
-        <dd>{formatDate(project.due_date, "No due date")}</dd>
-        <dt>Deliverables</dt>
-        <dd>{deliverables.length}</dd>
-      </dl>
-      {profile?.role === "agency" && (
-        <div className="assignment-section">
-          <h3>Designer</h3>
-          {assignments.error ? (
-            <p role="alert">Assignments could not be loaded.</p>
-          ) : (
-            <div>
-              {assignments.data?.members
-                .filter((member) => assignments.data.assigned.includes(member.id))
-                .map((member) => (
-                  <div className="details-heading" key={member.id}>
-                    <span>{member.display_name}</span>
-                    <button
-                      className="button quiet"
-                      aria-label={`Remove ${member.display_name} from project`}
-                      disabled={revoke.isPending}
-                      onClick={() => {
-                        revoke.reset();
-                        setRevoking({ id: member.id, name: member.display_name });
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
-            </div>
-          )}
-          <button className="button quiet" onClick={() => setAssigning(true)}>
-            Assign a designer
-          </button>
-        </div>
-      )}
-      {project.briefing_id && (
-        <Link
-          className="button"
-          href={`/clients/${project.client_id}/briefings/${project.briefing_id}`}
-        >
-          View briefing
+        {project.briefing_id && (
+          <Link
+            className="button"
+            href={`/clients/${project.client_id}/briefings/${project.briefing_id}`}
+          >
+            View briefing
+            <ArrowUpRight size={14} />
+          </Link>
+        )}
+        <Link className="button quiet" href={`/clients/${project.client_id}/brand/overview`}>
+          Brand direction
           <ArrowUpRight size={14} />
         </Link>
-      )}
-      <Link className="button quiet" href={`/clients/${project.client_id}/brand/overview`}>
-        Brand direction
-        <ArrowUpRight size={14} />
-      </Link>
-      <Link
-        className="button quiet"
-        href={`/clients/${project.client_id}/assets?project=${project.id}`}
-      >
-        Files
-        <ArrowUpRight size={14} />
-      </Link>
-      {profile?.role !== "designer" && <CopyButton text={shareLink} label="Copy project link" />}
-      <details className="project-history">
-        <summary>Version history</summary>
-        <ol>
-          {versions
-            .toSorted((a, b) => b.date.localeCompare(a.date))
-            .map((version) => (
-              <li key={version.id}>
-                <strong>
-                  {deliverables.find((item) => item.id === version.deliverableId)?.name} · V
-                  {version.number}
-                </strong>
-                <span>
-                  {formatDate(version.date)} · {versionStatusLabel(version.status)}
-                </span>
-                {version.note && <p>{version.note}</p>}
-              </li>
-            ))}
-        </ol>
-        {!versions.length && <p>The first version will appear here.</p>}
-      </details>
+        <Link
+          className="button quiet"
+          href={`/clients/${project.client_id}/assets?project=${project.id}`}
+        >
+          Files
+          <ArrowUpRight size={14} />
+        </Link>
+        {profile?.role !== "designer" && <CopyButton text={shareLink} label="Copy project link" />}
+        <details className="project-history">
+          <summary>Version history</summary>
+          <ol>
+            {versions
+              .toSorted((a, b) => b.date.localeCompare(a.date))
+              .map((version) => (
+                <li key={version.id}>
+                  <strong>
+                    {deliverables.find((item) => item.id === version.deliverableId)?.name} · V
+                    {version.number}
+                  </strong>
+                  <span>
+                    {formatDate(version.date)} · {versionStatusLabel(version.status)}
+                  </span>
+                  {version.note && <p>{version.note}</p>}
+                </li>
+              ))}
+          </ol>
+          {!versions.length && <p>The first version will appear here.</p>}
+        </details>
+      </div>
       <Modal
         open={editing}
         title="Project details"

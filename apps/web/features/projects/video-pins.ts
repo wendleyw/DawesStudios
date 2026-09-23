@@ -6,13 +6,7 @@
  * probe of the real container, not from what a browser claimed at upload.
  */
 
-const videoExtensions = ["mp4", "webm"];
-
-export function isVideoAsset(path: string | null): boolean {
-  if (!path) return false;
-  const extension = path.split(".").pop()?.toLowerCase() ?? "";
-  return videoExtensions.includes(extension);
-}
+export { isVideoAsset } from "@/features/shared/upload-rules";
 
 /** A pin's moment as a person reads it: `1:05`. Seconds are floored, never rounded up. */
 export function formatTimecode(seconds: number): string {

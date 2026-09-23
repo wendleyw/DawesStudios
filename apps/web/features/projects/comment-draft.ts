@@ -18,10 +18,21 @@ export type CommentAttempt = { payload: string; key: string };
 type CommentDraft = { body: string; pin: PendingPin | null; attempt: CommentAttempt | null };
 const emptyDraft: CommentDraft = { body: "", pin: null, attempt: null };
 
-export function useCommentDraft(projectId: string, channel: ProjectChannel, designId?: string) {
+export function useCommentDraft(
+  projectId: string,
+  channel: ProjectChannel,
+  designId?: string,
+  versionId?: string,
+) {
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  const key = ["comment-draft", session?.user.id, projectId, channel, designId ?? "project"];
+  const key = [
+    "comment-draft",
+    session?.user.id,
+    projectId,
+    channel,
+    designId ?? (versionId ? `version:${versionId}` : "project"),
+  ];
   const { data } = useQuery({
     queryKey: key,
     queryFn: () => emptyDraft,

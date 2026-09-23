@@ -32,7 +32,7 @@ export const CARD_BORDER = 2;
  * thing that makes the canvas read as a list of lines rather than a stack of blocks.
  */
 export const LABEL_W = TILE_W;
-/** The version header inside the label column: a 32 px icon button inside 12 px of padding. */
+/** The fixed-height version/status heading inside the label column. */
 export const HEADER_H = 56;
 /**
  * The label column's footer: 10 px above a 15 px design count, a 5 px gap, a 28 px control, and 8 px
@@ -40,10 +40,8 @@ export const HEADER_H = 56;
  * count.
  */
 export const FOOTER_H = 66;
-/** The release note, clamped to two 16 px lines under 8 px of padding. */
-export const NOTE_H = 40;
-/** Client feedback: a 70 px panel inside 10 px margins. */
-export const FEEDBACK_H = 90;
+/** Compact feedback shortcut between the version heading and action footer. */
+export const FEEDBACK_LINK_H = 36;
 /** The trailing "+N more designs" slot, wide enough for its label on two lines. */
 export const MORE_W = 112;
 /** The invitation shown by a version that holds no design yet, inside the row's own padding. */
@@ -54,8 +52,7 @@ export const EMPTY_SLOTS = 2;
 export const DELIVERABLE_HEAD_H = 64;
 /**
  * The deliverable header is a label for the lines beneath it, not a band across them, so it stops at
- * the width of the narrowest complete line — the label column plus two tile slots. A five-tile
- * section would otherwise leave its "new version" control stranded 1300 px from the name.
+ * the label column plus two tile slots. Version creation has a separate row below the section.
  */
 export const DELIVERABLE_HEAD_W =
   CARD_BORDER + LABEL_W + ROW_PAD * 2 + EMPTY_SLOTS * TILE_W + TILE_GAP;
@@ -63,6 +60,8 @@ export const DELIVERABLE_HEAD_W =
 export const HEAD_GAP = 16;
 /** Space between two versions of the same deliverable, tight enough to read as one list. */
 export const VERSION_GAP = 12;
+/** The full-width creation row below a deliverable's existing versions. */
+export const ADD_VERSION_H = 76;
 /** Sections are set further apart than versions are, so each deliverable reads as one group. */
 export const SECTION_GAP = 40;
 /**
@@ -70,9 +69,9 @@ export const SECTION_GAP = 40;
  * reachable through the row's trailing "+N more designs" slot.
  *
  * The cap used to be set by what left room for the next deliverable column. Deliverables are now
- * stacked sections, so the limit is the line itself: five tiles plus the label column and the more
- * slot come to 1378 px, which already fills the canvas pane of a 1600 px window at roughly fit zoom.
- * A sixth tile would push every line below the zoom where an 11 px label can still be read.
+ * stacked sections, with up to five artwork previews and the more control. Editable rows reserve
+ * one additional creation tile, and the fit calculation includes it without shrinking below the
+ * readable zoom floor.
  */
 export const MAX_ROW_DESIGNS = 5;
 /** A very wide deliverable still needs a preview worth looking at. */
@@ -104,33 +103,31 @@ export function hiddenDesigns(count: number): number {
 
 /**
  * The strip beside the label column: its padding, one slot per shown design, and the trailing more
- * slot when the row hides any. A version with no design yet shows the invitation instead.
+ * slot when the row hides any. Editable rows add one creation tile; empty read-only rows retain
+ * their two-slot invitation.
  */
-export function designsWidth(count: number): number {
-  const slots = count > 0 ? visibleDesigns(count) : EMPTY_SLOTS;
+export function designsWidth(count: number, canAddDesign = false): number {
+  const slots =
+    (count > 0 ? visibleDesigns(count) : canAddDesign ? 0 : EMPTY_SLOTS) + (canAddDesign ? 1 : 0);
   const more = hiddenDesigns(count) > 0 ? TILE_GAP + MORE_W : 0;
   return ROW_PAD * 2 + slots * TILE_W + (slots - 1) * TILE_GAP + more;
 }
 
 /** A version line is its label column plus its strip of designs, inside the card's border. */
-export function versionCardWidth(count: number): number {
-  return CARD_BORDER + LABEL_W + designsWidth(count);
+export function versionCardWidth(count: number, canAddDesign = false): number {
+  return CARD_BORDER + LABEL_W + designsWidth(count, canAddDesign);
 }
 
 export type CanvasLayoutVersion = {
   id: string;
   designCount: number;
-  /** A release note is optional, and it takes a fixed two-line block when present. */
-  hasNote: boolean;
-  /** Client feedback is optional, and it takes a fixed panel when present. */
-  hasFeedback: boolean;
+  /** Adds one creation tile after the designs when the caller can create working artwork. */
+  canAddDesign?: boolean;
 };
 
-/** The label column's own height: its header and footer, plus whichever blocks the version carries. */
-export function versionLabelHeight(version: CanvasLayoutVersion): number {
-  return (
-    HEADER_H + (version.hasNote ? NOTE_H : 0) + (version.hasFeedback ? FEEDBACK_H : 0) + FOOTER_H
-  );
+/** The label column's compact heading, feedback shortcut and action footer. */
+export function versionLabelHeight(): number {
+  return HEADER_H + FEEDBACK_LINK_H + FOOTER_H;
 }
 
 /**
@@ -139,8 +136,9 @@ export function versionLabelHeight(version: CanvasLayoutVersion): number {
  * of an artwork box and a card's worth of chrome.
  */
 export function versionCardHeight(version: CanvasLayoutVersion, artwork: number): number {
-  const designs = ROW_PAD * 2 + (version.designCount > 0 ? artwork + CAPTION_H : EMPTY_H);
-  return CARD_BORDER + Math.max(versionLabelHeight(version), designs);
+  const designs =
+    ROW_PAD * 2 + (version.designCount > 0 || version.canAddDesign ? artwork + CAPTION_H : EMPTY_H);
+  return CARD_BORDER + Math.max(versionLabelHeight(), designs);
 }
 
 /**
@@ -150,7 +148,8 @@ export function versionCardHeight(version: CanvasLayoutVersion, artwork: number)
 export function sectionWidth(versions: CanvasLayoutVersion[]): number {
   if (!versions.length) return versionCardWidth(0);
   return versions.reduce(
-    (widest, version) => Math.max(widest, versionCardWidth(version.designCount)),
+    (widest, version) =>
+      Math.max(widest, versionCardWidth(version.designCount, version.canAddDesign)),
     0,
   );
 }
@@ -170,11 +169,12 @@ export type CanvasLayoutSection = {
   deliverable: CanvasLayoutDeliverable;
   /** In version order, oldest first, exactly as the canvas stacks them. */
   versions: CanvasLayoutVersion[];
+  canAddVersion?: boolean;
 };
 
 export type CanvasFrame = {
   id: string;
-  kind: "deliverable" | "version";
+  kind: "deliverable" | "version" | "addVersion";
   deliverableId: string;
   /** Set on version frames only. */
   versionId?: string;
@@ -226,7 +226,7 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
         versionId: version.id,
         x: 0,
         y,
-        width: versionCardWidth(version.designCount),
+        width: versionCardWidth(version.designCount, version.canAddDesign),
         height,
         artworkHeight: artwork,
         visible: visibleDesigns(version.designCount),
@@ -234,6 +234,22 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
       });
       y += height;
       if (index < section.versions.length - 1) y += VERSION_GAP;
+    }
+    if (section.canAddVersion) {
+      y += section.versions.length ? VERSION_GAP : HEAD_GAP;
+      frames.push({
+        id: `add-version-${section.deliverable.id}`,
+        kind: "addVersion",
+        deliverableId: section.deliverable.id,
+        x: 0,
+        y,
+        width: sectionWidth(section.versions),
+        height: ADD_VERSION_H,
+        artworkHeight: artwork,
+        visible: 0,
+        hidden: 0,
+      });
+      y += ADD_VERSION_H;
     }
   }
   return frames;

@@ -1,10 +1,30 @@
 "use client";
 
-import { Background, Controls, ReactFlow, type Node, type NodeProps } from "@xyflow/react";
+import { CanvasBackground } from "@/features/shared/canvas-background";
+import { canvasNavigation } from "@/features/shared/canvas-navigation";
+import { CanvasControls } from "@/features/shared/canvas-controls";
+
+import {
+  ReactFlow,
+  getViewportForBounds,
+  useReactFlow,
+  useStore,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
 import { ArrowLeft, ChevronLeft, ChevronRight, MapPin, MousePointer2, Pencil } from "lucide-react";
-import { useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+  type RefObject,
+} from "react";
 import { Artwork } from "./artwork";
 import { CommentPanel } from "./comment-panel";
+import { VersionContext } from "./version-context";
 import {
   useProjectComments,
   type CanvasComment,
@@ -32,6 +52,7 @@ type ArtworkNode = Node<
     videoRef: RefObject<HTMLVideoElement | null>;
     onTimeUpdate: (seconds: number) => void;
     onDurationChange: (seconds: number) => void;
+    onVideoReadyChange: (ready: boolean) => void;
   },
   "artwork"
 >;
@@ -72,6 +93,7 @@ function ArtworkCanvasNode({ data }: NodeProps<ArtworkNode>) {
         videoRef={data.videoRef}
         onTimeUpdate={data.onTimeUpdate}
         onDurationChange={data.onDurationChange}
+        onVideoReadyChange={data.onVideoReadyChange}
       />
       {data.comments
         .filter((comment) => !comment.resolved && comment.pinX !== null && comment.pinY !== null)
@@ -100,6 +122,39 @@ function ArtworkCanvasNode({ data }: NodeProps<ArtworkNode>) {
 }
 const nodeTypes = { artwork: ArtworkCanvasNode };
 
+/** Reframe on an actual canvas resize; playback, comments and ordinary renders keep the view. */
+function DesignViewport({
+  artworkWidth,
+  artworkHeight,
+}: {
+  artworkWidth: number;
+  artworkHeight: number;
+}) {
+  const width = useStore((state) => state.width);
+  const height = useStore((state) => state.height);
+  const ready = useStore((state) => !!state.panZoom);
+  const { setViewport } = useReactFlow();
+  const previous = useRef<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!ready || width <= 0 || height <= 0) return;
+    const prior = previous.current;
+    previous.current = { width, height };
+    if (!prior || (prior.width === width && prior.height === height)) return;
+    void setViewport(
+      getViewportForBounds(
+        { x: 0, y: 0, width: artworkWidth, height: artworkHeight },
+        width,
+        height,
+        0.15,
+        1,
+        0.08,
+      ),
+      { duration: 0 },
+    );
+  }, [ready, width, height, artworkWidth, artworkHeight, setViewport]);
+  return null;
+}
+
 export function DesignViewer({
   projectId,
   version,
@@ -109,6 +164,10 @@ export function DesignViewer({
   channel,
   onClose,
   onEdit,
+  initialFeedbackScope = "design",
+  onReview,
+  actions,
+  toolbarRef,
 }: {
   projectId: string;
   version: CanvasVersion;
@@ -118,8 +177,13 @@ export function DesignViewer({
   channel: ProjectChannel;
   onClose: () => void;
   onEdit?: (design: CanvasDesign) => void;
+  initialFeedbackScope?: "design" | "version";
+  onReview?: () => void;
+  actions?: ReactNode;
+  toolbarRef?: Ref<HTMLElement>;
 }) {
   const [designId, setDesignId] = useState(initialDesignId);
+  const [feedbackScope, setFeedbackScope] = useState(initialFeedbackScope);
   const [pinMode, setPinMode] = useState(false);
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
   // The playhead and the <video> element itself. Both are read by `placePin` below, which is why
@@ -128,6 +192,16 @@ export function DesignViewer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoReadyRef = useRef(false);
+  const updateVideoReady = useCallback((ready: boolean) => {
+    videoReadyRef.current = ready;
+    setVideoReady(ready);
+  }, []);
+  function canUseVideoTime() {
+    const video = videoRef.current;
+    return videoReadyRef.current && video && video.readyState >= 1 && !video.seeking;
+  }
   const design = designs.find((item) => item.id === designId) ?? designs[0];
   const index = designs.findIndex((item) => item.id === design?.id);
   const { draft, update } = useCommentDraft(projectId, channel, design?.id);
@@ -135,7 +209,7 @@ export function DesignViewer({
   function setPendingPin(pin: PendingPin | null) {
     update({ pin });
   }
-  const comments = useProjectComments(projectId, channel, design?.id);
+  const comments = useProjectComments(projectId, channel, design?.id, version.id);
   if (!design) return null;
   const isVideo = isVideoAsset(design.assetPath);
   const commentList = comments.data ?? [];
@@ -145,8 +219,12 @@ export function DesignViewer({
   const timedComments = commentList.filter((comment) => comment.pinT !== null);
   const ratio =
     deliverable.width && deliverable.height ? deliverable.width / deliverable.height : 0.8;
+  const artworkWidth = ratio < 1 ? 440 : 620;
+  const artworkHeight = artworkWidth / ratio;
   function placePin(pin: PendingPin) {
+    setFeedbackScope("design");
     if (!isVideo) return setPendingPin(pin);
+    if (!canUseVideoTime()) return;
     // Pausing first is not a nicety. On a playing video the frame under the click is gone by the
     // time the pin is stored, so the coordinate would describe a frame nobody chose.
     videoRef.current?.pause();
@@ -157,14 +235,19 @@ export function DesignViewer({
       id: design.id,
       type: "artwork",
       position: { x: 0, y: 0 },
+      width: artworkWidth,
+      height: artworkHeight,
       data: {
         design,
         channel,
-        pinMode,
+        pinMode: pinMode && (!isVideo || videoReady),
         pendingPin,
-        comments: frameComments,
+        comments: isVideo && !videoReady ? [] : frameComments,
         selectedComment,
-        onSelect: setSelectedComment,
+        onSelect: (id) => {
+          setFeedbackScope("design");
+          setSelectedComment(id);
+        },
         onPin: (pin) => {
           placePin(pin);
           setPinMode(false);
@@ -174,8 +257,9 @@ export function DesignViewer({
         videoRef,
         onTimeUpdate: setCurrentTime,
         onDurationChange: setDuration,
+        onVideoReadyChange: updateVideoReady,
       },
-      style: { width: ratio < 1 ? 440 : 620, pointerEvents: "all" },
+      style: { width: artworkWidth, height: artworkHeight, pointerEvents: "all" },
       draggable: false,
       selectable: false,
     },
@@ -184,22 +268,22 @@ export function DesignViewer({
     setDesignId(designs[nextIndex].id);
     setSelectedComment(null);
     setPinMode(false);
+    setFeedbackScope("design");
     setCurrentTime(0);
     setDuration(0);
+    updateVideoReady(false);
   }
 
   return (
     <div className="design-viewer">
-      <header className="design-viewer-toolbar">
+      <header className="design-viewer-toolbar" ref={toolbarRef}>
         <button className="button quiet" onClick={onClose}>
           <ArrowLeft size={16} />
           All designs
         </button>
-        <div>
-          <strong>{design.title}</strong>
-          <span>
-            {deliverable.name} · V{version.number}
-          </span>
+        <div className="design-viewer-heading">
+          <strong>{deliverable.name}</strong>
+          <span>{design.title}</span>
         </div>
         <div className="viewer-mode-switch">
           {onEdit && (
@@ -221,18 +305,25 @@ export function DesignViewer({
           </button>
           <button
             className={`button quiet ${pinMode ? "selected" : ""}`}
+            disabled={isVideo && !videoReady}
+            title={isVideo && !videoReady ? "Wait for the video frame to load" : undefined}
             aria-pressed={pinMode}
-            onClick={() => setPinMode(!pinMode)}
+            onClick={() => {
+              setFeedbackScope("design");
+              setPinMode(!pinMode);
+            }}
           >
             <MapPin size={15} />
             Add pin
           </button>
+          {actions}
         </div>
       </header>
       <div className="design-viewer-body">
         <div className="design-viewport">
           <div className="design-canvas">
             <ReactFlow
+              {...canvasNavigation}
               key={design.id}
               nodes={nodes}
               edges={[]}
@@ -245,32 +336,15 @@ export function DesignViewer({
               nodesConnectable={false}
               deleteKeyCode={null}
               panOnDrag={!pinMode}
-              panOnScroll
             >
-              <Background color="#d4d4d0" gap={20} />
-              <Controls showInteractive={false} />
+              <DesignViewport
+                key="viewport"
+                artworkWidth={artworkWidth}
+                artworkHeight={artworkHeight}
+              />
+              <CanvasBackground key="background" />
+              <CanvasControls key="controls" />
             </ReactFlow>
-            <div className="design-carousel">
-              <button
-                className="icon-button"
-                aria-label="Previous design"
-                disabled={index <= 0}
-                onClick={() => changeDesign(index - 1)}
-              >
-                <ChevronLeft size={17} />
-              </button>
-              <span>
-                {index + 1} of {designs.length} · V{version.number}
-              </span>
-              <button
-                className="icon-button"
-                aria-label="Next design"
-                disabled={index >= designs.length - 1}
-                onClick={() => changeDesign(index + 1)}
-              >
-                <ChevronRight size={17} />
-              </button>
-            </div>
             {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
           </div>
           {isVideo && duration > 0 && (
@@ -283,25 +357,80 @@ export function DesignViewer({
                 <button
                   key={comment.id}
                   type="button"
+                  disabled={!videoReady}
                   className={`video-pin-marker ${selectedComment === comment.id ? "selected" : ""}`}
                   style={{ left: `${(comment.pinT! / duration) * 100}%` }}
                   aria-label={`Comment at ${formatTimecode(comment.pinT!)}: ${comment.body.slice(0, 60)}`}
                   onClick={() => {
+                    if (!canUseVideoTime()) return;
                     if (videoRef.current) videoRef.current.currentTime = comment.pinT!;
                     setSelectedComment(comment.id);
+                    setFeedbackScope("design");
                   }}
                 />
               ))}
             </div>
           )}
+          <div className="design-carousel">
+            <button
+              className="icon-button"
+              aria-label="Previous design"
+              disabled={index <= 0}
+              onClick={() => changeDesign(index - 1)}
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <span>
+              {index + 1} of {designs.length} · V{version.number}
+            </span>
+            <button
+              className="icon-button"
+              aria-label="Next design"
+              disabled={index >= designs.length - 1}
+              onClick={() => changeDesign(index + 1)}
+            >
+              <ChevronRight size={17} />
+            </button>
+          </div>
         </div>
         <CommentPanel
-          key={`${channel}:${design.id}`}
+          key={`${channel}:${feedbackScope === "design" ? design.id : version.id}`}
           projectId={projectId}
           channel={channel}
           versionId={version.id}
-          designId={design.id}
-          pendingPin={pendingPin}
+          designId={feedbackScope === "design" ? design.id : undefined}
+          heading={feedbackScope === "design" ? "Feedback" : "General feedback"}
+          navigation={
+            <div
+              className="feedback-scope segmented-control"
+              role="group"
+              aria-label="Feedback scope"
+            >
+              <button
+                className={feedbackScope === "design" ? "active" : ""}
+                aria-pressed={feedbackScope === "design"}
+                onClick={() => setFeedbackScope("design")}
+              >
+                This design
+              </button>
+              <button
+                className={feedbackScope === "version" ? "active" : ""}
+                aria-pressed={feedbackScope === "version"}
+                onClick={() => {
+                  setFeedbackScope("version");
+                  setPinMode(false);
+                }}
+              >
+                General feedback
+              </button>
+            </div>
+          }
+          context={
+            feedbackScope === "version" ? (
+              <VersionContext version={version} channel={channel} onReview={onReview} />
+            ) : undefined
+          }
+          pendingPin={feedbackScope === "design" ? pendingPin : null}
           onClearPin={() => setPendingPin(null)}
           selectedComment={selectedComment}
           // Selecting a comment from the side list seeks to the moment it marks, exactly as
@@ -317,6 +446,7 @@ export function DesignViewer({
           // is `placePin`'s reasoning — seeking a playing video lands a moment past the frame
           // asked for.
           onSelectComment={(id) => {
+            if (isVideo && !canUseVideoTime()) return;
             setSelectedComment(id);
             const pinned = commentList.find((comment) => comment.id === id);
             if (!isVideo || pinned?.pinT == null || !videoRef.current) return;

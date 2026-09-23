@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { ProjectPanelHeader } from "./project-panel";
 import { Check, MapPin, MessageSquare, Send, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
@@ -44,6 +45,10 @@ export function CommentPanel({
   onClearPin,
   selectedComment,
   onSelectComment,
+  heading,
+  onClose,
+  navigation,
+  context,
 }: {
   projectId: string;
   channel: ProjectChannel;
@@ -53,14 +58,25 @@ export function CommentPanel({
   onClearPin?: () => void;
   selectedComment?: string | null;
   onSelectComment?: (id: string) => void;
+  heading?: string;
+  onClose?: () => void;
+  navigation?: ReactNode;
+  context?: ReactNode;
 }) {
   const { database } = useAuth();
   const { formatDate } = useDateFormat();
-  const comments = useProjectComments(projectId, channel, designId);
+  const comments = useProjectComments(projectId, channel, designId, versionId);
   const invalidate = useInvalidateComments();
-  const { draft, update, clear } = useCommentDraft(projectId, channel, designId);
+  const { draft, update, clear } = useCommentDraft(projectId, channel, designId, versionId);
   const body = draft.body;
   const panel = useRef<HTMLElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const field = composer.current;
+    if (!field) return;
+    field.style.height = "60px";
+    field.style.height = `${Math.min(field.scrollHeight, 120)}px`;
+  }, [body]);
   // Keyed on the attempt's payload, and stored on the draft rather than in a ref: a retry of the
   // same comment must resend the same key (matching the server's replay), but a person editing the
   // text or pin between retries has to mint a new one, or `post_comment` raises a conflict it
@@ -119,13 +135,12 @@ export function CommentPanel({
       className="comment-panel"
       aria-label={channel === "client" ? "Client conversation" : "Studio conversation"}
     >
-      <div className="comment-panel-header">
-        <div>
-          <h2>{designId ? "Feedback" : "Conversation"}</h2>
-          <span>{channel === "client" ? "With the studio" : "Studio team only"}</span>
-        </div>
-        <MessageSquare size={17} />
-      </div>
+      <ProjectPanelHeader
+        title={heading ?? (designId ? "Feedback" : versionId ? "General feedback" : "Conversation")}
+        subtitle={channel === "client" ? "Shared with the studio" : "Studio team only"}
+        onClose={onClose}
+      />
+      {navigation}
       <label className="resolved-toggle">
         <input
           type="checkbox"
@@ -134,7 +149,8 @@ export function CommentPanel({
         />
         Show resolved
       </label>
-      <div className="comment-list">
+      <div className="comment-list" role="region" aria-label="Comment history" tabIndex={0}>
+        {context}
         {comments.isPending ? (
           <p role="status">Loading conversation…</p>
         ) : comments.error ? (
@@ -223,27 +239,23 @@ export function CommentPanel({
           Your message
         </label>
         <textarea
+          ref={composer}
           id={`comment-${designId ?? "project"}`}
           value={body}
           onChange={(event) => update({ body: event.target.value })}
           placeholder={pendingPin ? "What needs a closer look?" : "Leave a thoughtful note…"}
           maxLength={10000}
-          rows={3}
+          rows={2}
           required
         />
-        <div className="composer-actions">
-          <span>
-            {channel === "internal" ? "Only the studio team sees this." : "Shared with the studio."}
-          </span>
-          <button
-            className="icon-button send-comment"
-            type="submit"
-            disabled={post.isPending || !body.trim()}
-            aria-label="Send message"
-          >
-            <Send size={16} />
-          </button>
-        </div>
+        <button
+          className="icon-button send-comment"
+          type="submit"
+          disabled={post.isPending || !body.trim()}
+          aria-label="Send message"
+        >
+          <Send size={16} />
+        </button>
         {(post.error || resolve.error) && (
           <FormError>{(post.error || resolve.error)?.message}</FormError>
         )}

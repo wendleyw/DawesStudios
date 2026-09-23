@@ -1,33 +1,44 @@
 "use client";
 
-import { Background, Controls, ReactFlow } from "@xyflow/react";
-import { ArrowLeft, Info, MessageSquare } from "lucide-react";
+import { CanvasBackground } from "@/features/shared/canvas-background";
+import { canvasNavigation } from "@/features/shared/canvas-navigation";
+
+import { ReactFlow } from "@xyflow/react";
 import Link from "next/link";
+import { Lightbulb } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import {
-  projectStatusTones,
-  statusLabels,
-  useDateFormat,
-} from "@/features/workspace/workspace-data";
-import { statusToneClass } from "@/features/shared/status-tone";
+import { useClients } from "@/features/workspace/workspace-data";
 import { buildCanvas, canvasBounds } from "./canvas-layout";
 import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
-import { CanvasOpeningView } from "./project-canvas-view";
+import { CanvasOpeningView, ProjectCanvasControls } from "./project-canvas-view";
 import { DesignViewer } from "./design-viewer";
-import { nodeTypes, type DeliverableNode, type VersionNode } from "./project-nodes";
+import {
+  nodeTypes,
+  type DeliverableNode,
+  type VersionNode,
+  type AddVersionNode,
+} from "./project-nodes";
 import { ProjectActionDialog, type ProjectAction } from "./project-action-dialog";
-import { useProjectDetail, type ProjectChannel } from "./project-data";
+import {
+  useProjectDetail,
+  useVersionCommentCounts,
+  type ProjectChannel,
+  type CanvasVersion,
+} from "./project-data";
 import { useProjectEvents } from "./project-events";
 import "./projects.css";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
+import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
+import { ProjectHeader } from "./project-header";
+import { VersionContext } from "./version-context";
+import { PlaygroundBoard } from "@/features/playground/playground-board";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
-  const { formatDate } = useDateFormat();
+  const clients = useClients();
   useProjectEvents(projectId);
   const parameters = useSearchParams();
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
@@ -40,13 +51,69 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         ? "internal"
         : agencyChannel;
   const data = useProjectDetail(projectId, channel);
-  const [panel, setPanel] = useState<"conversation" | "details" | null>(null);
-  const [selected, setSelected] = useState<{ designId: string; versionId: string } | null>(null);
+  const commentCounts = useVersionCommentCounts(projectId, channel);
+  // Only the agency needs a working target while viewing published snapshots. Client sessions
+  // never enable this read, and publication IDs are never used as production version IDs.
+  const working = useProjectDetail(
+    projectId,
+    "internal",
+    profile?.role === "agency" && channel === "client",
+  );
+  const [panel, setPanel] = useState<ProjectPanelKind | null>(null);
+  const panelTrigger = useRef<HTMLElement | null>(null);
+  function closePanel() {
+    setPanel(null);
+    requestAnimationFrame(() => panelTrigger.current?.focus({ preventScroll: true }));
+  }
+  function changePanel(next: ProjectPanelKind | null) {
+    if (!next) {
+      closePanel();
+      return;
+    }
+    panelTrigger.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPanel(next);
+  }
+  const [selected, setSelected] = useState<{
+    designId?: string;
+    versionId: string;
+    scope?: "design" | "version";
+  } | null>(null);
   const [format, setFormat] = useState("");
   const [action, setAction] = useState<ProjectAction | null>(null);
+  const [playgroundOrigin, setPlaygroundOrigin] = useState<"project" | "upload" | null>(null);
+  const playgroundOpen = playgroundOrigin !== null;
+  const playgroundTrigger = useRef<HTMLButtonElement>(null);
+  function closePlayground() {
+    const returnToProject = playgroundOrigin === "project";
+    setPlaygroundOrigin(null);
+    if (returnToProject)
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body)
+          playgroundTrigger.current?.focus({ preventScroll: true });
+      });
+  }
   // The canvas pane's own size, which is all the opening view needs; the frames supply the rest.
   const [pane, setPane] = useState<HTMLDivElement | null>(null);
   const [view, setView] = useState({ width: 0, height: 0 });
+  const [chrome, setChrome] = useState<HTMLDivElement | null>(null);
+  const [chromeHeight, setChromeHeight] = useState(0);
+  const [reviewToolbar, setReviewToolbar] = useState<HTMLElement | null>(null);
+  const [reviewToolbarHeight, setReviewToolbarHeight] = useState(0);
+  useEffect(() => {
+    if (!reviewToolbar) return;
+    const observer = new ResizeObserver(() => setReviewToolbarHeight(reviewToolbar.offsetHeight));
+    observer.observe(reviewToolbar);
+    return () => observer.disconnect();
+  }, [reviewToolbar]);
+  useEffect(() => {
+    if (!chrome) return;
+    const observer = new ResizeObserver(() =>
+      setChromeHeight(chrome.offsetHeight + chrome.offsetTop),
+    );
+    observer.observe(chrome);
+    return () => observer.disconnect();
+  }, [chrome]);
   useEffect(() => {
     if (!pane) return;
     const observer = new ResizeObserver(([entry]) =>
@@ -56,7 +123,15 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     return () => observer.disconnect();
   }, [pane]);
   const canProduce = profile?.role !== "client" && channel === "internal";
-  if (data.isPending) return <PageStatus>Loading the project…</PageStatus>;
+  const canStartWorking =
+    canProduce || (profile?.role === "agency" && channel === "client" && !!working.data);
+  function beginWorkingAction(next: ProjectAction) {
+    if (channel === "client") setAgencyChannel("internal");
+    setSelected(null);
+    setAction(next);
+  }
+  if (data.isPending || (profile?.role === "agency" && channel === "client" && working.isPending))
+    return <PageStatus>Loading the project…</PageStatus>;
   if (data.error || !data.data)
     return (
       <div className="page-content">
@@ -87,25 +162,45 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       designs.filter((design) => design.versionId === version.id),
     ]),
   );
+  const latestWorkingByDeliverable = new Map(
+    (channel === "internal" ? versions : (working.data?.versions ?? [])).map((version) => [
+      version.deliverableId,
+      version,
+    ]),
+  );
+  const addDesignTargets = new Map<string, CanvasVersion>();
+  for (const version of versions) {
+    if (canProduce) addDesignTargets.set(version.id, version);
+    else if (
+      canStartWorking &&
+      versionsByDeliverable.get(version.deliverableId)?.at(-1)?.id === version.id
+    ) {
+      const target = latestWorkingByDeliverable.get(version.deliverableId);
+      if (target) addDesignTargets.set(version.id, target);
+    }
+  }
   // One section per deliverable, stacked. The geometry is computed, not measured, so the canvas
   // lands in its final shape on first paint.
   const frames = buildCanvas(
     shownDeliverables.map((deliverable) => ({
       deliverable: { id: deliverable.id, width: deliverable.width, height: deliverable.height },
+      canAddVersion: canStartWorking,
       versions: (versionsByDeliverable.get(deliverable.id) ?? []).map((version) => ({
         id: version.id,
         designCount: designsByVersion.get(version.id)?.length ?? 0,
-        hasNote: Boolean(version.note),
-        hasFeedback: Boolean(version.feedback),
+
+        canAddDesign: addDesignTargets.has(version.id),
       })),
     })),
   );
-  const nodes: (VersionNode | DeliverableNode)[] = [];
+  const nodes: (VersionNode | DeliverableNode | AddVersionNode)[] = [];
   for (const frame of frames) {
     const deliverable = shownDeliverables.find((item) => item.id === frame.deliverableId);
     if (!deliverable) continue;
     const deliverableVersions = versionsByDeliverable.get(deliverable.id) ?? [];
     const latest = deliverableVersions.at(-1);
+    const latestWorking = latestWorkingByDeliverable.get(deliverable.id);
+    const creationHint = channel === "client" ? "In Working files" : undefined;
     const style = {
       width: frame.width,
       height: frame.height,
@@ -116,6 +211,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         id: frame.id,
         type: "deliverable",
         position: { x: frame.x, y: frame.y },
+        width: frame.width,
+        height: frame.height,
         data: {
           name: deliverable.name,
           format: deliverable.format,
@@ -123,12 +220,28 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             deliverable.width && deliverable.height
               ? `${deliverable.width} × ${deliverable.height} · ${deliverable.quantity} ${deliverable.quantity === 1 ? "piece" : "pieces"}`
               : `${deliverable.quantity} ${deliverable.quantity === 1 ? "piece" : "pieces"} · ${deliverable.scope}`,
-          canProduce,
+        },
+        style,
+        draggable: false,
+        selectable: false,
+      });
+      continue;
+    }
+    if (frame.kind === "addVersion") {
+      nodes.push({
+        id: frame.id,
+        type: "addVersion",
+        position: { x: frame.x, y: frame.y },
+        width: frame.width,
+        height: frame.height,
+        data: {
+          name: deliverable.name,
+          creationHint,
           onCreate: () =>
-            setAction({
+            beginWorkingAction({
               kind: "version",
               deliverableId: deliverable.id,
-              sourceVersionId: latest?.id,
+              sourceVersionId: latestWorking?.id,
             }),
         },
         style,
@@ -139,15 +252,35 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     }
     const version = deliverableVersions.find((item) => item.id === frame.versionId);
     if (!version) continue;
+    const designTarget = addDesignTargets.get(version.id);
     nodes.push({
       id: version.id,
       type: "version",
       position: { x: frame.x, y: frame.y },
+      width: frame.width,
+      height: frame.height,
       data: {
         version,
         designs: designsByVersion.get(version.id) ?? [],
         channel,
         canProduce,
+        commentCount: commentCounts.data?.[version.id] ?? (commentCounts.isSuccess ? 0 : undefined),
+        openFeedback: () =>
+          setSelected({
+            versionId: version.id,
+            designId: designsByVersion.get(version.id)?.[0]?.id,
+            scope: "version",
+          }),
+        onAddDesign: designTarget
+          ? () => beginWorkingAction({ kind: "design", version: designTarget })
+          : undefined,
+        addDesignLabel: canProduce
+          ? `Add design to version ${version.number}`
+          : `Add design in working files for ${deliverable.name}`,
+        creationHint:
+          channel === "client" && designTarget
+            ? `Working files · V${designTarget.number}`
+            : undefined,
         canPublish: profile?.role === "agency" && channel === "internal",
         canReview:
           profile?.role === "client" &&
@@ -165,138 +298,165 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     });
   }
 
+  const quickActions = (
+    <>
+      <button
+        className="icon-button"
+        ref={playgroundTrigger}
+        title="Playground"
+        aria-label="Playground"
+        disabled={playgroundOpen}
+        aria-expanded={playgroundOpen}
+        onClick={() => setPlaygroundOrigin("project")}
+      >
+        <Lightbulb size={18} />
+      </button>
+    </>
+  );
   return (
-    <div className="project-page">
-      <header className="project-header">
-        <Link
-          className="icon-button"
-          href={`/clients/${project.client_id}/board`}
-          aria-label="Back to board"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-        <div className="project-heading">
-          <h1>{project.title}</h1>
-          <div>
-            <span className={statusToneClass(projectStatusTones[project.status])}>
-              {statusLabels[project.status]}
-            </span>
-            <span>{formatDate(project.due_date, "No due date")}</span>
-          </div>
-        </div>
-        {!selected && (
-          <div className="project-header-actions">
-            <button
-              className={`icon-button ${panel === "details" ? "selected" : ""}`}
-              aria-label="Project details"
-              aria-expanded={panel === "details"}
-              onClick={() => setPanel(panel === "details" ? null : "details")}
-            >
-              <Info size={18} />
-            </button>
-            <button
-              className={`button quiet ${panel === "conversation" ? "selected" : ""}`}
-              aria-expanded={panel === "conversation"}
-              onClick={() => setPanel(panel === "conversation" ? null : "conversation")}
-            >
-              <MessageSquare size={16} />
-              Conversation
-            </button>
-          </div>
-        )}
-        <NotificationsBell className="page-bell" />
-      </header>
-      {selected && chosenVersion && chosenDeliverable ? (
-        <DesignViewer
-          key={`${channel}:${chosenVersion.id}`}
-          projectId={projectId}
-          version={chosenVersion}
-          deliverable={chosenDeliverable}
-          designs={designs.filter((design) => design.versionId === chosenVersion.id)}
-          initialDesignId={selected.designId}
-          channel={channel}
-          onEdit={
-            canProduce
-              ? (design) => setAction({ kind: "edit-design", version: chosenVersion, design })
-              : undefined
-          }
-          onClose={() => setSelected(null)}
-        />
-      ) : (
-        <>
-          <div className="project-toolbar">
-            <div className="segmented-control">
-              {profile?.role === "agency" ? (
-                <>
-                  <button
-                    className={channel === "internal" ? "active" : ""}
-                    onClick={() => setAgencyChannel("internal")}
+    <div
+      className={`project-page ${selected?.designId ? "is-reviewing" : ""} ${playgroundOpen ? "is-brainstorming" : ""}`}
+      style={
+        {
+          "--project-chrome-height": `${chromeHeight}px`,
+          "--design-toolbar-height": `${reviewToolbarHeight}px`,
+        } as CSSProperties
+      }
+    >
+      <ProjectHeader
+        client={clients.data?.find((client) => client.id === project.client_id)}
+        viewer={profile}
+        project={project}
+        deliverables={deliverables}
+        channel={channel}
+        format={format}
+        onChannel={(next) => {
+          setSelected(null);
+          setAgencyChannel(next);
+        }}
+        onFormat={setFormat}
+        panel={panel}
+        onPanel={changePanel}
+        quickActions={quickActions}
+        playgroundOpen={playgroundOpen}
+        reviewing={!!selected?.designId}
+        chromeRef={setChrome}
+      />
+      <div className="project-workspace">
+        <div className="project-workspace-content" inert={playgroundOpen}>
+          {selected?.designId && chosenVersion && chosenDeliverable ? (
+            <DesignViewer
+              key={`${channel}:${chosenVersion.id}`}
+              projectId={projectId}
+              actions={quickActions}
+              toolbarRef={setReviewToolbar}
+              version={chosenVersion}
+              deliverable={chosenDeliverable}
+              designs={designs.filter((design) => design.versionId === chosenVersion.id)}
+              initialDesignId={selected.designId}
+              initialFeedbackScope={selected.scope}
+              onReview={
+                profile?.role === "client" &&
+                chosenVersion.id ===
+                  versionsByDeliverable.get(chosenVersion.deliverableId)?.at(-1)?.id &&
+                chosenVersion.status === "pending" &&
+                project.status !== "delivered"
+                  ? () => setAction({ kind: "review", version: chosenVersion })
+                  : undefined
+              }
+              channel={channel}
+              onEdit={
+                canProduce
+                  ? (design) => setAction({ kind: "edit-design", version: chosenVersion, design })
+                  : undefined
+              }
+              onClose={() => setSelected(null)}
+            />
+          ) : (
+            <>
+              <div className="project-body">
+                <div className="project-canvas" ref={setPane}>
+                  <ReactFlow
+                    {...canvasNavigation}
+                    key={`${channel}:${format}`}
+                    nodes={nodes}
+                    edges={[]}
+                    nodeTypes={nodeTypes}
+                    proOptions={{ hideAttribution: true }}
+                    nodesConnectable={false}
+                    deleteKeyCode={null}
+                    defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                    minZoom={0.2}
+                    maxZoom={1.5}
                   >
-                    Working files
-                  </button>
-                  <button
-                    className={channel === "client" ? "active" : ""}
-                    onClick={() => setAgencyChannel("client")}
-                  >
-                    Shared with client
-                  </button>
-                </>
-              ) : (
-                <span>{channel === "client" ? "Shared designs" : "Working files"}</span>
-              )}
-            </div>
-            <label className="visually-hidden" htmlFor="deliverable-filter">
-              Filter deliverable
-            </label>
-            <select
-              id="deliverable-filter"
-              value={format}
-              onChange={(event) => setFormat(event.target.value)}
-            >
-              <option value="">All deliverables</option>
-              {deliverables.map((deliverable) => (
-                <option key={deliverable.id} value={deliverable.id}>
-                  {deliverable.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="project-body">
-            <div className="project-canvas" ref={setPane}>
-              <ReactFlow
-                key={`${channel}:${format}`}
-                nodes={nodes}
-                edges={[]}
-                nodeTypes={nodeTypes}
-                proOptions={{ hideAttribution: true }}
-                nodesConnectable={false}
-                deleteKeyCode={null}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                minZoom={0.2}
-                maxZoom={1.5}
-                panOnScroll
-              >
-                <CanvasOpeningView content={canvasBounds(frames)} view={view} />
-                <Background gap={20} color="#d4d4d0" />
-                <Controls showInteractive={false} />
-              </ReactFlow>
-              {versions.length === 0 && (
-                <div className="canvas-empty-hint">
-                  {canProduce
-                    ? "Add a version to start shaping your ideas."
-                    : "Your studio will share designs here when they’re ready."}
+                    <CanvasOpeningView
+                      key="opening-view"
+                      content={canvasBounds(frames)}
+                      view={view}
+                      topInset={chromeHeight}
+                    />
+                    <CanvasBackground key="background" />
+                    <ProjectCanvasControls
+                      key="controls"
+                      content={canvasBounds(frames)}
+                      view={view}
+                      topInset={chromeHeight}
+                    />
+                  </ReactFlow>
+                  {versions.length === 0 && (
+                    <div className="canvas-empty-hint">
+                      {canProduce
+                        ? "Add a version to start shaping your ideas."
+                        : "Your studio will share designs here when they’re ready."}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            </>
+          )}
+        </div>
+        {!playgroundOpen && panel && (
+          <ProjectPanel key={panel} onClose={closePanel}>
             {panel === "conversation" && (
-              <CommentPanel key={channel} projectId={projectId} channel={channel} />
+              <CommentPanel
+                key={channel}
+                projectId={projectId}
+                channel={channel}
+                onClose={closePanel}
+              />
             )}
             {panel === "details" && (
-              <ProjectDetails project={project} deliverables={deliverables} versions={versions} />
+              <ProjectDetails
+                project={project}
+                deliverables={deliverables}
+                versions={versions}
+                onClose={closePanel}
+              />
             )}
-          </div>
-        </>
-      )}
+          </ProjectPanel>
+        )}
+        {!playgroundOpen && !panel && selected && !selected.designId && chosenVersion && (
+          <ProjectPanel onClose={() => setSelected(null)}>
+            <CommentPanel
+              key={`${channel}:${chosenVersion.id}`}
+              projectId={projectId}
+              channel={channel}
+              versionId={chosenVersion.id}
+              heading="Feedback"
+              onClose={() => setSelected(null)}
+              context={<VersionContext version={chosenVersion} channel={channel} />}
+            />
+          </ProjectPanel>
+        )}
+        {playgroundOpen && (
+          <PlaygroundBoard
+            clientId={project.client_id}
+            projectId={projectId}
+            onClose={closePlayground}
+            returnLabel={playgroundOrigin === "upload" ? "Back to upload" : "Back to project"}
+          />
+        )}
+      </div>
       <ProjectActionDialog
         key={
           action
@@ -305,6 +465,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         }
         action={action}
         projectId={projectId}
+        suspended={playgroundOrigin === "upload"}
+        onOpenPlayground={() => setPlaygroundOrigin("upload")}
         onClose={() => setAction(null)}
       />
     </div>

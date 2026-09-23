@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type RefObject } from "react";
+import { Film } from "lucide-react";
 import { useDesignAssetUrl, type CanvasDesign, type ProjectChannel } from "./project-data";
 import { isVideoAsset } from "./video-pins";
+import { VideoPlayer } from "./video-player";
 
 export function Artwork({
   design,
@@ -11,6 +13,7 @@ export function Artwork({
   videoRef,
   onTimeUpdate,
   onDurationChange,
+  onVideoReadyChange,
 }: {
   design: CanvasDesign;
   channel: ProjectChannel;
@@ -19,9 +22,11 @@ export function Artwork({
   videoRef?: RefObject<HTMLVideoElement | null>;
   onTimeUpdate?: (seconds: number) => void;
   onDurationChange?: (seconds: number) => void;
+  onVideoReadyChange?: (ready: boolean) => void;
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
-  const asset = useDesignAssetUrl(design.assetPath, channel);
+  const video = isVideoAsset(design.assetPath);
+  const asset = useDesignAssetUrl(design.assetPath, channel, !(video && thumbnail));
   const content =
     typeof design.content === "object" && design.content && !Array.isArray(design.content)
       ? design.content
@@ -31,6 +36,34 @@ export function Artwork({
   const color = (name: string, fallback: string) =>
     /^#[a-f\d]{3,8}$/i.test(field(name)) ? field(name) : fallback;
   if (design.assetPath) {
+    if (video && thumbnail) {
+      return (
+        <div className="artwork-video-placeholder">
+          <Film size={28} aria-hidden="true" />
+          <span>Video</span>
+        </div>
+      );
+    }
+    if (video) {
+      return (
+        <VideoPlayer
+          key={`${channel}:${design.id}:${design.assetPath}`}
+          source={asset.data}
+          sourceError={!!asset.error}
+          isFetching={asset.isFetching}
+          retrySource={async () => {
+            const result = await asset.refetch();
+            if (result.error) throw result.error;
+            if (!result.data) throw new Error("The video URL could not be loaded.");
+            return result.data;
+          }}
+          videoRef={videoRef}
+          onTimeUpdate={onTimeUpdate}
+          onDurationChange={onDurationChange}
+          onVideoReadyChange={onVideoReadyChange}
+        />
+      );
+    }
     if (!(asset.data && failedSource !== asset.data)) {
       return (
         <div className="artwork-loading" role="status">
@@ -56,39 +89,6 @@ export function Artwork({
             "Loading artwork…"
           )}
         </div>
-      );
-    }
-    if (isVideoAsset(design.assetPath)) {
-      return (
-        <video
-          ref={videoRef}
-          className="artwork-video"
-          src={asset.data}
-          // A thumbnail is a passive preview in a list: it plays silently and offers no
-          // transport controls, the same role an <img> plays there. The full viewer always
-          // shows controls so a person can play, pause and scrub without the pin tool.
-          controls={!thumbnail}
-          muted={thumbnail}
-          preload="metadata"
-          playsInline
-          onTimeUpdate={(event) => onTimeUpdate?.(event.currentTarget.currentTime)}
-          onLoadedMetadata={(event) => onDurationChange?.(event.currentTarget.duration)}
-          // Unlike an <img>, a <video> can raise `error` and still be perfectly usable. A seek
-          // backwards issues a fresh range request, and an aborted or briefly failed one fires
-          // here while the element keeps every frame it has already buffered. Retiring the player
-          // on that is unrecoverable by design — `failedSource === asset.data` stays true until
-          // the signed URL is refreshed 55 minutes later or the page is reloaded — so a person
-          // scrubbing back loses the video and only a refresh brings it back.
-          //
-          // `readyState === HAVE_NOTHING` is the distinction that matters: the source never
-          // yielded anything, which is the genuinely terminal case an <img> error always is.
-          // Anything above it means the element still holds usable media, so the error is
-          // transient and the browser recovers on its own without the UI intervening.
-          onError={(event) => {
-            if (event.currentTarget.readyState === event.currentTarget.HAVE_NOTHING)
-              setFailedSource(asset.data!);
-          }}
-        />
       );
     }
     return (

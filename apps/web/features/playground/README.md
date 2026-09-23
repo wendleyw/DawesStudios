@@ -1,0 +1,59 @@
+# Playground
+
+Playground is a persistent brainstorming canvas inside an individual project. Each project has separate agency, designer and client boards. People collaborate with their own role only; access still requires the underlying project permission. Playground files and notes are independent of production designs, billing and immutable client publications. Legacy workspace records are retained by the backend; this UI does not open or assign them to a project.
+
+`PlaygroundBoard({ clientId, projectId, onClose, returnLabel? })` requires both scope IDs and mounts
+only while open. Its named native dialog occupies the entire viewport in the browser's top layer,
+covering the sidebar, client/project headers and canvas. It slides down from the screen's top edge
+on entry and up before invoking `onClose` once; `returnLabel` defaults to **Back to project**.
+Reduced motion skips animation, and a short timer ensures completion if an animation event is
+unavailable. The transparent backdrop lets the previous surface remain visible during the slide.
+The covered app is inert and body scrolling is locked until exit completes. Focus starts on the
+heading; Escape/native cancellation uses the same unsaved/busy guard as the return button. Closing
+restores scrolling and focus to the opener or resumed upload form.
+
+The consuming project keeps the underlying canvas mounted, preserving its viewport and selection.
+When opened from a design upload, it temporarily closes that native dialog while retaining its
+mounted form and selected file; it reopens after Playground exits. Consumers own entry points and
+that round trip. This feature owns fullscreen framing, animation, state, validation, styles and
+data access.
+
+## Working on the canvas
+
+- Add notes and edit their title/text in the item editor. **Save note** persists the changes; unsaved copy remains visible until saved or explicitly discarded.
+- Add or drop multiple raster images, PDF, text/CSV, Word, Excel, PowerPoint and RTF documents. The shared backend contract in `playground-types.ts` allows up to 25 MiB per file. Invalid entries are listed individually while valid entries continue. The upload queue allows three transfers per batch.
+- Drag and resize items. These operations save when the gesture finishes. The **Position and size** fields provide the same controls with a keyboard; save the item after editing those fields. Shift selection supports moving several items together. The canvas uses the shared 24-unit line grid with a slightly darker background and grid than the project beneath it. Scroll/trackpad gestures pan in both axes and pinching zooms. Zoom/fit buttons animate over 200 ms unless reduced motion is requested; direct dragging stays immediate. When the usable canvas changes size, a selected item that would be clipped is fitted back into view. Typing does not recenter the canvas.
+- Images use private signed previews. Documents remain download-only. **Download file** obtains a fresh signed download URL. **Remove item** asks for confirmation before deleting the item and its file.
+- Each board allows 500 active items. Title, note length, coordinates and dimensions are checked before saving and independently validated by the database.
+
+## Compact header
+
+A single header contains the title, a short team-visibility caption, Add note/Add files icons,
+save status, Refresh and the close/return icon. Tooltips and accessible names preserve the actions;
+the close icon retains Back to project/Back to upload semantics. The full privacy explanation is
+available to assistive technology, with team scope also stated in the lock caption's tooltip.
+On phones the saved-state message is visually condensed, while saving and unsaved changes remain
+visible. The header belongs to the fullscreen Playground, independent of the covered project's
+header height. Opening it preserves the underlying canvas viewport and channel controls. There is
+no second permanent toolbar row.
+
+## Persistence and recovery
+
+All Supabase queries and Storage access live in `playground-data.ts`. The board owns file validation, drafts, stable item IDs, stable storage paths, revision expectations and retry state. A successful file upload is retained if the subsequent item save fails, so **Retry save** does not resend its bytes. An uncertain upload retries the same `File` and path; the data layer verifies an existing object's content rather than overwriting it. If a staged upload expires, the retained file can be uploaded again on retry.
+
+Committed items carry revisions. A conflict preserves local text and offers explicit discard/reload; it never silently overwrites another person's saved work. All newer successful canonical query snapshots, including automatic refetches, supersede committed local overlays, so a remote deletion does not leave a phantom item. Explicit conflict reload immediately returns ownership to the query; unsaved and failed drafts remain local. Failed deletion retains its original arguments until Storage cleanup succeeds, even when the server has already hidden the item. A stale-revision deletion instead offers a saved-item reload; explicitly discarding that rejected attempt leaves the collaborator's item intact. The data layer also retries durable cleanup after a later opening/refetch and exposes failures as `cleanupError`.
+
+Closing is disabled during queued transfers, saves or deletion cleanup, with a visible status. After failure, closing is available but prompts before discarding unsaved work. Discarding new staged files cleans them up first; cleanup failure leaves the board and retry available. Covered app navigation cannot receive pointer or keyboard interaction while the fullscreen dialog is open. The existing same-tab link guard also rejects dispatched navigation while work is unsaved or busy, showing an inline save/discard notice. Downloads remain available inside the board.
+
+Full page navigation/reload while unsaved work exists uses the browser's unsaved-changes warning. Browser history traversal and programmatic app-router transitions are not intercepted; unfinished local text/files are held in memory and can be lost when those actions unmount the board. There is no durable browser draft store. Server cleanup handles abandoned staged uploads.
+
+## Verification
+
+Run the colocated validation and recovery tests from `apps/web`:
+
+```sh
+npx vitest run features/playground/playground-model.test.ts features/playground/playground-board.test.tsx features/playground/playground-viewport.test.tsx
+```
+
+The component tests mock the data boundary and canvas renderer to exercise user-visible retry, conflict, cleanup, closing and batch behavior, plus dialog semantics, scroll restoration, native cancellation, animation completion, reduced motion, Escape, focus and guarded navigation. jsdom stubs native dialog methods; real top-layer bounds and background focus isolation are verified in Playwright. Responsive framing tests use the installed xyflow bounds calculation with explicit item sizes, including controlled nodes whose internal measurement flag remains false. The viewport waits for pan/zoom readiness and item arrival; it does not wait for transient node measurements. These tests do not prove backend isolation or rendered browser geometry. The orchestrator verifies those through the Playground database tests and real browser workflows, including exact full-viewport bounds at five sizes, slide keyframes, background focus isolation,
+upload return, persistence, download, resizing, keyboard access and mobile layout. See the [project-layer plan](../../../../docs/architecture/project-playground-and-video-optimization.md) and [feature specification](../../../../docs/architecture/playground-and-board-widgets.md).
