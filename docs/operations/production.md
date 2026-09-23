@@ -113,7 +113,7 @@ docker compose --env-file .env.production up -d --wait web media
 docker compose exec media df -h /scratch   # needs at least 2 GiB free for video remuxing
 ```
 
-`NEXT_PUBLIC_*` values are baked in at build time, so rebuild after changing them. Both services
+`NEXT_PUBLIC_*` values are baked in at build time, so rebuild after changing them. The web Content-Security-Policy is derived from the same two origins (Supabase and media, including the `wss:` Realtime origin), so a URL change also needs a rebuild. Both services
 bind to `127.0.0.1` and run read-only as non-root with every capability dropped. They are
 reachable only through the proxy. Tag each release image with its commit
 (`docker tag dawes-studios-web:local dawes-studios-web:<sha>`, and the same for media) so you
