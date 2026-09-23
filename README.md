@@ -31,7 +31,8 @@ Keep the terminal running and open `http://localhost:3003`. Edit `apps/web/app` 
 - [Playground and original board widget history](docs/architecture/playground-and-board-widgets.md)
 - [Project Playground and video efficiency](docs/architecture/project-playground-and-video-optimization.md)
 - [Acceptance matrix](docs/architecture/acceptance-matrix.md)
+- [Production deployment guide](docs/operations/production.md)
 - [Codex / Claude continuation checkpoint](docs/engineering/handoff.md)
 - [Agent orchestration and handoff procedure](docs/engineering/agent-orchestration.md)
 
-The application is in development. The acceptance matrix records the remaining verification work; local checks alone do not establish production readiness.
+The application is in development and not yet deployed. The acceptance matrix records the remaining verification work, and the [production guide](docs/operations/production.md) lists the release checklist; local checks alone do not establish production readiness.

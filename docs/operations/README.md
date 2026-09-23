@@ -1,6 +1,6 @@
 # Backend operations
 
-The repository has a tested local Docker development stack and production-oriented application/media containers. No public production environment has been deployed. The Supabase CLI stack is a local fixture environment and must remain private; a production installation uses the official self-hosted Docker distribution. Supabase explicitly distinguishes these environments in its [self-hosting guide](https://supabase.com/docs/guides/self-hosting).
+The repository has a tested local Docker development stack and production-oriented application/media containers. No public production environment has been deployed. The Supabase CLI stack is a local fixture environment and must remain private; a production installation uses the official self-hosted Docker distribution described in the [production guide](production.md). Supabase explicitly distinguishes these environments in its [self-hosting guide](https://supabase.com/docs/guides/self-hosting).
 
 ## Web development and backend containers
 
@@ -107,11 +107,7 @@ The checked-in [restore evidence](restore-evidence.json) records a successful is
 
 ## Production deployment requirements
 
-Provision the official [Supabase Docker distribution](https://supabase.com/docs/guides/self-hosting/docker) on the intended server, pin compatible images/configuration, and retain its database and Storage volumes. Configure TLS at a reverse proxy, real SMTP, public Auth/API URLs, recovery/invitation redirect allowlists and fresh production secrets. Keep database, Studio and worker service credentials private. The CLI mail inbox and demonstration accounts are local test conveniences. The official distribution supports filesystem or S3-backed Storage; select and back up the actual configured backend.
-
-Apply only versioned migrations to production, never the demonstration seed or local provisioning/reset scripts. Point the app at the public Supabase URL with its public key; inject service credentials only into the web server invitation endpoint and media worker. Give media its exact allowed app origin and an internal Supabase URL. Use the root application/container configuration for the web image; the worker image is defined in `apps/media/Dockerfile`.
-
-Before serving real clients, configure independent encrypted backups/retention, monitoring for database/storage/Auth/media failures, disk capacity and scheduled cleanup failures, a restore schedule with an agreed recovery target, and an upgrade/rollback procedure. Verify email delivery and recovery on the actual domain. There is no payment processor integration: client credit requests and agency ledger fulfillment allocate studio credits and never charge a card. PDF delivery is flattened; video/ZIP delivery sanitization is not implemented.
+The production target, configuration mapping, R2 Storage backend, container release, proxy, backups and release checklist are in the [production deployment guide](production.md). Production uses the official self-hosted Supabase distribution with fresh secrets, real SMTP and only the versioned migrations. The seed, demonstration overlay, provisioning and reset scripts stay local.
 
 The dedicated Realtime publication broadcasts inserts/updates only because deleted-row events do not enforce the same SELECT RLS filtering. Maintenance deletions therefore require list refresh rather than a delete event. Normal application operations use durable status changes and scoped insert/update events.
 

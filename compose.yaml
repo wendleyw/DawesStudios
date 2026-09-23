@@ -55,6 +55,8 @@ services:
     #   - apps/media/src/sanitize.js:23                 (LIMITS.videoBytes)
     #   - supabase/migrations/202609210004_video_storage.sql:9,24  (bucket + attestation CHECK)
     #   - supabase/config.toml:114                      (global storage.file_size_limit)
+    # Production adds a sixth: FILE_SIZE_LIMIT on the self-hosted Storage service, whose
+    # official default is 50 MB (docs/operations/production.md).
     # `apps/web/features/shared/media-scratch.test.ts` asserts this file keeps TMPDIR pointed at
     # a real volume rather than reverting to a tmpfs-backed `/tmp`; it cannot see the volume's
     # actual free disk, which is why the `df -h` check above is still a manual release step.
