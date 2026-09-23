@@ -1,6 +1,7 @@
+import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { writeFileSync } from "node:fs";
-import { credentials, localAgency, localCaller, signIn } from "./test-support";
+import { credentials, evidenceDirectory, localAgency, localCaller, signIn } from "./test-support";
 
 test("all ten clients and twenty-five projects render with matching records and scoped navigation", async ({
   browser,
@@ -126,7 +127,7 @@ test("all ten clients and twenty-five projects render with matching records and 
   const p95 = sorted[Math.floor((sorted.length - 1) * 0.95)];
   expect(p95).toBeLessThan(5000);
   writeFileSync(
-    new URL("../../../../docs/verification/canonical-browser-evidence.json", import.meta.url),
+    join(evidenceDirectory, "canonical-browser-evidence.json"),
     JSON.stringify(
       {
         clients: clients.length,

@@ -1,7 +1,14 @@
+import { join } from "node:path";
 import { openBoardSearch, setBoardSearch } from "./test-support";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { credentials, localAdmin, screenshotDirectory, signIn } from "./test-support";
+import {
+  credentials,
+  evidenceDirectory,
+  localAdmin,
+  screenshotDirectory,
+  signIn,
+} from "./test-support";
 import { createPlaygroundFixture } from "./playground-fixture";
 import { boardViews, type BoardView } from "../../features/board/board-views";
 import { calendarMonthLabel, monthStart, shiftMonth } from "../../features/board/calendar-model";
@@ -531,7 +538,7 @@ test("the live SABRE board fits every view across desktop, tablet and phone size
   } finally {
     const { writeFileSync } = await import("node:fs");
     writeFileSync(
-      new URL("../../../../docs/verification/board-view-fit-2026-09-23.json", import.meta.url),
+      join(evidenceDirectory, "board-view-fit-2026-09-23.json"),
       JSON.stringify(evidence, null, 2) + "\n",
     );
     const restored = saved.data

@@ -1,7 +1,15 @@
+import { join } from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { writeFileSync } from "node:fs";
-import { credentials, localAdmin, localAgency, screenshotDirectory, signIn } from "./test-support";
+import {
+  credentials,
+  evidenceDirectory,
+  localAdmin,
+  localAgency,
+  screenshotDirectory,
+  signIn,
+} from "./test-support";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { boardViews } from "../../features/board/board-views";
 
@@ -33,10 +41,7 @@ test("representative task surfaces pass responsive layout and accessibility chec
         nodes: item.nodes.map((node) => ({ target: node.target, summary: node.failureSummary })),
       })),
     });
-    writeFileSync(
-      new URL("../../../../docs/verification/design-audit.json", import.meta.url),
-      JSON.stringify(report, null, 2),
-    );
+    writeFileSync(join(evidenceDirectory, "design-audit.json"), JSON.stringify(report, null, 2));
     await target.screenshot({
       path: screenshotDirectory + "/design-" + name + "-" + width + ".png",
       fullPage: true,

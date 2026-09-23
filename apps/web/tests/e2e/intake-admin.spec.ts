@@ -432,7 +432,10 @@ test.describe("Briefing intake, credits, and account administration", () => {
     ).data!;
     const agencyId = (await agency.auth.getUser()).data.user!.id;
     const noticeTitle = `Acceptance timezone ${fixture.tag}`;
-    const timestamp = "2026-09-20T18:30:00.000Z";
+    // Dated ahead of every real notification so it sorts first: the feed shows only the latest
+    // 100, and a populated agency (such as the SABRE overlay's 271) would push an older notice out.
+    // 20 September keeps the same daylight-saving offsets the assertions below expect.
+    const timestamp = "2099-09-20T18:30:00.000Z";
     const notice = await localAdmin.from("notifications").insert({
       user_id: agencyId,
       client_id: fixture.clientId,

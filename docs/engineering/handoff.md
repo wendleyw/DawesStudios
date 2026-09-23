@@ -50,7 +50,7 @@ make the documentation production-ready, and make the development workflow cheap
   R2 stays inside Supabase Storage configuration; the application has no R2 client.
 - **Development efficiency:** lean agents on the cheapest adequate model, reports of 30 lines or
   fewer, this checkpoint kept short, and a commit per integrated task. The browser suite writes
-  screenshots to the ignored `outputs/`; set `EVIDENCE_SCREENSHOTS=1` for committed evidence.
+  evidence to the ignored `outputs/`; set `WRITE_EVIDENCE=1` for committed evidence.
 - **SABRE demonstration overlay stays active:** 10 clients, 68 projects, 50 of them SABRE. The
   canonical seed remains 10 clients / 25 projects. Use only the guarded removal in the
   [demo guide](../../supabase/demo/sabre/README.md).
