@@ -9,11 +9,9 @@ import { useBrandSections } from "./brand-data";
 import { brandNavigation, isBrandSection } from "./brand-model";
 import { BrandAssets } from "./brand-assets";
 import { BrandSectionContent } from "./brand-sections";
-import { BrandTemplates } from "./brand-templates";
 import { SectionEditor } from "./section-editor";
 import "./brand.css";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function BrandPage({ clientId, section }: { clientId: string; section: string }) {
   const { profile } = useAuth();
@@ -35,34 +33,36 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
     );
   const title = brandNavigation.find((item) => item.id === section)!.label;
   const content = sections.data?.find((item) => item.section === section)?.content;
-  const editable = section !== "assets" && section !== "templates";
+  const editable = section !== "assets";
   return (
     <div className="page-content brand-page">
-      <div className="page-heading">
+      <header className="page-heading client-page-heading">
         <div>
           <h1>Brand Hub</h1>
           <p>Identity, resources, and guidance for consistent work.</p>
         </div>
-        <NotificationsBell className="page-bell" />
-      </div>
-      {/*
-        The ten sections read as one row rather than hiding inside a select: where you are and what
+        {/*
+        The nine sections read as one row rather than hiding inside a select: where you are and what
         else there is are the same glance. They are links because they are routes — a section opens
         in a new tab or gets its own address, which a select could never offer. The row scrolls
         sideways instead of wrapping, so the order stays the order of the groups.
       */}
-      <nav className="brand-section-nav" aria-label="Brand sections">
-        {brandNavigation.map((item) => (
-          <Link
-            key={item.id}
-            href={`/clients/${clientId}/brand/${item.id}`}
-            className={item.id === section ? "active" : ""}
-            aria-current={item.id === section ? "page" : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+        <nav
+          className="brand-section-nav section-tabs client-page-tools"
+          aria-label="Brand sections"
+        >
+          {brandNavigation.map((item) => (
+            <Link
+              key={item.id}
+              href={`/clients/${clientId}/brand/${item.id}`}
+              className={item.id === section ? "active" : ""}
+              aria-current={item.id === section ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </header>
       <div className="brand-section-heading">
         <h2>{title}</h2>
         {profile?.role === "agency" && editable && (
@@ -74,8 +74,6 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
       </div>
       {section === "assets" ? (
         <BrandAssets key={clientId} clientId={clientId} />
-      ) : section === "templates" ? (
-        <BrandTemplates key={clientId} clientId={clientId} />
       ) : (
         <BrandSectionContent
           key={`${clientId}-${section}`}

@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import {
   brandQueryKeys,
+  type BrandAssetFolder,
   findBrandAssetById,
   insertBrandAsset,
   removeBrandAssetFile,
@@ -17,7 +18,17 @@ import { FormError } from "@/features/shared/form-error";
 import { brandUploadMimes, uploadLimitMb, uploadTypesLabel } from "@/features/shared/upload-rules";
 
 /** The dialog that uploads a new brand asset file and its metadata row. */
-export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+export function AssetUpload({
+  clientId,
+  folderId,
+  folders,
+  onClose,
+}: {
+  clientId: string;
+  folderId: string | null;
+  folders: BrandAssetFolder[];
+  onClose: () => void;
+}) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
   const formId = useId();
@@ -54,6 +65,7 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
             .slice(0, 20),
           mimeType: file.type,
           storagePath: uploaded.current.path,
+          folderId: String(form.get("folder") ?? "") || null,
         });
       uploaded.current = null;
     },
@@ -143,6 +155,17 @@ export function AssetUpload({ clientId, onClose }: { clientId: string; onClose: 
           <select name="category" defaultValue="Logo">
             {["Logo", "Photography", "Product", "Document", "Other"].map((category) => (
               <option key={category}>{category}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Folder
+          <select name="folder" defaultValue={folderId ?? ""} disabled={upload.isPending}>
+            <option value="">Unfiled</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
             ))}
           </select>
         </label>

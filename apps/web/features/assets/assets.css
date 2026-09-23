@@ -20,11 +20,13 @@
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
-  gap: 22px;
+
+  gap: var(--space-lg);
 }
 .file-card {
   border: 1px solid var(--border);
-  border-radius: 9px;
+
+  border-radius: var(--radius-lg);
   background: var(--surface);
   min-width: 0;
   overflow: hidden;
@@ -37,14 +39,14 @@
   justify-content: center;
   gap: 12px;
   min-height: 155px;
-  color: #6c6c65;
+  color: var(--muted);
 }
 .file-icon span {
   font-size: var(--text-xs);
   letter-spacing: 1px;
 }
 .file-information {
-  padding: 20px;
+  padding: var(--space-lg);
 }
 .file-information h2 {
   font-size: 15px;
@@ -65,7 +67,7 @@
 }
 .file-information footer > span {
   font-size: var(--text-sm);
-  color: #70706a;
+  color: var(--muted);
 }
 .delivery-callout {
   display: flex;
@@ -74,14 +76,17 @@
   gap: 20px;
   padding: 20px 24px;
   margin-bottom: 24px;
-  border: 1px solid #d5e1cd;
+
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #f4f8f0;
+
+  background: var(--surface);
 }
 .delivery-callout p {
   margin: 5px 0 0;
   font-size: var(--text-base);
-  color: #5e6758;
+
+  color: var(--muted);
 }
 @media (max-width: 720px) {
   .files-toolbar select {

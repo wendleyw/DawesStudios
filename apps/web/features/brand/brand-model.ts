@@ -16,12 +16,11 @@ export const brandNavigation = [
   { id: "visual-style", label: "Visual style", group: "Identity" },
   { id: "products", label: "Products", group: "Resources" },
   { id: "assets", label: "Assets", group: "Resources" },
-  { id: "templates", label: "Templates", group: "Resources" },
   { id: "messaging", label: "Messaging", group: "Guidance" },
   { id: "ai", label: "Brand context", group: "Guidance" },
 ] as const;
 export type BrandSectionId = (typeof brandNavigation)[number]["id"];
-export type EditableSectionId = Exclude<BrandSectionId, "assets" | "templates">;
+export type EditableSectionId = Exclude<BrandSectionId, "assets">;
 export type ColorSwatch = { name: string; hex: string };
 export type BrandProduct = { name: string; description: string; specs: string; rules: string };
 export type SectionField = {

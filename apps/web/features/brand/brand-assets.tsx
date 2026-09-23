@@ -1,16 +1,28 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { Download, FileText, ImageIcon, Plus } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Folder,
+  FolderPlus,
+  ImageIcon,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
+import { BrandFolderDialog } from "./brand-folder-dialog";
+import { BrandAssetFolderPicker } from "./brand-asset-folder-picker";
 import { AssetUpload } from "./brand-asset-upload";
 import {
   downloadBrandAssetFile,
   useBrandAssetPreviewUrl,
   useBrandAssets,
+  useBrandAssetFolders,
   type BrandAsset,
 } from "./brand-data";
 import { saveBlob } from "@/features/shared/save-blob";
@@ -52,6 +64,13 @@ export function BrandAssets({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
   const params = useSearchParams();
   const assets = useBrandAssets(clientId);
+  const folders = useBrandAssetFolders(clientId);
+  const [selectedFolderId, setFolderId] = useState("all");
+  const [folderAction, setFolderAction] = useState<"new" | "rename" | "delete" | null>(null);
+  const currentFolder = folders.data?.find((folder) => folder.id === selectedFolderId);
+  // A folder deleted by another viewer must not leave an invisible, stale filter active.
+  const folderId = currentFolder?.id ?? (selectedFolderId === "unfiled" ? "unfiled" : "all");
+  const canManage = profile?.role === "agency";
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "");
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -67,8 +86,10 @@ export function BrandAssets({ clientId }: { clientId: string }) {
       ...(assets.data ?? []).map((asset) => asset.category),
     ]),
   ).sort();
-  const filtered = (assets.data ?? []).filter((asset) =>
-    matchesBrandSearch(asset, search, category),
+  const filtered = (assets.data ?? []).filter(
+    (asset) =>
+      matchesBrandSearch(asset, search, category) &&
+      (folderId === "all" || (asset.folder_id ?? "unfiled") === folderId),
   );
   const download = useMutation({
     mutationFn: async (asset: BrandAsset) => {
@@ -79,12 +100,18 @@ export function BrandAssets({ clientId }: { clientId: string }) {
       });
     },
   });
-  if (assets.isPending) return <p role="status">Loading brand files…</p>;
-  if (assets.error)
+  if (assets.isPending || folders.isPending) return <p role="status">Loading brand files…</p>;
+  if (assets.error || folders.error)
     return (
       <div className="empty-state">
         <h3>We couldn’t load the assets.</h3>
-        <button className="button" onClick={() => void assets.refetch()}>
+        <button
+          className="button"
+          onClick={() => {
+            void assets.refetch();
+            void folders.refetch();
+          }}
+        >
           Try again
         </button>
       </div>
@@ -108,11 +135,72 @@ export function BrandAssets({ clientId }: { clientId: string }) {
             ))}
           </select>
         </label>
-        {profile?.role === "agency" && (
-          <button className="button primary" onClick={() => setUploadOpen(true)}>
-            <Plus size={15} />
-            Add asset
+        {canManage && (
+          <>
+            <button className="button" onClick={() => setFolderAction("new")}>
+              <FolderPlus size={15} />
+              New folder
+            </button>
+            <button className="button primary" onClick={() => setUploadOpen(true)}>
+              <Plus size={15} />
+              Add asset
+            </button>
+          </>
+        )}
+      </div>
+      <nav className="brand-folder-list" aria-label="Asset folders">
+        {[
+          { id: "all", name: "All assets" },
+          { id: "unfiled", name: "Unfiled" },
+          ...(folders.data ?? []),
+        ].map((folder) => (
+          <button
+            key={folder.id}
+            className={folderId === folder.id ? "active" : ""}
+            aria-pressed={folderId === folder.id}
+            onClick={() => {
+              setFolderId(folder.id);
+              setFolderAction(null);
+            }}
+          >
+            <Folder size={16} />
+            <span>{folder.name}</span>{" "}
+            <small>
+              {
+                (assets.data ?? []).filter(
+                  (asset) => folder.id === "all" || (asset.folder_id ?? "unfiled") === folder.id,
+                ).length
+              }
+            </small>
           </button>
+        ))}
+      </nav>
+      <div className="brand-folder-heading">
+        <p>
+          {currentFolder?.name ?? (folderId === "unfiled" ? "Unfiled" : "All assets")}
+          <span>
+            {filtered.length} asset{filtered.length === 1 ? "" : "s"}
+          </span>
+        </p>
+        {canManage && currentFolder && (
+          <div>
+            <button
+              className="icon-button"
+              aria-label="Rename folder"
+              title="Rename folder"
+              onClick={() => setFolderAction("rename")}
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Delete folder"
+              title="Delete folder"
+              onClick={() => setFolderAction("delete")}
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
         )}
       </div>
       {filtered.length ? (
@@ -135,10 +223,16 @@ export function BrandAssets({ clientId }: { clientId: string }) {
       ) : (
         <div className="empty-state">
           <ImageIcon size={26} />
-          <h3>{assets.data?.length ? "No matching assets." : "A place for the essentials."}</h3>
+          <h3>
+            {currentFolder && !search && !category
+              ? "This folder is empty."
+              : assets.data?.length
+                ? "No matching assets."
+                : "A place for the essentials."}
+          </h3>
           <p>
             {assets.data?.length
-              ? "Try another search or clear the category."
+              ? "Try another folder or clear the filters."
               : "Approved brand files will appear here."}
           </p>
           {(search || category) && (
@@ -154,7 +248,23 @@ export function BrandAssets({ clientId }: { clientId: string }) {
           )}
         </div>
       )}
-      {uploadOpen && <AssetUpload clientId={clientId} onClose={() => setUploadOpen(false)} />}
+      {folderAction && (folderAction === "new" || currentFolder) && (
+        <BrandFolderDialog
+          clientId={clientId}
+          folder={folderAction === "new" ? undefined : currentFolder}
+          deleting={folderAction === "delete"}
+          onClose={() => setFolderAction(null)}
+          onSaved={(id) => setFolderId(id ?? "unfiled")}
+        />
+      )}
+      {uploadOpen && (
+        <AssetUpload
+          clientId={clientId}
+          folders={folders.data ?? []}
+          folderId={currentFolder?.id ?? null}
+          onClose={() => setUploadOpen(false)}
+        />
+      )}
       {selected && (
         <Modal
           open
@@ -192,6 +302,18 @@ export function BrandAssets({ clientId }: { clientId: string }) {
               <span key={i}>{tag}</span>
             ))}
           </div>
+          {canManage ? (
+            <BrandAssetFolderPicker
+              key={selected.id}
+              asset={selected}
+              folders={folders.data ?? []}
+            />
+          ) : (
+            <p className="form-help">
+              Folder:{" "}
+              {folders.data?.find((folder) => folder.id === selected.folder_id)?.name ?? "Unfiled"}
+            </p>
+          )}
           {!selected.storage_path && (
             <p className="form-help">A downloadable file has not been attached yet.</p>
           )}

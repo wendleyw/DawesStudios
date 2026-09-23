@@ -25,7 +25,6 @@ import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
@@ -90,9 +89,9 @@ export function AssetsPage({ clientId }: { clientId: string }) {
 
   return (
     <div className="page-content files-page">
-      <header className="page-heading">
+      <header className="page-heading client-page-heading">
         <div>
-          <h1>Files.</h1>
+          <h1>Files</h1>
           <p>
             {profile?.role === "client"
               ? "Shared designs and final files, together."
@@ -124,41 +123,40 @@ export function AssetsPage({ clientId }: { clientId: string }) {
               </button>
             </div>
           )}
-          <NotificationsBell className="page-bell" />
+        </div>
+        <div className="files-toolbar client-page-tools">
+          <SearchField
+            label="Search files"
+            value={search}
+            onChange={setSearch}
+            placeholder="Find a file…"
+            iconSize={16}
+          />
+          <label className="visually-hidden" htmlFor="files-project">
+            Filter project
+          </label>
+          <select
+            id="files-project"
+            value={project}
+            onChange={(event) => setProject(event.target.value)}
+          >
+            <option value="">All projects</option>
+            {projects.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title}
+              </option>
+            ))}
+          </select>
+          <div className="segmented-control" aria-label="File status">
+            <button className={!approved ? "active" : ""} onClick={() => setApproved(false)}>
+              All files
+            </button>
+            <button className={approved ? "active" : ""} onClick={() => setApproved(true)}>
+              Approved
+            </button>
+          </div>
         </div>
       </header>
-      <div className="files-toolbar">
-        <SearchField
-          label="Search files"
-          value={search}
-          onChange={setSearch}
-          placeholder="Find a file…"
-          iconSize={16}
-        />
-        <label className="visually-hidden" htmlFor="files-project">
-          Filter project
-        </label>
-        <select
-          id="files-project"
-          value={project}
-          onChange={(event) => setProject(event.target.value)}
-        >
-          <option value="">All projects</option>
-          {projects.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.title}
-            </option>
-          ))}
-        </select>
-        <div className="segmented-control" aria-label="File status">
-          <button className={!approved ? "active" : ""} onClick={() => setApproved(false)}>
-            All files
-          </button>
-          <button className={approved ? "active" : ""} onClick={() => setApproved(true)}>
-            Approved
-          </button>
-        </div>
-      </div>
       {canDeliver && (
         <div className="delivery-callout">
           <div>

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createTemplateDraft,
   downloadBrandAssetFile,
   findBrandAssetById,
   insertBrandAsset,
@@ -102,6 +101,7 @@ describe("brand asset writes", () => {
             tags: ["primary", "approved"],
             mime_type: "image/png",
             storage_path: "client-1/asset-1.png",
+            folder_id: null,
           },
         ],
       },
@@ -132,34 +132,6 @@ describe("brand asset writes", () => {
 });
 
 describe("template draft writes", () => {
-  it("creates a private draft owned by the signed-in member", async () => {
-    const { database, calls } = stubDatabase(row);
-    await createTemplateDraft(database, {
-      clientId: "client-1",
-      templateId: "template-1",
-      ownerId: "owner-1",
-      name: "Instagram Post exploration",
-      content: { headline: "Hi" },
-    });
-    expect(calls).toEqual([
-      { method: "from", args: ["template_drafts"] },
-      {
-        method: "insert",
-        args: [
-          {
-            client_id: "client-1",
-            template_id: "template-1",
-            owner_id: "owner-1",
-            name: "Instagram Post exploration",
-            content: { headline: "Hi" },
-          },
-        ],
-      },
-      { method: "select", args: ["id"] },
-      { method: "single", args: [] },
-    ]);
-  });
-
   it("saves a draft guarded by the revision it was opened on", async () => {
     const { database, calls } = stubDatabase({
       data: { updated_at: "2026-09-20T10:00:00Z" },
@@ -270,17 +242,6 @@ describe("brand write failures", () => {
     [
       "downloadBrandAssetFile",
       (database) => downloadBrandAssetFile(database, { path: "client-1/a.png" }),
-    ],
-    [
-      "createTemplateDraft",
-      (database) =>
-        createTemplateDraft(database, {
-          clientId: "client-1",
-          templateId: "template-1",
-          ownerId: "owner-1",
-          name: "n",
-          content: {},
-        }),
     ],
     [
       "updateTemplateDraft",

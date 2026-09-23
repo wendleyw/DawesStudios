@@ -1,5 +1,10 @@
 # Assets
 
+The Files page uses the shared floating client navigation/profile and white title/action card
+on the workspace grid. Search, project scope and file-type controls sit inside that card, while
+actual file results and their authorized actions remain below. The content uses the full available
+width with the same desktop/mobile gutters as other client sections.
+
 The files page at `/clients/:clientId/assets` lists working files, shared designs and delivery
 files across a client's projects, and lets the agency upload a working file or a delivery file and
 mark an approved project as delivered.

@@ -25,7 +25,6 @@ import "./brand.css";
 import { FormError } from "@/features/shared/form-error";
 import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
-import { NotificationsBell } from "@/features/workspace/notifications-bell";
 
 export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: string }) {
   const templates = useBrandTemplates(clientId);
@@ -36,9 +35,9 @@ export function DraftEditor({ clientId, draftId }: { clientId: string; draftId: 
     return (
       <div className="page-content">
         <h1>This draft is unavailable.</h1>
-        <p className="brand-muted">You can open your own drafts from this workspace’s templates.</p>
-        <Link className="button" href={`/clients/${clientId}/brand/templates`}>
-          Back to templates
+        <p className="brand-muted">Only the owner can open a saved draft.</p>
+        <Link className="button" href={`/clients/${clientId}/brand/assets`}>
+          Back to assets
         </Link>
       </div>
     );
@@ -62,7 +61,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   const [zoom, setZoom] = useState(100);
   const [leaving, setLeaving] = useState(false);
   const router = useRouter();
-  const templatesHref = `/clients/${draft.client_id}/brand/templates`;
+  const assetsHref = `/clients/${draft.client_id}/brand/assets`;
   const dirty = JSON.stringify({ name, content }) !== saved;
   useEffect(() => {
     if (!dirty) return;
@@ -91,9 +90,6 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
       setName(result.name);
       setContent(result.content);
       setSaved(JSON.stringify({ name: result.name, content: result.content }));
-      // Saving a draft changes the list entry and the open draft, and nothing else brand owns, so
-      // this composes those two keys rather than taking a whole-feature helper.
-      void queryClient.invalidateQueries({ queryKey: [brandQueryKeys.templateDrafts] });
       void queryClient.invalidateQueries({ queryKey: [brandQueryKeys.templateDraft] });
     },
   });
@@ -102,35 +98,40 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   }
   return (
     <div className="page-content brand-draft-editor">
-      <div className="brand-draft-topbar">
-        {/* Leaving with unsaved work is the one thing this screen can lose, so it asks in the
+      <header className="page-heading client-page-heading">
+        <div>
+          <h1>Template draft</h1>
+          <p>Edit the content and layout. Your changes stay private.</p>
+        </div>
+        <div className="page-actions brand-draft-actions">
+          {/* Leaving with unsaved work is the one thing this screen can lose, so it asks in the
             product's own dialog rather than in the browser's. */}
-        <Link
-          href={templatesHref}
-          className="button quiet"
-          onClick={(event) => {
-            if (!dirty) return;
-            event.preventDefault();
-            setLeaving(true);
-          }}
-        >
-          <ArrowLeft size={16} />
-          Templates
-        </Link>
-        <span role="status" className="brand-save-status">
-          {save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "Saved to your drafts"}
-        </span>
-        <button
-          type="submit"
-          form="template-draft-form"
-          className="button primary"
-          disabled={!dirty || save.isPending}
-        >
-          <Save size={15} />
-          Save draft
-        </button>
-        <NotificationsBell className="page-bell" />
-      </div>
+          <Link
+            href={assetsHref}
+            className="button quiet"
+            onClick={(event) => {
+              if (!dirty) return;
+              event.preventDefault();
+              setLeaving(true);
+            }}
+          >
+            <ArrowLeft size={16} />
+            Assets
+          </Link>
+          <span role="status" className="brand-save-status">
+            {save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "Saved to your drafts"}
+          </span>
+          <button
+            type="submit"
+            form="template-draft-form"
+            className="button primary"
+            disabled={!dirty || save.isPending}
+          >
+            <Save size={15} />
+            Save draft
+          </button>
+        </div>
+      </header>
       <div className="brand-draft-layout">
         <form
           id="template-draft-form"
@@ -140,9 +141,6 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
             save.mutate();
           }}
         >
-          <span className="eyebrow">Private draft</span>
-          <h1>Template draft</h1>
-          <p className="brand-muted">Edit the content and layout. Your changes stay private.</p>
           <label>
             Draft name
             <input
@@ -266,7 +264,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
           <button className="button" onClick={() => setLeaving(false)}>
             Keep editing
           </button>
-          <button className="button primary" onClick={() => router.push(templatesHref)}>
+          <button className="button primary" onClick={() => router.push(assetsHref)}>
             Leave without saving
           </button>
         </div>

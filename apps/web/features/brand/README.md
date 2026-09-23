@@ -1,74 +1,86 @@
 # Brand workspace
 
-The Brand Hub lives at `/clients/:clientId/brand/:section`. Its single section selector groups identity, resources, and guidance without adding a second persistent sidebar. Sections are overview, logos, colors, typography, visual-style, products, assets, templates, messaging, and ai (presented as Brand context).
+The Brand Hub lives at `/clients/:clientId/brand/:section`. Its nine sections are Overview, Logos,
+Colors, Typography, Visual style, Products, Assets, Messaging and Brand context. They share the
+floating client navigation/account card, a white title card and the workspace grid. The section
+links retain their bounded horizontal scrolling on narrow screens; client navigation wraps above.
+Notifications open beside the signed-in profile, using the shared account popover.
 
-`brand-model.ts` validates field-based editing and safely reads the existing seeded content shapes. Forms expose named fields, palette rows, product fields, and line-separated guidance rather than raw JSON. `brand-data.ts` owns every Supabase read and write for the feature, as [the data-access contract](../../../../docs/architecture/data-access.md) requires: `use<Thing>()` hooks for reads a component renders, and plain `async (database, input)` functions for writes and for the two reads described below. Agency members may edit shared content; client and assigned designer sessions read it through Supabase policies. Successful section edits also invalidate briefing brand defaults.
+Templates has been removed from navigation and the gallery/creation UI. Old `/brand/templates`
+links redirect to Assets. Existing `brand_templates` and owner-private `template_drafts` records are
+preserved. Direct saved-draft URLs still support editing, optimistic revision checks and return to
+Assets, without project or billing writes. Draft reads filter owner and client in addition to RLS.
 
-Colors copy as HEX, RGB, a named CSS custom property, or Tailwind arbitrary-value utilities. Typography has custom sample text and optional HTTPS heading/body font-source links; previews use locally available fonts. Visual style stores Use/Avoid guidance; messaging stores reusable blocks, preferred terminology, and rules; Brand context combines explicit Use/Never direction with an allowlist of the current client's identity. Missing optional fields in older section records default safely to empty values.
+## Guidance and editing
 
-Brand assets use the private `brand-assets` bucket and opaque `<client UUID>/<random UUID>.<extension>` paths. Allowed file types match the bucket: PNG, JPEG, WebP, SVG, and PDF up to 50 MiB. Raster previews use short-lived signed URLs (`useBrandAssetPreviewUrl`); SVG/PDF files are downloaded, not embedded as active document content. Upload failure retains an already uploaded file and stable metadata ID for retry. A retry checks whether that ID already committed (`findBrandAssetById`). Cancellation cleans only unregistered files through the agency-only policy (`removeBrandAssetFile`); a cleanup error keeps the dialog open with a retry message. Downloading retrieves the real authenticated blob (`downloadBrandAssetFile`). Search covers asset names, descriptions, and tags; `category`, `search`, and `asset` query parameters open a useful filtered or selected state. Product asset links search by the product name, which seeded asset tags can reference. The upload dialog itself lives in `brand-asset-upload.tsx`, split out of `brand-assets.tsx` so the listing/preview/detail view and the upload flow are each a single cohesive file.
+`brand-model.ts` validates field-based editing and safely reads existing seeded content. Forms
+expose named fields, palette rows, product fields and line-separated guidance rather than raw JSON.
+Agency members edit canonical content; clients and assigned designers read it through Supabase
+policies. Successful edits also invalidate the briefing feature's brand-default query.
 
-Templates use `brand_templates` as read-only shared starting points. Creating a personal exploration writes a separate `template_drafts` row for the authenticated owner and navigates to `/clients/:clientId/brand/drafts/:draftId`. Draft queries filter owner and client in addition to server RLS. Editing never invokes project, briefing, or credit writes. Save validates content and matches the prior `updated_at` value to avoid silently overwriting another tab's changes. Existing partial drafts read missing presentation fields from their template. New drafts copy the complete supported presentation content. Browser unload and the editor's Back action warn about unsaved edits; navigation elsewhere in the application is not globally intercepted.
+Colors copy as HEX, RGB, CSS variables or Tailwind values. Typography supports sample text and HTTPS
+font-source links. Visual style records Use/Avoid rules; messaging records reusable copy and approved
+terminology. Brand context combines explicit direction with an allowlist of the client's identity;
+it is reusable guidance, not an AI service. The shared CopyButton provides a manual fallback.
 
-The seven seeded starting points are Instagram Post, Website Hero, Amazon Gallery, Presentation, Email Header, Print Flyer, and Product Card. They share one editor for name, headline, body, CTA, colors, layout, and preview zoom. CTA text is artwork content, not an unconfigured navigation action.
+## Assets and folders
 
-The reusable [CopyButton](../shared/copy-button.tsx) handles clipboard permission failure with an accessible manual-copy dialog. Brand context includes an explicit allowlist of client brand fields; it is reusable guidance, not an AI service.
+`brand-assets.tsx` owns the asset collection, search/category filters, folder navigation and details.
+Folders are one level deep and belong to one client. All assets and Unfiled remain available;
+existing assets start in Unfiled. Folder buttons show counts for the complete collection, while the
+active folder heading reports the search/category result count.
 
-Feature styles are in `brand.css`; shared controls, shell, and modal styling remain in `app/globals.css`. Brand color values are content and may be chromatic while application chrome stays restrained. The only `brand-`-prefixed selector left in `globals.css` is `.brand-logo`, and it is not this feature's: its consumers are `features/auth/login-page.tsx` and `features/workspace/app-shell.tsx`, neither of which is `features/brand`. This feature's own classes (`brand-link`, `brand-monogram`) already moved to `features/workspace/workspace.css` in an earlier pass.
+The agency can create or rename folders, choose a destination when uploading, and move an asset
+from its detail dialog. Deleting a folder requires confirmation and moves its assets to Unfiled;
+no asset record or Storage object is deleted. `brand-folder-dialog.tsx` owns form validation and a
+stable creation ID, including recovery after a committed response is lost. A renamed folder retains
+its ID. `brand-asset-folder-picker.tsx` handles per-asset moves. Clients and assigned designers can
+browse folders and download approved files, but cannot organize them.
 
-## Cache invalidation: `brandQueryKeys` and no aggregate helper
+Migration `202609230009_brand_asset_folders.sql` adds `brand_asset_folders` and nullable
+`brand_assets.folder_id`. RLS enforces client-scoped reads and agency writes. Names are trimmed,
+1–80 characters and unique case-insensitively per client. A composite foreign key prevents assigning
+an asset to another client's folder. Folder client/ID columns cannot be updated by authenticated
+users. Folder deletion nulls only `folder_id`; file paths and asset ownership stay unchanged.
 
-`brand-data.ts` exports `brandQueryKeys`, a named-key record covering the four keys this feature's
-writes dirty: `sections` (`brand-sections`), `assets` (`brand-assets`), `templateDrafts`
-(`template-drafts`) and `templateDraft` (`template-draft`). Every `invalidateQueries` call in this
-feature composes its own subset from that record instead of repeating the key string, per
-[rule 5 of the contract](../../../../docs/architecture/data-access.md).
+The private `brand-assets` bucket keeps opaque `<client UUID>/<random UUID>.<extension>` paths.
+PNG, JPEG, WebP, SVG and PDF are accepted up to 50 MiB. Raster previews use short-lived caller-scoped
+signed URLs; SVG/PDF are downloaded instead of embedded as active content. `brand-asset-upload.tsx`
+retains an uploaded file and stable metadata ID across failed saves. Cancellation removes only an
+unregistered upload, with a retryable cleanup error. Downloads retrieve the authenticated blob.
+Search covers names, descriptions and tags; `category`, `search` and `asset` URL parameters retain
+filtered links and direct asset references. Folder organization does not change these references.
 
-There is no `useInvalidateBrand()`, and adding one would be a behavior change rather than a tidy-up:
-no write here dirties all four keys. Saving a section touches `sections`; adding an asset touches
-`assets`; creating a draft touches `templateDrafts`; saving a draft touches `templateDrafts` and
-`templateDraft`. An aggregate helper would make each of those refetch caches it does not refetch
-today. The feature's other read keys — `brand-templates`, `brand-asset-preview` and `client-logo` —
-are deliberately absent from the record, because no write invalidates them and naming them would
-invite a call site to.
+## Data and styling boundaries
 
-`section-editor.tsx` also invalidates `briefing-brand`, which is **not** a brand key:
-`briefings/briefing-data.ts`'s `useBriefingBrand` is the only hook that reads it, so `briefings` owns
-the cache entry even though this feature owns the `brand_sections` rows behind it. That call site
-imports `briefingQueryKeys` and composes `briefingQueryKeys.brand` rather than declaring a
-brand-side copy — the same read-side ownership test `board-data.ts` applies above
-`moveProjectPosition`. The reasoning is recorded in a comment at the call site.
+All queries live in `brand-data.ts`: rendered reads are hooks; writes are plain async functions.
+The submit/close recovery reads `findBrandAssetById` and `findBrandAssetFolder`, plus on-demand
+`downloadBrandAssetFile`, are plain functions because mutation handlers cannot call hooks.
+Validation, trimming and retry IDs remain in components.
 
-## Deviation from the data-access contract: two reads that are not hooks
+`brandQueryKeys` owns sections, assets, folders and the legacy open draft. Asset writes invalidate
+assets; folder edits invalidate folders and assets; section and draft writes invalidate their own
+keys. There is no whole-feature invalidation helper. `briefingQueryKeys.brand` remains owned by
+Briefings. Signed preview URLs and client logos expire independently.
 
-`findBrandAssetById` and `downloadBrandAssetFile` in `brand-data.ts` are exported as plain
-`async (database, input)` functions instead of `use<Thing>()` hooks.
-
-Both are called from inside a `useMutation` `mutationFn` or a dialog's own close handler in
-`brand-asset-upload.tsx`, where React does not permit a hook to be called at all. This is
-[rule 2 of the contract](../../../../docs/architecture/data-access.md), not a licence this feature
-claimed for itself; the reason is also recorded above the two functions in `brand-data.ts`.
-
-`findBrandAssetById` asks whether the asset row a retry would write has already committed, on
-submit and again on close, so a retried upload never inserts a second row or deletes a file the
-stored row now references. `downloadBrandAssetFile` runs inside the download mutation, which exists
-only to trigger a browser save; no component ever puts the blob on screen. Both still live in
-`brand-data.ts`, still return through `assertResult(...)`, and are unit-tested like the writes:
-exact bucket or table, exact filters, and the surfacing of the database error message.
+Feature styling stays in `brand.css`; shared controls and layout tokens stay in `app/globals.css`.
+Legacy draft preview primitives remain available to the direct editor. Template gallery selectors
+and creation code have been retired; persisted template data has not been removed.
 
 ## Verification
 
-- `npm test -- features/brand`: 35 tests across two files — `brand-model.test.ts` (18 domain tests:
-  palette parsing and four copy formats, malformed style rejection, typography bounds and safe
-  source links, guidance lists, CTA/template isolation/defaults, draft naming, asset search, file
-  limits, and context allowlisting) and `brand-data.test.ts` (17 tests covering every extracted
-  write — exact table/bucket, exact argument object, and the database error message — plus the two
-  reads-that-cannot-be-hooks and the compare-and-set conflict on a stale draft revision).
-- `npm run check` from the repository root: typecheck, eslint, prettier and the whole unit suite —
-  20 files / 337 tests pass. The two lint warnings it reports are pre-existing and belong to
-  `features/board`.
-- `grep -rn '\.from(\|\.rpc(\|\.storage\.' features/brand --include='*.tsx' | grep -v 'Array\.from('`
-  returns no output, which is the contract's own check that no component issues a query.
-- `npm run typecheck`: whole-application generated database contract verification.
+Run `npm run check` from the repository root for type, lint, formatting and unit checks.
+Run `supabase test db supabase/tests/database/brand_asset_folders.test.sql` for folder constraints,
+role isolation, revoked access and file-preserving deletion in a rolled-back transaction.
 
-The repeatable browser suites are `npx playwright test tests/e2e/brand-accessibility.spec.ts tests/e2e/brand-guidance.spec.ts tests/e2e/brand-canvas-final.spec.ts`. They cover section layouts at six viewport sizes, keyboard navigation/dialogs, canonical guidance persistence and role denial, four copy formats and manual fallback, all seven template definitions, private draft save/reload and owner isolation, and real asset upload/search/download/retry/cancellation with isolated cleanup. The baseline suite expects the final seven-template seed. Run concurrent specialist invocations with separate output directories; the orchestrator runs the final suite once with one worker. [The design audit](../../../../docs/verification/design-audit.md) records executed results separately from planned coverage. Unit tests alone do not prove live authorization or complete production acceptance.
+From `apps/web`, run:
+
+```bash
+npx playwright test tests/e2e/brand-folders.spec.ts tests/e2e/brand-accessibility.spec.ts tests/e2e/brand-guidance.spec.ts tests/e2e/brand-canvas-final.spec.ts
+```
+
+These cover real folder
+creation/retry/move/delete, upload/download, legacy private draft editing, guidance persistence,
+keyboard behavior and responsive accessibility with isolated cleanup. See the
+[current verification](../../../../docs/verification/client-polish-and-brand-folders-2026-09-23.md)
+for executed evidence; broader release acceptance is separate.

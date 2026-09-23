@@ -6,33 +6,20 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { EditableSectionId, TemplateContent } from "./brand-model";
 
-/**
- * The cache keys this feature's writes dirty, named one by one so each call site can invalidate
- * exactly its own subset instead of the union of all of them.
- *
- * There is no aggregate `useInvalidateBrand()` helper, and adding one would be a behavior change:
- * no write in this feature dirties all four keys. Saving a section touches `sections` only; adding
- * an asset touches `assets` only; creating a draft touches `templateDrafts` only; saving a draft
- * touches `templateDrafts` and `templateDraft`. A helper covering the set would make each of those
- * call sites refetch caches it does not refetch today — the same reason `credit-data.ts` records
- * above `creditQueryKeys` for declining to route `briefing-detail.tsx` through
- * `useInvalidateCredits()`.
- *
- * The feature's other read keys (`brand-templates`, `brand-asset-preview`, `client-logo`) are
- * absent on purpose: no write here invalidates them, so naming them would invite a call site to.
- */
+/** Each mutation invalidates only the feature reads affected by its persisted change. */
 export const brandQueryKeys = {
   /** `useBrandSections` — the shared brand guidance shown on the brand page. */
   sections: "brand-sections",
   /** `useBrandAssets` — the approved file list for one client. */
   assets: "brand-assets",
-  /** `useTemplateDrafts` — the owner's private draft list. */
-  templateDrafts: "template-drafts",
+  /** `useBrandAssetFolders` — client-scoped folder navigation. */
+  folders: "brand-asset-folders",
   /** `useTemplateDraft` — one open draft. */
   templateDraft: "template-draft",
 } as const;
 
 export type BrandSection = Database["public"]["Tables"]["brand_sections"]["Row"];
+export type BrandAssetFolder = Database["public"]["Tables"]["brand_asset_folders"]["Row"];
 export type BrandAsset = Database["public"]["Tables"]["brand_assets"]["Row"];
 export type BrandTemplate = Database["public"]["Tables"]["brand_templates"]["Row"];
 export type TemplateDraft = Database["public"]["Tables"]["template_drafts"]["Row"];
@@ -71,22 +58,6 @@ export function useBrandTemplates(clientId: string) {
     queryFn: async () =>
       assertResult(
         await database.from("brand_templates").select("*").eq("client_id", clientId).order("name"),
-      ),
-  });
-}
-export function useTemplateDrafts(clientId: string) {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: [brandQueryKeys.templateDrafts, session?.user.id, clientId],
-    enabled: !!session,
-    queryFn: async () =>
-      assertResult(
-        await database
-          .from("template_drafts")
-          .select("*")
-          .eq("client_id", clientId)
-          .eq("owner_id", session!.user.id)
-          .order("updated_at", { ascending: false }),
       ),
   });
 }
@@ -206,6 +177,7 @@ export async function insertBrandAsset(
     tags: string[];
     mimeType: string;
     storagePath: string;
+    folderId?: string | null;
   },
 ) {
   assertResult(
@@ -220,6 +192,7 @@ export async function insertBrandAsset(
         tags: input.tags,
         mime_type: input.mimeType,
         storage_path: input.storagePath,
+        folder_id: input.folderId ?? null,
       })
       .select("id")
       .single(),
@@ -228,25 +201,6 @@ export async function insertBrandAsset(
 
 export async function removeBrandAssetFile(database: SupabaseDatabase, input: { path: string }) {
   assertResult(await database.storage.from("brand-assets").remove([input.path]));
-}
-
-export async function createTemplateDraft(
-  database: SupabaseDatabase,
-  input: { clientId: string; templateId: string; ownerId: string; name: string; content: Json },
-) {
-  return assertResult<{ id: string }>(
-    await database
-      .from("template_drafts")
-      .insert({
-        client_id: input.clientId,
-        template_id: input.templateId,
-        owner_id: input.ownerId,
-        name: input.name,
-        content: input.content,
-      })
-      .select("id")
-      .single(),
-  );
 }
 
 /** Saves a private template draft, refusing a save that would overwrite a concurrent edit. */
@@ -296,6 +250,93 @@ export async function saveBrandSection(
         { onConflict: "client_id,section" },
       )
       .select("section")
+      .single(),
+  );
+}
+
+export function useBrandAssetFolders(clientId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: [brandQueryKeys.folders, session?.user.id, clientId],
+    enabled: !!session,
+    queryFn: async () =>
+      assertResult(
+        await database
+          .from("brand_asset_folders")
+          .select("*")
+          .eq("client_id", clientId)
+          .order("name"),
+      ),
+  });
+}
+
+/** Called during submit to recover a folder creation whose response was lost. */
+export async function findBrandAssetFolder(
+  database: SupabaseDatabase,
+  input: { id: string; clientId: string },
+) {
+  return assertResult<{ id: string; name: string } | null>(
+    await database
+      .from("brand_asset_folders")
+      .select("id,name")
+      .eq("id", input.id)
+      .eq("client_id", input.clientId)
+      .maybeSingle(),
+  );
+}
+
+export async function createBrandAssetFolder(
+  database: SupabaseDatabase,
+  input: { id: string; clientId: string; name: string },
+) {
+  return assertResult(
+    await database
+      .from("brand_asset_folders")
+      .insert({ id: input.id, client_id: input.clientId, name: input.name })
+      .select("id")
+      .single(),
+  );
+}
+
+export async function renameBrandAssetFolder(
+  database: SupabaseDatabase,
+  input: { id: string; clientId: string; name: string },
+) {
+  return assertResult(
+    await database
+      .from("brand_asset_folders")
+      .update({ name: input.name })
+      .eq("id", input.id)
+      .eq("client_id", input.clientId)
+      .select("id")
+      .single(),
+  );
+}
+
+export async function deleteBrandAssetFolder(
+  database: SupabaseDatabase,
+  input: { id: string; clientId: string },
+) {
+  assertResult(
+    await database
+      .from("brand_asset_folders")
+      .delete()
+      .eq("id", input.id)
+      .eq("client_id", input.clientId),
+  );
+}
+
+export async function moveBrandAsset(
+  database: SupabaseDatabase,
+  input: { id: string; clientId: string; folderId: string | null },
+) {
+  return assertResult(
+    await database
+      .from("brand_assets")
+      .update({ folder_id: input.folderId })
+      .eq("id", input.id)
+      .eq("client_id", input.clientId)
+      .select("id")
       .single(),
   );
 }
