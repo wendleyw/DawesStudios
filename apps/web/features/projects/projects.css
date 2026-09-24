@@ -851,6 +851,57 @@
 .design-text-options label {
   margin-top: 14px;
 }
+.bulk-drop-group {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.bulk-drop-group legend {
+  padding: 0 var(--space-xs);
+  font-size: var(--text-base);
+}
+.bulk-drop-group legend span,
+.bulk-drop-note,
+.bulk-drop-status {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.bulk-drop-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+}
+.bulk-drop-note {
+  margin: 0;
+}
+.bulk-drop-files {
+  display: grid;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bulk-drop-files li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  min-width: 0;
+}
+.bulk-drop-files li > span:first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bulk-drop-status.is-failed {
+  color: var(--ink);
+  font-weight: 600;
+}
+.bulk-drop-summary {
+  margin: 0;
+  font-weight: 600;
+}
 .upload-progress {
   display: flex;
   align-items: center;
