@@ -102,24 +102,22 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
               className="briefing-list-row"
               href={`/clients/${clientId}/briefings/${item.id}`}
             >
-              <div>
-                <span className="eyebrow">
-                  {campaigns.data?.find((campaign) => campaign.id === item.campaign_id)?.title ??
-                    "Campaign not chosen"}
-                </span>
-                <h2>{item.title || "Untitled briefing"}</h2>
-                <p>
-                  {services.find((service) => service.id === item.service_type)?.name ??
-                    item.service_type}{" "}
-                  · {item.requested_deliverables.length} deliverable
-                  {item.requested_deliverables.length === 1 ? "" : "s"}
-                </p>
-              </div>
+              <h2>{item.title || "Untitled briefing"}</h2>
+              <span className="briefing-list-campaign">
+                {campaigns.data?.find((campaign) => campaign.id === item.campaign_id)?.title ??
+                  "Campaign not chosen"}
+              </span>
+              <span className="briefing-list-service">
+                {services.find((service) => service.id === item.service_type)?.name ??
+                  item.service_type}{" "}
+                · {item.requested_deliverables.length} deliverable
+                {item.requested_deliverables.length === 1 ? "" : "s"}
+              </span>
               <span className={statusToneClass(briefingStatusTones[item.status])}>
                 {briefingStatusLabels[item.status]}
               </span>
               <span className="briefing-list-date">{formatDate(item.due_date, "No due date")}</span>
-              <ArrowUpRight size={17} />
+              <ArrowUpRight size={16} />
             </Link>
           ))}
         </div>

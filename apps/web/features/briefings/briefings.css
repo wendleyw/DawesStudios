@@ -23,28 +23,38 @@
 .briefing-list-row:focus-visible {
   outline-offset: -3px;
 }
+/* One line per briefing: title, campaign, service, status, due date. */
 .briefing-list-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 100px 20px;
-
-  gap: var(--space-lg);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 56px 16px;
+  gap: var(--space-md);
   align-items: center;
-
-  padding: var(--space-lg);
-
+  min-height: 56px;
+  padding: 10px var(--space-lg);
   border-bottom: 1px solid var(--border);
+  color: var(--muted);
   text-decoration: none;
 }
 .briefing-list-row h2 {
-  font-size: 16px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
   line-height: 1.4;
-  margin: 8px 0;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.briefing-list-row p,
+.briefing-list-campaign,
+.briefing-list-service,
 .briefing-list-date {
+  overflow: hidden;
   font-size: var(--text-base);
-  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.briefing-list-row .status-badge {
+  justify-self: start;
 }
 .briefing-editor-header {
   display: flex;
@@ -439,9 +449,9 @@
     gap: 28px;
   }
   .briefing-list-row {
-    gap: 16px;
-    grid-template-columns: minmax(0, 1fr) auto 18px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 136px 16px;
   }
+  .briefing-list-service,
   .briefing-list-date {
     display: none;
   }
@@ -481,10 +491,24 @@
     font-size: var(--text-base);
   }
   .briefing-list-row {
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 10px var(--space-md);
+  }
+  .briefing-list-row h2 {
+    grid-row: 1;
+  }
+  .briefing-list-campaign {
+    grid-row: 2;
   }
   .briefing-list-row .status-badge {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
     font-size: var(--text-xs);
+  }
+  .briefing-list-row > svg {
+    display: none;
   }
   .briefing-summary h2 {
     font-size: 25px;
