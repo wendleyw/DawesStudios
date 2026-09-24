@@ -72,8 +72,9 @@ Success means all of the following hold:
   the album's own order. Clicking it again closes the row; clicking another chip switches to it.
   Only one album is open at a time.
 - **Adding to the board.** Dragging a thumbnail onto the board creates the item exactly at the drop
-  point. Several selected thumbnails can be dragged together; they land as a stack, the way a
-  multi-file drop already does. For keyboard users, **Enter** on a focused thumbnail adds it at the
+  point. Clicking a thumbnail toggles its selection (Shift+click selects a range), and dragging any
+  selected thumbnail drags the whole selection; the files land as a stack, the way a multi-file
+  drop already does. Opening another album clears the selection. For keyboard users, **Enter** on a focused thumbnail adds it at the
   center of the current view.
 - **Disabled files.** Files the Playground does not accept are shown dimmed and cannot be dragged.
   The reason appears on hover and focus: SVG and video (**Stays in the project**), or larger than
