@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { LIMITS, MediaError, sanitizeDelivery, sanitizePdf, sanitizeRaster, sanitizeVideo } from './sanitize.js';
+import { LIMITS, MediaError, probeVideo, runMediaTool, sanitizeDelivery, sanitizePdf, sanitizeRaster, sanitizeVideo } from './sanitize.js';
 
 const run = promisify(execFile);
 
@@ -142,6 +142,20 @@ describe('sanitizeVideo', () => {
     await expect(sanitizeVideo(input, join(dir, 'out.mp4'), 'video/mp4')).rejects.toThrow(MediaError);
   });
 
+  it('returns 422 for a file whose container does not match its declared type', async () => {
+    const input = join(dir, 'liar.mp4');
+    await writeFile(input, Buffer.from('this is not a video'));
+    await expect(sanitizeVideo(input, join(dir, 'out.mp4'), 'video/mp4')).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('exposes probeVideo so a caller can re-probe an already-sanitized file without re-running ffmpeg', async () => {
+    const input = resolve(import.meta.dirname, 'fixtures/tagged.mp4');
+    const probe = await probeVideo(input, 'video/mp4');
+    expect(probe.width).toBe(320);
+    expect(probe.height).toBe(240);
+    expect(probe.durationSeconds).toBeGreaterThan(1.5);
+  });
+
   it('refuses a file over the video ceiling', async () => {
     // LIMITS is frozen with Object.freeze, which also makes its properties non-configurable, so
     // Object.defineProperty cannot redefine videoBytes even with `configurable: true` in the
@@ -172,5 +186,18 @@ describe('sanitizeVideo', () => {
     await expect(sanitizeVideo(input, output, 'video/mp4')).rejects.toThrow(MediaError);
 
     expect(await exists(output)).toBe(false);
+  });
+});
+
+// A tool that is killed because its time budget ran out has not judged the file at all, so it is a
+// transient failure (504, retried) rather than content the tool rejected (the caller's failure
+// status, 422 for video, which discards the raw upload for good).
+describe('runMediaTool', () => {
+  it('reports a tool killed by its time budget as a timeout, not as the content failure', async () => {
+    await expect(runMediaTool('sleep', ['5'], 50, 'The video could not be read.', 422)).rejects.toMatchObject({ status: 504 });
+  });
+
+  it('reports a tool that exits with an error as the caller-supplied content failure', async () => {
+    await expect(runMediaTool('false', [], 5_000, 'The video could not be read.', 422)).rejects.toMatchObject({ status: 422, message: 'The video could not be read.' });
   });
 });

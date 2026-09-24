@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createBackend } from './supabase.js';
-import { LIMITS, MediaError, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
+import { LIMITS, MediaError, probeVideo, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // `.raw` only, deliberately narrower than `supabase.js`'s `VIDEO_ASSET_PATH`. This is the shape a
@@ -19,6 +19,24 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // `sanitizeVideo` — silently bypassing this feature's entire metadata-stripping guarantee. See the
 // `.mp4`/`.webm` refusal tests in `server.test.js` for `/designs/sanitize-video`.
 const RAW_VIDEO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/;
+// The browser retries a transient failure once and discards the raw upload on a permanent one, so
+// the status class is the contract: a transfer that timed out is 504 and storage that could not
+// be reached is 503, never the 502 `request()` collapses both into.
+function remapTransportFailure(error) {
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return new MediaError('The media service timed out. Try again.', 504);
+  if (error instanceof MediaError && error.status === 502) return new MediaError('The media service could not reach storage. Try again.', 503);
+  return error;
+}
+// A raw upload that is gone (expired, or already discarded) can never be processed, so its 404 is
+// the 410 the browser shows as "choose the file again".
+async function downloadRawOrDie(backend, rawPath, projectId, token, destination, signal) {
+  try {
+    await backend.downloadToFile(rawPath, projectId, token, destination, signal);
+  } catch (error) {
+    if (error instanceof MediaError && error.status === 404) throw new MediaError('The raw upload has expired. Choose the file again.', 410);
+    throw remapTransportFailure(error);
+  }
+}
 function validId(value) { if (typeof value !== 'string' || !UUID.test(value)) throw new MediaError('A valid resource identifier is required.'); return value; }
 async function readBody(request, maxBytes) {
   if (Number(request.headers['content-length']) > maxBytes) throw new MediaError('Request exceeds the file-size limit.', 413);
@@ -169,10 +187,34 @@ export function createMediaServer(config) {
         const extension = mimeType === 'video/mp4' ? 'mp4' : 'webm';
         const directory = await mkdtemp(join(tmpdir(), 'dawes-video-'));
         try {
+          // Idempotent retry: a browser that lost the response to a successful run asks again with
+          // the same raw path, which by then is deleted. The output that run attested (younger
+          // than 24 hours) is returned instead of failing with 410 or running ffmpeg again.
+          const existing = await backend.findSanitizedVideoBySource(projectId, rawPath);
+          if (existing) {
+            const probeInput = join(directory, `probe.${extension}`);
+            await downloadRawOrDie(backend, existing.storage_path, projectId, token, probeInput);
+            const probe = await probeVideo(probeInput, existing.mime_type);
+            try { await backend.discard('internal-assets', rawPath); } catch {
+              process.stderr.write(`Raw video discard failed for ${rawPath}; a duplicate remains in internal-assets.\n`);
+            }
+            return send(200, { path: existing.storage_path, ...probe });
+          }
+
           const input = join(directory, `in.${extension}`);
           const output = join(directory, `out.${extension}`);
-          await backend.downloadToFile(rawPath, projectId, token, input);
-          const probe = await sanitizeVideo(input, output, mimeType);
+          await downloadRawOrDie(backend, rawPath, projectId, token, input);
+          let probe;
+          try {
+            probe = await sanitizeVideo(input, output, mimeType);
+          } catch (error) {
+            // Content ffprobe or ffmpeg rejected can never succeed, so its raw upload is removed
+            // now rather than left for the 24-hour sweep.
+            if (error instanceof MediaError && error.status === 422) {
+              await backend.discard('internal-assets', rawPath).catch(() => {});
+            }
+            throw error;
+          }
           const path = `${projectId}/${randomUUID()}.${extension}`;
           let uploaded;
           try {
@@ -183,7 +225,7 @@ export function createMediaServer(config) {
             // removal is safe whether or not anything actually landed. The raw object is
             // untouched, so the caller's original upload is not lost to this failure.
             await backend.discard('internal-assets', path).catch(() => {});
-            throw error;
+            throw remapTransportFailure(error);
           }
           // Final whole-branch review, Critical 2: attest the clean object before this route
           // ever hands its path back to a caller. Without this row, `register_sanitized_asset`
@@ -191,7 +233,7 @@ export function createMediaServer(config) {
           // `202609210007_video_provenance_attestation.sql`. `registerSanitizedVideo` discards
           // the object it failed to attest, the same way the `uploadFile` failure above does, so
           // an unattested object is never left reachable under a path this response returns.
-          await backend.registerSanitizedVideo(projectId, path, uploaded, mimeType, userId);
+          await backend.registerSanitizedVideo(projectId, path, uploaded, mimeType, userId, rawPath);
           try {
             // The raw object has served its purpose now that the clean one is durably stored.
             await backend.discard('internal-assets', rawPath);

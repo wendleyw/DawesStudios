@@ -185,3 +185,58 @@ describe('trusted streamed upload', () => {
     expectClosedFiles();
   });
 });
+
+describe('video transfer statuses and the source lookup', () => {
+  const projectId = '0f8f5a8e-3c55-4d9c-9d9e-4f0f6a2b1c3d';
+
+  it('preserves a passthrough status instead of collapsing it to 502', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('not found', { status: 404 })));
+    const backend = createBackend(config);
+    await expect(backend.downloadToFile(
+      `${projectId}/1b4e28ba-2fa1-11d2-883f-0016d3cca427.raw`, projectId, 'token', join(directory, 'missing.raw'),
+    )).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('passes source_path through to register_sanitized_video', async () => {
+    const calls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      calls.push({ url, body: init.body });
+      return new Response('null', { status: 200 });
+    }));
+    const backend = createBackend(config);
+    await backend.registerSanitizedVideo(projectId, `${projectId}/clean.mp4`, { sha256: 'a'.repeat(64), fileSize: 10 }, 'video/mp4', 'user-1', `${projectId}/raw.raw`);
+    const rpcCall = calls.find(call => call.url.endsWith('/rest/v1/rpc/register_sanitized_video'));
+    expect(JSON.parse(rpcCall.body).p_source_path).toBe(`${projectId}/raw.raw`);
+  });
+
+  it('finds an attested video by its source_path', async () => {
+    const calls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      calls.push({ url, body: init.body, authorization: init.headers.Authorization });
+      return new Response(JSON.stringify([{ storage_path: `${projectId}/clean.mp4`, mime_type: 'video/mp4' }]), { status: 200 });
+    }));
+    const backend = createBackend(config);
+    const found = await backend.findSanitizedVideoBySource(projectId, `${projectId}/raw.raw`);
+    expect(found).toEqual({ storage_path: `${projectId}/clean.mp4`, mime_type: 'video/mp4' });
+    expect(calls[0].url).toBe('http://supabase.test/rest/v1/rpc/find_sanitized_video_by_source');
+    expect(JSON.parse(calls[0].body)).toEqual({ p_project_id: projectId, p_source_path: `${projectId}/raw.raw` });
+    // The RPC is service_role only; the caller's own token would be refused on every upload.
+    expect(calls[0].authorization).toBe('Bearer test-service');
+  });
+
+  it('returns null when no attested video matches the source_path', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })));
+    const backend = createBackend(config);
+    expect(await backend.findSanitizedVideoBySource(projectId, `${projectId}/raw.raw`)).toBeNull();
+  });
+
+  it('returns null rather than throwing when the RPC response body is a bare null', async () => {
+    // The generic `POST /rest/v1/rpc/` stub every other test in server.test.js's sanitize-video
+    // suite already relies on responds `jsonResponse(200, null)` for RPCs that return void. This
+    // function calls a `returns table(...)` RPC through that same generic path whenever a test does
+    // not stub it specifically, so it must tolerate a null body rather than crash on `rows[0]`.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('null', { status: 200 })));
+    const backend = createBackend(config);
+    expect(await backend.findSanitizedVideoBySource(projectId, `${projectId}/raw.raw`)).toBeNull();
+  });
+});

@@ -297,6 +297,8 @@ describe('POST /designs/sanitize-video', () => {
         p_project_id: projectId, p_storage_path: body.path, p_mime_type: 'video/mp4',
         p_file_size: expect.any(Number), p_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
         p_prepared_by: agencyUserId,
+        // The raw path the output came from, so a retry of this upload can find it again.
+        p_source_path: rawPath,
       });
       // The attestation call happens strictly after the clean object is durably uploaded, and
       // strictly before the raw object's discard: registering an object nobody has stored yet
@@ -392,11 +394,92 @@ describe('POST /designs/sanitize-video', () => {
       }));
 
       const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
-      expect(response.status).toBe(502);
+      // A storage failure is transient, so it is 503 (retried by the browser), not a bare 502.
+      expect(response.status).toBe(503);
       // The failed upload's own (possibly partial) path was cleaned up best-effort...
       expect(discardedPaths.flat()).toContain(uploadPath);
       // ...and the raw object — the user's original upload — was never touched.
       expect(discardedPaths.flat()).not.toContain(rawPath);
+    });
+
+    it('returns 422 and discards the raw upload for content ffprobe rejects', async () => {
+      const routes = baseRoutes();
+      let discardedPaths = [];
+      stubSupabase(new Proxy(routes, {
+        get(target, key) {
+          if (key === `GET /storage/v1/object/authenticated/internal-assets/${rawPath}`) return () => new Response(Buffer.from('not a video'), { status: 200, headers: { 'content-length': '11' } });
+          if (key in target) return target[key];
+          if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
+          if (typeof key === 'string' && key.startsWith(`DELETE /storage/v1/object/internal-assets`)) {
+            return (url, init) => { discardedPaths.push(JSON.parse(init.body).prefixes); return jsonResponse(200, {}); };
+          }
+          return undefined;
+        },
+      }));
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(422);
+      expect(discardedPaths.flat()).toContain(rawPath);
+    });
+
+    it('returns 410 for a raw upload that no longer exists in storage', async () => {
+      const routes = baseRoutes();
+      stubSupabase({
+        ...routes,
+        'POST /rest/v1/rpc/find_sanitized_video_by_source': () => jsonResponse(200, []),
+        [`GET /storage/v1/object/authenticated/internal-assets/${rawPath}`]: () => new Response('not found', { status: 404 }),
+      });
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(410);
+    });
+
+    it('returns 503 and keeps the raw upload when storage fails during the download', async () => {
+      const routes = baseRoutes();
+      stubSupabase({
+        ...routes,
+        'POST /rest/v1/rpc/find_sanitized_video_by_source': () => jsonResponse(200, []),
+        [`GET /storage/v1/object/authenticated/internal-assets/${rawPath}`]: () => new Response('upstream down', { status: 500 }),
+      });
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(503);
+      expect(calls.some(call => call.method === 'DELETE')).toBe(false);
+    });
+
+    it('returns 504 and keeps the raw upload when the download times out', async () => {
+      const routes = baseRoutes();
+      stubSupabase({
+        ...routes,
+        'POST /rest/v1/rpc/find_sanitized_video_by_source': () => jsonResponse(200, []),
+        [`GET /storage/v1/object/authenticated/internal-assets/${rawPath}`]: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); },
+      });
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      expect(response.status).toBe(504);
+      expect(calls.some(call => call.method === 'DELETE')).toBe(false);
+    });
+
+    it('returns the existing attested output without re-running ffmpeg when one is found for this source_path', async () => {
+      const routes = baseRoutes();
+      const cleanPath = `${projectId}/${md5Uuid('already-clean')}.mp4`;
+      let ffmpegRequested = false;
+      stubSupabase(new Proxy(routes, {
+        get(target, key) {
+          if (key in target) return target[key];
+          if (key === 'POST /rest/v1/rpc/find_sanitized_video_by_source') return () => jsonResponse(200, [{ storage_path: cleanPath, mime_type: 'video/mp4' }]);
+          if (key === `GET /storage/v1/object/authenticated/internal-assets/${cleanPath}`) return () => new Response(rawBytes, { status: 200, headers: { 'content-length': String(rawBytes.length) } });
+          if (typeof key === 'string' && key.startsWith(`POST /storage/v1/object/internal-assets/${projectId}/`)) { ffmpegRequested = true; return () => jsonResponse(200, {}); }
+          if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
+          if (typeof key === 'string' && key.startsWith(`DELETE /storage/v1/object/internal-assets`)) return () => jsonResponse(200, {});
+          return undefined;
+        },
+      }));
+      const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
+      const body = await response.json();
+      expect(response.status).toBe(200);
+      expect(body.path).toBe(cleanPath);
+      expect(typeof body.durationSeconds).toBe('number');
+      // No fresh clean object was ever uploaded: the existing attestation's path was returned
+      // as-is, proving ffmpeg did not run a second time.
+      expect(ffmpegRequested).toBe(false);
+      expect(calls.some(call => call.method === 'POST' && call.path === '/rest/v1/rpc/register_sanitized_video')).toBe(false);
     });
   });
 });

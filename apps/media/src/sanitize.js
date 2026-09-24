@@ -112,13 +112,53 @@ export async function sanitizePdf(bytes) {
   } finally { await rm(directory, { recursive: true, force: true }); }
 }
 
-async function runMediaTool(tool, args, timeoutMs, failure) {
+/**
+ * Runs ffprobe or ffmpeg with a scrubbed environment and a hard time budget. A tool that exits with
+ * an error has rejected the content, which is the caller's `failureStatus`. A tool this process
+ * killed because its budget ran out has not judged the file at all, so it is a 504 the browser may
+ * retry, never a verdict that discards the raw upload.
+ */
+export async function runMediaTool(tool, args, timeoutMs, failure, failureStatus = 400, signal) {
   try {
-    return await execFileAsync(tool, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024, env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' }, windowsHide: true });
-  } catch { throw new MediaError(failure); }
+    return await execFileAsync(tool, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024, env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' }, windowsHide: true, signal });
+  } catch (error) {
+    if (error?.killed && error.name !== 'AbortError') throw new MediaError('The video took too long to process. Try again.', 504);
+    throw new MediaError(failure, failureStatus);
+  }
 }
 
 const videoCodecs = Object.freeze({ 'video/mp4': ['h264'], 'video/webm': ['vp8', 'vp9', 'av1'] });
+
+/**
+ * Reads a video's codec, dimensions and duration without touching its bytes beyond the container
+ * headers. Split out of `sanitizeVideo` so the idempotent-retry path (server.js) can re-derive the
+ * response's `{durationSeconds, width, height}` for an already-sanitized object without running
+ * ffmpeg again -- "without running ffmpeg again" is the literal requirement; ffprobe still runs,
+ * bounded by the same LIMITS.videoProbeMs budget either way.
+ *
+ * ffprobe failing to read the container, or the container missing the dimensions/duration a player
+ * needs, is content ffmpeg or ffprobe rejects -- it can never succeed on retry -- so both return
+ * 422. A codec that does not match the declared MIME type is the type check, and stays 415.
+ */
+export async function probeVideo(inputPath, mimeType, signal) {
+  const codecs = videoCodecs[mimeType];
+  if (!codecs) throw new MediaError('Upload an MP4 or WebM video.', 415);
+  const { stdout } = await runMediaTool('ffprobe', [
+    '-v', 'error', '-select_streams', 'v:0',
+    '-show_entries', 'stream=codec_name,width,height', '-show_entries', 'format=duration',
+    '-of', 'json', inputPath,
+  ], LIMITS.videoProbeMs, 'The video could not be read.', 422, signal);
+  const probe = JSON.parse(stdout);
+  const stream = probe.streams?.[0];
+  if (!stream || !codecs.includes(stream.codec_name))
+    throw new MediaError('The file is not a playable MP4 or WebM video.', 415);
+  const width = Number(stream.width);
+  const height = Number(stream.height);
+  const durationSeconds = Number(probe.format?.duration);
+  if (!width || !height || !Number.isFinite(durationSeconds))
+    throw new MediaError('The video is missing the dimensions or duration a player needs.', 422);
+  return { durationSeconds, width, height };
+}
 
 /**
  * Strips every container tag, per-stream tag, chapter and timecode/attachment track from a
@@ -153,31 +193,14 @@ const videoCodecs = Object.freeze({ 'video/mp4': ['h264'], 'video/webm': ['vp8',
  * caller to move, upload or delete; on any other failure (bad size, bad mime, unreadable input)
  * the caller's `inputPath` is left untouched and `outputPath` is never created.
  */
-export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = LIMITS.videoBytes) {
-  const codecs = videoCodecs[mimeType];
-  if (!codecs) throw new MediaError('Upload an MP4 or WebM video.', 415);
-
+export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = LIMITS.videoBytes, signal) {
   const { size } = await stat(inputPath);
   if (!size || size > maxBytes)
     throw new MediaError('Videos must be between 1 byte and 1 gigabyte.', 413);
 
   // Probe before touching the file: a container that does not hold what its type claims is
   // refused rather than remuxed into something that still will not play.
-  const { stdout } = await runMediaTool('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=codec_name,width,height', '-show_entries', 'format=duration',
-    '-of', 'json', inputPath,
-  ], LIMITS.videoProbeMs, 'The video could not be read.');
-
-  const probe = JSON.parse(stdout);
-  const stream = probe.streams?.[0];
-  if (!stream || !codecs.includes(stream.codec_name))
-    throw new MediaError('The file is not a playable MP4 or WebM video.', 415);
-  const width = Number(stream.width);
-  const height = Number(stream.height);
-  const durationSeconds = Number(probe.format?.duration);
-  if (!width || !height || !Number.isFinite(durationSeconds))
-    throw new MediaError('The video is missing the dimensions or duration a player needs.');
+  const probe = await probeVideo(inputPath, mimeType, signal);
 
   const args = [
     '-v', 'error', '-nostdin', '-y', '-i', inputPath,
@@ -189,7 +212,7 @@ export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = 
   args.push(outputPath);
 
   try {
-    await runMediaTool('ffmpeg', args, LIMITS.videoProcessMs, 'The video could not be safely regenerated.');
+    await runMediaTool('ffmpeg', args, LIMITS.videoProcessMs, 'The video could not be safely regenerated.', 422, signal);
   } catch (error) {
     // A timeout (or any other ffmpeg failure) can still leave a truncated but structurally valid,
     // playable file at outputPath — the process is killed mid-write, not before it starts writing.
@@ -198,7 +221,7 @@ export async function sanitizeVideo(inputPath, outputPath, mimeType, maxBytes = 
     await unlink(outputPath).catch(unlinkError => { if (unlinkError.code !== 'ENOENT') throw unlinkError; });
     throw error;
   }
-  return { durationSeconds, width, height };
+  return probe;
 }
 
 export async function sanitizeDelivery(bytes, mimeType) {

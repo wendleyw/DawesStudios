@@ -24,9 +24,14 @@ export function createBackend(config) {
   // 30 seconds fits every call in this file except the two video-streaming ones below, which set
   // their own `timeoutMs` — every other call here is a small JSON request (auth, REST, an RPC),
   // and a longer default would let one of those hang instead of failing fast.
-  async function request(path, { token, method = 'GET', data, binary, mimeType, duplex, timeoutMs = 30_000 } = {}) {
+  // `signal` lets a caller stop a transfer before its time budget runs out (a browser that hung
+  // up). `passthroughStatuses` names upstream statuses the caller must tell apart, such as a 404
+  // that means "the raw upload is gone"; every other failure still collapses to a safe 502.
+  async function request(path, { token, method = 'GET', data, binary, mimeType, duplex, timeoutMs = 30_000, signal, passthroughStatuses = [] } = {}) {
     const response = await fetch(root + path, {
-      method, signal: AbortSignal.timeout(timeoutMs), redirect: 'error',
+      method,
+      signal: signal ? AbortSignal.any([AbortSignal.timeout(timeoutMs), signal]) : AbortSignal.timeout(timeoutMs),
+      redirect: 'error',
       headers: { apikey: config.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': mimeType ?? 'application/json' },
       body: binary ?? (data === undefined ? undefined : JSON.stringify(data)),
       ...(duplex ? { duplex } : {}),
@@ -34,6 +39,7 @@ export function createBackend(config) {
     if (!response.ok) {
       // Upstream error bodies may contain metadata or credentials; expose a stable safe message.
       await response.body?.cancel();
+      if (passthroughStatuses.includes(response.status)) throw new MediaError('The storage object was not found.', response.status);
       throw new MediaError(response.status === 401 || response.status === 403 ? 'Access denied.' : 'The storage operation could not be completed.', response.status === 401 || response.status === 403 ? response.status : 502);
     }
     return response;
@@ -81,7 +87,7 @@ export function createBackend(config) {
   // which is right for a 40-megapixel image and wrong for a gigabyte of video. Used both for the
   // raw upload `/designs/sanitize-video` streams in, and for the already-sanitized `.mp4`/`.webm`
   // `/publications/prepare` streams back out to copy into `published-assets`.
-  async function downloadToFile(path, projectId, token, destination) {
+  async function downloadToFile(path, projectId, token, destination, signal) {
     if (!VIDEO_ASSET_PATH.test(path) || path.split('/')[0] !== projectId) throw new MediaError('Asset path must belong to the project.');
     // `request()`'s AbortSignal covers the whole fetch lifecycle, including streaming the body —
     // not just getting a response header — so the default 30 seconds would abort a realistic
@@ -90,7 +96,7 @@ export function createBackend(config) {
     // it is bounded by disk/network cost rather than CPU, and a network leg moving the same bytes
     // deserves the same order of magnitude, not an independently-chosen constant that could drift
     // out of sync with it.
-    const response = await request(`/storage/v1/object/authenticated/internal-assets/${path}`, { token, timeoutMs: LIMITS.videoProcessMs });
+    const response = await request(`/storage/v1/object/authenticated/internal-assets/${path}`, { token, timeoutMs: LIMITS.videoProcessMs, signal, passthroughStatuses: [404] });
     const contentLength = Number(response.headers.get('content-length'));
     if (!contentLength || contentLength > LIMITS.videoBytes) { await response.body?.cancel().catch(() => {}); throw new MediaError('Source exceeds the file-size limit.', 413); }
     await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
@@ -100,7 +106,7 @@ export function createBackend(config) {
   // service has already authenticated the caller and checked project access, so the write itself
   // bypasses `internal_storage_insert`'s RLS checks (including `opaque_storage_path`) rather than
   // depending on them.
-  async function uploadFile(bucket, path, filePath, mimeType) {
+  async function uploadFile(bucket, path, filePath, mimeType, signal) {
     const source = createReadStream(filePath);
     const chunks = source[Symbol.asyncIterator]();
     const hash = createHash('sha256');
@@ -134,7 +140,7 @@ export function createBackend(config) {
     try {
       // Same transfer budget as downloadToFile. A successful early response must never attest
       // a prefix: require the outgoing stream's EOF in addition to the HTTP success status.
-      const response = await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half', timeoutMs: LIMITS.videoProcessMs });
+      const response = await request(`/storage/v1/object/${bucket}/${path}`, { method: 'POST', token: config.serviceKey, binary: body, mimeType, duplex: 'half', timeoutMs: LIMITS.videoProcessMs, signal });
       await response.body?.cancel();
       if (!reachedEnd || cancelled || fileSize === 0) throw new MediaError('The storage upload did not finish.', 502);
       return Object.freeze({ sha256: hash.digest('hex'), fileSize });
@@ -178,14 +184,24 @@ export function createBackend(config) {
 
   // Internal video provenance has its own RPC because assigned designers may sanitize a video,
   // while preparing publication remains agency-only. The database still verifies both gates.
-  async function registerSanitizedVideo(projectId, path, uploaded, mimeType, userId) {
+  // `sourcePath` is the raw upload the clean copy came from, so a retry of that same upload can
+  // find this output instead of processing it again.
+  async function registerSanitizedVideo(projectId, path, uploaded, mimeType, userId, sourcePath) {
     try {
       await rpc('register_sanitized_video', {
         p_project_id: projectId, p_storage_path: path, p_sha256: uploaded.sha256,
         p_mime_type: mimeType, p_file_size: uploaded.fileSize, p_prepared_by: userId,
+        p_source_path: sourcePath ?? null,
       }, config.serviceKey);
       return path;
     } catch (error) { await discard('internal-assets', path); throw error; }
+  }
+  // The attested output an earlier run already produced from this raw upload, if it is younger than
+  // 24 hours. The RPC is service_role only; the route has already checked the caller may produce
+  // for this project, and the lookup is scoped to it.
+  async function findSanitizedVideoBySource(projectId, sourcePath) {
+    const rows = await rpc('find_sanitized_video_by_source', { p_project_id: projectId, p_source_path: sourcePath }, config.serviceKey);
+    return Array.isArray(rows) ? (rows[0] ?? null) : null;
   }
   async function discard(bucket, path) {
     // Refuse to remove bytes if a publication or delivery already references them.
@@ -202,5 +218,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, findSanitizedVideoBySource, discard, discardPrepared, cleanStaleAssets };
 }
