@@ -8,7 +8,30 @@ function value<T>(result: { data: T; error: { message: string } | null }): NonNu
   return result.data as NonNullable<T>;
 }
 
-export async function createProductionFixture(agency: SupabaseClient<Database>) {
+export type FixtureDeliverable = {
+  name: string;
+  format: string;
+  width: number | null;
+  height: number | null;
+  quantity?: number;
+  scope?: string;
+};
+
+const defaultDeliverables: FixtureDeliverable[] = [
+  {
+    name: "Campaign square",
+    format: "square",
+    width: 1080,
+    height: 1080,
+    quantity: 1,
+    scope: "original",
+  },
+];
+
+export async function createProductionFixture(
+  agency: SupabaseClient<Database>,
+  deliverables: FixtureDeliverable[] = defaultDeliverables,
+) {
   const client = value(await agency.from("clients").select("id").eq("slug", "sabre").single());
   const campaign = value(
     await agency.from("campaigns").select("id").eq("client_id", client.id).limit(1).single(),
@@ -32,16 +55,7 @@ export async function createProductionFixture(agency: SupabaseClient<Database>) 
         "A browser acceptance project for the complete production and client review workflow.",
       p_goals: "Verify durable feedback, private work, fixed snapshots, and delivery.",
       p_direction: { questions: { content: "I’ll provide the content" } },
-      p_deliverables: [
-        {
-          name: "Campaign square",
-          format: "square",
-          width: 1080,
-          height: 1080,
-          quantity: 1,
-          scope: "original",
-        },
-      ],
+      p_deliverables: deliverables,
       p_estimated_credits: 4,
     }),
   );
