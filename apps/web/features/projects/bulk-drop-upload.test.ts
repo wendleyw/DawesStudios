@@ -101,9 +101,13 @@ describe("runBulkDrop concurrency", () => {
 describe("runBulkDrop isolation and version lifecycle", () => {
   const okDeps = () => ({
     uploadArtwork: vi.fn(async (file: File) => `path/${file.name}`),
-    discardUnreferencedArtwork: vi.fn(async () => {}),
-    createDesignVersion: vi.fn(async () => "version-new"),
-    addDesign: vi.fn(async () => {}),
+    discardUnreferencedArtwork: vi.fn<BulkDropDependencies["discardUnreferencedArtwork"]>(
+      async () => {},
+    ),
+    createDesignVersion: vi.fn<BulkDropDependencies["createDesignVersion"]>(
+      async () => "version-new",
+    ),
+    addDesign: vi.fn<BulkDropDependencies["addDesign"]>(async () => {}),
   });
 
   it("creates a deliverable's new version exactly once, even with several files", async () => {
