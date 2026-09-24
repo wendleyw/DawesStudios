@@ -16,6 +16,11 @@
   background: var(--sidebar);
   color: #fff;
 }
+.brand-logo {
+  display: block;
+  width: 168px;
+  height: auto;
+}
 .login-story > .brand-logo {
   width: 192px;
 }

@@ -16,7 +16,7 @@ Numeric values below have one of three meanings:
 
 ## Brand and visual direction
 
-Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`.
+Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`. The sidebar animates the symbol: [`brand/logo-animation.webm`](../../brand/logo-animation.webm) plays once when the app opens and rests on the finished symbol, beside the wordmark cut from this asset, so the lockup keeps the original composition and proportions (see `workspace/brand-mark.tsx`). Sign-in, invitation and recovery screens and the favicon keep the static logo.
 
 The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. The status badge is the one documented exception — see the Decision below — added at the user's request on 2026-09-24. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
 
@@ -301,8 +301,9 @@ either duplicate the rule into two stylesheets (a drift risk — the two copies 
 force one feature to import another feature's stylesheet, which breaks the boundary a different
 way. `.status-badge` has consumers in six features (`board`, `briefings`, `credits`, `projects`,
 `settings`, `workspace`); `.segmented-control` has consumers in five (`assets`, `board`, `brand`,
-`projects`, `reviews`); `.brand-logo` reads as `brand`-owned but is shared by `auth` and
-`workspace`. Each stays in `globals.css` under this rule. (These three are additional instances of
+`projects`, `reviews`); `.brand-logo` read as `brand`-owned but was shared by `auth` and
+`workspace`; since the sidebar's animated lockup (2026-09-24) only `auth` uses it, so it moved to
+`auth.css`. The other two stay in `globals.css` under this rule. (These three are additional instances of
 the rule, verified the same way as the twelve below, but outside the specific count Task 5 tracked —
 see the note on that count at the end of this section.)
 

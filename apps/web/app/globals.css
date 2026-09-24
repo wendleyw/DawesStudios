@@ -450,12 +450,6 @@ select {
   color: var(--foreground);
   font-size: 28px;
 }
-.brand-logo {
-  display: block;
-  width: 168px;
-  height: auto;
-}
-
 .application {
   min-height: 100dvh;
 }

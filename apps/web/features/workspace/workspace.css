@@ -20,15 +20,34 @@
 .sidebar :focus-visible {
   outline-color: var(--sidebar-text);
 }
+/*
+ * The sidebar lockup, laid out in the original logo image's own units (2409 across): the animated
+ * mark's finished frame lands exactly where the static mark was, and the wordmark keeps its place.
+ * The breakpoints below change only `--brand-unit`.
+ */
 .brand-link {
+  --brand-unit: calc(166px / 2409);
   display: flex;
   min-height: 42px;
-  align-items: center;
+  align-items: flex-start;
 
   margin: 0 var(--space-xs) var(--space-lg);
 }
-.sidebar .brand-logo {
-  width: 166px;
+.brand-link > .brand-mark {
+  flex-shrink: 0;
+  width: calc(380 * var(--brand-unit));
+  height: calc(600 * var(--brand-unit));
+  margin: calc(-9 * var(--brand-unit)) 0 0 calc(-25 * var(--brand-unit));
+}
+/* The animation is stored as a white mark on black; screening drops the black into the sidebar. */
+.brand-link > video.brand-mark {
+  mix-blend-mode: screen;
+}
+.brand-link > .brand-wordmark {
+  flex-shrink: 0;
+  width: calc(1820 * var(--brand-unit));
+  height: calc(619 * var(--brand-unit));
+  margin-left: calc(234 * var(--brand-unit));
 }
 .sidebar > nav {
   min-height: 0;
@@ -548,11 +567,6 @@
     margin: 0 10px 36px;
     overflow: hidden;
   }
-  .sidebar-collapsed .brand-logo {
-    max-width: none;
-    width: 166px;
-    flex: 0 0 166px;
-  }
   .sidebar-collapsed .sidebar-collapse svg {
     transform: rotate(180deg);
   }
@@ -599,8 +613,8 @@
   .sidebar {
     padding-inline: 13px;
   }
-  .sidebar .brand-logo {
-    width: 157px;
+  .sidebar .brand-link {
+    --brand-unit: calc(157px / 2409);
   }
   .workspace-card {
     padding-inline: 18px;
@@ -627,8 +641,8 @@
     transform: translateX(-100%);
     visibility: hidden;
   }
-  .sidebar .brand-logo {
-    width: 166px;
+  .sidebar .brand-link {
+    --brand-unit: calc(166px / 2409);
   }
   .sidebar-collapse {
     display: none;
@@ -806,8 +820,8 @@
     height: 30px;
     margin-bottom: 10px;
   }
-  .has-client-context .sidebar .brand-logo {
-    width: 132px;
+  .has-client-context .sidebar .brand-link {
+    --brand-unit: calc(132px / 2409);
   }
   .has-client-context .sidebar .client-switcher {
     margin-bottom: 8px;

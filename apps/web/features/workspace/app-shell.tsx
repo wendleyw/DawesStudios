@@ -21,6 +21,7 @@ import { CanvasHeader } from "./canvas-header";
 import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
+import { BrandMark } from "./brand-mark";
 import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
 import { useClients, useProjectClient } from "./workspace-data";
@@ -207,13 +208,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}
       >
         <Link href="/home" className="brand-link" aria-label={`${studioName} home`}>
+          <BrandMark />
           <Image
-            src="/brand/logo.webp"
-            alt={studioName}
-            width={2409}
+            src="/brand/wordmark.webp"
+            alt=""
+            width={1820}
             height={619}
-            sizes="166px"
-            className="brand-logo"
+            sizes="126px"
+            className="brand-wordmark"
           />
         </Link>
         <button
