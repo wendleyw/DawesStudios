@@ -36,6 +36,32 @@ nearly every action reads or writes them. `playground-node.tsx` renders a canvas
 - Images use private signed previews. Documents remain download-only. **Download file** obtains a fresh signed download URL. **Remove item** asks for confirmation before deleting the item and its file.
 - Each board allows 500 active items. Title, note length, coordinates and dimensions are checked before saving and independently validated by the database.
 
+## Albums
+
+Below the title, a horizontally scrolling row of album chips lists the client's Brand Hub folders
+(**Unfiled** first when it holds files, then named folders alphabetically) and the project's
+deliverable versions (**{Deliverable} · V{n}**, in canvas order then version number), for whichever
+role is signed in. An album with no stored file gets no chip; a file the Playground cannot hold still
+appears in its album, dimmed, with its reason on hover and focus (SVG and video: **Stays in the
+project**; a file over 25 MB, though neither source stores a byte size today, so only a caller that
+knows one can trigger it). Clicking a chip opens its thumbnail row and a second click closes it;
+only one album is open at a time, and switching albums clears the selection. Clicking a thumbnail
+toggles its selection, Shift+click selects a range, and Enter on a focused thumbnail adds it at the
+center of the current view.
+
+Dragging a thumbnail (or the whole selection, when the dragged one is part of it) onto the canvas
+downloads each file with the viewer's own session — `downloadBrandAssetFile` from `brand-data.ts`,
+or `downloadDesignAssetFile` from `project-data.ts`, which picks `internal-assets` or
+`published-assets` by channel exactly as the design viewer does — wraps it in a `File` named after
+its title and stored extension, and passes the result to this board's own `addFiles` at the drop
+point: the same validation, storage, retry and **Waiting to upload…** placeholder a native drop
+produces. At most three downloads run at once. A download in progress shows as **Copying…** in the
+list below the album row; a failed one stays there with **Try again**, which replaces the failed
+row, without affecting the other files of the same drag. `playground-albums.ts` holds the logic
+(`buildBrandAlbums`, `buildProjectAlbums`, `computeDisabledReason`, `copyAlbumFilesToBoard`) and
+`playground-albums-panel.tsx` renders it. A client's `useProjectDetail` read resolves only published
+versions and designs, so a client session never requests an `internal-assets` object.
+
 ## Compact header
 
 A single header contains the title, a short team-visibility caption, Add note/Add files icons,
@@ -62,7 +88,7 @@ Full page navigation/reload while unsaved work exists uses the browser's unsaved
 Run the colocated validation and recovery tests from `apps/web`:
 
 ```sh
-npx vitest run features/playground/playground-model.test.ts features/playground/playground-board.test.tsx features/playground/playground-viewport.test.tsx
+npx vitest run features/playground/playground-model.test.ts features/playground/playground-board.test.tsx features/playground/playground-viewport.test.tsx features/playground/playground-albums.test.ts features/playground/playground-albums-panel.test.tsx
 ```
 
 The component tests mock the data boundary and canvas renderer to exercise user-visible retry, conflict, cleanup, closing and batch behavior, plus dialog semantics, scroll restoration, native cancellation, animation completion, reduced motion, Escape, focus and guarded navigation. jsdom stubs native dialog methods; real top-layer bounds and background focus isolation are verified in Playwright. Responsive framing tests use the installed xyflow bounds calculation with explicit item sizes, including controlled nodes whose internal measurement flag remains false. The viewport waits for pan/zoom readiness and item arrival; it does not wait for transient node measurements. These tests do not prove backend isolation or rendered browser geometry. The orchestrator verifies those through the Playground database tests and real browser workflows, including exact full-viewport bounds at five sizes, slide keyframes, background focus isolation,
