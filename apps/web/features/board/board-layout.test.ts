@@ -16,6 +16,7 @@ import {
   slotPosition,
   type BoardCampaign,
   campaignColumnWidth,
+  competitorWidgetHeight,
   MIN_ROW_CARDS,
   boardFit,
   FIT_PAD,
@@ -363,5 +364,45 @@ describe("fitting the view to the board", () => {
 
   it("returns a usable viewport before the board has been measured", () => {
     expect(boardFit({ width: 0, height: 0 }, view)).toEqual({ x: FIT_PAD, y: FIT_PAD, zoom: 1 });
+  });
+});
+
+describe("competitor ads widget frame", () => {
+  it("sits first in the stack, as wide as a three-card row, and pushes the campaigns down", () => {
+    const frames = buildStack({
+      ...base,
+      projects: [project("p1", "c1")],
+      campaigns: [campaign("c1", "First", "2026-09-01")],
+      competitorWidget: { count: 5 },
+    });
+    expect(frames.map((frame) => frame.id)).toEqual([
+      "widget:competitor-ads",
+      "campaign:c1",
+      "addCampaign",
+    ]);
+    expect(frames[0]).toMatchObject({
+      kind: "competitorAds",
+      x: 0,
+      y: 0,
+      width: campaignColumnWidth(3),
+    });
+    expect(frames[0].height).toBe(competitorWidgetHeight(5));
+    expect(frames[1].y).toBe(frames[0].height + STACK_GAP);
+  });
+
+  it("grows by one row per four competitors, and keeps one row when empty", () => {
+    expect(competitorWidgetHeight(0)).toBe(FRAME_HEAD + 88 + FRAME_PAD);
+    expect(competitorWidgetHeight(4)).toBe(FRAME_HEAD + 88 + FRAME_PAD);
+    expect(competitorWidgetHeight(5)).toBe(FRAME_HEAD + 88 * 2 + 12 + FRAME_PAD);
+    expect(competitorWidgetHeight(12)).toBe(FRAME_HEAD + 88 * 3 + 12 * 2 + FRAME_PAD);
+  });
+
+  it("adds no frame when the widget is not on the board", () => {
+    const frames = buildStack({
+      ...base,
+      projects: [],
+      campaigns: [campaign("c1", "First", "2026-09-01")],
+    });
+    expect(frames.some((frame) => frame.kind === "competitorAds")).toBe(false);
   });
 });

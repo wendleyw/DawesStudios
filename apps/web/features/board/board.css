@@ -1047,3 +1047,14 @@
     --board-header-space: 164px;
   }
 }
+.board-widget-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.board-widget-option p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}

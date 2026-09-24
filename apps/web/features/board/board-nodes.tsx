@@ -15,6 +15,7 @@ import { campaignDateRange, type BoardCampaign } from "./board-layout";
 import { openLabel } from "./project-open";
 import { distinctTitle } from "./timeline-model";
 import { ProjectThumbnail, type SignedProjectArtwork } from "./project-thumbnail";
+import { CompetitorAdsWidget } from "@/features/competitors/competitor-ads-widget";
 
 export type NoticeNode = Node<
   { filtered: boolean; hasSearch: boolean; onClear: () => void },
@@ -35,6 +36,10 @@ export type ProjectCardNode = Node<
 >;
 export type BriefingSlotNode = Node<{ href: string; campaign: string }, "briefingSlot">;
 export type AddCampaignNode = Node<{ onCreate: () => void }, "addCampaign">;
+export type CompetitorAdsNode = Node<
+  { clientId: string; canEdit: boolean; removing: boolean; onRemove: () => void },
+  "competitorAds"
+>;
 
 const NoticeFrame = memo(function NoticeFrame({ data }: NodeProps<NoticeNode>) {
   return (
@@ -148,10 +153,24 @@ const AddCampaignFrame = memo(function AddCampaignFrame({ data }: NodeProps<AddC
   );
 });
 
+const CompetitorAdsFrame = memo(function CompetitorAdsFrame({
+  data,
+}: NodeProps<CompetitorAdsNode>) {
+  return (
+    <CompetitorAdsWidget
+      clientId={data.clientId}
+      canEdit={data.canEdit}
+      removing={data.removing}
+      onRemove={data.onRemove}
+    />
+  );
+});
+
 export const boardNodeTypes = {
   notice: NoticeFrame,
   campaign: CampaignFrame,
   project: ProjectCard,
   briefingSlot: BriefingSlot,
   addCampaign: AddCampaignFrame,
+  competitorAds: CompetitorAdsFrame,
 };

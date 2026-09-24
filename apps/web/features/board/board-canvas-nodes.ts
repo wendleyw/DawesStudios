@@ -63,6 +63,8 @@ export function useBoardCanvasNodes(input: {
   openProject: (projectId: string) => void;
   selectedProjectId: string | null;
   artwork: ProjectArtworkMap | undefined;
+  /** Present for the studio side when the widget is on the board. */
+  competitorWidget?: { count: number; canEdit: boolean; removing: boolean; onRemove: () => void };
 }): { nodes: Node[]; content: { width: number; height: number } } {
   const {
     filteredProjects,
@@ -79,6 +81,7 @@ export function useBoardCanvasNodes(input: {
     openProject,
     selectedProjectId,
     artwork,
+    competitorWidget,
   } = input;
   return useMemo(() => {
     // Seeded titles repeat the client name the viewer is already inside, which is what pushes the
@@ -94,6 +97,7 @@ export function useBoardCanvasNodes(input: {
       filtered,
       selectedCampaignId,
       overrides: positions,
+      competitorWidget: competitorWidget ? { count: competitorWidget.count } : undefined,
     });
     const built: Node[] = [];
     for (const frame of frames) {
@@ -121,6 +125,19 @@ export function useBoardCanvasNodes(input: {
           type: "addCampaign",
           ariaLabel: "Add a campaign",
           data: { onCreate: () => setCreatingCampaign(true) },
+        });
+      else if (frame.kind === "competitorAds" && competitorWidget)
+        built.push({
+          ...shared,
+          id: frame.id,
+          type: "competitorAds",
+          ariaLabel: "Competitor ads",
+          data: {
+            clientId,
+            canEdit: competitorWidget.canEdit,
+            removing: competitorWidget.removing,
+            onRemove: competitorWidget.onRemove,
+          },
         });
       else if (frame.campaign) {
         const group = frame.campaign;
@@ -193,5 +210,6 @@ export function useBoardCanvasNodes(input: {
     openProject,
     selectedProjectId,
     artwork,
+    competitorWidget,
   ]);
 }

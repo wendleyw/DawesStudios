@@ -28,8 +28,11 @@ import { mondayOf } from "./timeline-model";
 import { boardNodeTypes } from "./board-nodes";
 import { selectionFromChanges } from "./planning-view";
 import {
+  addBoardWidget,
+  removeBoardWidget,
   useBoardCampaigns,
   useBoardPreferences,
+  useBoardWidgets,
   useProjectArtwork,
   moveProjectPosition,
   saveBoardView,
@@ -45,6 +48,7 @@ import { monthStart } from "./calendar-model";
 import { BoardCanvasControls } from "./board-canvas-controls";
 import { useBoardCanvasNodes } from "./board-canvas-nodes";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
+import { useCompetitors } from "@/features/competitors/competitors-data";
 import "./board.css";
 import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
@@ -127,6 +131,39 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const client = clients.data?.find((item) => item.id === clientId);
   const canMove = profile?.role === "agency";
   const canCreate = profile?.role !== "designer";
+  // Only the studio side reads widgets or competitors; a client's board never asks.
+  const studioSide = profile?.role === "agency" || profile?.role === "designer";
+  const widgets = useBoardWidgets(clientId, studioSide);
+  const competitorWidgetPlaced = !!widgets.data?.includes("competitor_ads");
+  const competitors = useCompetitors(clientId, studioSide && competitorWidgetPlaced);
+  const competitorCount = competitors.data?.length ?? 0;
+  const toggleWidget = useMutation({
+    mutationFn: async (placed: boolean) =>
+      placed
+        ? removeBoardWidget(database, { clientId, kind: "competitor_ads" })
+        : addBoardWidget(database, { clientId, kind: "competitor_ads" }),
+    onSuccess: () => widgets.refetch(),
+  });
+  const { mutate: setWidgetPlaced } = toggleWidget;
+  const removeCompetitorWidget = useCallback(() => setWidgetPlaced(true), [setWidgetPlaced]);
+  const competitorWidget = useMemo(
+    () =>
+      competitorWidgetPlaced
+        ? {
+            count: competitorCount,
+            canEdit: canMove,
+            removing: toggleWidget.isPending,
+            onRemove: removeCompetitorWidget,
+          }
+        : undefined,
+    [
+      competitorWidgetPlaced,
+      competitorCount,
+      canMove,
+      toggleWidget.isPending,
+      removeCompetitorWidget,
+    ],
+  );
   const moveProject = useMutation({
     mutationFn: async ({ id, position }: { id: string; position: { x: number; y: number } }) =>
       moveProjectPosition(database, { id, position }),
@@ -226,6 +263,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
     openProject,
     selectedProjectId,
     artwork: artwork.data,
+    competitorWidget,
   });
 
   function changeNodes(changes: NodeChange<Node>[]) {
@@ -299,6 +337,16 @@ function ClientBoard({ clientId }: { clientId: string }) {
             campaigns={campaigns.data ?? []}
             resultCount={filteredProjects.length}
             onClear={clearFilters}
+            widgets={
+              canMove && layout === "canvas"
+                ? {
+                    placed: competitorWidgetPlaced,
+                    pending: toggleWidget.isPending || widgets.isPending,
+                    error: toggleWidget.error?.message ?? null,
+                    onToggle: () => setWidgetPlaced(competitorWidgetPlaced),
+                  }
+                : undefined
+            }
           />
           {layout === "canvas" && <div className="board-zoom-dock" ref={setZoomDock} />}
         </div>

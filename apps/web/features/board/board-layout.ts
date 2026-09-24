@@ -22,6 +22,16 @@ export const CARD_H = 324;
 export const CARD_GAP = 20;
 const NOTICE_H = 168;
 const ADD_CAMPAIGN_H = 76;
+/** The competitor widget's tiles: four to a row, each as tall as a short card. */
+export const WIDGET_TILE_H = 88;
+export const WIDGET_TILE_GAP = 12;
+export const WIDGET_COLUMNS = 4;
+
+/** Its head, then one row per four competitors, one row even when empty for its message. */
+export function competitorWidgetHeight(count: number): number {
+  const rows = Math.max(1, Math.ceil(count / WIDGET_COLUMNS));
+  return FRAME_HEAD + rows * WIDGET_TILE_H + (rows - 1) * WIDGET_TILE_GAP + FRAME_PAD;
+}
 /**
  * The row width every campaign frame starts from. A campaign carries its projects plus a briefing
  * slot, so the common two-project campaign already fills this and the column reads as one straight
@@ -92,7 +102,7 @@ export function campaignDateRange(campaign: BoardCampaign, format: (v: string | 
 
 type StackFrame = {
   id: string;
-  kind: "notice" | "campaign" | "addCampaign";
+  kind: "notice" | "campaign" | "addCampaign" | "competitorAds";
   x: number;
   y: number;
   width: number;
@@ -121,6 +131,8 @@ type StackInput = {
   selectedCampaignId?: string;
   /** Unsaved drag positions, which must size the frame exactly like persisted ones. */
   overrides?: Record<string, { x: number; y: number }>;
+  /** Present when the studio placed the Competitor ads widget on this board. */
+  competitorWidget?: { count: number };
 };
 
 function storedTops(projects: Project[], overrides?: Record<string, { x: number; y: number }>) {
@@ -160,6 +172,14 @@ export function buildStack(input: StackInput): StackFrame[] {
     frames.push({ ...frame, x: 0, y: cursor });
     cursor += frame.height + STACK_GAP;
   };
+
+  if (input.competitorWidget)
+    push({
+      id: "widget:competitor-ads",
+      kind: "competitorAds",
+      width: rowWidth(MIN_ROW_CARDS),
+      height: competitorWidgetHeight(input.competitorWidget.count),
+    });
 
   for (const campaign of ordered) {
     const projects = grouped.get(campaign.id) ?? [];

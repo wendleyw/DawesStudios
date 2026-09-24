@@ -1,9 +1,10 @@
 "use client";
 
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { LayoutDashboard, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { statusLabels } from "@/features/workspace/workspace-data";
+import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { BoardViewPicker } from "./board-view-picker";
 import { boardStatuses } from "./planning-view";
@@ -25,6 +26,7 @@ export function BoardToolbar({
   campaigns,
   resultCount,
   onClear,
+  widgets,
 }: {
   clientId: string;
   view: BoardView;
@@ -40,19 +42,24 @@ export function BoardToolbar({
   campaigns: BoardCampaign[];
   resultCount: number;
   onClear: () => void;
+  /** The agency's widget placement, offered only on the Canvas view. */
+  widgets?: { placed: boolean; pending: boolean; error: string | null; onToggle: () => void };
 }) {
-  const [panel, setPanel] = useState<"search" | "filters" | null>(null);
+  const [panel, setPanel] = useState<"search" | "filters" | "widgets" | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const campaignInput = useRef<HTMLSelectElement>(null);
+  const widgetsButton = useRef<HTMLButtonElement>(null);
+  const widgetToggle = useRef<HTMLButtonElement>(null);
   const panelId = useId();
 
   useEffect(() => {
     if (!panel) return;
     if (panel === "search") searchInput.current?.focus();
-    else campaignInput.current?.focus();
+    else if (panel === "filters") campaignInput.current?.focus();
+    else widgetToggle.current?.focus();
     function dismiss(event: PointerEvent) {
       if (event.target instanceof Node && !container.current?.contains(event.target))
         setPanel(null);
@@ -60,7 +67,12 @@ export function BoardToolbar({
     function escape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setPanel(null);
-      (panel === "search" ? searchButton : filterButton).current?.focus();
+      (panel === "search"
+        ? searchButton
+        : panel === "filters"
+          ? filterButton
+          : widgetsButton
+      ).current?.focus();
     }
     document.addEventListener("pointerdown", dismiss);
     document.addEventListener("keydown", escape);
@@ -71,7 +83,13 @@ export function BoardToolbar({
   }, [panel]);
 
   function closePanel() {
-    (panel === "search" ? searchButton : filterButton).current?.focus();
+    if (panel)
+      (panel === "search"
+        ? searchButton
+        : panel === "filters"
+          ? filterButton
+          : widgetsButton
+      ).current?.focus();
     setPanel(null);
   }
 
@@ -127,14 +145,41 @@ export function BoardToolbar({
           </Link>
         )}
       </div>
+      {widgets && (
+        <>
+          <span className="board-tool-divider" aria-hidden="true" />
+          <div className="board-tool-group">
+            <button
+              type="button"
+              className="icon-button board-tool"
+              ref={widgetsButton}
+              aria-label="Board widgets"
+              title="Board widgets"
+              aria-expanded={panel === "widgets"}
+              aria-controls={panel === "widgets" ? panelId : undefined}
+              onClick={() => setPanel(panel === "widgets" ? null : "widgets")}
+            >
+              <LayoutDashboard size={18} aria-hidden="true" />
+            </button>
+          </div>
+        </>
+      )}
       {panel && (
         <section
           className="board-tool-panel"
           id={panelId}
-          aria-label={panel === "search" ? "Project search" : "Project filters"}
+          aria-label={
+            panel === "search"
+              ? "Project search"
+              : panel === "filters"
+                ? "Project filters"
+                : "Board widgets"
+          }
         >
           <header>
-            <h2>{panel === "search" ? "Find a project" : "Filters"}</h2>
+            <h2>
+              {panel === "search" ? "Find a project" : panel === "filters" ? "Filters" : "Widgets"}
+            </h2>
             <button
               type="button"
               className="icon-button"
@@ -144,7 +189,26 @@ export function BoardToolbar({
               <X size={16} />
             </button>
           </header>
-          {panel === "search" ? (
+          {panel === "widgets" && widgets ? (
+            <>
+              <div className="board-widget-option">
+                <div>
+                  <strong>Competitor ads</strong>
+                  <p>Follow competitors&apos; ads from the official ad libraries.</p>
+                </div>
+                <button
+                  type="button"
+                  className="button"
+                  ref={widgetToggle}
+                  disabled={widgets.pending}
+                  onClick={widgets.onToggle}
+                >
+                  {widgets.placed ? "Remove from board" : "Add to board"}
+                </button>
+              </div>
+              {widgets.error && <FormError>{widgets.error}</FormError>}
+            </>
+          ) : panel === "search" ? (
             <SearchField
               label="Search projects"
               value={search}
@@ -183,16 +247,18 @@ export function BoardToolbar({
               </label>
             </>
           )}
-          <footer>
-            <span className="board-result-count" role="status">
-              {resultCount} project{resultCount === 1 ? "" : "s"}
-            </span>
-            {(search || campaign || status) && (
-              <button type="button" className="button quiet" onClick={onClear}>
-                Clear filters
-              </button>
-            )}
-          </footer>
+          {panel !== "widgets" && (
+            <footer>
+              <span className="board-result-count" role="status">
+                {resultCount} project{resultCount === 1 ? "" : "s"}
+              </span>
+              {(search || campaign || status) && (
+                <button type="button" className="button quiet" onClick={onClear}>
+                  Clear filters
+                </button>
+              )}
+            </footer>
+          )}
         </section>
       )}
     </div>

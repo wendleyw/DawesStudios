@@ -11,13 +11,18 @@ const fixture = vi.hoisted(() => ({
   database: {},
   campaignError: null as Error | null,
   refetchCampaigns: vi.fn(),
+  role: "agency" as "agency" | "designer" | "client",
+  widgets: [] as string[],
+  widgetsEnabled: [] as boolean[],
+  addWidget: vi.fn(),
+  removeWidget: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/clients/client/board",
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
-  useAuth: () => ({ database: fixture.database, profile: { id: "viewer", role: "agency" } }),
+  useAuth: () => ({ database: fixture.database, profile: { id: "viewer", role: fixture.role } }),
 }));
 vi.mock("@/features/workspace/workspace-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/workspace/workspace-data")>()),
@@ -44,6 +49,15 @@ vi.mock("./board-data", () => ({
   }),
   useProjectArtwork: () => ({ data: {} }),
   moveProjectPosition: vi.fn(),
+  useBoardWidgets: (_clientId: string, enabled: boolean) => {
+    fixture.widgetsEnabled.push(enabled);
+    return { data: enabled ? fixture.widgets : undefined, isPending: false, refetch: vi.fn() };
+  },
+  addBoardWidget: fixture.addWidget,
+  removeBoardWidget: fixture.removeWidget,
+}));
+vi.mock("@/features/competitors/competitors-data", () => ({
+  useCompetitors: () => ({ data: [], isPending: false }),
 }));
 vi.mock("./board-canvas-nodes", () => ({
   useBoardCanvasNodes: () => ({ nodes: [], content: { width: 0, height: 0 } }),
@@ -61,6 +75,11 @@ vi.mock("@/features/workspace/notifications-bell", () => ({ NotificationsBell: (
 
 beforeEach(() => {
   fixture.view = null;
+  fixture.role = "agency";
+  fixture.widgets = [];
+  fixture.widgetsEnabled = [];
+  fixture.addWidget.mockReset().mockResolvedValue(undefined);
+  fixture.removeWidget.mockReset().mockResolvedValue(undefined);
   fixture.campaignError = null;
   fixture.refetchCampaigns.mockReset();
   fixture.save.mockReset().mockImplementation(async (_database, input) => {
@@ -244,5 +263,75 @@ describe("BoardPage views", () => {
     );
     await user.click(screen.getByRole("button", { name: "Filters" }));
     expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("");
+  });
+});
+
+describe("BoardPage widgets", () => {
+  it("lets the agency place the competitor ads widget from the Widgets panel", async () => {
+    fixture.view = "canvas";
+    mountBoard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Board widgets" }));
+    const panel = screen.getByRole("region", { name: "Board widgets" });
+    expect(panel).toHaveTextContent("Follow competitors' ads from the official ad libraries.");
+    await user.click(within(panel).getByRole("button", { name: "Add to board" }));
+    await waitFor(() =>
+      expect(fixture.addWidget).toHaveBeenCalledWith(fixture.database, {
+        clientId: "client",
+        kind: "competitor_ads",
+      }),
+    );
+  });
+
+  it("offers removal once the widget is on the board", async () => {
+    fixture.view = "canvas";
+    fixture.widgets = ["competitor_ads"];
+    mountBoard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Board widgets" }));
+    await user.click(
+      within(screen.getByRole("region", { name: "Board widgets" })).getByRole("button", {
+        name: "Remove from board",
+      }),
+    );
+    await waitFor(() =>
+      expect(fixture.removeWidget).toHaveBeenCalledWith(fixture.database, {
+        clientId: "client",
+        kind: "competitor_ads",
+      }),
+    );
+  });
+
+  it("shows a failed placement in the panel", async () => {
+    fixture.view = "canvas";
+    fixture.addWidget.mockRejectedValue(new Error("Access removed"));
+    mountBoard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Board widgets" }));
+    await user.click(
+      within(screen.getByRole("region", { name: "Board widgets" })).getByRole("button", {
+        name: "Add to board",
+      }),
+    );
+    expect(
+      await within(screen.getByRole("region", { name: "Board widgets" })).findByRole("alert"),
+    ).toHaveTextContent("Access removed");
+  });
+
+  it.each(["designer", "client"] as const)("gives a %s no Widgets button", async (role) => {
+    fixture.view = "canvas";
+    fixture.role = role;
+    mountBoard();
+    await screen.findByRole("group", { name: "Board tools" });
+    expect(screen.queryByRole("button", { name: "Board widgets" })).not.toBeInTheDocument();
+  });
+
+  it("never asks for a client's widgets", async () => {
+    fixture.view = "canvas";
+    fixture.role = "client";
+    mountBoard();
+    await screen.findByRole("group", { name: "Board tools" });
+    expect(fixture.widgetsEnabled.length).toBeGreaterThan(0);
+    expect(fixture.widgetsEnabled).not.toContain(true);
   });
 });
