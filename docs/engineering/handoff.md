@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 20:00 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
+Updated: 2026-09-23 22:45 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
 orchestrator since 17:50 EDT.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -36,14 +36,14 @@ The details and evidence are in the
 
 ## In progress
 
-- **Video upload lifecycle:** the [spec](../superpowers/specs/2026-09-23-video-upload-lifecycle-design.md)
-  is approved and the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md) is
-  written (`4e56cdb`, 9 TDD tasks). **The user approved the plan and chose native execution in a
-  fresh session** (a mid-tier model is enough), with one whole-branch review at the end on the
-  most capable model. No code yet.
-- **J10 on staging: done for everything a local rehearsal can prove.** 68 of 72 scenarios pass on the
-  canonical dataset. The only failure needs SMTP, and the 3 scenarios after it in its serial group
-  did not run. A real server is still needed for R2, TLS, SMTP and a restore drill.
+- **Video upload lifecycle:** the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md)
+  (`4e56cdb`) is approved for native execution in a fresh session. No code yet.
+- **Bulk image drop:** the [spec](../superpowers/specs/2026-09-23-bulk-image-drop-design.md)
+  (`6db50b6`) waits for the user's written-spec review; then writing-plans. It does not modify the
+  files the video plan changes, so the two can run in either order.
+- **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
+  EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
+- **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
 
@@ -60,7 +60,7 @@ The details and evidence are in the
 
 - Next.js dev server on `http://localhost:3003`, restarted at 18:40 because its watcher had
   stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230012`);
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230013`);
   trusted media on 55430. Do not reset or re-provision.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
