@@ -22,7 +22,7 @@ vi.mock("./playground-albums-panel", () => ({
     onAdd: (files: unknown[], point: { x: number; y: number }) => void;
   }) => (
     <button
-      aria-description={props.blockedReason}
+      data-blocked-reason={props.blockedReason}
       onClick={() => props.onAdd([{ id: "album-file", title: "Album file" }], { x: 5, y: 5 })}
     >
       Trigger album add
@@ -706,12 +706,12 @@ describe("Playground albums wiring", () => {
       <PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />,
     );
     expect(screen.getByText("Trigger album add")).toHaveAttribute(
-      "aria-description",
+      "data-blocked-reason",
       "This Playground holds 500 items. Remove an item before adding more.",
     );
     remoteItems = remoteItems.slice(1);
     queryUpdatedAt += 1;
     rerender(<PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />);
-    expect(screen.getByText("Trigger album add")).not.toHaveAttribute("aria-description");
+    expect(screen.getByText("Trigger album add")).not.toHaveAttribute("data-blocked-reason");
   });
 });
