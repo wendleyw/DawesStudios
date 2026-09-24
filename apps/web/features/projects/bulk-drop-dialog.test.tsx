@@ -246,6 +246,64 @@ describe("BulkDropDialog progress and retry", () => {
     await act(async () => finish());
   });
 
+  it("keeps showing the versions the run used after the project refreshes", async () => {
+    upload.runBulkDrop.mockImplementationOnce(
+      async (_deps: unknown, runs: DeliverableRun[], options: BulkDropOptions) => {
+        options.onFileStatus?.(runs[0].files[0].id, { state: "done" });
+        return {
+          resolvedVersionIds: { "d-square": "v-square-2" },
+          outcomes: {},
+          permissionDenied: false,
+        };
+      },
+    );
+    const props = {
+      projectId: "project-1",
+      deliverables: [square],
+      files: [image("square-1.png", 1080, 1080)],
+      onClose: vi.fn(),
+    };
+    const view = render(
+      <BulkDropDialog
+        {...props}
+        versions={[{ id: "v-square-1", deliverableId: "d-square", number: 1, status: "draft" }]}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText(/Create V2/)).toBeEnabled());
+    await userEvent.click(screen.getByLabelText(/Create V2/));
+    await userEvent.click(screen.getByRole("button", { name: /Add 1 image/i }));
+    await waitFor(() => expect(screen.getByText("1 added")).toBeInTheDocument());
+
+    // The run created V2; the refreshed project now lists it as the latest version.
+    view.rerender(
+      <BulkDropDialog
+        {...props}
+        versions={[
+          { id: "v-square-1", deliverableId: "d-square", number: 1, status: "draft" },
+          { id: "v-square-2", deliverableId: "d-square", number: 2, status: "draft" },
+        ]}
+      />,
+    );
+    expect(screen.getByLabelText(/Create V2/)).toBeChecked();
+    expect(screen.queryByLabelText(/Create V3/)).toBeNull();
+  });
+
+  it("marks a skipped file as skipped", async () => {
+    render(
+      <BulkDropDialog
+        projectId="project-1"
+        deliverables={[square]}
+        versions={[]}
+        files={[image("square-1.png", 1080, 1080), image("odd.png", 400, 300)]}
+        onClose={vi.fn()}
+      />,
+    );
+    const skip = await screen.findByRole("button", { name: /Skip odd.png/i });
+    await userEvent.click(skip);
+    expect(skip).toHaveTextContent("Skipped");
+    expect(skip).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps the version choice fixed once a run has started", async () => {
     upload.runBulkDrop.mockImplementationOnce(
       async (_deps: unknown, runs: DeliverableRun[], options: BulkDropOptions) => {

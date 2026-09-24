@@ -189,6 +189,37 @@ Feature styles are local to `projects.css`. The shared controls, shell and modal
 `.design-viewport` appear there only inside a grouped `.react-flow__attribution` rule shared with
 `.board-canvas`.
 
+## Bulk image drop
+
+Dropping a bundle of PNG/JPG/WebP files onto the canvas is available only in **Working files**, to
+the agency or the assigned designer — the same `canProduce` gate the Add design tile already uses.
+A client gets no overlay, the agency's **Shared with client** view shows **Switch to Working files
+to add designs**, and a page-level guard keeps a file dropped anywhere else on the project page from
+opening in the tab. `bulk-drop-model.ts` is pure logic: it classifies each file (exact pixel-size
+match first, then the same aspect ratio within 1%, otherwise unmatched or a tie that the person
+settles), sorts naturally (`1, 2, 10`), and builds one plan per affected deliverable with its
+default version: the current one, or a new one when the current version is already shared with the
+client. "Shared" is the version's `reviewed` status, which only `publish_version` sets and which
+the canvas already shows as **Share update**; `published_versions.version_number` counts client
+publications per deliverable, so it cannot identify an internal version.
+
+`bulk-drop-upload.ts` runs the confirmed plan against injected dependencies. Up to three files
+upload at once across the whole drop, while each deliverable registers its designs strictly in
+natural order: `add_design` computes `sort_order` as a plain `count(*)` with no row lock
+(`supabase/migrations/202609200002_workflows.sql:121`), so one version's registrations must never
+overlap. A new version is created just before its deliverable's first registration, so a
+deliverable whose uploads all fail leaves no empty version, and every stored file that ends up
+unregistered (its `add_design` failed, its version could not be created, or a permission refusal
+stopped the drop) is discarded. Cancel stops the files still waiting to upload; a file already
+uploading finishes and is registered. `bulk-drop-dialog.tsx` renders one block per deliverable with
+its size, file count and version choice, the picker for unmatched or tied files, the files that
+cannot be added with their reasons, per-file progress, and **Try again** for the failed files only,
+reusing any version the first attempt created. `project-page.tsx` mounts one dialog per drop.
+Neither `artwork-files.ts` nor `project-action-dialog.tsx` changed for this feature; only their
+existing exports (`uploadArtwork`, `discardUnreferencedArtwork`) are called. `createDesignVersion`
+now returns the created version's id, which bulk drop needs to register several designs into a
+version it just created.
+
 ## Deviation from the data-access contract: two reads that are not hooks
 
 `findUnchangedDesign` and `findDesignByAsset` in `project-data.ts` are exported as plain

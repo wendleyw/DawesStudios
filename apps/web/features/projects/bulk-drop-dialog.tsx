@@ -68,6 +68,9 @@ export function BulkDropDialog({
   const [statuses, setStatuses] = useState<Record<string, FileStatus>>({});
   const [running, setRunning] = useState(false);
   const [lastResult, setLastResult] = useState<BulkDropResult | null>(null);
+  // The plans a run used. The project refreshes after a run (a new version becomes the latest), so
+  // the blocks and any retry keep to what the person confirmed instead of recomputing.
+  const [confirmedPlans, setConfirmedPlans] = useState<DeliverablePlan[] | null>(null);
   // Read by the running drop between files, so it must not be a render-time snapshot.
   const cancelledRef = useRef(false);
   const [taskIds] = useState(() => new Map<File, string>());
@@ -85,7 +88,7 @@ export function BulkDropDialog({
 
   const currentVersions = useMemo(() => latestVersionPerDeliverable(versions), [versions]);
 
-  const plans: DeliverablePlan[] = useMemo(() => {
+  const draftPlans: DeliverablePlan[] = useMemo(() => {
     if (!classified) return [];
     const handAssigned = [...classified.tied, ...classified.unmatched].flatMap(({ file }) => {
       const assignment = assignments[fileKey(file)];
@@ -106,6 +109,7 @@ export function BulkDropDialog({
         ),
     );
   }, [classified, assignments, deliverables, currentVersions, versions]);
+  const plans = confirmedPlans ?? draftPlans;
 
   const needsAssignment = classified ? [...classified.tied, ...classified.unmatched] : [];
   const everyNeedsAssignmentResolved = needsAssignment.every(
@@ -163,6 +167,7 @@ export function BulkDropDialog({
 
   async function run(onlyFileIds?: Set<string>) {
     cancelledRef.current = false;
+    setConfirmedPlans(plans);
     setRunning(true);
     try {
       const result = await runBulkDrop(dependencies(), buildRuns(onlyFileIds), {
@@ -314,7 +319,7 @@ export function BulkDropDialog({
                           }))
                         }
                       >
-                        Skip
+                        {assignment && "skipped" in assignment ? "Skipped" : "Skip"}
                       </button>
                     </li>
                   );

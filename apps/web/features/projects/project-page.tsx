@@ -460,7 +460,11 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                   </ReactFlow>
                   {dragOver && canProduce && (
                     <div className="canvas-drop-overlay">
-                      <span>{`Drop ${dragCount} image${dragCount === 1 ? "" : "s"} to add them to this project`}</span>
+                      <span>
+                        {dragCount === 1
+                          ? "Drop 1 image to add it to this project"
+                          : `Drop ${dragCount} images to add them to this project`}
+                      </span>
                     </div>
                   )}
                   {switchHint && (
