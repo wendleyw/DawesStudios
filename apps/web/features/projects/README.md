@@ -27,33 +27,38 @@ surface. Notification read actions remain explicit and recipient-scoped.
 Design previews open feedback with a desktop double-click. A single click keeps canvas interaction
 available; Enter/Space, the explicit arrow action and a single touch tap also open the design.
 The main board already uses double-click to enter a project. During design review the channel/action
-row is replaced by a compact deliverable/design toolbar directly below the title. Playground sits
-inside that toolbar. The artwork canvas is above the design/version navigation footer, so artwork
-cannot overlap the counter. Notifications remain in the account card.
+row is replaced by a compact deliverable/design title bar directly below the title, over the
+artwork column. The design tools (navigate, Add pin, edit and Playground) head the feedback column
+beside it, level with that bar. The artwork canvas is above the design/version navigation footer,
+so artwork cannot overlap the counter. Notifications remain in the account card.
 
 ## Feedback inside the design viewer
 
 Version cards show their number, status, design count, available workflow actions and a feedback
 shortcut with the unresolved comment count. Long release notes and review feedback no longer
-appear as truncated blocks beside artwork. The shortcut opens the first design on General feedback;
-an empty working version opens a standalone feedback panel.
+appear as truncated blocks beside artwork. The shortcut opens that version's own feedback panel
+beside the board, including for an empty working version.
 
-The feedback column is 310–380 px on desktop. Its compact heading/scope/filter controls leave most
-of the available height for an independently scrollable, keyboard-focusable comment history.
-The composer uses a 60–120 px growing textarea and adjacent send button; privacy context is shown
-once in the heading. Phones place a taller feedback section below the artwork, within the viewer's
-scrolling body. Pending pins, long comments, errors and drafts remain accessible.
+The feedback column is 310–380 px on desktop and runs the viewer's full height: the design tools,
+then the heading with **Show resolved** on its right, then an independently scrollable,
+keyboard-focusable comment history. The composer uses a 60–120 px growing textarea and adjacent
+send button; privacy context is shown once in the heading. Phones stack the title bar, the tools,
+the artwork and a taller feedback section; the title bar and tools stay put while the rest scrolls,
+as they do in short windows. Pending pins, long comments, errors and drafts remain accessible.
 
-The viewer separates **This design** (that design's comments and image/video pins) from **General
-feedback** (the current version's notes, client review decision and unpinned version discussion).
-Clicking a pin or moving to another design selects This design. Review decisions remain available
-for the latest pending client publication, including from General feedback. Existing release notes
-and review feedback are rendered in full from their original records, never copied into comments.
-A general comment has a version/publication ID and no design ID; queries filter both that context
-and the channel. Project Conversation retains the existing aggregate of unpinned messages.
-Draft bodies, pending pins and retry keys remain scoped to viewer/project/channel and design, or
-version for general feedback, so switching tabs or versions cannot mix unsent comments. Counts use
-only authorized unresolved comment rows and refresh with the existing comment invalidation path.
+The viewer holds only that design's feedback: its comments and image/video pins, each pin named
+beside its author (with its timecode on video). Version-wide feedback (the version's notes, the
+client's review decision and unpinned version discussion) lives in the version's panel on the board;
+the user removed the viewer's **General feedback** tab on 2026-09-24. While the latest client
+publication waits for a decision, the client can **Review version** from the top of the viewer's
+feedback column, from the version panel and from the version card; `reviewFor` in
+`project-page.tsx` is the one rule for all three. Existing release notes and review feedback are
+rendered in full from their original records, never copied into comments. A version comment has a
+version/publication ID and no design ID; queries filter both that context and the channel. Project
+Conversation retains the existing aggregate of unpinned messages. Draft bodies, pending pins and
+retry keys remain scoped to viewer/project/channel and design, or version for version-wide
+feedback, so moving between a design and its version cannot mix unsent comments. Counts use only
+authorized unresolved comment rows and refresh with the existing comment invalidation path.
 Clients never query working versions, designs or internal comments.
 
 The **Playground** action opens a persistent brainstorm canvas for the current role and project.

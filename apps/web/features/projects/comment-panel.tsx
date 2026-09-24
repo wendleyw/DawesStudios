@@ -47,7 +47,7 @@ export function CommentPanel({
   onSelectComment,
   heading,
   onClose,
-  navigation,
+  notice,
   context,
 }: {
   projectId: string;
@@ -60,7 +60,8 @@ export function CommentPanel({
   onSelectComment?: (id: string) => void;
   heading?: string;
   onClose?: () => void;
-  navigation?: ReactNode;
+  /** A call to action shown under the heading, such as a client's pending review. */
+  notice?: ReactNode;
   context?: ReactNode;
 }) {
   const { database } = useAuth();
@@ -136,19 +137,21 @@ export function CommentPanel({
       aria-label={channel === "client" ? "Client conversation" : "Studio conversation"}
     >
       <ProjectPanelHeader
-        title={heading ?? (designId ? "Feedback" : versionId ? "General feedback" : "Conversation")}
+        title={heading ?? (designId || versionId ? "Feedback" : "Conversation")}
         subtitle={channel === "client" ? "Shared with the studio" : "Studio team only"}
         onClose={onClose}
+        actions={
+          <label className="resolved-toggle">
+            <input
+              type="checkbox"
+              checked={showResolved}
+              onChange={(event) => setShowResolved(event.target.checked)}
+            />
+            Show resolved
+          </label>
+        }
       />
-      {navigation}
-      <label className="resolved-toggle">
-        <input
-          type="checkbox"
-          checked={showResolved}
-          onChange={(event) => setShowResolved(event.target.checked)}
-        />
-        Show resolved
-      </label>
+      {notice}
       <div className="comment-list" role="region" aria-label="Comment history" tabIndex={0}>
         {context}
         {comments.isPending ? (
@@ -170,27 +173,27 @@ export function CommentPanel({
               <div className="comment-author">
                 <span className="comment-avatar">{comment.label[0]}</span>
                 <strong>{comment.label}</strong>
+                {comment.pinX !== null && (
+                  <button
+                    className="comment-pin-link"
+                    // On a video this both highlights the pin and seeks the player to the moment it
+                    // marks; `design-viewer.tsx` owns the seek, because it owns the element. The
+                    // label carries the timecode for the same reason the marker's `aria-label` does:
+                    // "Pin 3" says nothing about *when*, which on a video is the only thing that
+                    // locates it.
+                    onClick={() => onSelectComment?.(comment.id)}
+                  >
+                    <MapPin size={12} />
+                    {comment.resolved
+                      ? "Resolved pin"
+                      : `Pin ${(comments.data?.filter((item) => !item.resolved && item.pinX !== null).findIndex((item) => item.id === comment.id) ?? 0) + 1}`}
+                    {comment.pinT !== null && (
+                      <span className="comment-pin-time">{formatTimecode(comment.pinT)}</span>
+                    )}
+                  </button>
+                )}
                 <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
               </div>
-              {comment.pinX !== null && (
-                <button
-                  className="comment-pin-link"
-                  // On a video this both highlights the pin and seeks the player to the moment it
-                  // marks; `design-viewer.tsx` owns the seek, because it owns the element. The
-                  // label carries the timecode for the same reason the marker's `aria-label` does:
-                  // "Pin 3" says nothing about *when*, which on a video is the only thing that
-                  // locates it.
-                  onClick={() => onSelectComment?.(comment.id)}
-                >
-                  <MapPin size={12} />
-                  {comment.resolved
-                    ? "Resolved pin"
-                    : `Pin ${(comments.data?.filter((item) => !item.resolved && item.pinX !== null).findIndex((item) => item.id === comment.id) ?? 0) + 1}`}
-                  {comment.pinT !== null && (
-                    <span className="comment-pin-time">{formatTimecode(comment.pinT)}</span>
-                  )}
-                </button>
-              )}
               <p>{comment.body}</p>
               <button
                 className="comment-resolve"

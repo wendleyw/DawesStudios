@@ -75,11 +75,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPanel(next);
   }
-  const [selected, setSelected] = useState<{
-    designId?: string;
-    versionId: string;
-    scope?: "design" | "version";
-  } | null>(null);
+  const [selected, setSelected] = useState<{ designId?: string; versionId: string } | null>(null);
   const [format, setFormat] = useState("");
   // Images dropped on the canvas in Working files; the dialog is mounted once per drop.
   const [bulkDropFiles, setBulkDropFiles] = useState<File[] | null>(null);
@@ -186,6 +182,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       designs.filter((design) => design.versionId === version.id),
     ]),
   );
+  // A client decides on the latest version of a deliverable while it waits for them, until delivery.
+  const reviewFor = (version: CanvasVersion) =>
+    profile?.role === "client" &&
+    version.id === versionsByDeliverable.get(version.deliverableId)?.at(-1)?.id &&
+    version.status === "pending" &&
+    project.status !== "delivered"
+      ? () => setAction({ kind: "review", version })
+      : undefined;
   const latestWorkingByDeliverable = new Map(
     (channel === "internal" ? versions : (working.data?.versions ?? [])).map((version) => [
       version.deliverableId,
@@ -222,7 +226,6 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     const deliverable = shownDeliverables.find((item) => item.id === frame.deliverableId);
     if (!deliverable) continue;
     const deliverableVersions = versionsByDeliverable.get(deliverable.id) ?? [];
-    const latest = deliverableVersions.at(-1);
     const latestWorking = latestWorkingByDeliverable.get(deliverable.id);
     const creationHint = channel === "client" ? "In Working files" : undefined;
     const style = {
@@ -289,12 +292,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         channel,
         canProduce,
         commentCount: commentCounts.data?.[version.id] ?? (commentCounts.isSuccess ? 0 : undefined),
-        openFeedback: () =>
-          setSelected({
-            versionId: version.id,
-            designId: designsByVersion.get(version.id)?.[0]?.id,
-            scope: "version",
-          }),
+        // Version-wide feedback opens in the version's own panel beside the board; a design's
+        // feedback lives in the viewer.
+        openFeedback: () => setSelected({ versionId: version.id }),
         onAddDesign: designTarget
           ? () => beginWorkingAction({ kind: "design", version: designTarget })
           : undefined,
@@ -306,11 +306,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             ? `Working files · V${designTarget.number}`
             : undefined,
         canPublish: profile?.role === "agency" && channel === "internal",
-        canReview:
-          profile?.role === "client" &&
-          version.id === latest?.id &&
-          version.status === "pending" &&
-          project.status !== "delivered",
+        canReview: reviewFor(version) !== undefined,
         artworkHeight: frame.artworkHeight,
         visibleDesigns: frame.visible,
         openDesign: (id) => setSelected({ designId: id, versionId: version.id }),
@@ -378,16 +374,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
               deliverable={chosenDeliverable}
               designs={designs.filter((design) => design.versionId === chosenVersion.id)}
               initialDesignId={selected.designId}
-              initialFeedbackScope={selected.scope}
-              onReview={
-                profile?.role === "client" &&
-                chosenVersion.id ===
-                  versionsByDeliverable.get(chosenVersion.deliverableId)?.at(-1)?.id &&
-                chosenVersion.status === "pending" &&
-                project.status !== "delivered"
-                  ? () => setAction({ kind: "review", version: chosenVersion })
-                  : undefined
-              }
+              onReview={reviewFor(chosenVersion)}
               channel={channel}
               onEdit={
                 canProduce
@@ -514,7 +501,13 @@ export function ProjectPage({ projectId }: { projectId: string }) {
               versionId={chosenVersion.id}
               heading="Feedback"
               onClose={() => setSelected(null)}
-              context={<VersionContext version={chosenVersion} channel={channel} />}
+              context={
+                <VersionContext
+                  version={chosenVersion}
+                  channel={channel}
+                  onReview={reviewFor(chosenVersion)}
+                />
+              }
             />
           </ProjectPanel>
         )}

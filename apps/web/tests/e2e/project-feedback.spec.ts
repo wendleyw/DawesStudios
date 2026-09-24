@@ -112,11 +112,21 @@ test("version feedback preserves review history, scoped comments, drafts and cli
     await artwork.click();
     await expect(page.locator(".design-viewer")).toHaveCount(0);
     await artwork.dblclick();
-    await expect(page.getByRole("button", { name: "This design", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    const panel = page.getByRole("complementary", { name: "Client conversation" });
+    const message = panel.getByRole("textbox", { name: "Your message", exact: true });
+    // The viewer is about this design only: no scope switch, Show resolved beside the title, and
+    // no review for round 1, which the client already decided.
+    await expect(page.getByRole("button", { name: "General feedback", exact: true })).toHaveCount(
+      0,
     );
-    await expect(page.locator(".comment-panel")).toContainText("Give this headline more space.");
+    await expect(page.getByRole("button", { name: "This design", exact: true })).toHaveCount(0);
+    await expect(panel.locator(".project-panel-heading").getByLabel("Show resolved")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Review version", exact: true })).toHaveCount(0);
+    await expect(panel).toContainText("Give this headline more space.");
+    await expect(panel).not.toContainText("General discussion for round 1.");
+    // A pinned comment names its pin beside its author rather than on a line of its own.
+    await expect(panel.locator(".comment-author .comment-pin-link")).toHaveText("Pin 1");
+    await panel.screenshot({ path: `${screenshotDirectory}/design-feedback-pinned-comment.png` });
     await page.getByRole("button", { name: "All designs", exact: true }).click();
     await artwork.press("Enter");
     await expect(page.locator(".design-viewer")).toBeVisible();
@@ -124,21 +134,18 @@ test("version feedback preserves review history, scoped comments, drafts and cli
     await expect(
       page.getByRole("button", { name: "Open feedback for version 1", exact: true }),
     ).toContainText("2 comments");
+    // Version-wide feedback opens beside the board, in that version's own panel.
     await page.getByRole("button", { name: "Open feedback for version 1", exact: true }).click();
-    const panel = page.getByRole("complementary", { name: "Client conversation" });
-    const general = panel.getByRole("button", { name: "General feedback", exact: true });
-    const design = panel.getByRole("button", { name: "This design", exact: true });
-    const message = panel.getByRole("textbox", { name: "Your message", exact: true });
-    await expect(general).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".design-viewer")).toHaveCount(0);
     await expect(panel).toContainText(`${releaseNote} Round 1.`);
     await expect(panel).toContainText(decisionNote);
     await expect(panel).toContainText("General discussion for round 1.");
     await expect(panel).not.toContainText("General discussion for round 2.");
     await expect(panel).not.toContainText("Give this headline more space.");
     await message.fill("General draft for round one");
-    await design.click();
+    await artwork.dblclick();
+    await expect(page.locator(".design-viewer")).toBeVisible();
     await expect(panel).toContainText("Give this headline more space.");
-    await expect(panel).not.toContainText("General discussion for round 1.");
     await expect(message).toHaveValue("");
     await message.fill("Draft for this image only");
     await page.getByRole("button", { name: "Add pin", exact: true }).click();
@@ -149,10 +156,10 @@ test("version feedback preserves review history, scoped comments, drafts and cli
       })
       .press("Enter");
     await expect(panel.locator(".pending-pin")).toBeVisible();
-    await general.click();
+    await page.getByRole("button", { name: "All designs", exact: true }).click();
+    await page.getByRole("button", { name: "Open feedback for version 1", exact: true }).click();
     await expect(panel.locator(".pending-pin")).toHaveCount(0);
     await expect(message).toHaveValue("General draft for round one");
-    await page.getByRole("button", { name: "All designs", exact: true }).click();
     await page.getByRole("button", { name: "Open feedback for version 2", exact: true }).click();
     await expect(panel).toContainText("General discussion for round 2.");
     await expect(panel).not.toContainText(decisionNote);
@@ -172,6 +179,14 @@ test("version feedback preserves review history, scoped comments, drafts and cli
         .single(),
     );
     expect(saved).toEqual({ publication_id: publications[1], design_id: null });
+    // Round 2 waits for the client, so its designs offer the review at the top of the feedback column.
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Review Direction A", exact: true }).nth(1).dblclick();
+    await expect(page.locator(".design-viewer")).toBeVisible();
+    await expect(panel.locator(".review-notice")).toContainText(
+      "Version 2 is waiting for your review.",
+    );
+    await page.screenshot({ path: `${screenshotDirectory}/design-feedback-review-notice.png` });
     await panel.getByRole("button", { name: "Review version", exact: true }).click();
     await page
       .getByRole("dialog")
@@ -182,12 +197,15 @@ test("version feedback preserves review history, scoped comments, drafts and cli
       .getByRole("button", { name: "Send review", exact: true })
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(panel).toContainText("Approved for this campaign.");
     await expect(panel.getByRole("button", { name: "Review version", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "All designs", exact: true }).click();
+    await page.getByRole("button", { name: "Open feedback for version 2", exact: true }).click();
+    await expect(panel).toContainText("Approved for this campaign.");
+    await expect(panel.getByRole("button", { name: "Review version", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Open feedback for version 1", exact: true }).click();
     await expect(message).toHaveValue("General draft for round one");
-    await design.click();
+    await page.keyboard.press("Escape");
+    await artwork.dblclick();
     await expect(message).toHaveValue("Draft for this image only");
     await expect(panel.locator(".pending-pin")).toBeVisible();
     await page.getByRole("button", { name: "Next design", exact: true }).click();
@@ -351,9 +369,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
       }
       await page.getByRole("button", { name: "Open feedback for version 1", exact: true }).click();
       const panel = page.getByRole("complementary", { name: "Client conversation" });
-      await panel
-        .getByRole("button", { name: "General feedback", exact: true })
-        .scrollIntoViewIfNeeded();
+      await expect(page.locator(".design-viewer")).toHaveCount(0);
       await expect(panel.locator(".version-context")).toContainText("Acceptance revision request");
       await panel
         .getByRole("textbox", { name: "Your message", exact: true })
@@ -372,6 +388,12 @@ test("floating project chrome fits desktop and mobile, including feedback and se
       expect(readingSpace.list).toBeGreaterThan(readingSpace.panel * 0.5);
       expect(readingSpace.composer).toBeLessThan(100);
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.screenshot({
+        path: `${screenshotDirectory}/project-version-feedback-${width}.png`,
+      });
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "Open Direction A", exact: true }).first().click();
+      await expect(page.locator(".design-viewer")).toBeVisible();
       expect(
         await page
           .locator(".design-viewer-toolbar")
@@ -384,7 +406,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
       await expect(page.locator(".project-toolbar")).toHaveCount(0);
       await expect(
         page
-          .locator(".design-viewer-toolbar")
+          .locator(".design-viewer-tools")
           .getByRole("button", { name: "Playground", exact: true }),
       ).toBeVisible();
       await expect(
@@ -397,7 +419,18 @@ test("floating project chrome fits desktop and mobile, including feedback and se
             const chrome = document.querySelector(".project-chrome")!.getBoundingClientRect();
             const artwork = element.querySelector(".artwork-stage")!.getBoundingClientRect();
             const carousel = element.querySelector(".design-carousel")!.getBoundingClientRect();
-            return bar.top - chrome.bottom <= 14 && artwork.bottom < carousel.top;
+            const tools = element.querySelector(".design-viewer-tools")!.getBoundingClientRect();
+            const feedback = element.querySelector(".comment-panel")!.getBoundingClientRect();
+            // Side by side, the feedback column starts level with the design's title bar and runs
+            // to the bottom; stacked on a phone, the tools follow the title bar.
+            const layout =
+              innerWidth > 720
+                ? Math.abs(tools.top - bar.top) <= 1 &&
+                  Math.abs(tools.left - feedback.left) <= 1 &&
+                  tools.bottom <= feedback.top + 1 &&
+                  feedback.bottom >= element.getBoundingClientRect().bottom - 1
+                : tools.top >= bar.bottom - 1;
+            return bar.top - chrome.bottom <= 14 && artwork.bottom < carousel.top && layout;
           }),
         )
         .toBe(true);
@@ -422,8 +455,9 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           .toBe(true);
         await page.keyboard.press("Escape");
       }
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.screenshot({
-        path: `${screenshotDirectory}/project-general-feedback-${width}.png`,
+        path: `${screenshotDirectory}/project-design-feedback-${width}.png`,
       });
     }
   } finally {
@@ -554,9 +588,9 @@ test("touch opens design feedback without requiring a double tap", async ({ brow
       await page.goto(`/projects/${fixture.projectId}`);
       await page.locator(".design-preview-artwork").first().tap();
       await expect(page.locator(".design-viewer")).toBeVisible();
-      await expect(page.getByRole("button", { name: "This design", exact: true })).toHaveAttribute(
-        "aria-pressed",
-        "true",
+      await expect(page.getByRole("complementary", { name: "Client conversation" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "General feedback", exact: true })).toHaveCount(
+        0,
       );
     } finally {
       await context.close();

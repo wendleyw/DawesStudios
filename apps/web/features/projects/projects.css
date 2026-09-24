@@ -595,16 +595,24 @@
   color: var(--muted);
   font-size: var(--text-base);
 }
+/*
+ * The design's title bar and canvas on the left; the feedback column on the right runs the viewer's
+ * full height, headed by the design tools (pinning acts on the artwork beside it). Phones stack.
+ */
 .design-viewer {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "toolbar tools"
+    "viewport feedback";
   min-height: 0;
 }
 .design-viewer-toolbar {
+  grid-area: toolbar;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  flex-shrink: 0;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
   gap: 16px;
   align-items: center;
   margin: 0 16px 12px;
@@ -631,22 +639,30 @@
   font-size: var(--text-xs);
   color: var(--muted);
 }
-.viewer-mode-switch {
+.design-viewer-toolbar > .button {
+  justify-self: start;
+}
+/* Bottom padding matches the title bar's own bottom margin, so both rows centre on one line. */
+.design-viewer-tools {
+  grid-area: tools;
   display: flex;
   gap: 4px;
   align-items: center;
+  justify-content: flex-end;
+  padding: 10px 16px 22px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
 }
-.viewer-mode-switch .icon-button {
+.design-viewer-tools .icon-button {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
 }
-.design-viewer-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
+.design-viewer > .comment-panel {
+  grid-area: feedback;
 }
 .design-viewport {
+  grid-area: viewport;
   position: relative;
   flex: 1;
   min-width: 0;
@@ -759,10 +775,10 @@
   flex-direction: row;
   gap: 7px;
   align-items: center;
-  padding: 0 16px 10px;
   flex-shrink: 0;
   font-size: var(--text-sm);
   color: var(--muted);
+  white-space: nowrap;
 }
 .resolved-toggle input {
   width: 13px;
@@ -808,11 +824,16 @@
   font-size: var(--text-xs);
 }
 .comment-author strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--text-sm);
   font-weight: 500;
-  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .comment-author time {
+  flex-shrink: 0;
+  margin-left: auto;
   font-size: var(--text-sm);
   color: var(--muted);
 }
@@ -835,6 +856,12 @@
   padding: 3px 0;
   margin-top: 9px;
 }
+/* The pin sits beside its author's name rather than on a line of its own. */
+.comment-author .comment-pin-link {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0;
+}
 .comment-pin-link:hover .comment-pin-time {
   color: var(--ink);
 }
@@ -845,7 +872,27 @@
   letter-spacing: 0.01em;
 }
 .comment-panel > .project-panel-heading {
+  align-items: center;
   padding: 12px 16px 8px;
+}
+/* A client's decision on the version, offered where they read its feedback. */
+.review-notice {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 16px 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  font-size: var(--text-sm);
+}
+.review-notice p {
+  margin: 0;
+}
+.review-notice .button {
+  flex-shrink: 0;
 }
 .comment-composer {
   display: grid;
@@ -990,8 +1037,20 @@
     border-left: 0;
     border-top: 1px solid var(--border);
   }
-  .design-viewer-body {
-    flex-direction: column;
+  .design-viewer {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "toolbar"
+      "tools"
+      "viewport"
+      "feedback";
+  }
+  .design-viewer-tools {
+    margin: 0 12px 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
   }
   .design-viewport {
     height: 530px;
@@ -1003,10 +1062,6 @@
     padding: 8px;
     margin: 0 12px 8px;
     gap: 8px;
-  }
-  .design-viewer-toolbar .viewer-mode-switch {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
   }
   .design-viewer-toolbar .button {
     font-size: var(--text-xs);
@@ -1069,14 +1124,6 @@
 }
 
 /* Notes and decisions are preserved in the review panel without truncation. */
-.feedback-scope {
-  margin: 0 12px 10px;
-  flex-shrink: 0;
-}
-.feedback-scope button {
-  flex: 1;
-  font-size: var(--text-xs);
-}
 .version-context {
   padding: 0 0 20px;
   margin-bottom: 4px;
@@ -1144,8 +1191,19 @@
   .project-header-actions > select {
     width: 150px;
   }
-  .design-viewer-body {
+  .design-viewer {
     overflow-y: auto;
+  }
+  /* Stacked, the title bar and then the tools stay put while artwork and feedback scroll. */
+  .design-viewer > :is(.design-viewer-toolbar, .design-viewer-tools) {
+    position: sticky;
+    z-index: 2;
+  }
+  .design-viewer-toolbar {
+    top: 0;
+  }
+  .design-viewer-tools {
+    top: calc(var(--design-toolbar-height, 0px) + 8px);
   }
   .design-viewport {
     height: 360px;
@@ -1155,15 +1213,19 @@
 
 /* Short windows keep the controls fixed while the artwork and feedback scroll underneath. */
 @media (max-height: 650px) {
-  .design-viewer-body {
+  .design-viewer {
     overflow-y: auto;
   }
-  .design-viewer-body > :is(.design-viewport, .comment-panel) {
+  .design-viewer > :is(.design-viewport, .comment-panel) {
     min-height: 460px;
-    flex-shrink: 0;
   }
 }
 @media (max-height: 650px) and (min-width: 721px) {
+  .design-viewer > :is(.design-viewer-toolbar, .design-viewer-tools) {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+  }
   .project-header {
     padding: 10px 12px;
   }

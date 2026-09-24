@@ -24,7 +24,6 @@ import {
 } from "react";
 import { Artwork } from "./artwork";
 import { CommentPanel } from "./comment-panel";
-import { VersionContext } from "./version-context";
 import {
   useProjectComments,
   type CanvasComment,
@@ -164,7 +163,6 @@ export function DesignViewer({
   channel,
   onClose,
   onEdit,
-  initialFeedbackScope = "design",
   onReview,
   actions,
   toolbarRef,
@@ -177,13 +175,12 @@ export function DesignViewer({
   channel: ProjectChannel;
   onClose: () => void;
   onEdit?: (design: CanvasDesign) => void;
-  initialFeedbackScope?: "design" | "version";
+  /** Set only while this version waits for the client's decision. */
   onReview?: () => void;
   actions?: ReactNode;
   toolbarRef?: Ref<HTMLElement>;
 }) {
   const [designId, setDesignId] = useState(initialDesignId);
-  const [feedbackScope, setFeedbackScope] = useState(initialFeedbackScope);
   const [pinMode, setPinMode] = useState(false);
   const [selectedComment, setSelectedComment] = useState<string | null>(null);
   // The playhead and the <video> element itself. Both are read by `placePin` below, which is why
@@ -222,7 +219,6 @@ export function DesignViewer({
   const artworkWidth = ratio < 1 ? 440 : 620;
   const artworkHeight = artworkWidth / ratio;
   function placePin(pin: PendingPin) {
-    setFeedbackScope("design");
     if (!isVideo) return setPendingPin(pin);
     if (!canUseVideoTime()) return;
     // Pausing first is not a nicety. On a playing video the frame under the click is gone by the
@@ -244,10 +240,7 @@ export function DesignViewer({
         pendingPin,
         comments: isVideo && !videoReady ? [] : frameComments,
         selectedComment,
-        onSelect: (id) => {
-          setFeedbackScope("design");
-          setSelectedComment(id);
-        },
+        onSelect: setSelectedComment,
         onPin: (pin) => {
           placePin(pin);
           setPinMode(false);
@@ -268,7 +261,6 @@ export function DesignViewer({
     setDesignId(designs[nextIndex].id);
     setSelectedComment(null);
     setPinMode(false);
-    setFeedbackScope("design");
     setCurrentTime(0);
     setDuration(0);
     updateVideoReady(false);
@@ -285,176 +277,150 @@ export function DesignViewer({
           <strong>{deliverable.name}</strong>
           <span>{design.title}</span>
         </div>
-        <div className="viewer-mode-switch">
-          {onEdit && (
-            <button
-              className="icon-button"
-              aria-label="Edit working design"
-              onClick={() => onEdit(design)}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          <button
-            className={`icon-button ${!pinMode ? "selected" : ""}`}
-            aria-label="Navigate designs"
-            aria-pressed={!pinMode}
-            onClick={() => setPinMode(false)}
-          >
-            <MousePointer2 size={16} />
-          </button>
-          <button
-            className={`button quiet ${pinMode ? "selected" : ""}`}
-            disabled={isVideo && !videoReady}
-            title={isVideo && !videoReady ? "Wait for the video frame to load" : undefined}
-            aria-pressed={pinMode}
-            onClick={() => {
-              setFeedbackScope("design");
-              setPinMode(!pinMode);
-            }}
-          >
-            <MapPin size={15} />
-            Add pin
-          </button>
-          {actions}
-        </div>
       </header>
-      <div className="design-viewer-body">
-        <div className="design-viewport">
-          <div className="design-canvas">
-            <ReactFlow
-              {...canvasNavigation}
-              key={design.id}
-              nodes={nodes}
-              edges={[]}
-              nodeTypes={nodeTypes}
-              proOptions={{ hideAttribution: true }}
-              fitView
-              fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
-              minZoom={0.15}
-              maxZoom={3}
-              nodesConnectable={false}
-              deleteKeyCode={null}
-              panOnDrag={!pinMode}
-            >
-              <DesignViewport
-                key="viewport"
-                artworkWidth={artworkWidth}
-                artworkHeight={artworkHeight}
-              />
-              <CanvasBackground key="background" />
-              <CanvasControls key="controls" />
-            </ReactFlow>
-            {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
-          </div>
-          {isVideo && duration > 0 && (
-            // `role="group"`, not `role="list"`/`role="listitem"`: these are actionable seek
-            // controls, not list items containing content, and `<button>`'s permitted-roles list
-            // doesn't include `listitem` — a browser would just ignore that override and fall
-            // back to the button's implicit role anyway.
-            <div className="video-pin-track" role="group" aria-label="Comments in time">
-              {timedComments.map((comment) => (
-                <button
-                  key={comment.id}
-                  type="button"
-                  disabled={!videoReady}
-                  className={`video-pin-marker ${selectedComment === comment.id ? "selected" : ""}`}
-                  style={{ left: `${(comment.pinT! / duration) * 100}%` }}
-                  aria-label={`Comment at ${formatTimecode(comment.pinT!)}: ${comment.body.slice(0, 60)}`}
-                  onClick={() => {
-                    if (!canUseVideoTime()) return;
-                    if (videoRef.current) videoRef.current.currentTime = comment.pinT!;
-                    setSelectedComment(comment.id);
-                    setFeedbackScope("design");
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          <div className="design-carousel">
-            <button
-              className="icon-button"
-              aria-label="Previous design"
-              disabled={index <= 0}
-              onClick={() => changeDesign(index - 1)}
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <span>
-              {index + 1} of {designs.length} · V{version.number}
-            </span>
-            <button
-              className="icon-button"
-              aria-label="Next design"
-              disabled={index >= designs.length - 1}
-              onClick={() => changeDesign(index + 1)}
-            >
-              <ChevronRight size={17} />
-            </button>
-          </div>
-        </div>
-        <CommentPanel
-          key={`${channel}:${feedbackScope === "design" ? design.id : version.id}`}
-          projectId={projectId}
-          channel={channel}
-          versionId={version.id}
-          designId={feedbackScope === "design" ? design.id : undefined}
-          heading={feedbackScope === "design" ? "Feedback" : "General feedback"}
-          navigation={
-            <div
-              className="feedback-scope segmented-control"
-              role="group"
-              aria-label="Feedback scope"
-            >
-              <button
-                className={feedbackScope === "design" ? "active" : ""}
-                aria-pressed={feedbackScope === "design"}
-                onClick={() => setFeedbackScope("design")}
-              >
-                This design
-              </button>
-              <button
-                className={feedbackScope === "version" ? "active" : ""}
-                aria-pressed={feedbackScope === "version"}
-                onClick={() => {
-                  setFeedbackScope("version");
-                  setPinMode(false);
-                }}
-              >
-                General feedback
-              </button>
-            </div>
-          }
-          context={
-            feedbackScope === "version" ? (
-              <VersionContext version={version} channel={channel} onReview={onReview} />
-            ) : undefined
-          }
-          pendingPin={feedbackScope === "design" ? pendingPin : null}
-          onClearPin={() => setPendingPin(null)}
-          selectedComment={selectedComment}
-          // Selecting a comment from the side list seeks to the moment it marks, exactly as
-          // clicking its marker on the track below does. Without this the two controls disagree
-          // about what selecting a pin means — the track seeks, the list only highlights — and a
-          // timed comment opened from the list leaves the viewer on whatever frame happened to be
-          // showing, which is the one frame the comment is not about.
-          //
-          // Done here rather than in an effect on `selectedComment`: an effect would not fire when
-          // an already-selected comment is clicked again, which is exactly when someone who has
-          // scrubbed away wants to come back, and its dependency on the comment array would make
-          // it re-seek on every render and fight the person dragging the scrubber. Pausing first
-          // is `placePin`'s reasoning — seeking a playing video lands a moment past the frame
-          // asked for.
-          onSelectComment={(id) => {
-            if (isVideo && !canUseVideoTime()) return;
-            setSelectedComment(id);
-            const pinned = commentList.find((comment) => comment.id === id);
-            if (!isVideo || pinned?.pinT == null || !videoRef.current) return;
-            videoRef.current.pause();
-            videoRef.current.currentTime = pinned.pinT;
-          }}
-        />
+      <div className="design-viewer-tools" role="toolbar" aria-label="Design tools">
+        {onEdit && (
+          <button
+            className="icon-button"
+            aria-label="Edit working design"
+            onClick={() => onEdit(design)}
+          >
+            <Pencil size={16} />
+          </button>
+        )}
+        <button
+          className={`icon-button ${!pinMode ? "selected" : ""}`}
+          aria-label="Navigate designs"
+          aria-pressed={!pinMode}
+          onClick={() => setPinMode(false)}
+        >
+          <MousePointer2 size={16} />
+        </button>
+        <button
+          className={`button quiet ${pinMode ? "selected" : ""}`}
+          disabled={isVideo && !videoReady}
+          title={isVideo && !videoReady ? "Wait for the video frame to load" : undefined}
+          aria-pressed={pinMode}
+          onClick={() => setPinMode(!pinMode)}
+        >
+          <MapPin size={15} />
+          Add pin
+        </button>
+        {actions}
       </div>
+      <div className="design-viewport">
+        <div className="design-canvas">
+          <ReactFlow
+            {...canvasNavigation}
+            key={design.id}
+            nodes={nodes}
+            edges={[]}
+            nodeTypes={nodeTypes}
+            proOptions={{ hideAttribution: true }}
+            fitView
+            fitViewOptions={{ padding: 0.18, maxZoom: 1 }}
+            minZoom={0.15}
+            maxZoom={3}
+            nodesConnectable={false}
+            deleteKeyCode={null}
+            panOnDrag={!pinMode}
+          >
+            <DesignViewport
+              key="viewport"
+              artworkWidth={artworkWidth}
+              artworkHeight={artworkHeight}
+            />
+            <CanvasBackground key="background" />
+            <CanvasControls key="controls" />
+          </ReactFlow>
+          {pinMode && <div className="canvas-hint">Click a detail to leave a pin.</div>}
+        </div>
+        {isVideo && duration > 0 && (
+          // `role="group"`, not `role="list"`/`role="listitem"`: these are actionable seek
+          // controls, not list items containing content, and `<button>`'s permitted-roles list
+          // doesn't include `listitem` — a browser would just ignore that override and fall
+          // back to the button's implicit role anyway.
+          <div className="video-pin-track" role="group" aria-label="Comments in time">
+            {timedComments.map((comment) => (
+              <button
+                key={comment.id}
+                type="button"
+                disabled={!videoReady}
+                className={`video-pin-marker ${selectedComment === comment.id ? "selected" : ""}`}
+                style={{ left: `${(comment.pinT! / duration) * 100}%` }}
+                aria-label={`Comment at ${formatTimecode(comment.pinT!)}: ${comment.body.slice(0, 60)}`}
+                onClick={() => {
+                  if (!canUseVideoTime()) return;
+                  if (videoRef.current) videoRef.current.currentTime = comment.pinT!;
+                  setSelectedComment(comment.id);
+                }}
+              />
+            ))}
+          </div>
+        )}
+        <div className="design-carousel">
+          <button
+            className="icon-button"
+            aria-label="Previous design"
+            disabled={index <= 0}
+            onClick={() => changeDesign(index - 1)}
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <span>
+            {index + 1} of {designs.length} · V{version.number}
+          </span>
+          <button
+            className="icon-button"
+            aria-label="Next design"
+            disabled={index >= designs.length - 1}
+            onClick={() => changeDesign(index + 1)}
+          >
+            <ChevronRight size={17} />
+          </button>
+        </div>
+      </div>
+      <CommentPanel
+        key={`${channel}:${design.id}`}
+        projectId={projectId}
+        channel={channel}
+        versionId={version.id}
+        designId={design.id}
+        heading="Feedback"
+        notice={
+          onReview && (
+            <div className="review-notice">
+              <p>Version {version.number} is waiting for your review.</p>
+              <button className="button primary" onClick={onReview}>
+                Review version
+              </button>
+            </div>
+          )
+        }
+        pendingPin={pendingPin}
+        onClearPin={() => setPendingPin(null)}
+        selectedComment={selectedComment}
+        // Selecting a comment from the side list seeks to the moment it marks, exactly as
+        // clicking its marker on the track below does. Without this the two controls disagree
+        // about what selecting a pin means — the track seeks, the list only highlights — and a
+        // timed comment opened from the list leaves the viewer on whatever frame happened to be
+        // showing, which is the one frame the comment is not about.
+        //
+        // Done here rather than in an effect on `selectedComment`: an effect would not fire when
+        // an already-selected comment is clicked again, which is exactly when someone who has
+        // scrubbed away wants to come back, and its dependency on the comment array would make
+        // it re-seek on every render and fight the person dragging the scrubber. Pausing first
+        // is `placePin`'s reasoning — seeking a playing video lands a moment past the frame
+        // asked for.
+        onSelectComment={(id) => {
+          if (isVideo && !canUseVideoTime()) return;
+          setSelectedComment(id);
+          const pinned = commentList.find((comment) => comment.id === id);
+          if (!isVideo || pinned?.pinT == null || !videoRef.current) return;
+          videoRef.current.pause();
+          videoRef.current.currentTime = pinned.pinT;
+        }}
+      />
     </div>
   );
 }
