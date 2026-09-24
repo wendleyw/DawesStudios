@@ -86,7 +86,7 @@ Widgets button.
 
 **The widget.** A frame above the campaigns, as wide as a three-card campaign row (920 units) and
 as tall as its rows of tiles, so its size stays a pure function of the competitor count. Its
-head reads **Competitor ads**, then the count ("3 competitors"). For the agency it also has
+head reads **Competitor ads**, then a count badge like a campaign frame's. For the agency it also has
 **Add competitor** and a **Remove from board** icon button. Its body is a grid of up to four
 competitor tiles per row: an initial, the name, the website's host, and the sources that have a
 direct match (**Meta**, **TikTok**, **Google**). Clicking a tile, or pressing Enter on it, opens
