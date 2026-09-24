@@ -405,7 +405,8 @@ test("view choices are isolated by viewer and client", async ({ browser }) => {
     await studio.goto(`/clients/${first.clientId}/board`);
     await chooseView(studio, "calendar");
     await client.goto(`/clients/${first.clientId}/board`);
-    await expect(client.getByRole("button", { name: "Canvas view", exact: true })).toHaveAttribute(
+    // An unsaved board opens as a list for every viewer.
+    await expect(client.getByRole("button", { name: "List view", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -415,11 +416,11 @@ test("view choices are isolated by viewer and client", async ({ browser }) => {
       studio.getByRole("button", { name: "Calendar view", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await studio.goto(`/clients/${second.clientId}/board`);
-    await expect(studio.getByRole("button", { name: "Canvas view", exact: true })).toHaveAttribute(
+    await expect(studio.getByRole("button", { name: "List view", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    await chooseView(studio, "list");
+    await chooseView(studio, "timeline");
     await studio.goto(`/clients/${first.clientId}/board`);
     await expect(
       studio.getByRole("button", { name: "Calendar view", exact: true }),

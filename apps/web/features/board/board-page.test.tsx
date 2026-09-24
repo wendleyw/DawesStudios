@@ -160,7 +160,7 @@ describe("BoardPage views", () => {
     expect(fixture.refetchCampaigns).toHaveBeenCalledOnce();
   });
 
-  it("offers five named icons and uses List as the unsaved mobile default", async () => {
+  it("offers five named icons and uses List as the unsaved default", async () => {
     mountBoard();
     const picker = await screen.findByRole("group", { name: "Board view" });
     const buttons = within(picker).getAllByRole("button");
@@ -178,6 +178,23 @@ describe("BoardPage views", () => {
       "true",
     );
     expect(screen.queryByRole("button", { name: "Widgets" })).not.toBeInTheDocument();
+  });
+
+  it("opens an unsaved desktop board as a list rather than the canvas", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    mountBoard();
+    expect(await screen.findByRole("button", { name: "List view" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Canvas view" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("keeps the saved choice on mobile and renders only its surface", async () => {

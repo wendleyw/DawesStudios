@@ -7,7 +7,7 @@ import { ReactFlow, type Node, type NodeChange } from "@xyflow/react";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
@@ -76,7 +76,6 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const projects = useProjects(clientId);
   const preferences = useBoardPreferences(clientId);
   const [pendingView, setPendingView] = useState<BoardView | null>(null);
-  const [defaultView, setDefaultView] = useState<BoardView>("canvas");
   const persistView = useMutation({
     mutationFn: async (view: BoardView) => saveBoardView(database, { clientId, view }),
     onSuccess: async () => {
@@ -84,7 +83,8 @@ function ClientBoard({ clientId }: { clientId: string }) {
     },
     onSettled: () => setPendingView(null),
   });
-  const layout = pendingView ?? preferences.data ?? defaultView;
+  // A viewer who has never chosen a view opens the board as a list, on every screen size.
+  const layout = pendingView ?? preferences.data ?? "list";
   const chooseLayout = (view: BoardView) => {
     setPendingView(view);
     persistView.mutate(view);
@@ -120,17 +120,28 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
-  // The board opens as a table on phones, where a pannable stack is the wrong reading surface.
-  // The breakpoint matches the stylesheet rather than the old 720px value it disagreed with.
-  useEffect(() => {
-    const narrow = window.matchMedia("(max-width: 640px)");
-    const apply = () => {
-      setDefaultView(narrow.matches ? "list" : "canvas");
-    };
-    apply();
-    narrow.addEventListener("change", apply);
-    return () => narrow.removeEventListener("change", apply);
-  }, []);
+  // The floating header wraps differently at every width and with every client name, so the
+  // space the views reserve beneath it is measured rather than guessed: its bottom edge plus the
+  // stylesheet's `--board-header-gap` (16px, like the other client pages; 12px on short screens).
+  // The stylesheet's breakpoint values remain the first-paint fallback.
+  const [workArea, setWorkArea] = useState<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const header = workArea?.querySelector<HTMLElement>(".board-header");
+    if (!workArea || !header) return;
+    const observer = new ResizeObserver(() => {
+      const gap = Number.parseFloat(
+        getComputedStyle(workArea).getPropertyValue("--board-header-gap"),
+      );
+      workArea.style.setProperty(
+        "--board-header-space",
+        `${header.offsetTop + header.offsetHeight + (Number.isNaN(gap) ? 16 : gap)}px`,
+      );
+    });
+    // The gap changes with the viewport height even when the header's size does not.
+    observer.observe(header);
+    observer.observe(workArea);
+    return () => observer.disconnect();
+  }, [workArea]);
 
   useEffect(() => {
     if (!canvas) return;
@@ -333,7 +344,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
 
   return (
     <div className={`board-page shows-${layout}`}>
-      <div className="board-work-area">
+      <div className="board-work-area" ref={setWorkArea}>
         <BoardHeader
           client={client}
           viewer={profile}
