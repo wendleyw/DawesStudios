@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 16:30 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
+Updated: 2026-09-24 16:55 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
 overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -23,7 +23,7 @@ grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed a
 board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
 Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
 with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
-viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card. Sonnet
+viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`). Sonnet
 workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
 here, so general-purpose workers followed `implementer.md`.
 
@@ -82,8 +82,8 @@ Overnight work (`a375ed7c`) and the complete system test are in the
 - tus termination on Supabase is unverified; a cancelled partial upload relies on the 24-hour
   window (R2: a one-day incomplete-multipart rule). Deferred minors from the video review: a
   missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
-- Unknown URLs (now including `/search`) render the "page unavailable" screen with HTTP 200, not
-  404 (pre-existing; likely the `@modal/[...catchAll]` slot).
+- Unknown URLs (now `/search` too) show "page unavailable" with HTTP 200, not 404 (pre-existing).
+  The tracked root `login.png` was deleted in the working tree by someone else; left for the user.
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
