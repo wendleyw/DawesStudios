@@ -549,14 +549,16 @@
 .briefing-editor-modal .service-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.briefing-editor-modal .briefing-progress {
-  margin-block: 24px;
-}
+/* Compact service cards, so more of the catalogue fits without scrolling. */
 .briefing-editor-modal .service-card {
-  min-height: 148px;
-  padding: 18px;
+  min-height: 0;
+  padding: 16px;
+}
+.briefing-editor-modal .service-card h3 {
+  font-size: 16px;
 }
 .briefing-editor-modal .service-card p {
+  margin-bottom: 12px;
   font-size: var(--text-base);
 }
 .briefing-editor-modal .briefing-editor-footer {
@@ -568,6 +570,103 @@
   padding: 16px var(--briefing-modal-padding);
   background: var(--surface);
   border-top: 1px solid var(--border);
+}
+/* The wide modal gives the editor its full width instead of the page's 800 px column. */
+.briefing-editor-modal .briefing-form,
+.briefing-editor-modal .briefing-review,
+.briefing-editor-modal .briefing-editor-footer {
+  max-width: none;
+}
+/* One header row: the client, the steps and Save draft. */
+.briefing-editor-modal .briefing-editor-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  margin-bottom: 24px;
+}
+.briefing-editor-modal .briefing-editor-header .briefing-progress {
+  margin: 0;
+}
+.briefing-editor-modal .briefing-editor-header .page-actions {
+  justify-self: end;
+}
+/* Outside the modal's two-column layout, the column groups leave their sections in the flow. */
+.briefing-form-column,
+.briefing-review-side {
+  display: contents;
+}
+@media (min-width: 1100px) {
+  /* Service: the question and the search share a row; four compact columns of services. */
+  .briefing-editor-modal .briefing-service-picker {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    align-items: center;
+  }
+  .briefing-editor-modal
+    .briefing-service-picker
+    > :not(.briefing-step-intro, .briefing-service-filters) {
+    grid-column: 1 / -1;
+  }
+  .briefing-editor-modal .service-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  /* Details: the project's story on the left, what it needs and when on the right. */
+  .briefing-editor-modal .briefing-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 48px;
+    align-items: start;
+  }
+  .briefing-editor-modal .briefing-service-summary {
+    grid-column: 1 / -1;
+  }
+  .briefing-editor-modal .briefing-form-column {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 20px;
+  }
+  /* Review: the summary on the left, the estimate and files on the right. */
+  .briefing-editor-modal .briefing-review {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr);
+    column-gap: 48px;
+    align-items: start;
+  }
+  .briefing-editor-modal .briefing-review > .briefing-step-intro {
+    grid-column: 1 / -1;
+  }
+  .briefing-editor-modal .briefing-review > .briefing-summary {
+    grid-column: 1;
+  }
+  .briefing-editor-modal .briefing-review-side {
+    display: flex;
+    grid-column: 2;
+    flex-direction: column;
+    gap: 24px;
+  }
+}
+@media (min-width: 721px) and (max-width: 1099px) {
+  .briefing-editor-modal .service-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  /* Phones hide the client's name; before Save draft appears the steps lead the header. */
+  .briefing-editor-modal .briefing-editor-header:has(.page-actions:empty) .briefing-progress {
+    margin-top: 0;
+  }
+}
+@media (max-width: 900px) {
+  /* Narrower, the steps take their own row under the client and Save draft. */
+  .briefing-editor-modal .briefing-editor-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .briefing-editor-modal .briefing-editor-header .briefing-progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 16px;
+  }
 }
 .briefing-modal-confirmation {
   display: grid;

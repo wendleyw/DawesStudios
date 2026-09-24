@@ -1102,6 +1102,9 @@ select {
 .modal-dialog.modal-lg {
   width: min(800px, calc(100vw - 48px));
 }
+.modal-dialog.modal-xl {
+  width: min(1200px, calc(100vw - 48px));
+}
 .modal-dialog-inner {
   display: flex;
   max-height: calc(100dvh - 50px);
@@ -1334,7 +1337,8 @@ select {
   }
   .modal-dialog,
   .modal-dialog.modal-sm,
-  .modal-dialog.modal-lg {
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl {
     width: calc(100vw - 32px);
     max-height: calc(100dvh - 32px);
   }

@@ -37,6 +37,7 @@ for (const role of ["agency", "client"] as const)
         .selectOption("");
       for (const [width, height] of [
         [1440, 900],
+        [1024, 700],
         [390, 844],
         [844, 390],
       ]) {
@@ -49,6 +50,37 @@ for (const role of ["agency", "client"] as const)
         expect(
           await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
         ).toBe(true);
+        if (width === 1440) {
+          // Wide enough to see most services at once: four compact columns, and the steps, the
+          // title and the search each share a row instead of stacking.
+          expect(bounds!.width).toBeGreaterThan(1100);
+          const layout = await dialog.evaluate((element) => {
+            const middle = (selector: string) => {
+              const box = element.querySelector(selector)!.getBoundingClientRect();
+              return (box.top + box.bottom) / 2;
+            };
+            const lefts = new Set(
+              Array.from(element.querySelectorAll(".service-card")).map((card) =>
+                Math.round(card.getBoundingClientRect().left),
+              ),
+            );
+            return {
+              columns: lefts.size,
+              stepsInHeader: !!element.querySelector(".briefing-editor-header .briefing-progress"),
+              headerRow: Math.abs(
+                middle(".briefing-editor-header .eyebrow") -
+                  middle(".briefing-editor-header .briefing-progress"),
+              ),
+              searchRow: Math.abs(
+                middle(".briefing-step-intro") - middle(".briefing-service-filters"),
+              ),
+            };
+          });
+          expect(layout.columns).toBe(4);
+          expect(layout.stepsInHeader).toBe(true);
+          expect(layout.headerRow).toBeLessThan(4);
+          expect(layout.searchRow).toBeLessThan(12);
+        }
         expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
         await expect(
           dialog.getByRole("button", { name: "Continue to details", exact: true }),
@@ -113,6 +145,20 @@ for (const role of ["agency", "client"] as const)
         expect(
           await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
         ).toBe(true);
+        // The project's story on the left and what it needs on the right; a phone stacks them.
+        const columns = await dialog.evaluate((element) => {
+          // Measure each group's first section: outside the two-column layout the groups are
+          // `display: contents` and have no box of their own.
+          const [story, needs] = Array.from(
+            element.querySelectorAll(".briefing-form-column > .briefing-form-section:first-child"),
+          ).map((section) => section.getBoundingClientRect());
+          return {
+            sideBySide: needs.left >= story.right,
+            topsAligned: Math.abs(needs.top - story.top),
+          };
+        });
+        expect(columns.sideBySide).toBe(width === 1440);
+        if (width === 1440) expect(columns.topsAligned).toBeLessThan(2);
         expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
         await page.screenshot({
           path: `${screenshotDirectory}/briefing-details-${role}-${width}.png`,
@@ -141,6 +187,15 @@ for (const role of ["agency", "client"] as const)
         expect.arrayContaining([expect.objectContaining({ width: 1200 })]),
       );
       await dialog.getByRole("button", { name: "Review briefing", exact: true }).click();
+      expect(
+        await dialog.evaluate((element) => {
+          const summary = element.querySelector(".briefing-summary")!.getBoundingClientRect();
+          const estimate = element.querySelector(".briefing-estimate")!.getBoundingClientRect();
+          return estimate.left >= summary.right && estimate.top < summary.bottom;
+        }),
+      ).toBe(true);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page.screenshot({ path: `${screenshotDirectory}/briefing-review-${role}-1440.png` });
       await dialog.getByRole("button", { name: "Send briefing", exact: true }).click();
       const sent = page.getByRole("dialog", { name: "Briefing sent", exact: true });
       await expect(sent).toBeVisible();

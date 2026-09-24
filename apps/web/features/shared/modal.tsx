@@ -10,7 +10,7 @@ export type ModalProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   initialFocusRef?: RefObject<HTMLElement | null>;
   // True while `onClose` would be a no-op (e.g. a caller like `ProjectActionDialog` refuses to
   // close during an in-flight mutation). The X button is the only control here with a persistent

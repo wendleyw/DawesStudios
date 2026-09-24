@@ -50,16 +50,16 @@ remain owned by each feature. No transform easing is applied to pointer gestures
 The native `<dialog>` overlay: focus trap, scroll lock, focus restore on close
 and light dismiss.
 
-| Prop              | Type                             | Default | Notes                                                |
-| ----------------- | -------------------------------- | ------- | ---------------------------------------------------- |
-| `open`            | `boolean`                        | —       | Opens and closes the dialog.                         |
-| `onClose`         | `() => void`                     | —       | Called by the close button, Escape and the backdrop. |
-| `title`           | `string`                         | —       | Labels the dialog through `aria-labelledby`.         |
-| `description`     | `string`                         | —       | Describes it through `aria-describedby`.             |
-| `children`        | `ReactNode`                      | —       | The dialog body.                                     |
-| `footer`          | `ReactNode`                      | —       | The action row.                                      |
-| `size`            | `"sm" \| "md" \| "lg"`           | `"md"`  | Width class.                                         |
-| `initialFocusRef` | `RefObject<HTMLElement \| null>` | —       | Element focused on open.                             |
+| Prop              | Type                             | Default | Notes                                                  |
+| ----------------- | -------------------------------- | ------- | ------------------------------------------------------ |
+| `open`            | `boolean`                        | —       | Opens and closes the dialog.                           |
+| `onClose`         | `() => void`                     | —       | Called by the close button, Escape and the backdrop.   |
+| `title`           | `string`                         | —       | Labels the dialog through `aria-labelledby`.           |
+| `description`     | `string`                         | —       | Describes it through `aria-describedby`.               |
+| `children`        | `ReactNode`                      | —       | The dialog body.                                       |
+| `footer`          | `ReactNode`                      | —       | The action row.                                        |
+| `size`            | `"sm" \| "md" \| "lg" \| "xl"`   | `"md"`  | Width class; `xl` is the new-briefing modal's 1200 px. |
+| `initialFocusRef` | `RefObject<HTMLElement \| null>` | —       | Element focused on open.                               |
 
 Consumers: `assets/assets-page`, `assets/upload-file-dialog`,
 `brand/brand-assets`, `brand/section-editor`, `campaigns/campaign-dialog`,

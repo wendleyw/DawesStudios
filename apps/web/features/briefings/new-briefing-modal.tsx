@@ -20,7 +20,7 @@ export function NewBriefingModal({ clientId }: { clientId: string }) {
       open
       onClose={close}
       title={submitted ? "Briefing sent" : "New briefing"}
-      size="lg"
+      size="xl"
       closeDisabled={editorState.busy}
     >
       {submitted ? (

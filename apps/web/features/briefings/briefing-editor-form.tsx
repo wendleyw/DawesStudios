@@ -180,6 +180,23 @@ export function BriefingEditor({
     }
   }
 
+  const progress = (
+    <nav className="briefing-progress" aria-label="Briefing steps">
+      {["Service", "Details", "Review"].map((label, index) => (
+        <button
+          key={label}
+          aria-current={step === index ? "step" : undefined}
+          className={step === index ? "active" : ""}
+          disabled={index > 0 && !service}
+          onClick={() => (index === 2 ? review() : setStep(index))}
+        >
+          <span>{index < step ? <Check size={14} /> : index + 1}</span>
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+
   return (
     <div
       ref={editor}
@@ -201,6 +218,7 @@ export function BriefingEditor({
             <h1>{briefing ? "Edit briefing" : "New briefing"}</h1>
           </div>
         )}
+        {dialog && progress}
         <div className="page-actions">
           {service && (
             <button
@@ -213,20 +231,7 @@ export function BriefingEditor({
           )}
         </div>
       </header>
-      <nav className="briefing-progress" aria-label="Briefing steps">
-        {["Service", "Details", "Review"].map((label, index) => (
-          <button
-            key={label}
-            aria-current={step === index ? "step" : undefined}
-            className={step === index ? "active" : ""}
-            disabled={index > 0 && !service}
-            onClick={() => (index === 2 ? review() : setStep(index))}
-          >
-            <span>{index < step ? <Check size={14} /> : index + 1}</span>
-            {label}
-          </button>
-        ))}
-      </nav>
+      {!dialog && progress}
       {saved && (
         <p className="briefing-save-status" role="status">
           Draft saved.
@@ -284,13 +289,16 @@ export function BriefingEditor({
             draft={draft}
             campaignName={campaigns.find((item) => item.id === draft.campaignId)?.title}
           />
-          {savedId && <BriefingAttachments briefingId={savedId} />}
-          <div className="briefing-estimate">
-            <span>{estimateLabel(service)}</span>
-            <p>
-              The studio will confirm one project total before work begins. Sending this briefing
-              does not use credits.
-            </p>
+          {/* Beside the summary in the modal; elsewhere `display: contents`. */}
+          <div className="briefing-review-side">
+            {savedId && <BriefingAttachments briefingId={savedId} />}
+            <div className="briefing-estimate">
+              <span>{estimateLabel(service)}</span>
+              <p>
+                The studio will confirm one project total before work begins. Sending this briefing
+                does not use credits.
+              </p>
+            </div>
           </div>
         </div>
       )}

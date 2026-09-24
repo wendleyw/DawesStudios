@@ -41,6 +41,15 @@ presentations. New campaign opens its existing dialog. The modal hides duplicate
 contains its scrolling, and adapts to narrow screens. The editor reports dirty/busy state to its
 dialog through props; no second form store or data-access layer is introduced.
 
+The modal uses the shared dialog's `xl` size (up to 1200 px) so a client sees most of each step
+without scrolling. The client's name, the Service / Details / Review steps and Save draft share
+one header row. From 1100 px wide the Service step puts its question beside the search and shows
+four compact columns of services (three from 721 px); Details places the project's story (Project
+basics, then Tell us what you have in mind) beside what it needs (What do you need?, then Timing &
+files); Review puts the summary beside the files and estimate. The `.briefing-form-column` and
+`.briefing-review-side` groups carry that split and are `display: contents` everywhere else, so the
+full-page editor and narrow screens keep their single column and the reading order never changes.
+
 Saving an incomplete draft is allowed after choosing a service. Submission requires a campaign, title, overview, at least one valid deliverable and the service-specific answers. Fixed formats require width/height, fluid formats width, and non-dimensional formats neither. Named variations preserve their own quantity and Original/Adaptation scope. Estimates apply to the service and are not multiplied by format badges. Current service presets override only the estimate and delivery timing, while questions and formats remain canonical. Saving stores the preset revision; accepted project quotes are not recalculated. Optional RPC arguments are omitted when empty, using the SQL function's nullable defaults to clear optional draft fields. The editor calls `save_briefing_revision`, captures the loaded revision with its local draft, and receives the saved ID/revision atomically. A second editor with an older revision receives a conflict; its unsaved text is preserved. Background query refreshes do not advance that local revision.
 
 The agency confirms an integer project budget. An adjustment or custom service requires a note in the interface. Acceptance calls the backend transaction; the interface does not create a project or ledger entry separately. Backend rejection of insufficient balance and repeated acceptance is surfaced directly. Budget acceptance is two backend calls, both relocated verbatim into `briefing-data.ts`: `confirmBriefingBudget` (`confirm_briefing_budget`) records the approved figure and its note, and `acceptBriefing` (`accept_briefing`) performs the atomic project-creation-plus-credit-debit transaction, rejects insufficient balance and stays idempotent under a repeat call — all enforced inside that one procedure, not by anything either function or its caller adds. Neither call carried an idempotency-key argument before this move, and neither gained one.
