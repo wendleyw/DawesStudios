@@ -13,6 +13,9 @@ services:
       SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:?Set the server-accessible Supabase URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set the private server credential}
       APP_ORIGIN: ${APP_ORIGIN:?Set the exact browser origin}
+      # Optional competitor ad previews (see docs/operations/production.md). Empty disables them.
+      META_AD_LIBRARY_ACCESS_TOKEN: ${META_AD_LIBRARY_ACCESS_TOKEN:-}
+      META_AD_LIBRARY_COUNTRIES: ${META_AD_LIBRARY_COUNTRIES:-}
     ports:
       - "127.0.0.1:${WEB_PORT:-3003}:3003"
     restart: unless-stopped

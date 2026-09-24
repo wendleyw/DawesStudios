@@ -20,7 +20,19 @@ The work area fills the viewport below the shared mobile topbar. Canvas extends 
 
 Timeline retains Fortnight/Month/Quarter scales and previous/next/Today controls. Calendar shows project **due dates**, Monday-first calendar months, previous/next/Today controls and a separate **No due date** section. Start-only projects stay in that section; Timeline continues to show their start dates. Date calculations use UTC calendar days, including leap years and year boundaries. The monthly grid fits its complete weeks into the available height; busy days scroll internally. Below 900 px of board width, a monthly agenda replaces the grid so project titles and actions remain readable. Calendar month and Timeline period/scale survive view switching.
 
-The canvas waits for projects/campaign frames and its actual DOM element to be measured before fitting. Its opening inset reads the responsive header spacing so wrapped navigation cannot cover the first campaign. It refits on viewport resizing without refitting on project selection or dragging. It uses the shared 24-unit line grid, two-axis scroll/trackpad panning and reduced-motion-aware zoom/fit controls. Its node model now contains only campaigns, projects and creation/empty-state frames. See the [shared canvas primitives](../shared/README.md#canvas-background-and-controls).
+The canvas waits for projects/campaign frames and its actual DOM element to be measured before fitting. Its opening inset reads the responsive header spacing so wrapped navigation cannot cover the first campaign. It refits on viewport resizing without refitting on project selection or dragging. It uses the shared 24-unit line grid, two-axis scroll/trackpad panning and reduced-motion-aware zoom/fit controls. Its node model contains campaigns, projects, creation/empty-state frames and, when the studio placed it, the Competitor ads widget frame. See the [shared canvas primitives](../shared/README.md#canvas-background-and-controls).
+
+## Widgets
+
+In Canvas view the agency's toolbar has a **Board widgets** button. Its compact panel lists
+**Competitor ads** with **Add to board** or **Remove from board**; a failed change shows its message
+in the panel. Placement is shared per client in `client_board_widgets` (`useBoardWidgets`,
+`addBoardWidget` and `removeBoardWidget` in `board-data.ts`), unlike the legacy per-viewer
+`visible_widgets` column. The agency and designers with the client's work see a placed widget;
+clients never read the table, and their board does not even ask. The widget is the first frame of
+the stack, as wide as a three-card row and `competitorWidgetHeight(count)` tall (one row of four
+tiles per four competitors). Its content and behavior belong to the
+[competitors feature](../competitors/README.md).
 
 ## Quarter filter
 

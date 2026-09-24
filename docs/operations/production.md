@@ -133,6 +133,8 @@ Copy `.env.production.example` to the ignored `.env.production` and fill in real
 | `SUPABASE_SERVICE_ROLE_KEY` | web invitation/removal routes, media | Private; never in a browser variable |
 | `APP_ORIGIN` | web, media | `https://app.example.com` (exact origin) |
 | `MEDIA_ALLOWED_ORIGINS` | media | Empty in production |
+| `META_AD_LIBRARY_ACCESS_TOKEN` | web (server) | Optional; a Meta Ad Library API token (see below) |
+| `META_AD_LIBRARY_COUNTRIES` | web (server) | Optional; comma-separated ISO codes, empty for every country |
 
 ```bash
 docker compose --env-file .env.production build
@@ -148,6 +150,24 @@ can roll back.
 
 The 1 GiB video ceiling must agree in six places: the five listed in `compose.yaml` and
 `FILE_SIZE_LIMIT` on the production Storage service.
+
+### Competitor ad previews (optional)
+
+The board's Competitor ads widget always links to the official Meta, TikTok and Google ad
+libraries. To also preview a competitor's Meta ads inside the app:
+
+1. Create a Meta developer app and add the **Ad Library API** product.
+2. Confirm the Meta account's identity and location at facebook.com/ID. Meta reviews this, which
+   can take several days.
+3. Generate a long-lived user access token for that app and set it as
+   `META_AD_LIBRARY_ACCESS_TOKEN` for the `web` service; optionally set `META_AD_LIBRARY_COUNTRIES`.
+   Restart `web` (no rebuild is needed; these are server variables).
+4. Renew the token before its roughly 60 days run out. An expired token shows "The Meta Ad Library
+   token has expired or was revoked. Renew it on the server." on the competitor screen.
+
+Meta's API returns ordinary ads only where they reached the EU, and political or issue ads
+elsewhere. The token stays on the server and is never sent to a browser. See the
+[competitors feature](../../apps/web/features/competitors/README.md).
 
 ## 3. Reverse proxy and TLS
 

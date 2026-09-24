@@ -1048,10 +1048,9 @@
   }
 }
 .board-widget-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
 }
 .board-widget-option p {
   margin: 2px 0 0;

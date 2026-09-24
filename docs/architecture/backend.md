@@ -56,11 +56,23 @@ Playground Storage checks both the board's role/scope and attachment ownership. 
 
 `board_preferences` stores nullable `active_view` under `(user_id, client_id)`, constrained to Canvas, List, Timeline, Kanban or Calendar identifiers. Missing/null preferences use the responsive default. `save_board_view` derives the user ID from the session; RLS requires ownership and current client access. Migration `202609230008` preserves legacy `visible_widgets` data and `save_board_widgets` compatibility; neither writer overwrites the other's field. Even agency users cannot read or change another viewer's choice. See the [board feature](../../apps/web/features/board/README.md).
 
+## Competitor ads
+
+`competitors` holds the competitors a client's studio team follows (name, website, Facebook Page ID,
+Google advertiser ID and TikTok advertiser name, each checked by a constraint; names unique per client
+ignoring case), and `client_board_widgets` records which widgets the agency placed on a client's board
+(`kind` is `competitor_ads`). Row-level security admits reads through `private.can_follow_competitors`:
+the agency, or a designer that `private.can_access_client` admits; never a client. Only the agency
+inserts, updates or deletes, with insert and update granted column by column. A `before insert` trigger
+holds the client row and refuses a thirteenth competitor, and passes any other caller straight to
+row-level security. Migration `202609240001`; tests in `competitor_ads.test.sql`. See the
+[competitors feature](../../apps/web/features/competitors/README.md).
+
 ## Frontend table contract
 
 Use generated `supabase/database.types.ts` as the authoritative TypeScript interface. Read tables through the caller's Supabase session. Authentication is `signInWithPassword`, followed by `useProfile` reading the caller's identity fields and `removed_at`. A removed membership is refused by the UI and by backend role helpers. Queries need no service key.
 
-Primary lists: `clients`, `campaigns`, `briefings`, `projects`, `deliverables`, `design_versions`, `designs`, `published_versions`, `published_designs`, `publication_reviews`, `internal_comments`, `client_comments`, `credit_accounts`, `credit_ledger`, `brand_sections`, `brand_assets`, `brand_asset_folders`, `brand_templates`, `template_drafts`, `project_assets`, `delivery_files`, `notifications`, `invitations`, `playground_boards`, `playground_items`, `board_preferences`.
+Primary lists: `clients`, `campaigns`, `briefings`, `projects`, `deliverables`, `design_versions`, `designs`, `published_versions`, `published_designs`, `publication_reviews`, `internal_comments`, `client_comments`, `credit_accounts`, `credit_ledger`, `brand_sections`, `brand_assets`, `brand_asset_folders`, `brand_templates`, `template_drafts`, `project_assets`, `delivery_files`, `notifications`, `invitations`, `playground_boards`, `playground_items`, `board_preferences`, `competitors`, `client_board_widgets`.
 
 Project status: `planned`, `in_progress`, `internal_review`, `client_review`, `changes_requested`, `approved`, `delivered`. Briefing status: `draft`, `awaiting_review`, `budget_confirmed`, `accepted`.
 

@@ -2,7 +2,7 @@
 
 Status: original feature implemented and verified, 2026-09-23. The current project-only layer revision is tracked in [the active plan](project-playground-and-video-optimization.md); verification below is historical. Owner: Codex orchestrator. All eight feature acceptance checks are evidenced in the [integrated verification report](../verification/playground-and-widgets-2026-09-23.md); the broader product release audit remains separate.
 
-The widget presentation described by the original verification is superseded by the [five-view board](../../apps/web/features/board/README.md). Legacy widget preference records remain preserved.
+The widget presentation described by the original verification is superseded by the [five-view board](../../apps/web/features/board/README.md). Legacy widget preference records remain preserved. "Board widgets" now means frames the agency places on a client's canvas for the whole studio side, starting with [Competitor ads](../../apps/web/features/competitors/README.md); they are unrelated to the legacy per-viewer preferences.
 
 ## Required behavior
 

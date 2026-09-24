@@ -67,7 +67,9 @@ export function CompetitorForm({
           <input name="name" maxLength={80} autoComplete="off" defaultValue={competitor?.name} />
         </label>
         <label>
-          Website <span className="muted">(optional)</span>
+          <span>
+            Website <span className="muted">(optional)</span>
+          </span>
           <input
             name="website"
             type="url"
@@ -77,7 +79,9 @@ export function CompetitorForm({
           />
         </label>
         <label>
-          Facebook Page ID <span className="muted">(optional)</span>
+          <span>
+            Facebook Page ID <span className="muted">(optional)</span>
+          </span>
           <input
             name="metaPageId"
             inputMode="numeric"
@@ -90,7 +94,9 @@ export function CompetitorForm({
           </small>
         </label>
         <label>
-          Google advertiser ID <span className="muted">(optional)</span>
+          <span>
+            Google advertiser ID <span className="muted">(optional)</span>
+          </span>
           <input
             name="googleAdvertiserId"
             maxLength={32}
@@ -102,7 +108,9 @@ export function CompetitorForm({
           </small>
         </label>
         <label>
-          TikTok advertiser name <span className="muted">(optional)</span>
+          <span>
+            TikTok advertiser name <span className="muted">(optional)</span>
+          </span>
           <input
             name="tiktokAdvertiser"
             maxLength={80}
