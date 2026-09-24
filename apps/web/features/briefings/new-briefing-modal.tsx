@@ -39,7 +39,7 @@ export function NewBriefingModal({ clientId }: { clientId: string }) {
                 <button className="button" onClick={() => setConfirmClose(false)}>
                   Keep editing
                 </button>
-                <button className="button danger" onClick={() => router.back()}>
+                <button className="button" onClick={() => router.back()}>
                   Discard changes
                 </button>
               </div>

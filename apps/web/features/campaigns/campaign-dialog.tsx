@@ -60,7 +60,9 @@ export function CampaignDialog({
           <input name="title" required maxLength={200} placeholder="Fall launch" />
         </label>
         <label>
-          Campaign goal <span className="muted">(optional)</span>
+          <span>
+            Campaign goal <span className="muted">(optional)</span>
+          </span>
           <textarea name="description" rows={3} maxLength={3000} />
         </label>
         <div className="form-row">

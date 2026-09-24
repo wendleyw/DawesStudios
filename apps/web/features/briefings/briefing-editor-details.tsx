@@ -262,7 +262,9 @@ export function BriefingEditorDetails({
       <section className="briefing-form-section">
         <h2>Timing & files</h2>
         <label>
-          Target due date <span className="muted">(optional)</span>
+          <span>
+            Target due date <span className="muted">(optional)</span>
+          </span>
           <input
             type="date"
             value={draft.dueDate}
