@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 04:40 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+Updated: 2026-09-24 05:05 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
 orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -37,13 +37,10 @@ Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-
 
 ## In progress
 
-- **The complete system test** of logic, UX, UI and every action for all roles, with a screenshot
-  of every screen (`apps/web/tests/e2e/system-tour.spec.ts`, `SYSTEM_TOUR=1`, uncommitted until the
-  record). Fixed so far: a client's **Waiting for you** (`7918b48`), preset estimates (`58f8bf7`), the
-  briefing summary labels (`318dadf`), the designer's studio-managed pages (`8b79be0`), the header
-  squeezing the client's name after the credit chip (`003272e`), "(optional)" markers, and Files
-  previews and types (`f4fe18d`). Kept on purpose: the board's 40% opening zoom. Next: the
-  re-run tour's screenshots, the whole browser suite, fixes, then the verification record.
+- Nothing. The user's **complete system test** is done: 159 surfaces toured for three roles at two
+  widths with none flagged, eleven findings fixed, the whole browser suite green apart from the five
+  overlay-count scenarios. Record: [verification](../verification/system-test-2026-09-24.md). Every
+  decision taken overnight on the user's behalf: [decision log](decisions-2026-09-24.md).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
@@ -57,10 +54,12 @@ Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-
 - **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
   a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
 
-## Environment (observed 2026-09-23)
+## Environment (observed 2026-09-24)
 
-- Next.js dev server on `http://localhost:3003`, restarted at 18:40 because its watcher had
-  stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
+- Next.js dev server on `http://localhost:3003`, restarted at 04:25 after clearing
+  `apps/web/.next/dev/cache`: Turbopack's disk cache had stopped picking up CSS changes (a restart
+  alone did not help). It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a
+  competing server; if edits stop showing, clear that cache and restart it on the same port.
 - Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609240001`);
   trusted media on 55430. Do not reset or re-provision. The compose `media` container was rebuilt
   from the current tree at 2026-09-24 04:27 UTC, so it serves the video lifecycle routes.
@@ -68,13 +67,13 @@ Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (`a375ed7c`, after `f4fe18d`)
+## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`)
 
-- `npm run check`: 855 tests / 73 files. `npm --prefix apps/media test`: 70 of 70 (after `7f3d3f0`).
-- Database: 20 of 21 pgTAP files pass (401 tests); `access_and_workflows.test.sql` fails its known 6
-  assertions under the SABRE overlay, as expected.
-- Browser: `competitor-ads` 1 of 1, `board-views` + `client-navigation` + `client-pages-layout` 15 of
-  15 after the header fix, and the earlier plans' specs. The whole suite has not run yet today.
+- `npm run check`: 863 tests / 75 files. `npm --prefix apps/media test`: 70 of 70.
+- `supabase test db`: 21 files, 456 tests; only `access_and_workflows.test.sql` fails its known 6
+  overlay assertions (2, 4, 9, 18, 32, 54).
+- Browser, whole suite: 85 passed, 3 skipped (the `SYSTEM_TOUR` tours), 5 failed on the overlay's
+  counts only (`canonical-workspaces`, `design-audit`, `workspace-actions`, both `workspace`).
 
 ## Open gaps
 
@@ -97,5 +96,6 @@ and the incomplete-multipart lifecycle rule, the Supabase storage override, the 
 per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
 checklist. The local rehearsal already proves the rest.
 
-1. Finish the system test: review the re-run tour, run the whole browser suite, fix what they show,
-   write `docs/verification/system-test-2026-09-24.md` and commit the tour spec with it.
+1. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
+   [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
+   default is "Dawes Studio"). To preview Meta ads, set `META_AD_LIBRARY_ACCESS_TOKEN`.
