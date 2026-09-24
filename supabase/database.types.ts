@@ -1705,6 +1705,13 @@ export type Database = {
         Args: { p_bucket_id: string; p_storage_path: string }
         Returns: undefined
       }
+      find_sanitized_video_by_source: {
+        Args: { p_project_id: string; p_source_path: string }
+        Returns: {
+          mime_type: string
+          storage_path: string
+        }[]
+      }
       fulfill_credit_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: string
@@ -1740,6 +1747,14 @@ export type Database = {
       list_stale_sanitized_assets: {
         Args: never
         Returns: {
+          bucket_id: string
+          storage_path: string
+        }[]
+      }
+      list_stale_video_uploads: {
+        Args: never
+        Returns: {
+          attested: boolean
           bucket_id: string
           storage_path: string
         }[]
@@ -1792,6 +1807,7 @@ export type Database = {
           p_prepared_by: string
           p_project_id: string
           p_sha256: string
+          p_source_path?: string
           p_storage_path: string
         }
         Returns: undefined
