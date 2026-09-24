@@ -38,9 +38,10 @@ The details and evidence are in the
 
 - **Video upload lifecycle:** the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md)
   (`4e56cdb`) is approved for native execution in a fresh session. No code yet.
-- **Bulk image drop:** the [spec](../superpowers/specs/2026-09-23-bulk-image-drop-design.md)
-  (`6db50b6`) waits for the user's written-spec review; then writing-plans. It does not modify the
-  files the video plan changes, so the two can run in either order.
+- **Bulk image drop:** spec approved; [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md)
+  (7 tasks) awaits the user's plan review. **Playground albums:**
+  [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) awaits review. Order: video,
+  then bulk drop, then albums (both touch `project-data.ts`).
 - **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
   EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
@@ -79,6 +80,8 @@ The details and evidence are in the
 - Real server items: an R2 bucket (object tagging), the TLS proxy, SMTP delivery, a restore
   drill, and rate limiting at the proxy.
 - The notification feed shows only the latest 100 items, with no pagination (product decision).
+- `add_design` computes `sort_order` with an unlocked `count(*)`, so concurrent adds to one version
+  can collide (found while planning bulk drop, which registers sequentially per deliverable).
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
