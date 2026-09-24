@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { openBoardSearch, setBoardSearch } from "./test-support";
+import { openBoardSearch, preserveBoardPreference, setBoardSearch } from "./test-support";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {
@@ -305,6 +305,59 @@ test("timeline points to work outside the period and jumps to it", async ({ page
     await page.screenshot({ path: `${screenshotDirectory}/timeline-pointer-jumped.png` });
   } finally {
     await fixture.cleanup();
+  }
+});
+
+test("list sorts by a clicked column title and by the phone menu", async ({ page }) => {
+  const sabre = await localAdmin.from("clients").select("id").eq("slug", "sabre").single();
+  expect(sabre.error).toBeNull();
+  const clientId = sabre.data!.id;
+  const projects = await localAdmin
+    .from("projects")
+    .select("id,due_date")
+    .eq("client_id", clientId);
+  expect(projects.error).toBeNull();
+  const dueDates = new Map(projects.data!.map((project) => [project.id, project.due_date]));
+  const rowDueDates = async () =>
+    (
+      await page
+        .locator(".board-list .project-row")
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("href")!.split("/").pop()!))
+    ).map((id) => dueDates.get(id) ?? null);
+  const expectDueOrder = async (direction: "asc" | "desc") => {
+    const dates = await rowDueDates();
+    const dated = dates.filter((date): date is string => Boolean(date));
+    const expected = dated.toSorted();
+    expect(dated).toEqual(direction === "asc" ? expected : expected.toReversed());
+    // Undated work stays last in both directions.
+    expect(dates.slice(dated.length).every((date) => date === null)).toBe(true);
+  };
+  const restoreBoard = await preserveBoardPreference(credentials.agency, clientId);
+  try {
+    await signIn(page, credentials.agency);
+    await page.goto(`/clients/${clientId}/board`);
+    await chooseView(page, "list");
+    const head = page.locator(".board-list .table-head");
+    const due = head.getByRole("button", { name: /^Due/ });
+    await due.click();
+    await expect(due).toHaveAccessibleName("Due, earliest first");
+    await expectDueOrder("asc");
+    await due.click();
+    await expect(due).toHaveAccessibleName("Due, latest first");
+    await expectDueOrder("desc");
+    await page.screenshot({ path: `${screenshotDirectory}/board-list-sorted-due-1600.png` });
+
+    // Phones hide the title row; the Sort by menu carries the same state.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const menu = page.getByLabel("Sort by", { exact: true });
+    await expect(menu).toHaveValue("due-desc");
+    await menu.selectOption("project-asc");
+    const titles = await page.locator(".board-list .project-row strong").allTextContents();
+    expect(titles).toEqual(
+      titles.toSorted((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    );
+  } finally {
+    await restoreBoard();
   }
 });
 

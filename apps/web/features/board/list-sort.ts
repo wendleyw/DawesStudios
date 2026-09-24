@@ -1,0 +1,135 @@
+import {
+  statusLabels,
+  type Project,
+  type ProjectStatus,
+} from "@/features/workspace/workspace-data";
+
+/**
+ * The List view starts in `filteredProjects` order (`null`, "today's order"). Clicking a header
+ * button replaces that with an explicit key and direction; there is no click path back to `null` —
+ * only switching clients (which remounts the board) restores it.
+ */
+export type ListSortKey = "project" | "campaign" | "status" | "due";
+export type SortDirection = "asc" | "desc";
+export type ListSort = { key: ListSortKey; direction: SortDirection } | null;
+
+/** Column order and the label both the header buttons and the phone select derive their text from. */
+export const LIST_SORT_COLUMNS: readonly { key: ListSortKey; label: string }[] = [
+  { key: "project", label: "Project" },
+  { key: "campaign", label: "Campaign" },
+  { key: "status", label: "Status" },
+  { key: "due", label: "Due" },
+];
+
+const COLUMN_LABELS: Record<ListSortKey, string> = Object.fromEntries(
+  LIST_SORT_COLUMNS.map((column) => [column.key, column.label]),
+) as Record<ListSortKey, string>;
+
+/** Workflow order for the Status column: the same key order as `statusLabels`, i.e. the Kanban columns. */
+const STATUS_RANK: Record<ProjectStatus, number> = Object.fromEntries(
+  Object.keys(statusLabels).map((status, index) => [status, index]),
+) as Record<ProjectStatus, number>;
+
+/** The word(s) a header button's accessible name adds once its column is the active sort. */
+const HEADER_STATE_LABELS: Record<ListSortKey, Record<SortDirection, string>> = {
+  project: { asc: "A to Z", desc: "Z to A" },
+  campaign: { asc: "A to Z", desc: "Z to A" },
+  status: { asc: "workflow order", desc: "reverse workflow order" },
+  due: { asc: "earliest first", desc: "latest first" },
+};
+
+/** First click on a column sorts it ascending; a second click on the active column reverses it. */
+export function nextListSort(
+  current: ListSort,
+  key: ListSortKey,
+): { key: ListSortKey; direction: SortDirection } {
+  if (current && current.key === key)
+    return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+  return { key, direction: "asc" };
+}
+
+/** A header button's accessible name: the column alone, or with its active state appended. */
+export function listSortAccessibleName(key: ListSortKey, active: ListSort): string {
+  const label = COLUMN_LABELS[key];
+  if (!active || active.key !== key) return label;
+  return `${label}, ${HEADER_STATE_LABELS[key][active.direction]}`;
+}
+
+export type ListSortOption = { value: string; label: string; sort: ListSort };
+
+/** The phone "Sort by" select reads and writes the same state the header buttons do. */
+export const LIST_SORT_OPTIONS: readonly ListSortOption[] = [
+  { value: "default", label: "Default order", sort: null },
+  { value: "project-asc", label: "Project A–Z", sort: { key: "project", direction: "asc" } },
+  { value: "project-desc", label: "Project Z–A", sort: { key: "project", direction: "desc" } },
+  { value: "campaign-asc", label: "Campaign A–Z", sort: { key: "campaign", direction: "asc" } },
+  { value: "campaign-desc", label: "Campaign Z–A", sort: { key: "campaign", direction: "desc" } },
+  {
+    value: "status-asc",
+    label: "Status, workflow order",
+    sort: { key: "status", direction: "asc" },
+  },
+  { value: "status-desc", label: "Status, reverse", sort: { key: "status", direction: "desc" } },
+  { value: "due-asc", label: "Due, earliest first", sort: { key: "due", direction: "asc" } },
+  { value: "due-desc", label: "Due, latest first", sort: { key: "due", direction: "desc" } },
+];
+
+export function listSortOptionValue(sort: ListSort): string {
+  return sort ? `${sort.key}-${sort.direction}` : "default";
+}
+
+export function listSortFromOptionValue(value: string): ListSort {
+  return LIST_SORT_OPTIONS.find((option) => option.value === value)?.sort ?? null;
+}
+
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+function compareTitle(a: Project, b: Project): number {
+  return compareText(a.title, b.title);
+}
+
+function applyDirection(value: number, direction: SortDirection): number {
+  return direction === "asc" ? value : -value;
+}
+
+function comparatorFor(
+  sort: { key: ListSortKey; direction: SortDirection },
+  campaignName: (id: string | null) => string,
+): (a: Project, b: Project) => number {
+  const { key, direction } = sort;
+  switch (key) {
+    case "project":
+      return (a, b) => applyDirection(compareTitle(a, b), direction);
+    case "campaign":
+      return (a, b) => {
+        const primary = compareText(campaignName(a.campaign_id), campaignName(b.campaign_id));
+        return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
+      };
+    case "status":
+      return (a, b) => {
+        const primary = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+        return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
+      };
+    case "due":
+      // Missing due dates always sort last, in both directions, so direction never touches this
+      // branch — only the tie among two dated (or two undated) projects passes through it.
+      return (a, b) => {
+        if (!a.due_date || !b.due_date)
+          return a.due_date === b.due_date ? compareTitle(a, b) : a.due_date ? -1 : 1;
+        const primary = a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0;
+        return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
+      };
+  }
+}
+
+/** Sorts `projects` by the given key/direction; `null` returns the input order unchanged. */
+export function sortProjects(
+  projects: Project[],
+  sort: ListSort,
+  campaignName: (id: string | null) => string,
+): Project[] {
+  if (!sort) return projects;
+  return [...projects].sort(comparatorFor(sort, campaignName));
+}

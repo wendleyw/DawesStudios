@@ -5,9 +5,9 @@ import { canvasNavigation } from "@/features/shared/canvas-navigation";
 
 import { ReactFlow, type Node, type NodeChange } from "@xyflow/react";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
@@ -22,6 +22,16 @@ import {
 import { statusToneClass } from "@/features/shared/status-tone";
 
 import { FRAME_HEAD, FRAME_PAD, orderCampaigns } from "./board-layout";
+import {
+  LIST_SORT_COLUMNS,
+  LIST_SORT_OPTIONS,
+  listSortAccessibleName,
+  listSortFromOptionValue,
+  listSortOptionValue,
+  nextListSort,
+  sortProjects,
+  type ListSort,
+} from "./list-sort";
 import { projectHref } from "./project-open";
 import { smallestScaleFor, timelineScales, type TimelineScale } from "./timeline-model";
 import { mondayOf } from "./timeline-model";
@@ -102,6 +112,11 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState("");
   const [quarter, setQuarter] = useState("");
+  // List view column sort: `null` keeps today's (`filteredProjects`) order until a header is
+  // clicked. It lives here like the period filter — kept for the board visit, surviving view
+  // switches, untouched by Clear filters, and reset only when switching clients remounts the board.
+  const [listSort, setListSort] = useState<ListSort>(null);
+  const listSortSelectId = useId();
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -216,6 +231,11 @@ function ClientBoard({ clientId }: { clientId: string }) {
     (id: string | null) =>
       campaigns.data?.find((item) => item.id === id)?.title ?? "Studio projects",
     [campaigns.data],
+  );
+  // Only the List view reads this; other views keep reading `filteredProjects` directly.
+  const sortedProjects = useMemo(
+    () => sortProjects(filteredProjects, listSort, campaignName),
+    [filteredProjects, listSort, campaignName],
   );
   const campaignOrder = useMemo(
     () => orderCampaigns(campaigns.data ?? []).map((item) => item.id),
@@ -419,16 +439,47 @@ function ClientBoard({ clientId }: { clientId: string }) {
           </div>
         ) : layout === "list" ? (
           <div className="board-list project-table">
+            {/* Phones hide `.table-head` below (globals.css); this compact control keeps sorting
+              reachable there, reading and writing the same `listSort` state as the header buttons. */}
+            <div className="board-list-sort-mobile">
+              <label htmlFor={listSortSelectId} className="visually-hidden">
+                Sort by
+              </label>
+              <select
+                id={listSortSelectId}
+                value={listSortOptionValue(listSort)}
+                onChange={(event) => setListSort(listSortFromOptionValue(event.target.value))}
+              >
+                {LIST_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="table-head">
-              <span>PROJECT</span>
-              <span>CAMPAIGN</span>
-              <span>STATUS</span>
-              <span>DUE</span>
+              {LIST_SORT_COLUMNS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="board-list-sort-button"
+                  onClick={() => setListSort((current) => nextListSort(current, key))}
+                  aria-label={listSortAccessibleName(key, listSort)}
+                >
+                  {label.toUpperCase()}
+                  {listSort?.key === key &&
+                    (listSort.direction === "asc" ? (
+                      <ArrowUp size={14} aria-hidden="true" />
+                    ) : (
+                      <ArrowDown size={14} aria-hidden="true" />
+                    ))}
+                </button>
+              ))}
               <span />
             </div>
             {/* The head stays put when nothing matches, so a filtered table still reads as the same
               table rather than as a different screen. */}
-            {filteredProjects.length === 0 && (
+            {sortedProjects.length === 0 && (
               <div className="empty-state board-list-empty">
                 <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
                 <p>
@@ -445,7 +496,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
                 )}
               </div>
             )}
-            {filteredProjects.map((project: Project) => (
+            {sortedProjects.map((project: Project) => (
               <Link key={project.id} href={projectHref(project.id)} className="project-row">
                 <strong title={project.title}>{project.title}</strong>
                 <span>{campaignName(project.campaign_id)}</span>

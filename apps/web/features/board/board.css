@@ -1076,3 +1076,47 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
+
+/*
+ * List view column sort. The header cells are buttons; `.table-head`'s own layout (globals.css)
+ * already grids and aligns them, so this only strips button chrome and spaces the arrow icon.
+ */
+.board-list-sort-button {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+.board-list-sort-button:hover {
+  color: var(--foreground);
+}
+
+/*
+ * The phone "Sort by" select stands in for the header row it replaces. `.table-head` hides at
+ * 640px (globals.css), not the 900px board-toolbar breakpoint used elsewhere on this page, so this
+ * matches that rule exactly — showing the select any wider would double it up with the still-visible
+ * header buttons.
+ */
+.board-list-sort-mobile {
+  display: none;
+}
+.board-list-sort-mobile select {
+  width: 100%;
+  min-height: 40px;
+  font-size: var(--text-base);
+}
+@media (max-width: 640px) {
+  .board-list-sort-mobile {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-hover);
+  }
+}

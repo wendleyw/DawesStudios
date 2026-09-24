@@ -2,6 +2,8 @@
 
 The board has five mutually exclusive views: **Canvas**, **List**, **Timeline**, **Kanban**, and **Calendar**. One icon selector carries named buttons, native tooltips, keyboard activation and `aria-pressed`. Search, campaign/status filters and selection use the same authorized projects in every view. Canvas groups cards by campaign; List links directly to projects. A card or planning entry selects on click and opens on double click or its explicit open control.
 
+List's PROJECT/CAMPAIGN/STATUS/DUE headers are buttons: the first click sorts that column ascending, a second click on the same column reverses it, and clicking another column restarts at ascending on the new one. Project and Campaign sort A–Z (locale-aware, case-insensitive); Status sorts by workflow order (the same key order as `statusLabels` in `workspace/workspace-data.ts`, also the Kanban column order); Due sorts by date with undated projects always last in both directions; Campaign/Status/Due ties break by title. An arrow icon marks the active column, and each header button's accessible name states the column and, once active, its direction (e.g. "Due, earliest first"). The sort is `board-page.tsx` state kept for the board visit — it survives switching views, combines with search/campaign/status/period filters, and is not reset by Clear filters, only by switching clients (which remounts the board). Below 640px, where `.table-head` hides (`app/globals.css`) and List is the phone default, a compact "Sort by" select above the rows reads and writes the same state. The pure sort (no React) lives in `list-sort.ts`.
+
 ## Floating tools
 
 `board-header.tsx` supplies the quarter picker to `workspace/canvas-header.tsx`, shared with projects and all client sections.

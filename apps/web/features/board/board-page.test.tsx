@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Project } from "@/features/workspace/workspace-data";
+import type { BoardCampaign } from "./board-layout";
 import type { BoardView } from "./board-views";
 import { BoardPage } from "./board-page";
 
@@ -16,6 +18,8 @@ const fixture = vi.hoisted(() => ({
   widgetsEnabled: [] as boolean[],
   addWidget: vi.fn(),
   removeWidget: vi.fn(),
+  projects: [] as Project[],
+  campaigns: [] as BoardCampaign[],
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -31,7 +35,7 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => ({
     isPending: false,
     refetch: vi.fn(),
   }),
-  useProjects: () => ({ data: [], isPending: false, refetch: vi.fn() }),
+  useProjects: () => ({ data: fixture.projects, isPending: false, refetch: vi.fn() }),
   useDateFormat: () => ({ formatDate: () => "" }),
   useInvalidateWorkspace: () => vi.fn(),
 }));
@@ -43,7 +47,7 @@ vi.mock("./board-data", () => ({
     }),
   saveBoardView: fixture.save,
   useBoardCampaigns: () => ({
-    data: [],
+    data: fixture.campaigns,
     error: fixture.campaignError,
     refetch: fixture.refetchCampaigns,
   }),
@@ -78,6 +82,8 @@ beforeEach(() => {
   fixture.role = "agency";
   fixture.widgets = [];
   fixture.widgetsEnabled = [];
+  fixture.projects = [];
+  fixture.campaigns = [];
   fixture.addWidget.mockReset().mockResolvedValue(undefined);
   fixture.removeWidget.mockReset().mockResolvedValue(undefined);
   fixture.campaignError = null;
@@ -113,6 +119,23 @@ function mountBoard() {
       <BoardPage clientId="client" />
     </QueryClientProvider>,
   );
+}
+
+function project(overrides: Partial<Project> & { id: string; title: string }): Project {
+  return {
+    client_id: "client",
+    campaign_id: null,
+    briefing_id: null,
+    description: "",
+    status: "planned",
+    service_type: "",
+    due_date: null,
+    start_date: null,
+    board_position: { x: 0, y: 0 },
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
 }
 
 function pendingSave() {
@@ -333,5 +356,122 @@ describe("BoardPage widgets", () => {
     await screen.findByRole("group", { name: "Board tools" });
     expect(fixture.widgetsEnabled.length).toBeGreaterThan(0);
     expect(fixture.widgetsEnabled).not.toContain(true);
+  });
+});
+
+describe("BoardPage list sort", () => {
+  const titles = ["Banana launch", "Apple launch", "Cherry launch"];
+  // Every link's accessible text starts with its project's title, so mapping the full link list
+  // down to the ones that match a known title both finds the rows among the header nav links and
+  // preserves their on-screen order.
+  function visibleTitleOrder() {
+    return screen
+      .getAllByRole("link")
+      .map((link) => titles.find((title) => (link.textContent ?? "").startsWith(title)))
+      .filter((title): title is string => Boolean(title));
+  }
+
+  it("sorts by Project on the first click and reverses it on the second", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "p1", title: "Banana launch" }),
+      project({ id: "p2", title: "Apple launch" }),
+      project({ id: "p3", title: "Cherry launch" }),
+    ];
+    mountBoard();
+    await screen.findByRole("button", { name: "Project" });
+    expect(visibleTitleOrder()).toEqual(["Banana launch", "Apple launch", "Cherry launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch", "Cherry launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Project, A to Z" }));
+    expect(screen.getByRole("button", { name: "Project, Z to A" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Cherry launch", "Banana launch", "Apple launch"]);
+  });
+
+  it("sorts Due with undated projects always last, and a new column restarts ascending", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "p1", title: "Banana launch", due_date: "2026-03-01" }),
+      project({ id: "p2", title: "Apple launch", due_date: null }),
+      project({ id: "p3", title: "Cherry launch", due_date: "2026-01-01" }),
+    ];
+    mountBoard();
+    await user.click(await screen.findByRole("button", { name: "Due" }));
+    expect(screen.getByRole("button", { name: "Due, earliest first" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Cherry launch", "Banana launch", "Apple launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Due, earliest first" }));
+    expect(screen.getByRole("button", { name: "Due, latest first" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Banana launch", "Cherry launch", "Apple launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch", "Cherry launch"]);
+  });
+
+  it("keeps the sort when switching views", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "p1", title: "Banana launch" }),
+      project({ id: "p2", title: "Apple launch" }),
+    ];
+    mountBoard();
+    await user.click(await screen.findByRole("button", { name: "Project" }));
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Canvas view" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "List view" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "List view" }));
+    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
+  });
+
+  it("is not reset by Clear filters", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "p1", title: "Banana launch", status: "approved" }),
+      project({ id: "p2", title: "Apple launch", status: "approved" }),
+    ];
+    mountBoard();
+    await user.click(await screen.findByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Status" }), "approved");
+    await user.click(screen.getByRole("button", { name: "Close panel" }));
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Search projects" }));
+    await user.click(
+      within(screen.getByRole("region", { name: "Project search" })).getByRole("button", {
+        name: "Clear filters",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
+  });
+
+  it("offers a phone 'Sort by' select that reads and writes the same state", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "p1", title: "Banana launch" }),
+      project({ id: "p2", title: "Apple launch" }),
+    ];
+    mountBoard();
+    const select = await screen.findByRole("combobox", { name: "Sort by" });
+    expect(select).toHaveValue("default");
+
+    await user.selectOptions(select, "project-asc");
+    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
+
+    await user.click(screen.getByRole("button", { name: "Project, A to Z" }));
+    expect(select).toHaveValue("project-desc");
   });
 });
