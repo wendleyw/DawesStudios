@@ -84,6 +84,13 @@ The details and evidence are in the
 
 ## Next actions
 
+**Production setup (user-deferred on 2026-09-23 in favour of product work).** Follow the
+[production guide](../operations/production.md) on a real server: an R2 bucket with a scoped token
+and the incomplete-multipart lifecycle rule, the Supabase storage override, the TLS proxy with
+per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
+checklist. The local rehearsal already proves the rest.
+
+
 1. In a fresh session: implement the video lifecycle plan natively. Start it with:
    `claude "Read CLAUDE.md and docs/engineering/handoff.md, record yourself as the incoming
    orchestrator, then execute docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md with
