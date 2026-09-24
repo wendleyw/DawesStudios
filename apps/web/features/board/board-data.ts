@@ -195,3 +195,51 @@ export async function moveProjectPosition(
       .single(),
   );
 }
+
+export type BoardWidgetKind = "competitor_ads";
+
+/**
+ * The widgets the studio placed on this client's board. Only the studio side can read them, so the
+ * board disables this read for a client instead of sending it.
+ */
+export function useBoardWidgets(clientId: string, enabled: boolean) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["board-widgets", session?.user.id, clientId],
+    enabled: enabled && !!session,
+    queryFn: async () =>
+      (
+        assertResult(
+          await database.from("client_board_widgets").select("kind").eq("client_id", clientId),
+        ) as { kind: BoardWidgetKind }[]
+      ).map((row) => row.kind),
+  });
+}
+
+export async function addBoardWidget(
+  database: SupabaseDatabase,
+  input: { clientId: string; kind: BoardWidgetKind },
+) {
+  assertResult(
+    await database
+      .from("client_board_widgets")
+      .insert({ client_id: input.clientId, kind: input.kind })
+      .select("kind")
+      .single(),
+  );
+}
+
+export async function removeBoardWidget(
+  database: SupabaseDatabase,
+  input: { clientId: string; kind: BoardWidgetKind },
+) {
+  assertResult(
+    await database
+      .from("client_board_widgets")
+      .delete()
+      .eq("client_id", input.clientId)
+      .eq("kind", input.kind)
+      .select("kind")
+      .single(),
+  );
+}

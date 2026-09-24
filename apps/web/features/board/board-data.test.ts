@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { THUMBNAIL_TTL, moveProjectPosition, saveBoardView } from "./board-data";
+import {
+  THUMBNAIL_TTL,
+  addBoardWidget,
+  moveProjectPosition,
+  removeBoardWidget,
+  saveBoardView,
+} from "./board-data";
 
 function stubDatabase(result: { data: unknown; error: { message: string } | null }) {
   const single = vi.fn().mockResolvedValue(result);
@@ -59,5 +65,32 @@ describe("saveBoardView", () => {
     await expect(
       saveBoardView(database as never, { clientId: "client-1", view: "kanban" }),
     ).rejects.toThrow("Access removed");
+  });
+});
+
+describe("board widget placement", () => {
+  it("places a widget for a client", async () => {
+    const single = vi.fn().mockResolvedValue({ data: { kind: "competitor_ads" }, error: null });
+    const select = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select });
+    const database = { from: vi.fn().mockReturnValue({ insert }) };
+    await addBoardWidget(database as never, { clientId: "client-1", kind: "competitor_ads" });
+    expect(database.from).toHaveBeenCalledWith("client_board_widgets");
+    expect(insert).toHaveBeenCalledWith({ client_id: "client-1", kind: "competitor_ads" });
+  });
+
+  it("removes a client's widget and reports a removal the database refused", async () => {
+    const single = vi.fn().mockResolvedValue({ data: null, error: { message: "No widget" } });
+    const select = vi.fn().mockReturnValue({ single });
+    const kindFilter = vi.fn().mockReturnValue({ select });
+    const clientFilter = vi.fn().mockReturnValue({ eq: kindFilter });
+    const database = {
+      from: vi.fn().mockReturnValue({ delete: vi.fn().mockReturnValue({ eq: clientFilter }) }),
+    };
+    await expect(
+      removeBoardWidget(database as never, { clientId: "client-1", kind: "competitor_ads" }),
+    ).rejects.toThrow("No widget");
+    expect(clientFilter).toHaveBeenCalledWith("client_id", "client-1");
+    expect(kindFilter).toHaveBeenCalledWith("kind", "competitor_ads");
   });
 });
