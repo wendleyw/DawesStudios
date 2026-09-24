@@ -8,6 +8,7 @@ import { brandDefaults, catalogWithPresets } from "./briefing-model";
 import { BriefingEditor, type BriefingDialogOptions } from "./briefing-editor-form";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
+import { StudioManagedNotice } from "@/features/shared/studio-managed-notice";
 
 /**
  * Resolves every prerequisite the editor needs — the client, an existing draft (when editing), the
@@ -30,15 +31,7 @@ export function BriefingEditorPage({
   const campaigns = useCampaigns(clientId);
   const brand = useBriefingBrand(clientId);
   const presets = useServicePresets();
-  if (profile?.role === "designer")
-    return (
-      <div className="page-content">
-        <h1>Briefings are managed by the studio.</h1>
-        <Link href="/home" className="button">
-          Back to your work
-        </Link>
-      </div>
-    );
+  if (profile?.role === "designer") return <StudioManagedNotice area="Briefings" />;
   if (
     clients.isPending ||
     campaigns.isPending ||

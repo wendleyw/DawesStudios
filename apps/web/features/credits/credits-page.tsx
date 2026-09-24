@@ -27,6 +27,7 @@ import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
 import { saveBlob } from "@/features/shared/save-blob";
 import { statusToneClass } from "@/features/shared/status-tone";
+import { StudioManagedNotice } from "@/features/shared/studio-managed-notice";
 
 export function CreditsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
@@ -52,15 +53,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
   const [detail, setDetail] = useState<CreditEntry | null>(null);
   const [request, setRequest] = useState<CreditRequest | null>(null);
   const [exportError, setExportError] = useState("");
-  if (profile?.role === "designer")
-    return (
-      <div className="page-content">
-        <h1>Credits are managed by the studio.</h1>
-        <Link className="button" href="/home">
-          Back to your work
-        </Link>
-      </div>
-    );
+  if (profile?.role === "designer") return <StudioManagedNotice area="Credits" />;
   if (
     clients.isPending ||
     account.isPending ||

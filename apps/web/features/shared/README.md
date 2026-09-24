@@ -133,6 +133,19 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-page`,
 `reviews/reviews-page`, `settings/settings-page`, `workspace/app-shell`,
 `workspace/home-page`.
 
+### `StudioManagedNotice` — `studio-managed-notice.tsx`
+
+The page a designer reaches by URL for an area only the studio and the client use: an `<h1>` of
+`{area} are managed by the studio.` and a **Back to your work** link to `/home`, inside
+`.empty-state`, so it keeps the workspace's card treatment instead of bare text under the floating
+header.
+
+| Prop   | Type     | Default |
+| ------ | -------- | ------- |
+| `area` | `string` | —       |
+
+Consumers: `briefings/briefing-editor`, `credits/credits-page`.
+
 ### `SearchField` — `search-field.tsx`
 
 The search input of the board, service chooser and list pages: a `label.search-field`
