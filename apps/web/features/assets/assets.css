@@ -24,6 +24,8 @@
   gap: var(--space-lg);
 }
 .file-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
 
   border-radius: var(--radius-lg);
@@ -44,8 +46,21 @@
 .file-icon span {
   font-size: var(--text-xs);
   letter-spacing: 1px;
+  text-transform: uppercase;
 }
+.file-icon img {
+  display: block;
+  width: 100%;
+  height: 155px;
+  object-fit: cover;
+}
+/* Cards in a row share a height; the footer sits on the card's bottom edge whatever the title wraps
+   to, so sizes, dates and downloads line up across the row. */
 .file-information {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
   padding: var(--space-lg);
 }
 .file-information h2 {
@@ -63,7 +78,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 18px;
+  align-self: stretch;
+  margin-top: auto;
+  padding-top: 18px;
 }
 .file-information footer > span {
   font-size: var(--text-sm);

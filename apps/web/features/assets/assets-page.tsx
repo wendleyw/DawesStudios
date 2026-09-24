@@ -1,25 +1,22 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { Download, FileImage, FileText, Plus, Check } from "lucide-react";
-import Link from "next/link";
+import { FileText, Plus, Check } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { downloadPrivateFile } from "./file-download";
 import { Modal } from "@/features/shared/modal";
-import {
-  useClients,
-  useDateFormat,
-  useInvalidateWorkspace,
-} from "@/features/workspace/workspace-data";
+import { useClients, useInvalidateWorkspace } from "@/features/workspace/workspace-data";
 import {
   initialUploadProject,
   markProjectDelivered,
   useInvalidateAssets,
+  useAssetPreviews,
   useProjectAssets,
   type ProjectAsset,
 } from "./asset-data";
+import { FileCard } from "./file-card";
 import { UploadFileDialog } from "./upload-file-dialog";
 import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
@@ -28,7 +25,6 @@ import { PageStatus } from "@/features/shared/page-status";
 
 export function AssetsPage({ clientId }: { clientId: string }) {
   const { database, profile } = useAuth();
-  const { formatDate } = useDateFormat();
   const invalidateAssets = useInvalidateAssets();
   const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
@@ -39,6 +35,8 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   const [deliverProject, setDeliverProject] = useState<string | null>(null);
   const clients = useClients();
   const data = useProjectAssets(clientId);
+  // Signed for the whole list rather than the filtered one, so filtering never re-signs.
+  const previews = useAssetPreviews(data.data?.assets ?? []);
   const download = useMutation({
     mutationFn: (file: ProjectAsset) =>
       downloadPrivateFile(
@@ -173,33 +171,14 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       {visible.length ? (
         <div className="file-grid">
           {visible.map((file) => (
-            <article className="file-card" key={`${file.bucket}:${file.id}`}>
-              <div className="file-icon">
-                {file.mime.startsWith("image/") ? <FileImage size={31} /> : <FileText size={31} />}
-                <span>{file.mime === "application/pdf" ? "PDF" : "IMAGE"}</span>
-              </div>
-              <div className="file-information">
-                <span className="eyebrow">{file.category}</span>
-                <h2>{file.name}</h2>
-                <Link href={`/projects/${file.projectId}`}>
-                  {projects.find((item) => item.id === file.projectId)?.title}
-                </Link>
-                <footer>
-                  <span>
-                    {file.size ? `${(file.size / 1024).toFixed(0)} KB · ` : ""}
-                    {formatDate(file.date)}
-                  </span>
-                  <button
-                    className="icon-button"
-                    aria-label={`Download ${file.name}`}
-                    disabled={download.isPending}
-                    onClick={() => download.mutate(file)}
-                  >
-                    <Download size={16} />
-                  </button>
-                </footer>
-              </div>
-            </article>
+            <FileCard
+              key={`${file.bucket}:${file.id}`}
+              file={file}
+              projectTitle={projects.find((item) => item.id === file.projectId)?.title}
+              preview={previews.data?.[`${file.bucket}:${file.id}`]}
+              downloading={download.isPending}
+              onDownload={(chosen) => download.mutate(chosen)}
+            />
           ))}
         </div>
       ) : (

@@ -15,6 +15,15 @@ is the page's single read hook. `findAssetByStoragePath`, `removeUnusedUpload`,
 `uploadInternalAsset`, `recordProjectAsset` and `markProjectDelivered` were relocated from
 `upload-file-dialog.tsx` and `assets-page.tsx` during the small-features migration (task 15).
 
+Each file is a `FileCard` (`file-card.tsx`). A raster image (PNG, JPEG, WebP, GIF) shows its own
+preview: `useAssetPreviews` signs every image in the list, one `createSignedUrls` request per bucket,
+for ten minutes, the board thumbnails' revocation window, and the page signs the whole list rather
+than the filtered one so filtering never re-signs. Every file in the list already came through the
+viewer's role-scoped read, so a client is only ever signed shared designs and deliveries. Any other
+file shows an icon and its real type from `fileTypeLabel` ("PDF", "MP4", "Word", or "File"); a
+shared design takes its type from its stored file (`publishedDesignAsset` with `mimeForPath`), so a
+shared video is never called an image. Cards in a row share a height and their footers line up.
+
 `file-download.ts` moved here from `features/shared/` in the same migration: it had exactly one
 consumer, `assets-page.tsx`, and the shared layer's own rule is that a primitive belongs in
 `shared/` only with two or more real consumers.
@@ -48,6 +57,6 @@ reason is also recorded above the function in `asset-data.ts`.
 
 ## Test files
 
-`asset-data.test.ts` is the pre-existing regression test for `initialUploadProject` and was left
-unmodified by this migration. The five functions relocated in this migration are tested in
+`asset-data.test.tsx` holds the regression tests for `initialUploadProject`, the shared-design type
+and the preview signing; `file-card.test.tsx` covers the card. The five functions relocated in this migration are tested in
 `asset-data-writes.test.ts` instead, kept separate so the existing file's diff stays empty.

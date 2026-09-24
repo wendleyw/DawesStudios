@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { mimeForPath } from "@/features/shared/upload-rules";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
@@ -77,6 +79,35 @@ function fromStoredFile(
   };
 }
 
+/**
+ * A shared design as a file. `published_designs` stores no type of its own, so the type comes from
+ * the stored file's extension: a shared video is a video, not an image.
+ */
+export function publishedDesignAsset(
+  file: {
+    id: string;
+    title: string;
+    project_id: string;
+    asset_path: string;
+    publication_id: string;
+    published_versions: { published_at: string };
+  },
+  approvedIds: Set<string>,
+): ProjectAsset {
+  return {
+    id: file.id,
+    name: file.title,
+    projectId: file.project_id,
+    path: file.asset_path,
+    bucket: "published-assets",
+    mime: mimeForPath(file.asset_path) ?? "image/png",
+    size: null,
+    date: file.published_versions.published_at,
+    category: "Shared design",
+    approved: approvedIds.has(file.publication_id),
+  };
+}
+
 export function useProjectAssets(clientId: string) {
   const { database, profile, session } = useAuth();
   return useQuery({
@@ -128,18 +159,9 @@ export function useProjectAssets(clientId: string) {
       assets.push(
         ...assertResult(publications)
           .filter((file) => file.asset_path)
-          .map((file) => ({
-            id: file.id,
-            name: file.title,
-            projectId: file.project_id,
-            path: file.asset_path!,
-            bucket: "published-assets" as const,
-            mime: "image/png",
-            size: null,
-            date: file.published_versions.published_at,
-            category: "Shared design" as const,
-            approved: approvedIds.has(file.publication_id),
-          })),
+          .map((file) =>
+            publishedDesignAsset({ ...file, asset_path: file.asset_path! }, approvedIds),
+          ),
       );
       return { assets: assets.toSorted((a, b) => b.date.localeCompare(a.date)), projects };
     },
@@ -217,4 +239,53 @@ export async function markProjectDelivered(
   input: { projectId: string },
 ) {
   assertResult(await database.rpc("mark_project_delivered", { p_project_id: input.projectId }));
+}
+
+/**
+ * Ten minutes, the board thumbnails' window: a signed URL outlives any change of access, so its
+ * expiry is the whole revocation window (see `THUMBNAIL_TTL` in `board-data.ts`).
+ */
+const PREVIEW_TTL = 600;
+const previewableMimes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+/**
+ * Previews for the Files grid, keyed `bucket:id`: one signed URL per raster image, one request per
+ * bucket. Every file here already came through the viewer's own role-scoped read, so a preview is
+ * never signed for a file the viewer could not download.
+ */
+export function useAssetPreviews(assets: ProjectAsset[]) {
+  const { database, session } = useAuth();
+  const images = useMemo(
+    () => assets.filter((asset) => previewableMimes.has(asset.mime)),
+    [assets],
+  );
+  return useQuery({
+    queryKey: [
+      "asset-previews",
+      session?.user.id,
+      images.map((image) => `${image.bucket}:${image.path}`).sort(),
+    ],
+    enabled: !!session && images.length > 0,
+    staleTime: (PREVIEW_TTL - 300) * 1000,
+    queryFn: async () => {
+      const previews: Record<string, string> = {};
+      const buckets = [...new Set(images.map((image) => image.bucket))];
+      await Promise.all(
+        buckets.map(async (bucket) => {
+          const inBucket = images.filter((image) => image.bucket === bucket);
+          const signed = assertResult(
+            await database.storage.from(bucket).createSignedUrls(
+              inBucket.map((image) => image.path),
+              PREVIEW_TTL,
+            ),
+          );
+          for (const image of inBucket) {
+            const url = signed.find((item) => item.path === image.path)?.signedUrl;
+            if (url) previews[`${bucket}:${image.id}`] = url;
+          }
+        }),
+      );
+      return previews;
+    },
+  });
 }

@@ -15,6 +15,8 @@ import {
   uploadTypesLabel,
   videoUploadMimes,
   acceptedExtensions,
+  fileTypeLabel,
+  mimeForPath,
 } from "./upload-rules";
 
 // Postgres owns the upload contract; `upload-rules.ts` only restates it early enough to explain
@@ -270,5 +272,24 @@ describe("video", () => {
 
   it("names video types in prose a person can read", () => {
     expect(uploadTypesLabel(videoUploadMimes)).toBe("MP4, or WebM");
+  });
+});
+
+describe("a stored file's type, for the people reading a file list", () => {
+  it("names a file by its own type, and says only File when the vocabulary has none", () => {
+    expect(fileTypeLabel("image/png")).toBe("PNG");
+    expect(fileTypeLabel("application/pdf")).toBe("PDF");
+    expect(fileTypeLabel("video/mp4")).toBe("MP4");
+    expect(
+      fileTypeLabel("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    ).toBe("Word");
+    expect(fileTypeLabel("application/zip")).toBe("File");
+  });
+
+  it("reads a stored object's type from its extension", () => {
+    expect(mimeForPath("project/v1/design.mp4")).toBe("video/mp4");
+    expect(mimeForPath("project/v1/DESIGN.JPEG")).toBe("image/jpeg");
+    expect(mimeForPath("project/v1/design.png")).toBe("image/png");
+    expect(mimeForPath("project/v1/no-extension")).toBeNull();
   });
 });

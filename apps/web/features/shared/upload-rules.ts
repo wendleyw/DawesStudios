@@ -177,6 +177,18 @@ const mimeLabels: Record<UploadMime, string> = {
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint",
 };
 
+/** A file's type as a person reads it ("PNG", "PDF", "Word"), or "File" outside the vocabulary. */
+export function fileTypeLabel(mime: string): string {
+  return (mimeLabels as Record<string, string>)[mime] ?? "File";
+}
+
+/** The type a stored object's extension names, or null when the vocabulary has none. */
+export function mimeForPath(path: string): UploadMime | null {
+  const extension = path.includes(".") ? (path.split(".").pop()?.toLowerCase() ?? "") : "";
+  const entries = Object.entries(uploadExtensions) as [UploadMime, readonly string[]][];
+  return entries.find(([, extensions]) => extensions.includes(extension))?.[0] ?? null;
+}
+
 /** The ceiling as it is shown to a person: `50` for 52428800. */
 export function uploadLimitMb(maxBytes: number = BUCKET_MAX_BYTES): number {
   return Math.round(maxBytes / (1024 * 1024));
