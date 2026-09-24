@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useServicePresets } from "@/features/briefings/briefing-data";
-import { services } from "@/features/briefings/briefing-model";
+import { catalogWithPresets, estimateLabel, services } from "@/features/briefings/briefing-model";
 import { Modal } from "@/features/shared/modal";
 import { saveServicePreset, useInvalidatePresets } from "./settings-data";
 import { SettingsSuccess } from "./settings-success";
@@ -44,7 +44,7 @@ export function PresetSettings() {
       </header>
       {notice && <SettingsSuccess>{notice}</SettingsSuccess>}
       <div className="settings-list">
-        {services.map((service) => {
+        {catalogWithPresets(presets.data ?? []).map((service) => {
           const preset = presets.data?.find((item) => item.service_type === service.id);
           return (
             <div className="settings-list-row settings-preset-row" key={service.id}>
@@ -56,14 +56,12 @@ export function PresetSettings() {
                 </p>
               </div>
               <span className="settings-preset-value">
-                {service.id === "other"
-                  ? "Custom estimate"
-                  : `${preset?.min_credits ?? service.min}–${preset?.max_credits ?? service.max} credits`}
+                {service.id === "other" ? "Custom estimate" : estimateLabel(service)}
               </span>
               <span className="settings-preset-value">
                 {service.id === "other"
                   ? "To be agreed"
-                  : `${preset?.due_days ?? service.days} days`}
+                  : `${service.days} ${service.days === 1 ? "day" : "days"}`}
               </span>
               {preset && service.id !== "other" && (
                 <button className="button quiet" onClick={() => setEditing(preset)}>
