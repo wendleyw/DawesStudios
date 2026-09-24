@@ -11,10 +11,8 @@ history only when a task needs earlier evidence.
 
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
-- Other interactive Claude sessions of the user's also work here. `dawesstudios-3b` owns the
-  client logo feature. Every session stages explicit paths only; never run `git add -A`. At 00:40
-  EDT another session had uncommitted edits in `globals.css`, `status-tone.ts` and a new
-  `features/credits/credit-balance-chip.tsx`; they are not this run's and were left untouched.
+- Other interactive Claude sessions of the user's also work here (`dawesstudios-52` committed the
+  deliverable frames, `317c7bc`). Every session stages explicit paths only; never run `git add -A`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
@@ -28,8 +26,7 @@ seven tasks (`422178d..0a274a1`): "shared" is the version's `reviewed` status (t
 published-number rule misjudged 7 of 101 local deliverables). Review: one Critical and one Important,
 both fixed with tests. Record: [verification](../verification/bulk-image-drop-2026-09-23.md).
 
-`dawesstudios-29` — details and evidence: [verification record](../verification/production-hardening-2026-09-23.md).
-Consolidated 618 files into commits; workflow rules and lean agents; production guide and local
+`dawesstudios-29` ([record](../verification/production-hardening-2026-09-23.md)): consolidated 618 files into commits; workflow rules and lean agents; production guide and local
 staging rehearsal; audit fixes (indexes, dead CSS, styling moves, CSP and HSTS, invitation cap,
 Playground split, jitless Zod); test harness for declared backends; the client logo feature from
 `dawesstudios-3b`; and the briefing acceptance date and single budget action (`0d310d5`).
@@ -37,11 +34,11 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 ## In progress
 
 - **Playground albums:** the [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks)
-  executes next, inline in `a375ed7c` on `main`; ledger
-  `.superpowers/sdd/2026-09-23-playground-albums/progress.md` (git-ignored). After it, the user asked
-  for a complete all-roles test of logic, UX, UI and actions with a screenshot of every screen.
-- **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
-  EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
+  executes next, inline in `a375ed7c` on `main` (ledger in the git-ignored
+  `.superpowers/sdd/2026-09-23-playground-albums/`). Then the user's requested complete test of
+  logic, UX, UI and every action for all roles, with a screenshot of every screen.
+- **Fixed today from user reports:** briefing acceptance on the studio's local date and one budget
+  action (`0d310d5`, migration `202609230013`).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
