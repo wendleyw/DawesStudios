@@ -156,6 +156,17 @@ describe('sanitizeVideo', () => {
     expect(probe.durationSeconds).toBeGreaterThan(1.5);
   });
 
+  it('aborts the ffmpeg remux and removes any partial output when the signal fires', async () => {
+    const input = resolve(import.meta.dirname, 'fixtures/tagged.mp4');
+    const output = join(dir, 'clean.mp4');
+    const controller = new AbortController();
+    controller.abort();
+    // An abort is the caller hanging up, not a verdict on the file: it must not surface as the 422
+    // that makes the route discard the raw upload for good.
+    await expect(sanitizeVideo(input, output, 'video/mp4', undefined, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(await exists(output)).toBe(false);
+  });
+
   it('refuses a file over the video ceiling', async () => {
     // LIMITS is frozen with Object.freeze, which also makes its properties non-configurable, so
     // Object.defineProperty cannot redefine videoBytes even with `configurable: true` in the
@@ -195,6 +206,13 @@ describe('sanitizeVideo', () => {
 describe('runMediaTool', () => {
   it('reports a tool killed by its time budget as a timeout, not as the content failure', async () => {
     await expect(runMediaTool('sleep', ['5'], 50, 'The video could not be read.', 422)).rejects.toMatchObject({ status: 504 });
+  });
+
+  it('reports a tool stopped by its abort signal as an abort, not as the content failure', async () => {
+    const controller = new AbortController();
+    const running = runMediaTool('sleep', ['5'], 5_000, 'The video could not be read.', 422, controller.signal);
+    controller.abort();
+    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   it('reports a tool that exits with an error as the caller-supplied content failure', async () => {

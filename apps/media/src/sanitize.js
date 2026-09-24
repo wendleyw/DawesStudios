@@ -116,13 +116,15 @@ export async function sanitizePdf(bytes) {
  * Runs ffprobe or ffmpeg with a scrubbed environment and a hard time budget. A tool that exits with
  * an error has rejected the content, which is the caller's `failureStatus`. A tool this process
  * killed because its budget ran out has not judged the file at all, so it is a 504 the browser may
- * retry, never a verdict that discards the raw upload.
+ * retry, never a verdict that discards the raw upload. An aborted `signal` (the caller hung up)
+ * kills the tool and rethrows the `AbortError` itself, for the same reason.
  */
 export async function runMediaTool(tool, args, timeoutMs, failure, failureStatus = 400, signal) {
   try {
     return await execFileAsync(tool, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024, env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' }, windowsHide: true, signal });
   } catch (error) {
-    if (error?.killed && error.name !== 'AbortError') throw new MediaError('The video took too long to process. Try again.', 504);
+    if (error?.name === 'AbortError') throw error;
+    if (error?.killed) throw new MediaError('The video took too long to process. Try again.', 504);
     throw new MediaError(failure, failureStatus);
   }
 }

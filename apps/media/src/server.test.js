@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll, afterEach } from 'vitest';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { allowedOrigins, createMediaServer, sweepStaleScratchDirectories } from './server.js';
@@ -334,10 +334,9 @@ describe('POST /designs/sanitize-video', () => {
       }));
 
       const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
-      // A non-2xx upstream response is remapped to 502 by `supabase.js`'s own `request()` helper
-      // (401/403 are the only statuses it passes through); the point under test is the discard,
-      // not this status code, which is already covered by that helper's own tests.
-      expect(response.status).toBe(502);
+      // `request()` collapses the failed RPC to 502, and the route reports that storage-class
+      // failure as a retryable 503: the raw upload is still there for the browser's retry.
+      expect(response.status).toBe(503);
       // The clean object this response would otherwise have named is discarded rather than left
       // reachable-but-unattested -- exactly the gap this attestation exists to close.
       expect(discardedPaths.flat()).toContain(uploadPath);
@@ -454,6 +453,101 @@ describe('POST /designs/sanitize-video', () => {
       const response = await post('/designs/sanitize-video', { projectId, rawPath, mimeType: 'video/mp4' });
       expect(response.status).toBe(504);
       expect(calls.some(call => call.method === 'DELETE')).toBe(false);
+    });
+
+    // A disconnect is not a cancel: the browser's automatic retry reuses the raw upload, so a
+    // dropped connection stops the work in flight but never discards the raw file.
+    function disconnectable(body) {
+      const controller = new AbortController();
+      const request = fetch(`${baseUrl}/designs/sanitize-video`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      return { request, disconnect: () => controller.abort() };
+    }
+    const settle = ms => new Promise(resolve => setTimeout(resolve, ms));
+    function rawLifecycleCalls() {
+      return calls.filter(call => (call.method === 'POST' && ['/rest/v1/rpc/discard_sanitized_asset', '/rest/v1/rpc/register_sanitized_video'].includes(call.path))
+        || call.method === 'DELETE'
+        || (call.method === 'POST' && call.path.startsWith('/storage/v1/object/internal-assets/')));
+    }
+
+    it('aborts the download, keeps the raw file and registers nothing when the client disconnects mid-download', async () => {
+      const routes = baseRoutes();
+      let downloadStarted;
+      const started = new Promise(resolve => { downloadStarted = resolve; });
+      let serverAborted;
+      const aborted = new Promise(resolve => { serverAborted = resolve; });
+      stubSupabase(new Proxy(routes, {
+        get(target, key) {
+          if (key === `GET /storage/v1/object/authenticated/internal-assets/${rawPath}`) {
+            return (url, init) => new Promise((resolve, reject) => {
+              downloadStarted();
+              init.signal.addEventListener('abort', () => { serverAborted(); reject(init.signal.reason); });
+            });
+          }
+          if (key in target) return target[key];
+          if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
+          return undefined;
+        },
+      }));
+      const { request, disconnect } = disconnectable({ projectId, rawPath, mimeType: 'video/mp4' });
+      await started;
+      disconnect();
+      await expect(request).rejects.toThrow();
+      // The server stops its own download rather than streaming a gigabyte for nobody.
+      await expect(Promise.race([aborted.then(() => 'aborted'), settle(2_000).then(() => 'still downloading')])).resolves.toBe('aborted');
+      await settle(100);
+      expect(rawLifecycleCalls()).toEqual([]);
+    });
+
+    it('kills ffmpeg, keeps the raw file and registers nothing when the client disconnects mid-remux', async () => {
+      // A stand-in ffmpeg that records its pid and blocks, so the disconnect lands mid-remux
+      // deterministically. The real ffprobe still runs first, found further along PATH.
+      const bin = await mkdtemp(join(tmpdir(), 'fake-ffmpeg-'));
+      await writeFile(join(bin, 'ffmpeg'), '#!/bin/sh\necho $$ > "$(dirname "$0")/pid"\nexec sleep 30\n');
+      await chmod(join(bin, 'ffmpeg'), 0o755);
+      const realPath = process.env.PATH;
+      process.env.PATH = `${bin}:${realPath}`;
+      // A hang-up is routine, so it must not be logged as an unexpected processing failure.
+      const logged = [];
+      const realWrite = process.stderr.write;
+      process.stderr.write = (chunk, ...rest) => { logged.push(String(chunk)); return realWrite.call(process.stderr, chunk, ...rest); };
+      try {
+        const routes = baseRoutes();
+        stubSupabase(new Proxy(routes, {
+          get(target, key) {
+            if (key in target) return target[key];
+            if (typeof key === 'string' && key.startsWith(`POST /rest/v1/rpc/`)) return () => jsonResponse(200, null);
+            if (typeof key === 'string' && key.startsWith(`DELETE /storage/v1/object/internal-assets`)) return () => jsonResponse(200, {});
+            return undefined;
+          },
+        }));
+        const { request, disconnect } = disconnectable({ projectId, rawPath, mimeType: 'video/mp4' });
+        let pid;
+        for (let waited = 0; !pid && waited < 10_000; waited += 25) {
+          await settle(25);
+          pid = Number(await readFile(join(bin, 'pid'), 'utf8').catch(() => '')) || undefined;
+        }
+        expect(pid).toBeGreaterThan(0);
+        disconnect();
+        await expect(request).rejects.toThrow();
+        let alive = true;
+        for (let waited = 0; alive && waited < 2_000; waited += 25) {
+          await settle(25);
+          try { process.kill(pid, 0); } catch { alive = false; }
+        }
+        expect(alive).toBe(false);
+        await settle(100);
+        expect(rawLifecycleCalls()).toEqual([]);
+        expect(logged.filter(line => line.includes('Unexpected media processing failure'))).toEqual([]);
+      } finally {
+        process.stderr.write = realWrite;
+        process.env.PATH = realPath;
+        await rm(bin, { recursive: true, force: true });
+      }
     });
 
     it('returns the existing attested output without re-running ffmpeg when one is found for this source_path', async () => {

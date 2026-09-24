@@ -78,7 +78,8 @@ export function createMediaServer(config) {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     const origin = request.headers.origin;
-    const send = (status, data) => { if (!response.destroyed) { response.statusCode = status; response.end(JSON.stringify(data)); } };
+    let responded = false;
+    const send = (status, data) => { responded = true; if (!response.destroyed) { response.statusCode = status; response.end(JSON.stringify(data)); } };
     if (origin && !permitted.has(origin)) { request.resume(); return send(403, { error: 'Origin is not allowed.' }); }
     if (origin) { response.setHeader('Access-Control-Allow-Origin', origin); response.setHeader('Vary', 'Origin'); }
     if (request.method === 'OPTIONS') {
@@ -184,6 +185,14 @@ export function createMediaServer(config) {
         const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id`, { token });
         if (projects.length !== 1) throw new MediaError('Project not found.', 404);
 
+        // A disconnect is not a cancel: the raw upload stays, so the automatic retry (web layer)
+        // can reuse it. This controller only aborts the in-flight download/probe/remux/upload; it
+        // never triggers the raw object's discard. It listens on the response, not the request:
+        // the request stream has already closed once its small JSON body was read, so a later
+        // disconnect only shows as the response closing before anything was sent.
+        const controller = new AbortController();
+        response.on('close', () => { if (!responded) controller.abort(); });
+
         const extension = mimeType === 'video/mp4' ? 'mp4' : 'webm';
         const directory = await mkdtemp(join(tmpdir(), 'dawes-video-'));
         try {
@@ -193,8 +202,8 @@ export function createMediaServer(config) {
           const existing = await backend.findSanitizedVideoBySource(projectId, rawPath);
           if (existing) {
             const probeInput = join(directory, `probe.${extension}`);
-            await downloadRawOrDie(backend, existing.storage_path, projectId, token, probeInput);
-            const probe = await probeVideo(probeInput, existing.mime_type);
+            await downloadRawOrDie(backend, existing.storage_path, projectId, token, probeInput, controller.signal);
+            const probe = await probeVideo(probeInput, existing.mime_type, controller.signal);
             try { await backend.discard('internal-assets', rawPath); } catch {
               process.stderr.write(`Raw video discard failed for ${rawPath}; a duplicate remains in internal-assets.\n`);
             }
@@ -203,10 +212,10 @@ export function createMediaServer(config) {
 
           const input = join(directory, `in.${extension}`);
           const output = join(directory, `out.${extension}`);
-          await downloadRawOrDie(backend, rawPath, projectId, token, input);
+          await downloadRawOrDie(backend, rawPath, projectId, token, input, controller.signal);
           let probe;
           try {
-            probe = await sanitizeVideo(input, output, mimeType);
+            probe = await sanitizeVideo(input, output, mimeType, undefined, controller.signal);
           } catch (error) {
             // Content ffprobe or ffmpeg rejected can never succeed, so its raw upload is removed
             // now rather than left for the 24-hour sweep.
@@ -218,14 +227,14 @@ export function createMediaServer(config) {
           const path = `${projectId}/${randomUUID()}.${extension}`;
           let uploaded;
           try {
-            uploaded = await backend.uploadFile('internal-assets', path, output, mimeType);
+            uploaded = await backend.uploadFile('internal-assets', path, output, mimeType, controller.signal);
           } catch (error) {
             // The upload may have left a partial object under `path` before failing. Nothing
             // references that path yet — it was never linked to a design — so a best-effort
             // removal is safe whether or not anything actually landed. The raw object is
             // untouched, so the caller's original upload is not lost to this failure.
             await backend.discard('internal-assets', path).catch(() => {});
-            throw remapTransportFailure(error);
+            throw error;
           }
           // Final whole-branch review, Critical 2: attest the clean object before this route
           // ever hands its path back to a caller. Without this row, `register_sanitized_asset`
@@ -246,6 +255,11 @@ export function createMediaServer(config) {
             process.stderr.write(`Raw video discard failed for ${rawPath}; a duplicate remains in internal-assets.\n`);
           }
           return send(200, { path, ...probe });
+        } catch (error) {
+          // Storage and RPC failures, timeouts and a hang-up (an abort) all leave the raw upload
+          // in place, so each reaches the browser as a retryable 503/504 rather than a 502 or an
+          // "unexpected" failure.
+          throw remapTransportFailure(error);
         } finally {
           await rm(directory, { recursive: true, force: true });
         }
