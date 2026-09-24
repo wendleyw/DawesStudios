@@ -28,10 +28,10 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 
 - **Video upload lifecycle:** the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md)
   (`4e56cdb`) is approved for native execution in a fresh session. No code yet.
-- **Bulk image drop:** spec approved; [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md)
-  (7 tasks) awaits the user's plan review. **Playground albums:**
-  [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) awaits review. Order: video,
-  then bulk drop, then albums (both touch `project-data.ts`).
+- **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) approved for the
+  same native, fresh-session execution. **Playground albums:** the
+  [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) is approved and a Sonnet agent
+  is drafting its plan. Order: video, then bulk drop, then albums (both touch `project-data.ts`).
 - **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
   EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
@@ -83,10 +83,10 @@ and the incomplete-multipart lifecycle rule, the Supabase storage override, the 
 per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
 checklist. The local rehearsal already proves the rest.
 
-
-1. In a fresh session: implement the video lifecycle plan natively. Start it with:
+1. In a fresh session, execute the approved plans in order, each natively:
    `claude "Read CLAUDE.md and docs/engineering/handoff.md, record yourself as the incoming
-   orchestrator, then execute docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md with
-   superpowers:executing-plans: TDD per step, gate and a conventional commit per task, explicit
-   paths only, and the next free migration number. Finish with one whole-branch review by the
-   reviewer agent, then update this checkpoint."`
+   orchestrator, then execute, in this order, docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md
+   and docs/superpowers/plans/2026-09-23-bulk-image-drop.md (and the Playground albums plan once the
+   user approves it) with superpowers:executing-plans: TDD per step, gate and a conventional commit
+   per task, explicit paths only, the next free migration number. After each plan, run one
+   whole-branch review with the reviewer agent and update this checkpoint."`
