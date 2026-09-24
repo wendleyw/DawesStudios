@@ -38,8 +38,9 @@ The details and evidence are in the
 
 - **Video upload lifecycle:** the [spec](../superpowers/specs/2026-09-23-video-upload-lifecycle-design.md)
   is approved and the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md) is
-  written (`4e56cdb`, 9 TDD tasks). It waits for the user's plan review and choice of execution
-  method. No code yet.
+  written (`4e56cdb`, 9 TDD tasks). **The user approved the plan and chose native execution in a
+  fresh session** (a mid-tier model is enough), with one whole-branch review at the end on the
+  most capable model. No code yet.
 - **J10 on staging:** 63 of 72 scenarios pass on the canonical dataset. The six failures are
   classified in the record. A Sonnet agent is making four data- or layout-dependent specs
   dataset-independent and verifying them locally and on staging
@@ -84,6 +85,10 @@ The details and evidence are in the
 
 ## Next actions
 
-1. After the user reviews the plan, implement the video lifecycle with the chosen method.
-2. Integrate the dataset-independence fixes, rerun the full suite on staging, and update J10.
-3. Start a fresh session so the project agents load by name, and to reset context size.
+1. In a fresh session: implement the video lifecycle plan natively. Start it with:
+   `claude "Read CLAUDE.md and docs/engineering/handoff.md, record yourself as the incoming
+   orchestrator, then execute docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md with
+   superpowers:executing-plans: TDD per step, gate and a conventional commit per task, explicit
+   paths only, and the next free migration number. Finish with one whole-branch review by the
+   reviewer agent, then update this checkpoint."`
+2. Rerun the full suite on staging after the dataset-independence fixes, then update J10.

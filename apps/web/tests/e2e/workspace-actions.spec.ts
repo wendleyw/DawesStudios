@@ -26,9 +26,16 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await setBoardSearch(page, project.title);
     await openBoardSearch(page);
     await expect(page.locator(".board-result-count")).toHaveText("1 project");
+    // The board keeps the active filter once its panel closes; close it here so the raw-mouse
+    // drag below isn't swallowed by the "Find a project" panel sitting on top of the grip (which
+    // the canonical, less crowded board layout makes possible where the SABRE overlay did not).
+    await page.getByRole("button", { name: "Close panel", exact: true }).click();
     const node = page.locator(`.react-flow__node[data-id="${fixture.projectId}"]`);
     const grip = node.locator(".board-card-grip");
     await expect(grip).toBeVisible();
+    // hover() runs Playwright's actionability check, including that the grip itself (not some
+    // panel still on top of it) receives pointer events here, before the manual drag below.
+    await grip.hover();
     const box = (await grip.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
@@ -83,6 +90,11 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await expect(page.locator(".kanban-column")).toHaveCount(7);
     await page.getByRole("button", { name: "Timeline view", exact: true }).click();
     await expect(page.getByRole("region", { name: "Project timeline", exact: true })).toBeVisible();
+    // Start from a known scale. Without an explicit choice the timeline opens on the smallest
+    // scale that fits every project on the board, so a much wider board layout (for example, the
+    // local SABRE demo overlay's far broader project date range) can otherwise leave it already
+    // open on Quarter, making the explicit selection below a no-op.
+    await page.getByRole("group", { name: "Timeline scale" }).getByText("Fortnight").click();
     const periodLabel = page.locator(".project-timeline header strong");
     await expect(periodLabel).toBeVisible();
     // Wait for the live timeline period to be rendered.
@@ -313,6 +325,9 @@ test("one click selects and two open the project, on the card and in the calenda
     await page.goto(board);
     await page.getByRole("button", { name: "Canvas view", exact: true }).click();
     await setBoardSearch(page, project.title);
+    // The board keeps the active filter once its panel closes; close it here so the click below
+    // isn't swallowed by the "Find a project" panel sitting on top of the card.
+    await page.getByRole("button", { name: "Close panel", exact: true }).click();
     const node = page.locator(`.react-flow__node[data-id="${fixture.projectId}"]`);
     const card = node.locator(".board-card-body");
 
