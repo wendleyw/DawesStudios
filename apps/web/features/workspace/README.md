@@ -22,7 +22,8 @@ stay out of that role's view everywhere else. Only the board supplies the quarte
 Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
 Reviews, Files, Brand Hub and Credits receive the same header from the shell, positioned sticky
 inside the main scrolling region. Their white title/action cards and contextual tools sit below it
-on the same subtle grid, using the full available width with 16 px desktop and 12 px mobile gutters.
+on the plain page background (the line grid belongs to the canvases), using the full available
+width with 16 px desktop and 12 px mobile gutters.
 Route changes reset this region's scroll position.
 
 All desktop client routes hide the shell topbar and set `--topbar-height` to zero. On phones the

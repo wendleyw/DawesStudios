@@ -223,11 +223,6 @@
   height: calc(100dvh - var(--topbar-height));
   overflow-y: auto;
   container: board / inline-size;
-  background-color: var(--canvas-background);
-  background-image:
-    linear-gradient(var(--canvas-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 .client-page-chrome {
   position: sticky;

@@ -1,7 +1,7 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 05:05 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
-orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
+Updated: 2026-09-24 10:45 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
+overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-through-2026-09-23.md) (or a newer history file). Read the
@@ -18,22 +18,14 @@ history only when a task needs earlier evidence.
 
 ## Done today
 
-`a375ed7c`: the **video upload lifecycle** plan, all nine tasks (`fdb9a2f..7f3d3f0`, migration
-`202609230014`): cancel in both phases, resume, one automatic retry plus **Try processing again**,
-and the 24-hour sweep. Whole-branch review: no Critical or Important findings. Record:
-[verification](../verification/video-upload-lifecycle-2026-09-23.md). Then **bulk image drop**, all
-seven tasks (`422178d..0a274a1`): "shared" is the version's `reviewed` status (the plan's
-published-number rule misjudged 7 of 101 local deliverables). Review: one Critical and one Important,
-both fixed with tests. Record: [verification](../verification/bulk-image-drop-2026-09-23.md).
-Then **Playground albums**, all six tasks (`3fe4cac..5b2b4b3`); review: two Important (a disabled
-thumbnail's reason only in `title`; a silent no-op at the 500-item cap), both fixed test-first in
-`610b7e4`. Record: [verification](../verification/playground-albums-2026-09-23.md). Then the user's
-**Competitor ads widget** (asked at 01:55; spec, plan and approvals delegated for the night): ten
-tasks, `26eea82..01b57d9`, migration `202609240001`; review approved with three deferred minors.
-Meta previews need `META_AD_LIBRARY_ACCESS_TOKEN` (see the production guide); TikTok and Google are
-links. Record: [verification](../verification/competitor-ads-2026-09-24.md).
+`ab0cd20e` (10:45): the user found the client sections hard to read over the canvas line grid.
+Briefings, Reviews, Files, Brand Hub and Credits (with briefing detail/editor and brand drafts)
+now sit on the plain `--background` page surface; the grid stays on the four xyflow canvases.
+`client-pages-layout.spec.ts` asserts it and failed on the old grid first.
 
-Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-09-23.md).
+Overnight, `a375ed7c` finished the video upload lifecycle, bulk image drop, Playground albums and
+Competitor ads widget plans: see the [history](history/handoff-2026-09-24.md). Earlier
+`dawesstudios-29` work is in the [older history](history/handoff-through-2026-09-23.md).
 
 ## In progress
 
@@ -67,8 +59,10 @@ Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`)
+## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`, unless noted)
 
+- `ab0cd20e` at 10:45, after the background change: `npm run check` 863 tests / 75 files; the
+  `client-pages-layout` browser spec 3 of 3 (both roles, every tested width, axe clean).
 - `npm run check`: 863 tests / 75 files. `npm --prefix apps/media test`: 70 of 70.
 - `supabase test db`: 21 files, 456 tests; only `access_and_workflows.test.sql` fails its known 6
   overlay assertions (2, 4, 9, 18, 32, 54).
