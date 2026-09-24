@@ -22,6 +22,7 @@ import {
   type AddVersionNode,
 } from "./project-nodes";
 import { ProjectActionDialog, type ProjectAction } from "./project-action-dialog";
+import { BulkDropDialog } from "./bulk-drop-dialog";
 import {
   useProjectDetail,
   useVersionCommentCounts,
@@ -80,6 +81,29 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     scope?: "design" | "version";
   } | null>(null);
   const [format, setFormat] = useState("");
+  // Images dropped on the canvas in Working files; the dialog is mounted once per drop.
+  const [bulkDropFiles, setBulkDropFiles] = useState<File[] | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragCount, setDragCount] = useState(0);
+  const [switchHint, setSwitchHint] = useState(false);
+  useEffect(() => {
+    if (!switchHint) return;
+    const timer = setTimeout(() => setSwitchHint(false), 4000);
+    return () => clearTimeout(timer);
+  }, [switchHint]);
+  // A file dropped anywhere else on the page must never make the browser open it and leave the
+  // workspace; only the canvas accepts a drop, and only in Working files.
+  useEffect(() => {
+    const swallow = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+    };
+    window.addEventListener("dragover", swallow);
+    window.addEventListener("drop", swallow);
+    return () => {
+      window.removeEventListener("dragover", swallow);
+      window.removeEventListener("drop", swallow);
+    };
+  }, []);
   const [action, setAction] = useState<ProjectAction | null>(null);
   const [playgroundOrigin, setPlaygroundOrigin] = useState<"project" | "upload" | null>(null);
   const playgroundOpen = playgroundOrigin !== null;
@@ -375,7 +399,38 @@ export function ProjectPage({ projectId }: { projectId: string }) {
           ) : (
             <>
               <div className="project-body">
-                <div className="project-canvas" ref={setPane}>
+                <div
+                  className={`project-canvas${dragOver ? " is-dragging-over" : ""}`}
+                  ref={setPane}
+                  onDragOver={(event) => {
+                    if (!event.dataTransfer.types.includes("Files")) return;
+                    event.preventDefault();
+                    if (canProduce) {
+                      event.dataTransfer.dropEffect = "copy";
+                      setDragCount(event.dataTransfer.items.length);
+                      setDragOver(true);
+                    } else {
+                      event.dataTransfer.dropEffect = "none";
+                    }
+                  }}
+                  onDragLeave={(event) => {
+                    if (
+                      !event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)
+                    )
+                      setDragOver(false);
+                  }}
+                  onDrop={(event) => {
+                    if (!event.dataTransfer.types.includes("Files")) return;
+                    event.preventDefault();
+                    setDragOver(false);
+                    if (canProduce) {
+                      const dropped = Array.from(event.dataTransfer.files);
+                      if (dropped.length) setBulkDropFiles(dropped);
+                    } else if (profile?.role === "agency" && channel === "client") {
+                      setSwitchHint(true);
+                    }
+                  }}
+                >
                   <ReactFlow
                     {...canvasNavigation}
                     key={`${channel}:${format}`}
@@ -403,6 +458,16 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                       topInset={chromeHeight}
                     />
                   </ReactFlow>
+                  {dragOver && canProduce && (
+                    <div className="canvas-drop-overlay">
+                      <span>{`Drop ${dragCount} image${dragCount === 1 ? "" : "s"} to add them to this project`}</span>
+                    </div>
+                  )}
+                  {switchHint && (
+                    <div className="canvas-drop-hint" role="status">
+                      Switch to Working files to add designs
+                    </div>
+                  )}
                   {versions.length === 0 && (
                     <div className="canvas-empty-hint">
                       {canProduce
@@ -469,6 +534,15 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         onOpenPlayground={() => setPlaygroundOrigin("upload")}
         onClose={() => setAction(null)}
       />
+      {bulkDropFiles && (
+        <BulkDropDialog
+          projectId={projectId}
+          deliverables={deliverables}
+          versions={versions}
+          files={bulkDropFiles}
+          onClose={() => setBulkDropFiles(null)}
+        />
+      )}
     </div>
   );
 }
