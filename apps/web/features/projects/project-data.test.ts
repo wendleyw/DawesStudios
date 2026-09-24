@@ -74,6 +74,13 @@ describe("project procedures", () => {
     });
   });
 
+  it("resolves to the new version's id", async () => {
+    const { database } = stubDatabase({ data: "version-99", error: null });
+    await expect(
+      createDesignVersion(database, { deliverableId: "deliverable-1", notes: "" }),
+    ).resolves.toBe("version-99");
+  });
+
   it("adds a text design without an artwork path", async () => {
     const { database, rpc } = stubDatabase(ok);
     await addDesign(database, {

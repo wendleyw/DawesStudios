@@ -461,11 +461,12 @@ export async function resolveComment(
   );
 }
 
+/** Creates the deliverable's next design version and resolves to its id. */
 export async function createDesignVersion(
   database: SupabaseDatabase,
   input: { deliverableId: string; notes: string; copyVersionId?: string },
 ) {
-  assertResult(
+  return assertResult(
     await database.rpc("create_design_version", {
       p_deliverable_id: input.deliverableId,
       p_notes: input.notes,
