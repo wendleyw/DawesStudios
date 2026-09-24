@@ -363,6 +363,42 @@ export type Database = {
           },
         ]
       }
+      client_board_widgets: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          kind: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          kind: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_board_widgets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_board_widgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_comments: {
         Row: {
           author_kind: string
@@ -504,6 +540,60 @@ export type Database = {
           website?: string
         }
         Relationships: []
+      }
+      competitors: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          google_advertiser_id: string | null
+          id: string
+          meta_page_id: string | null
+          name: string
+          tiktok_advertiser: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          google_advertiser_id?: string | null
+          id?: string
+          meta_page_id?: string | null
+          name: string
+          tiktok_advertiser?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          google_advertiser_id?: string | null
+          id?: string
+          meta_page_id?: string | null
+          name?: string
+          tiktok_advertiser?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitors_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_accounts: {
         Row: {
