@@ -230,6 +230,20 @@ describe('video transfer statuses and the source lookup', () => {
     expect(await backend.findSanitizedVideoBySource(projectId, `${projectId}/raw.raw`)).toBeNull();
   });
 
+  it('deletes a raw object from storage without touching the attestation RPCs', async () => {
+    const calls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      calls.push({ url, method: init.method ?? 'GET', body: init.body });
+      return new Response('[]', { status: 200 });
+    }));
+    const backend = createBackend(config);
+    await backend.discardRaw('internal-assets', `${projectId}/raw.raw`);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('DELETE');
+    expect(calls[0].url).toBe('http://supabase.test/storage/v1/object/internal-assets');
+    expect(JSON.parse(calls[0].body)).toEqual({ prefixes: [`${projectId}/raw.raw`] });
+  });
+
   it('returns null rather than throwing when the RPC response body is a bare null', async () => {
     // The generic `POST /rest/v1/rpc/` stub every other test in server.test.js's sanitize-video
     // suite already relies on responds `jsonResponse(200, null)` for RPCs that return void. This

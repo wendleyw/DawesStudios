@@ -90,7 +90,7 @@ export function createMediaServer(config) {
     }
     const url = new URL(request.url, 'http://media.local');
     if (request.method === 'GET' && url.pathname === '/health') return send(200, { status: 'ok', service: 'dawes-media' });
-    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard', '/designs/sanitize-video'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
+    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard', '/designs/sanitize-video', '/designs/discard-raw'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
     let acquired = false;
     try {
       const token = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]+)$/)?.[1];
@@ -99,7 +99,7 @@ export function createMediaServer(config) {
       // producing a design, so it identifies the caller here and defers the actual authorization
       // decision to the route below, once the target project is known from the body.
       let userId, callerRole;
-      if (url.pathname === '/designs/sanitize-video') ({ id: userId, role: callerRole } = await backend.identify(token));
+      if (url.pathname === '/designs/sanitize-video' || url.pathname === '/designs/discard-raw') ({ id: userId, role: callerRole } = await backend.identify(token));
       else userId = await backend.authenticate(token);
       if (active >= 2) throw new MediaError('Media processing is busy. Try again shortly.', 429);
       active++; acquired = true;
@@ -162,6 +162,19 @@ export function createMediaServer(config) {
           throw error;
         }
         return send(200, { assets });
+      }
+      // Cancel during processing: the browser has aborted its sanitize-video request (which keeps
+      // the raw file, since a disconnect is not a cancel) and now removes the raw upload itself.
+      // Same path rules and production access as sanitize-video.
+      if (url.pathname === '/designs/discard-raw') {
+        const { projectId, rawPath } = parseJson(await readBody(request, 16 * 1024));
+        validId(projectId);
+        if (!RAW_VIDEO_PATH.test(rawPath) || rawPath.split('/')[0] !== projectId)
+          throw new MediaError('Asset path must belong to the project.');
+        if (!(await backend.canProduce(token, userId, callerRole, projectId)))
+          throw new MediaError('Production access required.', 403);
+        await backend.discardRaw('internal-assets', rawPath);
+        return send(200, { discarded: true });
       }
       if (url.pathname === '/designs/sanitize-video') {
         const { projectId, rawPath, mimeType } = parseJson(await readBody(request, 16 * 1024));

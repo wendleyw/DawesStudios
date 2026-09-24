@@ -578,6 +578,90 @@ describe('POST /designs/sanitize-video', () => {
   });
 });
 
+describe('POST /designs/discard-raw', () => {
+  const config = { supabaseUrl: 'http://supabase.test', anonKey: 'anon-key', serviceKey: 'service-key', appOrigin: 'http://localhost:3003' };
+  const agencyUserId = md5Uuid('dawes:agency');
+  const projectId = md5Uuid('dawes:project-1');
+  let server, baseUrl, realFetch, calls;
+
+  beforeAll(async () => {
+    realFetch = globalThis.fetch;
+    server = createMediaServer(config);
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    baseUrl = `http://127.0.0.1:${server.address().port}`;
+  });
+  afterAll(async () => { globalThis.fetch = realFetch; await new Promise(resolve => server.close(resolve)); });
+  afterEach(() => { globalThis.fetch = realFetch; calls = undefined; });
+
+  function stubSupabase(routes) {
+    calls = [];
+    globalThis.fetch = async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (!url.startsWith(config.supabaseUrl)) return realFetch(input, init);
+      const method = init.method ?? 'GET';
+      const path = url.slice(config.supabaseUrl.length).split('?')[0];
+      calls.push({ method, path });
+      const handler = routes[`${method} ${path}`] ?? routes[path];
+      if (!handler) throw new Error(`Unstubbed Supabase call: ${method} ${path}`);
+      return handler(url, init);
+    };
+  }
+  function jsonResponse(status, body) { return new Response(body === undefined ? '' : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }); }
+  function post(body) {
+    return fetch(`${baseUrl}/designs/discard-raw`, {
+      method: 'POST', headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+  }
+
+  it('deletes the named raw object once production access is confirmed', async () => {
+    const rawPath = `${projectId}/${md5Uuid('raw-object')}.raw`;
+    let deletedPrefixes;
+    stubSupabase({
+      'GET /auth/v1/user': () => jsonResponse(200, { id: agencyUserId }),
+      'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: agencyUserId, role: 'agency' }]),
+      [`DELETE /storage/v1/object/internal-assets`]: (url, init) => { deletedPrefixes = JSON.parse(init.body).prefixes; return jsonResponse(200, {}); },
+    });
+    const response = await post({ projectId, rawPath });
+    expect(response.status).toBe(200);
+    expect((await response.json()).discarded).toBe(true);
+    expect(deletedPrefixes).toEqual([rawPath]);
+  });
+
+  it('succeeds when the raw object is already gone, so a repeated cancel is safe', async () => {
+    const rawPath = `${projectId}/${md5Uuid('already-gone')}.raw`;
+    stubSupabase({
+      'GET /auth/v1/user': () => jsonResponse(200, { id: agencyUserId }),
+      'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: agencyUserId, role: 'agency' }]),
+      // Storage answers a delete of a missing object with an empty list, not an error.
+      [`DELETE /storage/v1/object/internal-assets`]: () => jsonResponse(200, []),
+    });
+    const response = await post({ projectId, rawPath });
+    expect(response.status).toBe(200);
+  });
+
+  it('refuses a rawPath outside the named project', async () => {
+    stubSupabase({
+      'GET /auth/v1/user': () => jsonResponse(200, { id: agencyUserId }),
+      'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: agencyUserId, role: 'agency' }]),
+    });
+    const response = await post({ projectId, rawPath: `${md5Uuid('dawes:project-2')}/${md5Uuid('x')}.raw` });
+    expect(response.status).toBe(400);
+    expect(calls.some(call => call.method === 'DELETE')).toBe(false);
+  });
+
+  it('refuses a designer with no assignment on the project', async () => {
+    const designerUserId = md5Uuid('dawes:designer-1');
+    stubSupabase({
+      'GET /auth/v1/user': () => jsonResponse(200, { id: designerUserId }),
+      'GET /rest/v1/profiles': () => jsonResponse(200, [{ id: designerUserId, role: 'designer' }]),
+      'GET /rest/v1/project_assignments': () => jsonResponse(200, []),
+    });
+    const response = await post({ projectId, rawPath: `${projectId}/${md5Uuid('x')}.raw` });
+    expect(response.status).toBe(403);
+    expect(calls.some(call => call.method === 'DELETE')).toBe(false);
+  });
+});
+
 // There is no pre-existing suite for this route to extend — the brief describing this task
 // claimed one and pointed at it, but this file had no `/publications/prepare` coverage at all
 // before this task. This block is written fresh, following the stubbing style

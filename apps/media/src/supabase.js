@@ -209,6 +209,11 @@ export function createBackend(config) {
     await request(`/storage/v1/object/${bucket}`, { method: 'DELETE', token: config.serviceKey, data: { prefixes: [path] } });
     await rpc('finalize_asset_discard', { p_bucket_id: bucket, p_storage_path: path }, config.serviceKey);
   }
+  // A raw upload was never attested, so removing it is a Storage delete alone; deleting a missing
+  // object succeeds, which keeps a repeated cancel safe.
+  async function discardRaw(bucket, path) {
+    await request(`/storage/v1/object/${bucket}`, { method: 'DELETE', token: config.serviceKey, data: { prefixes: [path] } });
+  }
   async function discardPrepared(paths, token) {
     const allowed = await rpc('discard_prepared_assets', { p_paths: paths }, token);
     for (const path of allowed) await discard('published-assets', path);
@@ -218,5 +223,5 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, findSanitizedVideoBySource, discard, discardPrepared, cleanStaleAssets };
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, findSanitizedVideoBySource, discard, discardRaw, discardPrepared, cleanStaleAssets };
 }
