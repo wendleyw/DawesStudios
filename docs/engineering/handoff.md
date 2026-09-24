@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 23:55 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+Updated: 2026-09-24 00:50 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
 orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -12,13 +12,20 @@ history only when a task needs earlier evidence.
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
 - Other interactive Claude sessions of the user's also work here. `dawesstudios-3b` owns the
-  client logo feature. Every session stages explicit paths only; never run `git add -A`.
+  client logo feature. Every session stages explicit paths only; never run `git add -A`. At 00:40
+  EDT another session had uncommitted edits in `globals.css`, `status-tone.ts` and a new
+  `features/credits/credit-balance-chip.tsx`; they are not this run's and were left untouched.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
-## Done in this session
+## Done today
 
-Details and evidence: [verification record](../verification/production-hardening-2026-09-23.md).
+`a375ed7c`: the **video upload lifecycle** plan, all nine tasks (`fdb9a2f..7f3d3f0`, migration
+`202609230014`): cancel in both phases, resume, one automatic retry plus **Try processing again**,
+and the 24-hour sweep. Whole-branch review: no Critical or Important findings. Record:
+[verification](../verification/video-upload-lifecycle-2026-09-23.md).
+
+`dawesstudios-29` — details and evidence: [verification record](../verification/production-hardening-2026-09-23.md).
 Consolidated 618 files into commits; workflow rules and lean agents; production guide and local
 staging rehearsal; audit fixes (indexes, dead CSS, styling moves, CSP and HSTS, invitation cap,
 Playground split, jitless Zod); test harness for declared backends; the client logo feature from
@@ -26,11 +33,9 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 
 ## In progress
 
-- **Video upload lifecycle:** the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md)
-  (`4e56cdb`) is executing inline in `a375ed7c` on `main`, one commit per task. Progress ledger:
-  `.superpowers/sdd/2026-09-23-video-upload-lifecycle/progress.md` (git-ignored).
-- **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) approved for the
-  same native, fresh-session execution. **Playground albums:** the
+- **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) executes next,
+  inline in `a375ed7c` on `main`, one commit per task; its ledger is
+  `.superpowers/sdd/2026-09-23-bulk-image-drop/progress.md` (git-ignored). **Playground albums:** the
   [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) is approved and a Sonnet agent
   has its [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks), approved for the same execution. Order: video,
   then bulk drop, then albums (both touch `project-data.ts`).
@@ -53,19 +58,21 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 
 - Next.js dev server on `http://localhost:3003`, restarted at 18:40 because its watcher had
   stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230013`);
-  trusted media on 55430. Do not reset or re-provision.
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230014`);
+  trusted media on 55430. Do not reset or re-provision. The compose `media` container was rebuilt
+  from the current tree at 2026-09-24 04:27 UTC, so it serves the video lifecycle routes.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (this session)
+## Evidence (`a375ed7c`, after `7f3d3f0`)
 
-- `npm run check`: 609 tests / 53 files, clean after `712828e`. `npm run build`: exit 0.
-- Local browser checks after the fixes: `intake-admin` 6 of 6. The owning session reported the
-  two logo-affected specs passing 13 of 13.
-- Local `npm run db:test`: 17 of 18 files pass. The canonical-count file fails under the SABRE
-  overlay, as expected. The local data was verified intact after the staging runs.
+- `npm run check`: 652 tests / 55 files (the tree included the other session's edits).
+  `npm --prefix apps/media test`: 70 of 70.
+- `npm run db:test`: 19 of 20 files pass. `access_and_workflows.test.sql` fails its known 6
+  assertions under the SABRE overlay, as expected.
+- Browser: `video-designs.spec.ts` 6 of 6; the seven dialog-affected specs 23 of 23. The whole
+  suite was not run.
 
 ## Open gaps
 
@@ -74,6 +81,9 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 - The notification feed shows only the latest 100 items, with no pagination (product decision).
 - `add_design` computes `sort_order` with an unlocked `count(*)`, so concurrent adds to one version
   can collide (found while planning bulk drop, which registers sequentially per deliverable).
+- tus termination on Supabase is unverified; a cancelled partial upload relies on the 24-hour
+  window (R2: a one-day incomplete-multipart rule). Deferred minors from the video review: a
+  missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
@@ -85,10 +95,7 @@ and the incomplete-multipart lifecycle rule, the Supabase storage override, the 
 per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
 checklist. The local rehearsal already proves the rest.
 
-1. In a fresh session, execute the approved plans in order, each natively:
-   `claude "Read CLAUDE.md and docs/engineering/handoff.md, record yourself as the incoming
-   orchestrator, then execute, in this order, docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md
-   docs/superpowers/plans/2026-09-23-bulk-image-drop.md and
-   docs/superpowers/plans/2026-09-23-playground-albums.md with superpowers:executing-plans: TDD per step, gate and a conventional commit
-   per task, explicit paths only, the next free migration number. After each plan, run one
-   whole-branch review with the reviewer agent and update this checkpoint."`
+1. Continue the ordered run in `a375ed7c`: the bulk image drop plan, then
+   `docs/superpowers/plans/2026-09-23-playground-albums.md`, each with superpowers:executing-plans,
+   one whole-branch review and a checkpoint update. If this session ends first, a fresh session
+   resumes from the plan's ledger and `git log` (completed tasks have `Task N: complete` lines).
