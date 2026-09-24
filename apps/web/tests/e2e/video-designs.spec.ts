@@ -1,4 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
@@ -274,6 +277,249 @@ test("a video design carries pinned time-coded feedback across all three roles, 
     expect(errors).toEqual([]);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
+    await cleanupTestProject(fixture.projectId);
+  }
+});
+
+// The upload lifecycle scenarios below (docs/superpowers/specs/2026-09-23-video-upload-lifecycle-design.md).
+// Every tus request (the creation POST and the later HEAD/PATCH to its URL) matches this.
+const resumable = /\/storage\/v1\/upload\/resumable/;
+const hold = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Creates version 1 of the fixture's deliverable and opens its Add design dialog. */
+async function openAddDesign(page: Page, projectId: string) {
+  await page.goto(`/projects/${projectId}`);
+  await page.getByRole("button", { name: "New version for Campaign square" }).click();
+  await page.getByRole("button", { name: "Create version", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add design to version 1" }).click();
+}
+
+/** The dialog's progress line; the submit button repeats the same words while it is pending. */
+function progressLine(page: Page, text: RegExp) {
+  return page.getByRole("dialog").locator(".upload-progress").getByText(text);
+}
+
+async function startUpload(page: Page, title: string, file: string) {
+  await page.getByRole("textbox", { name: "Design name" }).fill(title);
+  await page.getByLabel("Design file").setInputFiles(file);
+  await page.getByRole("dialog").getByRole("button", { name: "Add design", exact: true }).click();
+}
+
+/** The raw object's path, read from a tus creation request's own `Upload-Metadata` header. */
+function rawPathOf(metadata: string | undefined) {
+  const entry = metadata
+    ?.split(",")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("objectName "));
+  return entry
+    ? Buffer.from(entry.slice("objectName ".length), "base64").toString("utf8")
+    : undefined;
+}
+
+async function designsTitled(
+  agency: Awaited<ReturnType<typeof localAgency>>,
+  projectId: string,
+  title: string,
+  expected: number,
+) {
+  const versions = await agency.from("design_versions").select("id").eq("project_id", projectId);
+  expect(versions.error, JSON.stringify(versions.error)).toBeNull();
+  const versionIds = (versions.data ?? []).map((version) => version.id);
+  return readRowsEventually(
+    () => agency.from("designs").select("id").in("version_id", versionIds).eq("title", title),
+    expected,
+  );
+}
+
+async function rawObjectExists(rawPath: string) {
+  const [projectDirectory, objectName] = rawPath.split("/");
+  const listing = await localAdmin.storage
+    .from("internal-assets")
+    .list(projectDirectory, { limit: 1000 });
+  expect(listing.error).toBeNull();
+  return listing.data?.some((entry) => entry.name === objectName) ?? false;
+}
+
+/** A `sanitize-video` answer the browser will read: a fulfilled cross-origin response needs CORS. */
+function busy(page: Page) {
+  return {
+    status: 503,
+    contentType: "application/json",
+    headers: { "Access-Control-Allow-Origin": new URL(page.url()).origin, Vary: "Origin" },
+    body: JSON.stringify({ error: "Media processing is busy. Try again shortly." }),
+  };
+}
+
+test("cancelling mid-transfer leaves no design and no stored object", async ({ page }) => {
+  test.setTimeout(90_000);
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    await signIn(page, credentials.agency);
+    await openAddDesign(page, fixture.projectId);
+    // Hold the transfer so it is still running when Cancel is clicked. Had the cancel not stopped
+    // it, the held request would reach Storage once released.
+    let rawPath: string | undefined;
+    await page.route(resumable, async (route) => {
+      rawPath ??= rawPathOf(route.request().headers()["upload-metadata"]);
+      await hold(2_000);
+      await route.continue().catch(() => undefined);
+    });
+    await startUpload(page, "Cancelled upload", clip);
+    await expect(progressLine(page, /^Sending \d+%$/)).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Upload cancelled.")).toBeVisible();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await hold(3_000);
+
+    await designsTitled(agency, fixture.projectId, "Cancelled upload", 0);
+    expect(rawPath, "the tus creation request must have been observed").toBeTruthy();
+    expect(await rawObjectExists(rawPath!)).toBe(false);
+  } finally {
+    await cleanupTestProject(fixture.projectId);
+  }
+});
+
+test("reloading mid-transfer and choosing the same file again continues the transfer", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  // Resume needs a transfer with more than one 6 MB chunk: the clip followed by filler bytes. The
+  // resumed transfer is cancelled, so the filler never reaches processing.
+  const directory = await mkdtemp(join(tmpdir(), "dawes-resume-"));
+  const longTake = join(directory, "long-take.mp4");
+  await writeFile(
+    longTake,
+    Buffer.concat([await readFile(clip), Buffer.alloc(13 * 1024 * 1024, 7)]),
+  );
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    await signIn(page, credentials.agency);
+    await openAddDesign(page, fixture.projectId);
+    // The creation request carries the first chunk; each later chunk is held, so the reload lands
+    // between chunks with the resume point already stored.
+    await page.route(resumable, async (route) => {
+      if (route.request().method() === "PATCH") await hold(3_000);
+      await route.continue().catch(() => undefined);
+    });
+    const created = page.waitForResponse(
+      (response) =>
+        resumable.test(response.url()) &&
+        response.request().method() === "POST" &&
+        response.status() === 201,
+    );
+    await startUpload(page, "Resumed upload", longTake);
+    await created;
+    await expect(progressLine(page, /^Sending \d+%$/)).toBeVisible();
+
+    await page.reload();
+    await page.getByRole("button", { name: "Add design to version 1" }).click();
+    await startUpload(page, "Resumed upload", longTake);
+    await expect(progressLine(page, /^Continuing from \d+%$/)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Upload cancelled.")).toBeVisible();
+    await designsTitled(agency, fixture.projectId, "Resumed upload", 0);
+  } finally {
+    await cleanupTestProject(fixture.projectId);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a forced 503 on the first processing call recovers automatically", async ({ page }) => {
+  test.setTimeout(90_000);
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    await signIn(page, credentials.agency);
+    await openAddDesign(page, fixture.projectId);
+    let calls = 0;
+    await page.route("**/designs/sanitize-video", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      calls += 1;
+      if (calls === 1) return route.fulfill(busy(page));
+      return route.continue();
+    });
+    await startUpload(page, "Auto-recovered upload", clip);
+    await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 60_000 });
+    expect(calls).toBe(2);
+    await designsTitled(agency, fixture.projectId, "Auto-recovered upload", 1);
+  } finally {
+    await cleanupTestProject(fixture.projectId);
+  }
+});
+
+test("two forced processing failures offer Try processing again, which succeeds without a second transfer", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    await signIn(page, credentials.agency);
+    await openAddDesign(page, fixture.projectId);
+    let transferCalls = 0;
+    let sanitizeCalls = 0;
+    await page.route(resumable, async (route) => {
+      transferCalls += 1;
+      await route.continue();
+    });
+    await page.route("**/designs/sanitize-video", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      sanitizeCalls += 1;
+      if (sanitizeCalls <= 2) return route.fulfill(busy(page));
+      return route.continue();
+    });
+    await startUpload(page, "Manually retried upload", clip);
+    const retry = page.getByRole("dialog").getByRole("button", { name: "Try processing again" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+    expect(sanitizeCalls).toBe(2);
+    const transfersBeforeRetry = transferCalls;
+
+    await retry.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 60_000 });
+    expect(sanitizeCalls).toBe(3);
+    expect(transferCalls).toBe(transfersBeforeRetry);
+    await designsTitled(agency, fixture.projectId, "Manually retried upload", 1);
+  } finally {
+    await cleanupTestProject(fixture.projectId);
+  }
+});
+
+test("cancelling during processing discards the raw file through the media service", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const agency = await localAgency();
+  const fixture = await createProductionFixture(agency);
+  try {
+    await signIn(page, credentials.agency);
+    await openAddDesign(page, fixture.projectId);
+    let rawPath: string | undefined;
+    await page.route(resumable, async (route) => {
+      rawPath ??= rawPathOf(route.request().headers()["upload-metadata"]);
+      await route.continue();
+    });
+    // Hold processing, so the cancel lands while it runs; the aborted request never reaches it.
+    await page.route("**/designs/sanitize-video", async (route) => {
+      if (route.request().method() === "POST") await hold(3_000);
+      await route.continue().catch(() => undefined);
+    });
+    await startUpload(page, "Cancelled while processing", clip);
+    await expect(page.getByText("Processing…", { exact: true }).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    expect(rawPath, "the tus creation request must have been observed").toBeTruthy();
+    expect(await rawObjectExists(rawPath!)).toBe(true);
+
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Upload cancelled.")).toBeVisible();
+    await expect.poll(() => rawObjectExists(rawPath!), { timeout: 10_000 }).toBe(false);
+    await hold(3_000);
+    await designsTitled(agency, fixture.projectId, "Cancelled while processing", 0);
+  } finally {
     await cleanupTestProject(fixture.projectId);
   }
 });
