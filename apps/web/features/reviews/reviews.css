@@ -3,65 +3,83 @@
   margin-bottom: 28px;
 }
 .review-list {
-  display: grid;
-  gap: 16px;
-}
-.review-card {
-  display: flex;
-  align-items: flex-start;
-
-  gap: var(--space-lg);
-
-  padding: var(--space-lg);
+  overflow: hidden;
   border: 1px solid var(--border);
-
   border-radius: var(--radius-lg);
   background: var(--surface);
-  transition: border-color 0.15s;
+}
+/* One line per version: title, deliverable and version, note, status, date. */
+.review-card {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.4fr)
+    156px 56px 16px;
+  gap: var(--space-md);
+  align-items: center;
+  min-height: 56px;
+  padding: 10px var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  text-decoration: none;
+}
+.review-card:last-child {
+  border-bottom: 0;
 }
 .review-card:hover {
-  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }
-.review-card > div {
-  flex: 1;
-  min-width: 0;
+.review-card:focus-visible {
+  outline-offset: -3px;
 }
 .review-card h2 {
-  font-size: 17px;
-  margin: 8px 0;
-}
-.review-card p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
   font-size: var(--text-lg);
-  color: var(--muted);
-  line-height: 1.6;
-  margin: 0 0 12px;
-  overflow-wrap: anywhere;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.review-symbol {
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius);
-
-  background: var(--surface-subtle);
-  width: 48px;
-  height: 48px;
-
-  color: var(--muted);
-  flex-shrink: 0;
-}
+.review-row-deliverable,
+.review-row-note,
 .review-date {
-  font-size: var(--text-sm);
-  color: var(--muted);
+  overflow: hidden;
+  font-size: var(--text-base);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-card .status-badge {
+  justify-self: start;
+}
+@media (max-width: 1000px) {
+  .review-card {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 156px 16px;
+  }
+  .review-row-note,
+  .review-date {
+    display: none;
+  }
 }
 @media (max-width: 720px) {
   .review-card {
-    padding: 18px;
-    gap: 14px;
-  }
-  .review-symbol {
-    display: none;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 10px var(--space-md);
   }
   .review-card h2 {
-    font-size: 15px;
+    grid-row: 1;
+  }
+  .review-row-deliverable {
+    grid-row: 2;
+  }
+  .review-card .status-badge {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: var(--text-xs);
+  }
+  .review-card > svg {
+    display: none;
   }
 }

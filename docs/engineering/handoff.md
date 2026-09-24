@@ -23,7 +23,7 @@ grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed a
 board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
 Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
 with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
-viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing list rows. Sonnet
+viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows. Sonnet
 workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
 here, so general-purpose workers followed `implementer.md`.
 

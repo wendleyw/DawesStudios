@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowUpRight, CheckCheck, Clock3 } from "lucide-react";
+import { ArrowUpRight, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
+import { statusToneClass, type StatusTone } from "@/features/shared/status-tone";
 import { useReviews } from "./review-data";
 
 /**
@@ -20,6 +21,14 @@ import { useReviews } from "./review-data";
  * waiting on the designer.
  */
 export const isFinished = (status: string) => status === "approved";
+
+/** Badge tone for a version status: waiting on a person reads as attention, approved as complete. */
+const versionStatusTones: Record<string, StatusTone> = {
+  submitted: "active",
+  pending: "attention",
+  changes_requested: "attention",
+  approved: "complete",
+};
 
 /**
  * Whether a row belongs to a review tab for the signed-in role. A client's **Waiting for you** holds
@@ -103,25 +112,18 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
               href={`/projects/${row.projectId}?channel=${row.internal ? "internal" : "client"}`}
               className="review-card"
             >
-              <span className="review-symbol">
-                {isFinished(row.status) ? <CheckCheck size={23} /> : <Clock3 size={23} />}
+              <h2>{row.title}</h2>
+              <span className="review-row-deliverable">
+                {row.deliverable} · V{row.version}
               </span>
-              <div>
-                <span className="eyebrow">
-                  {row.deliverable} · V{row.version}
-                </span>
-                <h2>{row.title}</h2>
-                <p>
-                  {row.note ||
-                    (row.status === "changes_requested"
-                      ? "Changes were requested on this version."
-                      : "Open the project to see the designs and conversation.")}
-                </p>
-                <span className="review-date">
-                  {formatDate(row.date)} · {versionStatusLabel(row.status)}
-                </span>
-              </div>
-              <ArrowUpRight size={18} />
+              <span className="review-row-note" title={row.note ?? undefined}>
+                {row.note}
+              </span>
+              <span className={statusToneClass(versionStatusTones[row.status])}>
+                {versionStatusLabel(row.status)}
+              </span>
+              <span className="review-date">{formatDate(row.date)}</span>
+              <ArrowUpRight size={16} />
             </Link>
           ))}
         </div>

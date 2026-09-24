@@ -1,8 +1,11 @@
 # Reviews
 
 The page uses the shared floating client navigation/profile above a white title/action card on
-the plain page background. Review filters sit inside the title card; the existing scoped review cards and
-open actions remain below. The same layout adapts to desktop and mobile without duplicating client
+the plain page background. Review filters sit inside the title card; below it, each version is one
+line in a single bordered list: title, deliverable and version, the review note (full text in its
+tooltip), a status badge and the date. The status column has a fixed width so columns align; below
+1000 px the note and date drop, and below 720 px the deliverable moves under the title. Version
+statuses map onto the shared badge tones in `reviews-page.tsx`. The same layout adapts to desktop and mobile without duplicating client
 navigation in the sidebar.
 
 `reviews-page.tsx` lists the design versions currently in review: a designer's own in-progress
