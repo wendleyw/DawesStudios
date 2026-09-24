@@ -1,7 +1,7 @@
 # Reviews
 
 The page uses the shared floating client navigation/profile above a white title/action card on
-the workspace grid. Review filters sit inside the title card; the existing scoped review cards and
+the plain page background. Review filters sit inside the title card; the existing scoped review cards and
 open actions remain below. The same layout adapts to desktop and mobile without duplicating client
 navigation in the sidebar.
 

@@ -2,7 +2,7 @@
 
 The Brand Hub lives at `/clients/:clientId/brand/:section`. Its nine sections are Overview, Logos,
 Colors, Typography, Visual style, Products, Assets, Messaging and Brand context. They share the
-floating client navigation/account card, a white title card and the workspace grid. The section
+floating client navigation/account card, a white title card and the plain page background. The section
 links retain their bounded horizontal scrolling on narrow screens; client navigation wraps above.
 Notifications open beside the signed-in profile, using the shared account popover.
 

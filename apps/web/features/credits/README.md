@@ -1,7 +1,7 @@
 # Credits
 
 The Credits page uses the shared floating client navigation/profile and white title/action card
-on the workspace grid. Balance, requests, ledger/report tabs and accounting actions remain in their
+on the plain page background. Balance, requests, ledger/report tabs and accounting actions remain in their
 existing content panels below. The layout follows the same desktop/mobile gutters as other client
 sections without changing billing or export behavior.
 

@@ -1,7 +1,7 @@
 # Briefings
 
 The listing, detail and directly opened editor use the shared floating client navigation/profile
-and a full-width white title/action card on the workspace grid. Listing filters sit inside that
+and a full-width white title/action card on the plain page background. Listing filters sit inside that
 card. Detail shows the briefing title once; its summary keeps a screen-reader heading for the
 Deliverables and Creative direction hierarchy. The direct editor has a back link and one New/Edit
 briefing heading; intercepted modals retain their compact dialog layout. Editor review scrolling
