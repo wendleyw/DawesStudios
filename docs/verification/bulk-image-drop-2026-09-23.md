@@ -38,13 +38,18 @@ Evidence for the three success criteria of the design:
 
 | Check | Result |
 | --- | --- |
-| `npm run check` (typecheck, eslint, prettier, unit suites) | 704 tests / 59 files pass |
+| `npm run check` (typecheck, eslint, prettier, unit suites) | 705 tests / 59 files pass after the review fixes |
 | `bulk-drop-model.test.ts` | 23: natural sort, bounded concurrency, exact/ratio/tie/none matching with the 1% boundary on both sides, rejection reasons, no pixel read for a rejected file, title and content, the default-version rule |
 | `bulk-drop-upload.test.ts` | 11: three uploads in flight within one deliverable, natural-order registration despite out-of-order completion, a single version per deliverable, no version when every upload failed, isolation of upload and `add_design` failures, a failed version creation discarding what it stored, a permission refusal stopping the drop and discarding, cancel stopping queued files |
 | `bulk-drop-dialog.test.tsx` | 10: one block per deliverable with its size, confirm gating on unmatched files, hand assignment, a skipped file marked Skipped, shared-version preselection, the all-rejected drop, retry limited to failed files with the created version reused, Cancel read during the run, choices fixed once a run starts, and the confirmed versions kept after the project refreshes |
 | `project-data.test.ts` | `createDesignVersion` resolves to the new version's id |
 | `npx playwright test tests/e2e/bulk-image-drop.spec.ts` | 4 passed: a mixed out-of-order drop lands as `square-1, square-2, square-10, unmatched` in the current square version and `story-1, story-2` in a new story version while the shared version is untouched; a client session gets no overlay or dialog; the agency's Shared with client view shows the hint; a drop on the project header is prevented |
 | Project browser specs with the frame commit (`bulk-image-drop`, `project-feedback`, `production-workflow`, `project-creation-cards`, `video-designs`, `design-audit`) | 17 passed, 1 failed: `design-audit` expects the canonical 7 SABRE projects on the board and finds 50 under the demo overlay, a dataset assumption unrelated to this feature |
+
+The whole-branch review found two defects, fixed test-first in `0a274a1`: setting an unmatched
+file's picker back to its placeholder counted as an assignment and silently left the file out, and
+a dragged link was not held by the canvas. The bulk spec now has 5 scenarios (5 passed) and the
+project specs passed 17 of 17.
 
 Every drop assertion checks that the drop's default action was prevented, which is what stops a
 browser from opening the file; a dispatched event never navigates by itself, so a URL check could

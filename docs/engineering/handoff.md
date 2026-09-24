@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 00:50 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+Updated: 2026-09-24 01:40 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
 orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -23,7 +23,10 @@ history only when a task needs earlier evidence.
 `a375ed7c`: the **video upload lifecycle** plan, all nine tasks (`fdb9a2f..7f3d3f0`, migration
 `202609230014`): cancel in both phases, resume, one automatic retry plus **Try processing again**,
 and the 24-hour sweep. Whole-branch review: no Critical or Important findings. Record:
-[verification](../verification/video-upload-lifecycle-2026-09-23.md).
+[verification](../verification/video-upload-lifecycle-2026-09-23.md). Then **bulk image drop**, all
+seven tasks (`422178d..0a274a1`): "shared" is the version's `reviewed` status (the plan's
+published-number rule misjudged 7 of 101 local deliverables). Review: one Critical and one Important,
+both fixed with tests. Record: [verification](../verification/bulk-image-drop-2026-09-23.md).
 
 `dawesstudios-29` — details and evidence: [verification record](../verification/production-hardening-2026-09-23.md).
 Consolidated 618 files into commits; workflow rules and lean agents; production guide and local
@@ -33,12 +36,10 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 
 ## In progress
 
-- **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) executes next,
-  inline in `a375ed7c` on `main`, one commit per task; its ledger is
-  `.superpowers/sdd/2026-09-23-bulk-image-drop/progress.md` (git-ignored). **Playground albums:** the
-  [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) is approved and a Sonnet agent
-  has its [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks), approved for the same execution. Order: video,
-  then bulk drop, then albums (both touch `project-data.ts`).
+- **Playground albums:** the [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks)
+  executes next, inline in `a375ed7c` on `main`; ledger
+  `.superpowers/sdd/2026-09-23-playground-albums/progress.md` (git-ignored). After it, the user asked
+  for a complete all-roles test of logic, UX, UI and actions with a screenshot of every screen.
 - **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
   EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
