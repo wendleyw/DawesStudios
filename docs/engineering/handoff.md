@@ -31,7 +31,7 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 - **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) approved for the
   same native, fresh-session execution. **Playground albums:** the
   [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) is approved and a Sonnet agent
-  has its [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks) awaiting review. Order: video,
+  has its [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks), approved for the same execution. Order: video,
   then bulk drop, then albums (both touch `project-data.ts`).
 - **Fixed today from user reports:** briefing acceptance used the UTC date and failed after 8 PM
   EDT, and the budget panel showed two primary actions (`0d310d5`, migration `202609230013`).
@@ -87,7 +87,7 @@ checklist. The local rehearsal already proves the rest.
 1. In a fresh session, execute the approved plans in order, each natively:
    `claude "Read CLAUDE.md and docs/engineering/handoff.md, record yourself as the incoming
    orchestrator, then execute, in this order, docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md
-   and docs/superpowers/plans/2026-09-23-bulk-image-drop.md (and the Playground albums plan once the
-   user approves it) with superpowers:executing-plans: TDD per step, gate and a conventional commit
+   docs/superpowers/plans/2026-09-23-bulk-image-drop.md and
+   docs/superpowers/plans/2026-09-23-playground-albums.md with superpowers:executing-plans: TDD per step, gate and a conventional commit
    per task, explicit paths only, the next free migration number. After each plan, run one
    whole-branch review with the reviewer agent and update this checkpoint."`
