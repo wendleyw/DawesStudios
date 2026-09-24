@@ -124,6 +124,24 @@ describe("BulkDropDialog classification and choices", () => {
     expect(screen.getByRole("button", { name: /Add 2 images/i })).toBeEnabled();
   });
 
+  it("treats a picker set back to its placeholder as unassigned again", async () => {
+    render(
+      <BulkDropDialog
+        projectId="project-1"
+        deliverables={[square]}
+        versions={[]}
+        files={[image("square-1.png", 1080, 1080), image("odd.png", 400, 300)]}
+        onClose={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText("Needs a deliverable")).toBeInTheDocument());
+    const picker = screen.getByLabelText("Deliverable for odd.png");
+    await userEvent.selectOptions(picker, "d-square");
+    expect(screen.getByRole("button", { name: /Add 2 images/i })).toBeEnabled();
+    await userEvent.selectOptions(picker, "");
+    expect(screen.getByRole("button", { name: /Add 1 image/i })).toBeDisabled();
+  });
+
   it("preselects a new version when the current one is already shared with the client", async () => {
     render(
       <BulkDropDialog

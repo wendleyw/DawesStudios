@@ -222,6 +222,31 @@ test.describe("bulk image drop", () => {
     await expect(page.getByRole("dialog", { name: "Add images" })).toHaveCount(0);
   });
 
+  test("a dragged link dropped on the canvas never navigates the tab", async ({ page }) => {
+    const agency = await localAgency();
+    const fixture = await createProductionFixture(agency);
+    projectId = fixture.projectId;
+
+    await signIn(page, credentials.agency);
+    await page.goto(`/projects/${projectId}`);
+    await expect(page.locator(".project-canvas")).toBeVisible();
+
+    const prevented = await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.setData("text/uri-list", "https://example.com/");
+      const element = document.querySelector(".project-canvas")!;
+      const init = { bubbles: true, cancelable: true, dataTransfer: transfer };
+      const over = new DragEvent("dragover", init);
+      element.dispatchEvent(over);
+      const drop = new DragEvent("drop", init);
+      element.dispatchEvent(drop);
+      return { over: over.defaultPrevented, drop: drop.defaultPrevented };
+    });
+    expect(prevented).toEqual({ over: true, drop: true });
+    await expect(page.locator(".canvas-drop-overlay")).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Add images" })).toHaveCount(0);
+  });
+
   test("a file dropped outside the canvas never opens in the tab", async ({ page }) => {
     const agency = await localAgency();
     const fixture = await createProductionFixture(agency);

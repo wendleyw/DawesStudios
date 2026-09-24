@@ -292,12 +292,16 @@ export function BulkDropDialog({
                             : ""
                         }
                         disabled={started}
-                        onChange={(event) =>
-                          setAssignments((current) => ({
-                            ...current,
-                            [fileKey(file)]: { deliverableId: event.target.value },
-                          }))
-                        }
+                        onChange={(event) => {
+                          const deliverableId = event.target.value;
+                          // The placeholder means "not assigned yet", never a deliverable.
+                          setAssignments((current) => {
+                            const next = { ...current };
+                            if (deliverableId) next[fileKey(file)] = { deliverableId };
+                            else delete next[fileKey(file)];
+                            return next;
+                          });
+                        }}
                       >
                         <option value="">Choose a deliverable…</option>
                         {deliverables.map((deliverable) => (

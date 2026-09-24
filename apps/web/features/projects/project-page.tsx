@@ -403,9 +403,10 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                   className={`project-canvas${dragOver ? " is-dragging-over" : ""}`}
                   ref={setPane}
                   onDragOver={(event) => {
-                    if (!event.dataTransfer.types.includes("Files")) return;
+                    // Every drag over the canvas is held here, so nothing dropped on it (a file,
+                    // a link) ever makes the browser leave the page; only files are taken.
                     event.preventDefault();
-                    if (canProduce) {
+                    if (canProduce && event.dataTransfer.types.includes("Files")) {
                       event.dataTransfer.dropEffect = "copy";
                       setDragCount(event.dataTransfer.items.length);
                       setDragOver(true);
@@ -420,9 +421,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                       setDragOver(false);
                   }}
                   onDrop={(event) => {
-                    if (!event.dataTransfer.types.includes("Files")) return;
                     event.preventDefault();
                     setDragOver(false);
+                    if (!event.dataTransfer.types.includes("Files")) return;
                     if (canProduce) {
                       const dropped = Array.from(event.dataTransfer.files);
                       if (dropped.length) setBulkDropFiles(dropped);
