@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 11:30 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
+Updated: 2026-09-24 12:00 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
 overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -22,7 +22,8 @@ history only when a task needs earlier evidence.
 grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed as duplicates of the
 board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
 Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
-with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`). Sonnet
+with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
+viewer's feedback column runs full height without the General tab (`e130c95`). Sonnet
 workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
 here, so general-purpose workers followed `implementer.md`.
 
@@ -31,10 +32,8 @@ Overnight work (`a375ed7c`) and the complete system test are in the
 
 ## In progress
 
-- **Feedback panel redesign** (asked 11:05, after the four above): a taller feedback column,
-  no General feedback tab, Show resolved beside the title, the pin label beside the author. The
-  General tab also holds the client's Review version button, the version note and version-wide
-  comments, so its removal needs the user's decision on where they go before implementation.
+- Nothing. Version-wide feedback now opens in the version's panel on the board; Review version
+  shows in the viewer's feedback column, that panel and the version card (one `reviewFor` rule).
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
@@ -63,9 +62,10 @@ Overnight work (`a375ed7c`) and the complete system test are in the
 
 ## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`, unless noted)
 
-- `ab0cd20e` at 11:20, before the four commits: `npm run check` 927 tests / 78 files, no lint
-  warnings; browser `client-pages-layout production-workflow client-navigation console-errors
-  board-views files-campaigns`: 23 of 23.
+- `ab0cd20e` at 11:20 and again at 11:58: `npm run check` 927 tests / 78 files, no lint warnings;
+  browser: `client-pages-layout production-workflow client-navigation console-errors board-views
+  files-campaigns` 23 of 23; `project-feedback production-workflow video-designs video-loading
+  playground` 23 of 23; `workspace-actions design-audit` fail only on the overlay's counts.
 - `npm run check`: 863 tests / 75 files. `npm --prefix apps/media test`: 70 of 70.
 - `supabase test db`: 21 files, 456 tests; only `access_and_workflows.test.sql` fails its known 6
   overlay assertions (2, 4, 9, 18, 32, 54).
