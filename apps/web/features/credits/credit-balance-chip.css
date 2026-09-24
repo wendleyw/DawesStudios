@@ -53,3 +53,11 @@
     display: none;
   }
 }
+/* On a phone the account card would take the identity card's room: the client's name truncated and
+   the section links wrapped into a third row. The balance stays one tap away under Credits in the
+   header's own links. */
+@container board (max-width: 480px) {
+  .credit-balance-chip {
+    display: none;
+  }
+}

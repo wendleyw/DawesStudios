@@ -1546,6 +1546,10 @@ select {
   }
 }
 
+/* Below 980px one row cannot hold the client's name, the period, every section link and the account
+   card (credit balance, bell, avatar), so the links move to a second row instead of squeezing the
+   name. A short landscape phone keeps one row down to 700px, so the period panel still fits below
+   the header. */
 @container board (max-width: 700px) {
   .board-identity {
     flex-direction: column;
@@ -1557,14 +1561,26 @@ select {
     gap: 12px;
   }
 }
+@media (min-height: 651px) {
+  @container board (max-width: 980px) {
+    .board-identity {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+    }
+    .board-identity .client-navigation {
+      justify-content: space-between;
+      gap: 12px;
+    }
+  }
+}
+/* On a phone the links wrap at their own widths, so a long one such as Brand Hub never runs into
+   its neighbour. */
 @container board (max-width: 480px) {
   .board-identity .client-navigation {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0 12px;
-  }
-  .board-identity .client-navigation-link {
-    justify-self: start;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0 16px;
   }
 }
 

@@ -146,7 +146,7 @@ export function BoardToolbar({
         )}
       </div>
       {widgets && (
-        <>
+        <div className="board-widgets-tool">
           <span className="board-tool-divider" aria-hidden="true" />
           <div className="board-tool-group">
             <button
@@ -162,7 +162,7 @@ export function BoardToolbar({
               <LayoutDashboard size={18} aria-hidden="true" />
             </button>
           </div>
-        </>
+        </div>
       )}
       {panel && (
         <section

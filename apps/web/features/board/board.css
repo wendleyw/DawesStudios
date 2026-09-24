@@ -1037,14 +1037,33 @@
   }
 }
 
+/* Matches the two-row identity header in globals.css: always below 700px, and below 980px on screens
+   tall enough to spare the second row. */
 @container board (max-width: 700px) {
   .board-work-area {
     --board-header-space: 132px;
   }
 }
+@media (min-height: 651px) {
+  @container board (max-width: 980px) {
+    .board-work-area {
+      --board-header-space: 132px;
+    }
+  }
+}
 @container board (max-width: 480px) {
   .board-work-area {
     --board-header-space: 164px;
+  }
+}
+.board-widgets-tool {
+  display: contents;
+}
+/* The narrowest phones cannot fit a ninth button in the agency's toolbar. The widget keeps its own
+   remove button there, and placing one waits for a wider screen. */
+@media (max-width: 359px) {
+  .board-widgets-tool {
+    display: none;
   }
 }
 .board-widget-option {
