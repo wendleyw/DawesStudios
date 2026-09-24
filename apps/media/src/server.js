@@ -300,10 +300,14 @@ export function createMediaServer(config) {
     } finally { if (acquired) active--; }
   });
   const cleanupFailed = () => process.stderr.write('Prepared asset cleanup failed; the next scheduled pass will retry.\n');
-  const cleanup = setInterval(() => { backend.cleanStaleAssets().catch(cleanupFailed); }, 60 * 60 * 1000);
+  const cleanup = setInterval(() => {
+    backend.cleanStaleAssets().catch(cleanupFailed);
+    backend.cleanStaleVideoUploads().catch(cleanupFailed);
+  }, 60 * 60 * 1000);
   cleanup.unref();
   server.on('close', () => clearInterval(cleanup));
   backend.cleanStaleAssets().catch(cleanupFailed);
+  backend.cleanStaleVideoUploads().catch(cleanupFailed);
   return server;
 }
 

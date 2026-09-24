@@ -223,5 +223,14 @@ export function createBackend(config) {
     const stale = await rpc('list_stale_sanitized_assets', {}, config.serviceKey);
     return Promise.allSettled(stale.map(asset => discard(asset.bucket_id, asset.storage_path)));
   }
-  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, findSanitizedVideoBySource, discard, discardRaw, discardPrepared, cleanStaleAssets };
+  // Raw uploads and unreferenced processed videos in internal-assets older than 24 hours. An
+  // attested output goes through the attestation-aware `discard`, which also removes its row; a
+  // raw upload was never attested, so it is a Storage delete alone.
+  async function cleanStaleVideoUploads() {
+    const stale = await rpc('list_stale_video_uploads', {}, config.serviceKey);
+    return Promise.allSettled(stale.map(item =>
+      item.attested ? discard(item.bucket_id, item.storage_path) : discardRaw(item.bucket_id, item.storage_path),
+    ));
+  }
+  return { json, rpc, identify, authenticate, canProduce, downloadInternal, downloadToFile, uploadFile, saveSanitized, registerCopied, registerSanitizedVideo, findSanitizedVideoBySource, discard, discardRaw, discardPrepared, cleanStaleAssets, cleanStaleVideoUploads };
 }

@@ -578,6 +578,28 @@ describe('POST /designs/sanitize-video', () => {
   });
 });
 
+describe('the stale-asset sweep', () => {
+  it('also sweeps stale video uploads when the service starts', async () => {
+    const realFetch = globalThis.fetch;
+    const rpcs = [];
+    globalThis.fetch = async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (!url.startsWith('http://supabase.test')) return realFetch(input, init);
+      rpcs.push(url.slice('http://supabase.test'.length));
+      return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+    const server = createMediaServer({ supabaseUrl: 'http://supabase.test', anonKey: 'anon-key', serviceKey: 'service-key', appOrigin: 'http://localhost:3003' });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(rpcs).toContain('/rest/v1/rpc/list_stale_sanitized_assets');
+      expect(rpcs).toContain('/rest/v1/rpc/list_stale_video_uploads');
+    } finally {
+      globalThis.fetch = realFetch;
+      server.close();
+    }
+  });
+});
+
 describe('POST /designs/discard-raw', () => {
   const config = { supabaseUrl: 'http://supabase.test', anonKey: 'anon-key', serviceKey: 'service-key', appOrigin: 'http://localhost:3003' };
   const agencyUserId = md5Uuid('dawes:agency');

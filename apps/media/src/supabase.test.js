@@ -244,6 +244,27 @@ describe('video transfer statuses and the source lookup', () => {
     expect(JSON.parse(calls[0].body)).toEqual({ prefixes: [`${projectId}/raw.raw`] });
   });
 
+  it('discards an attested stale output through the full attestation-aware path, and a raw upload through a plain storage delete', async () => {
+    const calls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
+      calls.push({ url, method: init.method ?? 'GET', body: init.body });
+      if (url.endsWith('/rest/v1/rpc/list_stale_video_uploads')) {
+        return new Response(JSON.stringify([
+          { bucket_id: 'internal-assets', storage_path: `${projectId}/attested.mp4`, attested: true },
+          { bucket_id: 'internal-assets', storage_path: `${projectId}/raw.raw`, attested: false },
+        ]), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    }));
+    const backend = createBackend(config);
+    const results = await backend.cleanStaleVideoUploads();
+    expect(results.map(result => result.status)).toEqual(['fulfilled', 'fulfilled']);
+    const attestationCalls = calls.filter(call => /rpc\/(discard_sanitized_asset|finalize_asset_discard)$/.test(call.url));
+    expect(attestationCalls.map(call => JSON.parse(call.body).p_storage_path)).toEqual([`${projectId}/attested.mp4`, `${projectId}/attested.mp4`]);
+    const deletes = calls.filter(call => call.method === 'DELETE' && call.url.endsWith('/storage/v1/object/internal-assets'));
+    expect(deletes.map(call => JSON.parse(call.body).prefixes).flat().sort()).toEqual([`${projectId}/attested.mp4`, `${projectId}/raw.raw`]);
+  });
+
   it('returns null rather than throwing when the RPC response body is a bare null', async () => {
     // The generic `POST /rest/v1/rpc/` stub every other test in server.test.js's sanitize-video
     // suite already relies on responds `jsonResponse(200, null)` for RPCs that return void. This
