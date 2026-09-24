@@ -47,7 +47,11 @@ project**; a file over 25 MB, though neither source stores a byte size today, so
 knows one can trigger it). Clicking a chip opens its thumbnail row and a second click closes it;
 only one album is open at a time, and switching albums clears the selection. Clicking a thumbnail
 toggles its selection, Shift+click selects a range, and Enter on a focused thumbnail adds it at the
-center of the current view.
+center of the current view. The reason is text of its own, linked to the thumbnail with
+`aria-describedby` and shown just below the panel while the thumbnail is hovered or focused, since a
+`title` tooltip never appears on keyboard focus. While the board holds 500 items every thumbnail is
+disabled the same way, with **This Playground holds 500 items. Remove an item before adding more.**
+— the message a native drop at the cap already shows.
 
 Dragging a thumbnail (or the whole selection, when the dragged one is part of it) onto the canvas
 downloads each file with the viewer's own session — `downloadBrandAssetFile` from `brand-data.ts`,

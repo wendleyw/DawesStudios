@@ -18,9 +18,11 @@ const backend = vi.hoisted(() => ({
 vi.mock("./playground-data", () => backend);
 vi.mock("./playground-albums-panel", () => ({
   PlaygroundAlbumsPanel: (props: {
+    blockedReason?: string;
     onAdd: (files: unknown[], point: { x: number; y: number }) => void;
   }) => (
     <button
+      aria-description={props.blockedReason}
       onClick={() => props.onAdd([{ id: "album-file", title: "Album file" }], { x: 5, y: 5 })}
     >
       Trigger album add
@@ -693,5 +695,23 @@ describe("Playground albums wiring", () => {
     expect(albumBackend.copyAlbumFilesToBoard).toHaveBeenCalledTimes(2);
     // The failed attempt's row gives way to the retry instead of lingering beside it.
     await waitFor(() => expect(screen.queryByText("network error")).not.toBeInTheDocument());
+  });
+
+  it("tells the albums panel why nothing can be added once the board holds 500 items", () => {
+    remoteItems = Array.from({ length: 500 }, (_, index) => ({
+      ...savedNote,
+      id: `note-${index}`,
+    }));
+    const { rerender } = render(
+      <PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />,
+    );
+    expect(screen.getByText("Trigger album add")).toHaveAttribute(
+      "aria-description",
+      "This Playground holds 500 items. Remove an item before adding more.",
+    );
+    remoteItems = remoteItems.slice(1);
+    queryUpdatedAt += 1;
+    rerender(<PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />);
+    expect(screen.getByText("Trigger album add")).not.toHaveAttribute("aria-description");
   });
 });

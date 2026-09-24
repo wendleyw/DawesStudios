@@ -24,6 +24,7 @@ import {
   itemInput,
   mergePlaygroundDrafts,
   messageOf,
+  PLAYGROUND_FULL_MESSAGE,
   PLAYGROUND_MAX_ITEMS,
   playgroundFileAccept,
   validatePlaygroundItem,
@@ -530,6 +531,7 @@ export function PlaygroundBoard({
           clientId={clientId}
           projectId={projectId}
           canAdd={!!boardId && !closing && items.length < PLAYGROUND_MAX_ITEMS}
+          blockedReason={items.length >= PLAYGROUND_MAX_ITEMS ? PLAYGROUND_FULL_MESSAGE : undefined}
           viewCenter={viewCenter}
           onAdd={(files, point) => void copyAlbumFiles(files, point)}
           onDragStart={(files) => {

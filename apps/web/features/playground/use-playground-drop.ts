@@ -5,6 +5,7 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import {
   batchPosition,
   messageOf,
+  PLAYGROUND_FULL_MESSAGE,
   PLAYGROUND_MAX_ITEMS,
   playgroundStorageName,
   preparePlaygroundFile,
@@ -78,8 +79,7 @@ export function usePlaygroundDrop({
     const count = itemCount;
     for (const original of files) {
       try {
-        if (count + added.length >= PLAYGROUND_MAX_ITEMS)
-          throw new Error("This Playground holds 500 items. Remove an item before adding more.");
+        if (count + added.length >= PLAYGROUND_MAX_ITEMS) throw new Error(PLAYGROUND_FULL_MESSAGE);
         const file = preparePlaygroundFile(original);
         const id = crypto.randomUUID();
         const image = file.type.startsWith("image/");

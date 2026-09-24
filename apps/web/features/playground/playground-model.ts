@@ -7,6 +7,9 @@ import {
 } from "./playground-types";
 
 export const PLAYGROUND_MAX_ITEMS = 500;
+/** Why nothing more can be added once a board holds `PLAYGROUND_MAX_ITEMS` items. */
+export const PLAYGROUND_FULL_MESSAGE =
+  "This Playground holds 500 items. Remove an item before adding more.";
 
 /** The message shown for a failed save, delete or upload attempt when the error carries none. */
 export const messageOf = (error: unknown) =>

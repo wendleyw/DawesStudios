@@ -122,7 +122,7 @@ describe("PlaygroundAlbumsPanel", () => {
     );
     panel();
     fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
-    const disabled = screen.getByTitle("Stays in the project.");
+    const disabled = screen.getByRole("button", { name: "Square video" });
     expect(disabled).toHaveAttribute("aria-disabled", "true");
     expect(disabled).toHaveAttribute("draggable", "false");
   });
@@ -247,7 +247,7 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
     );
     const { onAdd, onDragStart } = panel();
     fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
-    const thumb = screen.getByTitle("Stays in the project.");
+    const thumb = screen.getByRole("button", { name: "Square video" });
     fireEvent.keyDown(thumb, { key: "Enter" });
     expect(onAdd).not.toHaveBeenCalled();
     fireEvent.dragStart(thumb, { dataTransfer: { effectAllowed: "", setData: vi.fn() } });
@@ -279,5 +279,51 @@ describe("PlaygroundAlbumsPanel role-to-channel mapping", () => {
     auth.profile = { role: "designer" };
     panel();
     expect(projectBackend.useProjectDetail).toHaveBeenCalledWith("project-1", "internal");
+  });
+});
+
+describe("PlaygroundAlbumsPanel reasons a person can read", () => {
+  it("describes a disabled thumbnail's reason to keyboard and screen-reader users, not only on hover", () => {
+    projectBackend.useProjectDetail.mockReturnValue(
+      projectDetail({
+        designs: [
+          {
+            id: "design-1",
+            versionId: "v1",
+            title: "Square video",
+            content: {},
+            assetPath: "p/design-1.mp4",
+            order: 0,
+          },
+        ],
+      }),
+    );
+    panel();
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    const thumb = screen.getByRole("button", { name: "Square video" });
+    expect(thumb).toHaveAttribute("aria-disabled", "true");
+    // A `title` tooltip never appears on keyboard focus, so the reason is rendered text that the
+    // thumbnail points at, shown on hover and focus.
+    const reason = screen.getByText("Stays in the project.");
+    expect(thumb).toHaveAttribute("aria-describedby", reason.id);
+    expect(thumb).toHaveAccessibleDescription("Stays in the project.");
+  });
+
+  it("explains why nothing can be added while the board is full, instead of ignoring the attempt", () => {
+    const { onAdd, onDragStart } = panel({
+      canAdd: false,
+      blockedReason: "This Playground holds 500 items. Remove an item before adding more.",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    const thumb = screen.getByRole("button", { name: "Square A" });
+    expect(thumb).toHaveAttribute("aria-disabled", "true");
+    expect(thumb).toHaveAttribute("draggable", "false");
+    expect(thumb).toHaveAccessibleDescription(
+      "This Playground holds 500 items. Remove an item before adding more.",
+    );
+    fireEvent.keyDown(thumb, { key: "Enter" });
+    fireEvent.dragStart(thumb, { dataTransfer: { effectAllowed: "", setData: vi.fn() } });
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(onDragStart).not.toHaveBeenCalled();
   });
 });

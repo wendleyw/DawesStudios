@@ -372,6 +372,8 @@
   border-top: 1px solid var(--border);
 }
 .playground-albums {
+  position: relative;
+  z-index: 6;
   border-bottom: 1px solid var(--border);
   padding: 8px 20px;
 }
@@ -447,6 +449,31 @@
 .playground-album-thumb.is-disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.playground-album-thumb-slot {
+  flex-shrink: 0;
+  display: flex;
+}
+/* Positioned against .playground-albums rather than the scrolling row, so the row cannot clip it:
+   it appears just below the panel while its thumbnail is hovered or focused. */
+.playground-album-thumb-reason {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 20px;
+  max-width: min(360px, calc(100% - 40px));
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--foreground);
+  color: #fff;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  box-shadow: 0 2px 10px #0002;
+  pointer-events: none;
+}
+.playground-album-thumb-slot:hover .playground-album-thumb-reason,
+.playground-album-thumb-slot:focus-within .playground-album-thumb-reason {
+  display: block;
 }
 @media (max-width: 700px) {
   .playground-header {

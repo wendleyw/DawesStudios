@@ -27,6 +27,20 @@ overlay active, on 2026-09-24.
 3. **Files the Playground cannot hold are visible but disabled.** Unit and panel tests cover SVG
    and video, and the size branch with a synthetic size.
 
+## Final review fix pass
+
+The whole-branch review found two Important issues, both fixed test-first on 2026-09-24:
+
+| Finding | Test (RED → GREEN) |
+| --- | --- |
+| A disabled thumbnail's reason lived only in `title`, which keyboard and screen-reader users never get | `describes a disabled thumbnail's reason to keyboard and screen-reader users, not only on hover` |
+| At the 500-item cap, dragging or pressing Enter on a thumbnail silently did nothing | `explains why nothing can be added while the board is full, instead of ignoring the attempt`; `tells the albums panel why nothing can be added once the board holds 500 items` |
+
+After the pass: `npm run check` 754 tests / 61 files, and `playground.spec.ts` 11 passed. A focused
+SVG thumbnail in the SABRE **Unfiled** album showed **Stays in the project.** below the panel at
+1600 × 1000 and 390 × 844, hidden again on blur (captures in the ignored
+`outputs/playground-albums-fix/`).
+
 ## Decisions that differ from the plan
 
 - **Try again replaces the failed row.** The plan retried under a new id and left the old error

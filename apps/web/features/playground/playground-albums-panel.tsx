@@ -1,7 +1,14 @@
 "use client";
 
 import { FileText, ImageIcon } from "lucide-react";
-import { Fragment, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  Fragment,
+  useId,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
   useBrandAssetFolders,
@@ -28,6 +35,9 @@ export type PlaygroundAlbumsPanelProps = {
   /** False while the board has no id yet, is closing, or is already at its 500-item cap — mirrors
    * the same gate the header's Add note/Add files buttons already use. */
   canAdd: boolean;
+  /** Why nothing can be added right now, shown on every thumbnail while `canAdd` is false (the
+   * 500-item cap); absent for a passing state such as loading or closing. */
+  blockedReason?: string;
   viewCenter: () => { x: number; y: number };
   onAdd: (files: AlbumFile[], point: { x: number; y: number }) => void;
   onDragStart: (files: AlbumFile[]) => void;
@@ -38,6 +48,7 @@ export function PlaygroundAlbumsPanel({
   clientId,
   projectId,
   canAdd,
+  blockedReason,
   viewCenter,
   onAdd,
   onDragStart,
@@ -130,6 +141,7 @@ export function PlaygroundAlbumsPanel({
             <AlbumThumbnail
               key={file.id}
               file={file}
+              blockedReason={canAdd ? undefined : blockedReason}
               selected={selectedIds.includes(file.id)}
               onClick={(event) => toggleSelect(file, index, event.shiftKey)}
               onKeyDown={(event) => {
@@ -150,6 +162,7 @@ export function PlaygroundAlbumsPanel({
 
 function AlbumThumbnail({
   file,
+  blockedReason,
   selected,
   onClick,
   onKeyDown,
@@ -157,6 +170,7 @@ function AlbumThumbnail({
   onDragEnd,
 }: {
   file: AlbumFile;
+  blockedReason?: string;
   selected: boolean;
   onClick: (event: MouseEvent) => void;
   onKeyDown: (event: KeyboardEvent) => void;
@@ -179,32 +193,44 @@ function AlbumThumbnail({
     previewable && file.source.kind === "design",
   );
   const url = file.source.kind === "brand" ? brandPreview.data : designPreview.data;
+  const reason = file.disabledReason ?? blockedReason;
+  const reasonId = useId();
   return (
-    <button
-      type="button"
-      className={`playground-album-thumb${selected ? " is-selected" : ""}${file.disabledReason ? " is-disabled" : ""}`}
-      aria-disabled={!!file.disabledReason}
-      aria-pressed={selected}
-      title={file.disabledReason ?? file.title}
-      draggable={!file.disabledReason}
-      onClick={(event) => {
-        if (file.disabledReason) return;
-        onClick(event);
-      }}
-      onKeyDown={onKeyDown}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-    >
-      {previewable && url ? (
-        // Short-lived signed private URLs are intentional; they must not enter an image proxy.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" draggable={false} />
-      ) : previewable ? (
-        <ImageIcon size={24} aria-hidden />
-      ) : (
-        <FileText size={24} aria-hidden />
+    <span className="playground-album-thumb-slot">
+      <button
+        type="button"
+        className={`playground-album-thumb${selected ? " is-selected" : ""}${reason ? " is-disabled" : ""}`}
+        aria-disabled={!!reason}
+        aria-pressed={selected}
+        aria-describedby={reason ? reasonId : undefined}
+        title={reason ? undefined : file.title}
+        draggable={!reason}
+        onClick={(event) => {
+          if (reason) return;
+          onClick(event);
+        }}
+        onKeyDown={onKeyDown}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        {previewable && url ? (
+          // Short-lived signed private URLs are intentional; they must not enter an image proxy.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" draggable={false} />
+        ) : previewable ? (
+          <ImageIcon size={24} aria-hidden />
+        ) : (
+          <FileText size={24} aria-hidden />
+        )}
+        <span>{file.title}</span>
+      </button>
+      {/* A `title` tooltip never shows on keyboard focus, so the reason is text of its own, shown
+          beside the thumbnail on hover and focus. */}
+      {reason && (
+        <span className="playground-album-thumb-reason" id={reasonId} role="tooltip">
+          {reason}
+        </span>
       )}
-      <span>{file.title}</span>
-    </button>
+    </span>
   );
 }
