@@ -4,8 +4,18 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
-import { discardUnreferencedArtwork, uploadDesignAsset } from "./artwork-files";
-import { discardPreparedAssets, preparePublicationAssets } from "./media-client";
+import {
+  classifyUploadError,
+  discardRawUpload,
+  discardUnreferencedArtwork,
+  UploadCancelledError,
+  uploadDesignAsset,
+} from "./artwork-files";
+import {
+  discardPreparedAssets,
+  preparePublicationAssets,
+  sanitizeVideoAsset,
+} from "./media-client";
 import {
   addDesign,
   createDesignVersion,
@@ -62,34 +72,28 @@ export function ProjectActionDialog({
   const [closeError, setCloseError] = useState("");
   const [returningFromPlayground, setReturningFromPlayground] = useState(false);
   const playgroundTrigger = useRef<HTMLButtonElement>(null);
-  // `null` means no upload is in flight (or none was ever started for this attempt); once an
-  // upload begins it's set to 0 and tracks `uploadDesignAsset`'s `onProgress` fraction up to 1.
-  // A video's own resumable transfer can run for many minutes, so this is what turns "Saving…"
+  // `null` means no video transfer or processing is running; once one begins it is set to 0 and
+  // tracks `uploadDesignAsset`'s `onProgress` fraction up to 1, where processing takes over. A
+  // video's own resumable transfer can run for many minutes, so this is what turns "Saving…"
   // into an honest, moving number instead of a hang.
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  async function close() {
-    // `mutation.isPending` covers the whole upload, not just the initial request: `mutationFn`
-    // does not resolve until `uploadDesignAsset` does, so this guard — and the disabled Cancel
-    // button and disabled Modal close control below — already refuse to close the dialog while a
-    // video is mid-transfer. `uploadResumable` (in `artwork-files.ts`) does not currently expose
-    // the `tus.Upload` handle needed to abort a transfer server-side, so "closing" today could
-    // only ever hide the request, not stop it, while still leaving the raw object it's writing to
-    // `internal-assets` behind. Real cancellation (threading an abort handle out through
-    // `uploadDesignAsset` and a new branch here) is a deliberate follow-up, not something ruled
-    // out — until it lands, blocking the close keeps the visible state honest about what's
-    // actually still happening.
-    if (mutation.isPending || closing) return;
-    setClosing(true);
-    setCloseError("");
-    try {
-      if (stagedArtwork) await discardUnreferencedArtwork(database, stagedArtwork);
-      setUploadProgress(null);
-      onClose();
-    } catch {
-      setCloseError("The unfinished upload could not be removed. Please try closing again.");
-    } finally {
-      setClosing(false);
-    }
+  // Distinguishes "Continuing from N%" from "Sending N%"; set only by `onResuming`, which fires
+  // when the transfer resumes an earlier attempt at the same file.
+  const [continuing, setContinuing] = useState(false);
+  // The running attempt's abort handle, and the raw file its transfer produced. `storedVideo`
+  // outlives a transient processing failure, so "Try processing again" can reprocess the stored
+  // raw file without sending it again.
+  const controllerRef = useRef<AbortController | null>(null);
+  const rawPathRef = useRef<string | null>(null);
+  const [storedVideo, setStoredVideo] = useState<{
+    projectId: string;
+    rawPath: string;
+    mimeType: string;
+  } | null>(null);
+  function forgetVideo() {
+    rawPathRef.current = null;
+    setStoredVideo(null);
+    setContinuing(false);
   }
   // A video upload can run for many minutes, unattended, with nothing on screen to catch outside
   // this tab. Mirrors the `beforeunload` guard in `features/brand/draft-editor.tsx`: it can only
@@ -126,10 +130,41 @@ export function ProjectActionDialog({
           // reading as a stall for an operation that is in fact completing normally. Progress is
           // only meaningful, and only shown, for the video path.
           const isVideo = file.type.startsWith("video/");
-          if (isVideo) setUploadProgress(0);
-          path = await uploadDesignAsset(database, mediaUrl, projectId, file, {
-            onProgress: isVideo ? setUploadProgress : undefined,
-          });
+          // "Try processing again": the last attempt's transfer finished but its processing
+          // failed transiently even after the automatic retry, so the stored raw file is
+          // reprocessed without sending it again. Any other failure (invalid content, an expired
+          // or cancelled upload, a failed transfer) starts a full attempt, which resumes the
+          // transfer where it can.
+          const retry =
+            isVideo &&
+            storedVideo &&
+            mutation.error &&
+            classifyUploadError(mutation.error) === "transient"
+              ? storedVideo
+              : null;
+          if (!retry) forgetVideo();
+          const controller = new AbortController();
+          controllerRef.current = controller;
+          if (isVideo) setUploadProgress(retry ? 1 : 0);
+          path = retry
+            ? (await sanitizeVideoAsset(database, mediaUrl, retry, controller.signal)).path
+            : await uploadDesignAsset(database, mediaUrl, projectId, file, {
+                onProgress: isVideo ? setUploadProgress : undefined,
+                onResuming: isVideo ? () => setContinuing(true) : undefined,
+                onRawPath: isVideo
+                  ? (rawPath) => {
+                      rawPathRef.current = rawPath;
+                      setStoredVideo({ projectId, rawPath, mimeType: file.type });
+                    }
+                  : undefined,
+                signal: controller.signal,
+              });
+          // A cancel that lands just after processing answered must still leave no design behind.
+          if (controller.signal.aborted) throw new UploadCancelledError();
+          // The file is stored; only the design itself is saved from here, which Cancel does not
+          // interrupt, the same as every other action.
+          forgetVideo();
+          setUploadProgress(null);
         }
         if (path) setStagedArtwork(path);
         const designContent = {
@@ -208,7 +243,44 @@ export function ProjectActionDialog({
       await invalidate();
       onClose();
     },
+    // Nothing is transferring or processing any more, so the progress line and the unload
+    // warning go away; a retained raw file stays in `storedVideo` for "Try processing again".
+    onError: () => setUploadProgress(null),
   });
+
+  // A video transfer or its processing is running: the one pending state Cancel can stop.
+  const uploading = mutation.isPending && uploadProgress !== null;
+
+  /** Stops the running video upload and returns the dialog to choosing a file. */
+  function cancelUpload() {
+    controllerRef.current?.abort();
+    const rawPath = rawPathRef.current;
+    forgetVideo();
+    // A failed discard leaves the raw file to the media service's 24-hour sweep.
+    if (rawPath) void discardRawUpload(database, mediaUrl, { projectId, rawPath }).catch(() => {});
+  }
+
+  async function close() {
+    // Saving a design, a version, a publication or a review cannot be stopped midway, so closing
+    // waits for it; only a video upload can be abandoned, and closing then stops it first.
+    if (closing || (mutation.isPending && !uploading)) return;
+    controllerRef.current?.abort();
+    const rawPath = rawPathRef.current;
+    setClosing(true);
+    setCloseError("");
+    try {
+      if (rawPath)
+        await discardRawUpload(database, mediaUrl, { projectId, rawPath }).catch(() => {});
+      if (stagedArtwork) await discardUnreferencedArtwork(database, stagedArtwork);
+      forgetVideo();
+      setUploadProgress(null);
+      onClose();
+    } catch {
+      setCloseError("The unfinished upload could not be removed. Please try closing again.");
+    } finally {
+      setClosing(false);
+    }
+  }
 
   const current = action?.kind === "edit-design" ? action.design : null;
   const content =
@@ -226,6 +298,12 @@ export function ProjectActionDialog({
   // never be true for an image upload. Once the mutation settles — success or failure —
   // `mutation.isPending` goes false and this reverts on its own; nothing here needs its own reset.
   const sanitizing = mutation.isPending && uploadProgress === 1;
+  const uploadErrorKind =
+    mutation.error && (action?.kind === "design" || action?.kind === "edit-design")
+      ? classifyUploadError(mutation.error)
+      : null;
+  // Only a video whose transfer finished can be reprocessed without sending it again.
+  const canRetryProcessing = uploadErrorKind === "transient" && storedVideo !== null;
 
   return (
     <>
@@ -234,7 +312,7 @@ export function ProjectActionDialog({
         initialFocusRef={returningFromPlayground ? playgroundTrigger : undefined}
         onClose={() => void close()}
         title={action ? titles[action.kind] : "Project action"}
-        closeDisabled={mutation.isPending || closing}
+        closeDisabled={closing || (mutation.isPending && !uploading)}
       >
         {action && (
           <form
@@ -290,6 +368,10 @@ export function ProjectActionDialog({
                     type="file"
                     disabled={!!stagedArtwork || mutation.isPending}
                     accept={designUploadMimes.join(",")}
+                    onChange={() => {
+                      forgetVideo();
+                      if (mutation.error) mutation.reset();
+                    }}
                   />
                   <small>
                     {uploadTypesLabel(designUploadMimes)}. Images up to{" "}
@@ -309,7 +391,9 @@ export function ProjectActionDialog({
                       <progress value={uploadProgress} max={1} aria-label="Upload progress" />
                     )}
                     <span>
-                      {sanitizing ? "Processing…" : `${Math.round(uploadProgress * 100)}%`}
+                      {sanitizing
+                        ? "Processing…"
+                        : `${continuing ? "Continuing from" : "Sending"} ${Math.round(uploadProgress * 100)}%`}
                     </span>
                   </p>
                 )}
@@ -396,15 +480,24 @@ export function ProjectActionDialog({
                 </label>
               </>
             )}
-            {(mutation.error || closeError) && (
-              <FormError>{closeError || mutation.error?.message}</FormError>
+            {uploadErrorKind === "cancelled" && !closeError && (
+              <p className="upload-progress" aria-live="polite">
+                <span>Upload cancelled.</span>
+              </p>
             )}
+            {uploadErrorKind === "expired" && !closeError && (
+              <FormError>The upload expired; choose the file again.</FormError>
+            )}
+            {((mutation.error &&
+              uploadErrorKind !== "cancelled" &&
+              uploadErrorKind !== "expired") ||
+              closeError) && <FormError>{closeError || mutation.error?.message}</FormError>}
             <div className="form-actions">
               <button
                 className="button"
                 type="button"
-                onClick={() => void close()}
-                disabled={mutation.isPending || closing}
+                onClick={() => (uploading ? cancelUpload() : void close())}
+                disabled={closing || (mutation.isPending && !uploading)}
               >
                 Cancel
               </button>
@@ -413,16 +506,18 @@ export function ProjectActionDialog({
                   ? sanitizing
                     ? "Processing…"
                     : uploadProgress !== null
-                      ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+                      ? `${continuing ? "Continuing from" : "Sending"} ${Math.round(uploadProgress * 100)}%`
                       : "Saving…"
-                  : {
-                      version: "Create version",
-                      design: "Add design",
-                      "edit-design": "Save working design",
-                      publish: "Share version",
-                      submit: "Send to studio",
-                      review: "Send review",
-                    }[action.kind]}
+                  : canRetryProcessing
+                    ? "Try processing again"
+                    : {
+                        version: "Create version",
+                        design: "Add design",
+                        "edit-design": "Save working design",
+                        publish: "Share version",
+                        submit: "Send to studio",
+                        review: "Send review",
+                      }[action.kind]}
               </button>
             </div>
           </form>
