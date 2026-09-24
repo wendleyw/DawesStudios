@@ -142,27 +142,48 @@
 .is-reviewing .project-workspace-content {
   padding-top: calc(var(--project-chrome-height) + 12px);
 }
-.deliverable-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px;
+/*
+ * The deliverable frame sits behind its version lines (see `buildCanvas`): a title bar with the name
+ * centred, then one border around every version. Its height is FRAME_BAR_H in canvas-layout.ts.
+ * xyflow makes a non-selectable, non-draggable node transparent to the pointer, so the frame never
+ * blocks panning; the lines drawn on top keep their own controls.
+ */
+.deliverable-frame {
+  height: 100%;
+  /* The frame's fill is close to the canvas, so its edge carries the grouping. */
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
 }
-/* The canvas sizes this header with DELIVERABLE_HEAD_H, so its name keeps to one line. */
-.deliverable-header h2 {
+.deliverable-frame-bar {
+  display: flex;
+  min-width: 0;
+  height: 48px;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface);
+}
+.deliverable-frame-bar h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   font-size: 16px;
   line-height: 20px;
   letter-spacing: -0.3px;
-  margin: 7px 0 5px;
-  overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.deliverable-header p {
+.deliverable-frame-bar p {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 17px;
-  color: var(--muted);
-  margin: 0;
+  white-space: nowrap;
 }
 /* One version reads as a single line: the label column on the left, the designs beside it. */
 .version-card {

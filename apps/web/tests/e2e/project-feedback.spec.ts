@@ -277,7 +277,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           page.locator(".project-chrome").evaluate((element) => {
             const controls = Array.from(element.querySelectorAll("button, a, select"));
             const chrome = element.getBoundingClientRect();
-            const first = document.querySelector(".deliverable-header")!.getBoundingClientRect();
+            const first = document.querySelector(".deliverable-frame-bar")!.getBoundingClientRect();
             const card = element.querySelector(".project-header")!.getBoundingClientRect();
             const title = element.querySelector("h1")!.getBoundingClientRect();
             const metadata = element

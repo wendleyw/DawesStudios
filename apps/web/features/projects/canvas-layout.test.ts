@@ -4,14 +4,13 @@ import {
   ARTWORK_MIN_H,
   CAPTION_H,
   CARD_BORDER,
-  DELIVERABLE_HEAD_H,
-  DELIVERABLE_HEAD_W,
   EMPTY_H,
   EMPTY_SLOTS,
   FEEDBACK_LINK_H,
   FIT_PAD,
   FOOTER_H,
-  HEAD_GAP,
+  FRAME_BAR_H,
+  FRAME_PAD,
   HEADER_H,
   LABEL_W,
   MAX_ROW_DESIGNS,
@@ -26,7 +25,7 @@ import {
   buildCanvas,
   canvasBounds,
   canvasFit,
-  deliverableHeadWidth,
+  frameWidth,
   designsWidth,
   hiddenDesigns,
   sectionWidth,
@@ -52,11 +51,27 @@ function section(
 function overlaps(a: CanvasFrame, b: CanvasFrame) {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
+function contains(outer: CanvasFrame, inner: CanvasFrame) {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.width <= outer.x + outer.width &&
+    inner.y + inner.height <= outer.y + outer.height
+  );
+}
+/**
+ * Pairs that collide. A deliverable frame is meant to hold its own lines, so a line inside its own
+ * frame is not a collision; a line outside it, or crossing another section, is.
+ */
 function overlapping(frames: CanvasFrame[]) {
   const pairs: string[] = [];
   for (let i = 0; i < frames.length; i += 1)
-    for (let j = i + 1; j < frames.length; j += 1)
-      if (overlaps(frames[i], frames[j])) pairs.push(`${frames[i].id} / ${frames[j].id}`);
+    for (let j = i + 1; j < frames.length; j += 1) {
+      const [a, b] = [frames[i], frames[j]];
+      const own =
+        a.kind === "deliverable" && b.kind !== "deliverable" && a.deliverableId === b.deliverableId;
+      if (own ? !contains(a, b) : overlaps(a, b)) pairs.push(`${a.id} / ${b.id}`);
+    }
   return pairs;
 }
 
@@ -180,10 +195,11 @@ describe("section width", () => {
     expect(sectionWidth([])).toBe(versionCardWidth(0));
   });
 
-  it("caps the deliverable header so its control stays beside the name", () => {
-    expect(deliverableHeadWidth([version("v1", 5)])).toBe(DELIVERABLE_HEAD_W);
-    expect(deliverableHeadWidth([version("v1", 1)])).toBe(versionCardWidth(1));
-    expect(DELIVERABLE_HEAD_W).toBe(versionCardWidth(EMPTY_SLOTS));
+  it("frames the widest line with the inset on both sides", () => {
+    expect(frameWidth([version("v1", 5), version("v2", 1)])).toBe(
+      versionCardWidth(5) + FRAME_PAD * 2,
+    );
+    expect(frameWidth([])).toBe(versionCardWidth(EMPTY_SLOTS) + FRAME_PAD * 2);
   });
 });
 
@@ -222,24 +238,34 @@ describe("canvas", () => {
     expect(filled.width).toBe(versionCardWidth(3));
   });
 
-  it("stacks the versions of a deliverable under its header, in order, on one left edge", () => {
+  it("stacks the versions of a deliverable inside its frame, in order, on one left edge", () => {
     const frames = buildCanvas([
       section("square", [version("v1", 3), version("v2", 1), version("v3", 0)]),
     ]);
     expect(frames.map((frame) => frame.id)).toEqual(["deliverable-square", "v1", "v2", "v3"]);
-    const [head, v1, v2, v3] = frames;
-    expect(head.y).toBe(0);
-    expect(head.height).toBe(DELIVERABLE_HEAD_H);
-    expect(v1.y).toBe(DELIVERABLE_HEAD_H + HEAD_GAP);
+    const [frame, v1, v2, v3] = frames;
+    expect(frame).toMatchObject({ x: 0, y: 0 });
+    expect(v1.y).toBe(FRAME_BAR_H + FRAME_PAD);
     expect(v2.y).toBe(v1.y + v1.height + VERSION_GAP);
     expect(v3.y).toBe(v2.y + v2.height + VERSION_GAP);
-    // The label column of every line starts on the same edge, header included.
-    expect(frames.every((frame) => frame.x === 0)).toBe(true);
+    // The frame closes FRAME_PAD below its last line.
+    expect(frame.height).toBe(v3.y + v3.height + FRAME_PAD);
+    // The label column of every line starts on the same edge, inside the frame.
+    expect([v1, v2, v3].every((line) => line.x === FRAME_PAD)).toBe(true);
   });
 
-  it("gives each line its own width and the header the capped one", () => {
+  it("keeps the add-version row inside the same frame", () => {
+    const [frame, v1, add] = buildCanvas([
+      { ...section("square", [version("v1", 2)]), canAddVersion: true },
+    ]);
+    expect(add.y).toBe(v1.y + v1.height + VERSION_GAP);
+    expect(frame.height).toBe(add.y + add.height + FRAME_PAD);
+    expect(contains(frame, add)).toBe(true);
+  });
+
+  it("gives each line its own width and the frame the widest plus its inset", () => {
     const frames = buildCanvas([section("square", [version("v1", 4), version("v2", 1)])]);
-    expect(frames[0].width).toBe(DELIVERABLE_HEAD_W);
+    expect(frames[0].width).toBe(versionCardWidth(4) + FRAME_PAD * 2);
     expect(frames[1].width).toBe(versionCardWidth(4));
     expect(frames[2].width).toBe(versionCardWidth(1));
   });
@@ -251,19 +277,21 @@ describe("canvas", () => {
     ]);
     const [head, v1, v2, reelHead, v3] = frames;
     expect(head.y).toBe(0);
-    expect(reelHead.y).toBe(v2.y + v2.height + SECTION_GAP);
-    expect(v3.y).toBe(reelHead.y + DELIVERABLE_HEAD_H + HEAD_GAP);
+    expect(reelHead.y).toBe(head.y + head.height + SECTION_GAP);
+    expect(head.height).toBe(v2.y + v2.height + FRAME_PAD);
+    expect(v3.y).toBe(reelHead.y + FRAME_BAR_H + FRAME_PAD);
     expect(v1.y).toBeLessThan(v2.y);
   });
 
-  it("does not open a version gap under a deliverable that has no version yet", () => {
+  it("shrinks a deliverable with nothing inside to its title bar", () => {
     const frames = buildCanvas([section("empty", []), section("square", [version("v1", 1)])]);
     expect(frames.map((frame) => frame.id)).toEqual([
       "deliverable-empty",
       "deliverable-square",
       "v1",
     ]);
-    expect(frames[1].y).toBe(DELIVERABLE_HEAD_H + SECTION_GAP);
+    expect(frames[0].height).toBe(FRAME_BAR_H);
+    expect(frames[1].y).toBe(FRAME_BAR_H + SECTION_GAP);
   });
 
   it("never lets two frames overlap, whatever the sections hold", () => {
@@ -324,9 +352,10 @@ describe("opening view", () => {
 
   it("measures the box the frames occupy", () => {
     const bounds = canvasBounds(frames);
-    expect(bounds.width).toBe(versionCardWidth(2));
+    expect(bounds.width).toBe(versionCardWidth(2) + FRAME_PAD * 2);
+    // The last section's frame closes FRAME_PAD below its last line.
     const last = frames.at(-1) as CanvasFrame;
-    expect(bounds.height).toBe(last.y + last.height);
+    expect(bounds.height).toBe(last.y + last.height + FRAME_PAD);
     expect(canvasBounds([])).toEqual({ width: 0, height: 0 });
   });
 

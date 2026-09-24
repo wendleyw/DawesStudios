@@ -166,15 +166,20 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
     </article>
   );
 });
-function DeliverableHeader({ data }: NodeProps<DeliverableNode>) {
+/**
+ * The deliverable's frame: a title bar with the name centred and its format beside it, and one
+ * border that the version lines and the add-version row sit inside (see `buildCanvas`).
+ */
+function DeliverableFrame({ data }: NodeProps<DeliverableNode>) {
   return (
-    <header className="deliverable-header">
-      <div>
-        <span className="eyebrow">{data.format}</span>
-        <h2>{data.name}</h2>
-        <p>{data.dimensions}</p>
-      </div>
-    </header>
+    <section className="deliverable-frame" aria-label={data.name}>
+      <header className="deliverable-frame-bar">
+        <h2 title={data.name}>{data.name}</h2>
+        <p>
+          {data.format} · {data.dimensions}
+        </p>
+      </header>
+    </section>
   );
 }
 function AddVersionCard({ data }: NodeProps<AddVersionNode>) {
@@ -193,6 +198,6 @@ function AddVersionCard({ data }: NodeProps<AddVersionNode>) {
 }
 export const nodeTypes = {
   version: VersionCard,
-  deliverable: DeliverableHeader,
+  deliverable: DeliverableFrame,
   addVersion: AddVersionCard,
 };

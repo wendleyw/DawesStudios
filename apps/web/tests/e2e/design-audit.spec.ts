@@ -242,7 +242,9 @@ test("two versions with long notes remain separated on the project canvas", asyn
         .poll(
           async () =>
             page.locator(".project-canvas").evaluate((canvas) => {
-              const header = canvas.querySelector(".deliverable-header")?.getBoundingClientRect();
+              const header = canvas
+                .querySelector(".deliverable-frame-bar")
+                ?.getBoundingClientRect();
               const first = Array.from(canvas.querySelectorAll(".version-card"))
                 .map((element) => element.getBoundingClientRect())
                 .sort((a, b) => a.top - b.top)[0];

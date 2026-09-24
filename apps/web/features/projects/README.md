@@ -79,6 +79,10 @@ and a signed URL expires on its own schedule.
 
 `canvas-layout.ts` computes the canvas geometry from the deliverables and their version counts, so
 the canvas lands in its final shape on first paint instead of being measured after render.
+Each deliverable is one frame: a white title bar with the deliverable's name centred and its format
+beside it, then every version line and the Add version row inside a single border, like the board's
+campaign frames. The frame node is emitted first so the lines draw on top of it, and it is neither
+selectable nor draggable, so dragging across it still pans the canvas.
 Deliverable, version and creation nodes pass those dimensions as xyflow `width`/`height` as well as CSS.
 This keeps controlled nodes visible when a dialog or query update recreates them without a new
 DOM resize; relying on a discarded measurement can otherwise hide the completed upload's canvas.

@@ -48,16 +48,15 @@ export const MORE_W = 112;
 export const EMPTY_H = 144;
 /** The invitation spans two tile slots, so an empty line still reads as a place designs go. */
 export const EMPTY_SLOTS = 2;
-/** The deliverable header node: its eyebrow, a single-line name, and the format line. */
-export const DELIVERABLE_HEAD_H = 64;
 /**
- * The deliverable header is a label for the lines beneath it, not a band across them, so it stops at
- * the label column plus two tile slots. Version creation has a separate row below the section.
+ * Each deliverable is one frame: a title bar across its top, then every version line and the
+ * add-version row inside a single border. It mirrors the board's campaign frames, so a section reads
+ * as one object rather than a label floating above loose cards.
  */
-export const DELIVERABLE_HEAD_W =
-  CARD_BORDER + LABEL_W + ROW_PAD * 2 + EMPTY_SLOTS * TILE_W + TILE_GAP;
-/** Space under the deliverable header before its first version. */
-export const HEAD_GAP = 16;
+/** The frame's title bar, holding the deliverable's name centred with its format beside it. */
+export const FRAME_BAR_H = 48;
+/** Inset between the frame's border and the version lines inside it, on the sides and below. */
+export const FRAME_PAD = 16;
 /** Space between two versions of the same deliverable, tight enough to read as one list. */
 export const VERSION_GAP = 12;
 /** The full-width creation row below a deliverable's existing versions. */
@@ -141,10 +140,7 @@ export function versionCardHeight(version: CanvasLayoutVersion, artwork: number)
   return CARD_BORDER + Math.max(versionLabelHeight(), designs);
 }
 
-/**
- * A section is as wide as its widest version line, which is what the canvas has to fit and what the
- * deliverable header measures itself against.
- */
+/** A section's content is as wide as its widest version line; its frame adds `FRAME_PAD` a side. */
 export function sectionWidth(versions: CanvasLayoutVersion[]): number {
   if (!versions.length) return versionCardWidth(0);
   return versions.reduce(
@@ -154,9 +150,9 @@ export function sectionWidth(versions: CanvasLayoutVersion[]): number {
   );
 }
 
-/** The header never outgrows its cap, and shrinks with a section narrower than that cap. */
-export function deliverableHeadWidth(versions: CanvasLayoutVersion[]): number {
-  return Math.min(sectionWidth(versions), DELIVERABLE_HEAD_W);
+/** The frame around a section: its widest line plus the inset on both sides. */
+export function frameWidth(versions: CanvasLayoutVersion[]): number {
+  return sectionWidth(versions) + FRAME_PAD * 2;
 }
 
 type CanvasLayoutDeliverable = {
@@ -176,6 +172,10 @@ export type CanvasFrame = {
   id: string;
   kind: "deliverable" | "version" | "addVersion";
   deliverableId: string;
+  /**
+   * `deliverable` is the section's frame, drawn first so every version line and the add-version row
+   * sit on top of it, inside its border.
+   */
   /** Set on version frames only. */
   versionId?: string;
   x: number;
@@ -191,9 +191,10 @@ export type CanvasFrame = {
 };
 
 /**
- * Lays the sections out top to bottom, each one stacking its versions under its header. Every frame
- * starts at x 0, so the label columns line up down the whole canvas and no two frames can overlap.
- * Returns plain frames so the geometry can be unit tested without rendering xyflow.
+ * Lays the sections out top to bottom. Each section opens with its frame, and its version lines and
+ * add-version row stack inside it at `FRAME_PAD`, so the label columns still form one straight rail
+ * down the canvas and no two frames can overlap. Returns plain frames so the geometry can be unit
+ * tested without rendering xyflow.
  */
 export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
   const frames: CanvasFrame[] = [];
@@ -201,22 +202,25 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
   for (const section of sections) {
     if (frames.length) y += SECTION_GAP;
     const artwork = artworkHeight(section.deliverable.width, section.deliverable.height);
-    frames.push({
+    const frame: CanvasFrame = {
       id: `deliverable-${section.deliverable.id}`,
       kind: "deliverable",
       deliverableId: section.deliverable.id,
       x: 0,
       y,
-      width: deliverableHeadWidth(section.versions),
-      height: DELIVERABLE_HEAD_H,
+      width: frameWidth(section.versions),
+      height: FRAME_BAR_H,
       artworkHeight: artwork,
       visible: 0,
       hidden: 0,
-    });
-    y += DELIVERABLE_HEAD_H;
-    // A deliverable with no version yet ends at its header, so the next section does not inherit the
-    // gap that would have opened above a first version.
-    if (section.versions.length) y += HEAD_GAP;
+    };
+    frames.push(frame);
+    const top = y;
+    y += FRAME_BAR_H;
+    // A deliverable with nothing inside yet is just its title bar, so the next section does not
+    // inherit an empty inset.
+    const hasContent = section.versions.length > 0 || !!section.canAddVersion;
+    if (hasContent) y += FRAME_PAD;
     for (const [index, version] of section.versions.entries()) {
       const height = versionCardHeight(version, artwork);
       frames.push({
@@ -224,7 +228,7 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
         kind: "version",
         deliverableId: section.deliverable.id,
         versionId: version.id,
-        x: 0,
+        x: FRAME_PAD,
         y,
         width: versionCardWidth(version.designCount, version.canAddDesign),
         height,
@@ -236,12 +240,12 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
       if (index < section.versions.length - 1) y += VERSION_GAP;
     }
     if (section.canAddVersion) {
-      y += section.versions.length ? VERSION_GAP : HEAD_GAP;
+      if (section.versions.length) y += VERSION_GAP;
       frames.push({
         id: `add-version-${section.deliverable.id}`,
         kind: "addVersion",
         deliverableId: section.deliverable.id,
-        x: 0,
+        x: FRAME_PAD,
         y,
         width: sectionWidth(section.versions),
         height: ADD_VERSION_H,
@@ -251,6 +255,8 @@ export function buildCanvas(sections: CanvasLayoutSection[]): CanvasFrame[] {
       });
       y += ADD_VERSION_H;
     }
+    if (hasContent) y += FRAME_PAD;
+    frame.height = y - top;
   }
   return frames;
 }

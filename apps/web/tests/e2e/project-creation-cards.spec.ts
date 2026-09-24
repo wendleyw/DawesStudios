@@ -38,7 +38,7 @@ test("creation cards sit beside designs and below versions, and shared actions k
       name: "New version for Campaign square",
       exact: true,
     });
-    await expect(studio.locator(".deliverable-header button")).toHaveCount(0);
+    await expect(studio.locator(".deliverable-frame-bar button")).toHaveCount(0);
     await addVersion.click();
     await studio.getByLabel("Version note", { exact: true }).fill("First working version.");
     await studio.getByRole("button", { name: "Create version", exact: true }).click();
