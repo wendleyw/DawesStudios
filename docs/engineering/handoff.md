@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 10:45 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
+Updated: 2026-09-24 11:30 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
 overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -18,21 +18,23 @@ history only when a task needs earlier evidence.
 
 ## Done today
 
-`ab0cd20e` (10:45): the user found the client sections hard to read over the canvas line grid.
-Briefings, Reviews, Files, Brand Hub and Credits (with briefing detail/editor and brand drafts)
-now sit on the plain `--background` page surface; the grid stays on the four xyflow canvases.
-`client-pages-layout.spec.ts` asserts it and failed on the old grid first.
+`ab0cd20e`, one commit per approved request: client sections on the plain page background, the
+grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed as duplicates of the
+board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
+Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
+with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`). Sonnet
+workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
+here, so general-purpose workers followed `implementer.md`.
 
-Overnight, `a375ed7c` finished the video upload lifecycle, bulk image drop, Playground albums and
-Competitor ads widget plans: see the [history](history/handoff-2026-09-24.md). Earlier
-`dawesstudios-29` work is in the [older history](history/handoff-through-2026-09-23.md).
+Overnight work (`a375ed7c`) and the complete system test are in the
+[history](history/handoff-2026-09-24.md); earlier work in the [older history](history/handoff-through-2026-09-23.md).
 
 ## In progress
 
-- Nothing. The user's **complete system test** is done: 159 surfaces toured for three roles at two
-  widths with none flagged, eleven findings fixed, the whole browser suite green apart from the five
-  overlay-count scenarios. Record: [verification](../verification/system-test-2026-09-24.md). Every
-  decision taken overnight on the user's behalf: [decision log](decisions-2026-09-24.md).
+- **Feedback panel redesign** (asked 11:05, after the four above): a taller feedback column,
+  no General feedback tab, Show resolved beside the title, the pin label beside the author. The
+  General tab also holds the client's Review version button, the version note and version-wide
+  comments, so its removal needs the user's decision on where they go before implementation.
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
@@ -48,9 +50,9 @@ Competitor ads widget plans: see the [history](history/handoff-2026-09-24.md). E
 
 ## Environment (observed 2026-09-24)
 
-- Next.js dev server on `http://localhost:3003`, restarted at 04:25 after clearing
-  `apps/web/.next/dev/cache`: Turbopack's disk cache had stopped picking up CSS changes (a restart
-  alone did not help). It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a
+- Next.js dev server on `http://localhost:3003`, restarted again at 11:12 after clearing
+  `apps/web/.next/dev/cache`: Turbopack's disk cache stopped picking up `globals.css` edits twice
+  today (a `touch` fixed the first, not the second). It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a
   competing server; if edits stop showing, clear that cache and restart it on the same port.
 - Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609240001`);
   trusted media on 55430. Do not reset or re-provision. The compose `media` container was rebuilt
@@ -61,8 +63,9 @@ Competitor ads widget plans: see the [history](history/handoff-2026-09-24.md). E
 
 ## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`, unless noted)
 
-- `ab0cd20e` at 10:45, after the background change: `npm run check` 863 tests / 75 files; the
-  `client-pages-layout` browser spec 3 of 3 (both roles, every tested width, axe clean).
+- `ab0cd20e` at 11:20, before the four commits: `npm run check` 927 tests / 78 files, no lint
+  warnings; browser `client-pages-layout production-workflow client-navigation console-errors
+  board-views files-campaigns`: 23 of 23.
 - `npm run check`: 863 tests / 75 files. `npm --prefix apps/media test`: 70 of 70.
 - `supabase test db`: 21 files, 456 tests; only `access_and_workflows.test.sql` fails its known 6
   overlay assertions (2, 4, 9, 18, 32, 54).
@@ -79,6 +82,8 @@ Competitor ads widget plans: see the [history](history/handoff-2026-09-24.md). E
 - tus termination on Supabase is unverified; a cancelled partial upload relies on the 24-hour
   window (R2: a one-day incomplete-multipart rule). Deferred minors from the video review: a
   missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
+- Unknown URLs (now including `/search`) render the "page unavailable" screen with HTTP 200, not
+  404 (pre-existing; likely the `@modal/[...catchAll]` slot).
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 
