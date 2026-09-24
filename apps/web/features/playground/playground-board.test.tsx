@@ -16,6 +16,24 @@ const backend = vi.hoisted(() => ({
   getPlaygroundDownload: vi.fn(),
 }));
 vi.mock("./playground-data", () => backend);
+vi.mock("./playground-albums-panel", () => ({
+  PlaygroundAlbumsPanel: (props: {
+    onAdd: (files: unknown[], point: { x: number; y: number }) => void;
+  }) => (
+    <button
+      onClick={() => props.onAdd([{ id: "album-file", title: "Album file" }], { x: 5, y: 5 })}
+    >
+      Trigger album add
+    </button>
+  ),
+}));
+const albumBackend = vi.hoisted(() => ({ copyAlbumFilesToBoard: vi.fn() }));
+vi.mock("./playground-albums", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./playground-albums")>()),
+  copyAlbumFilesToBoard: albumBackend.copyAlbumFilesToBoard,
+}));
+vi.mock("@/features/brand/brand-data", () => ({ downloadBrandAssetFile: vi.fn() }));
+vi.mock("@/features/projects/project-data", () => ({ downloadDesignAssetFile: vi.fn() }));
 vi.mock("@/features/shared/canvas-background", () => ({ CanvasBackground: () => null }));
 vi.mock("@/features/shared/canvas-controls", () => ({ CanvasControls: () => null }));
 vi.mock("./playground-viewport", () => ({ PlaygroundViewport: () => null }));
@@ -633,5 +651,47 @@ describe("Playground save and cleanup recovery", () => {
     await user.click(screen.getByRole("button", { name: "Refresh Playground" }));
     rerender(<PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Saved note" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Playground albums wiring", () => {
+  it("copies a file added through the albums panel onto the board", async () => {
+    albumBackend.copyAlbumFilesToBoard.mockResolvedValue([
+      new File(["x"], "Logo.png", { type: "image/png" }),
+    ]);
+    const user = userEvent.setup();
+    render(<PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />);
+    await user.click(screen.getByText("Trigger album add"));
+    await waitFor(() => expect(albumBackend.copyAlbumFilesToBoard).toHaveBeenCalled());
+    expect(await screen.findByText("Logo.png")).toBeInTheDocument();
+  });
+
+  it("shows Try again for a failed copy and retries it on click", async () => {
+    albumBackend.copyAlbumFilesToBoard.mockImplementationOnce(
+      async (
+        _files: unknown,
+        _point: unknown,
+        _deps: unknown,
+        onStatus: (status: unknown) => void,
+      ) => {
+        onStatus({
+          id: "copy-1",
+          file: { id: "album-file", title: "Album file" },
+          point: { x: 5, y: 5 },
+          state: "error",
+          error: "network error",
+        });
+        return [];
+      },
+    );
+    const user = userEvent.setup();
+    render(<PlaygroundBoard clientId="client" projectId="project" onClose={vi.fn()} />);
+    await user.click(screen.getByText("Trigger album add"));
+    expect(await screen.findByText("network error")).toBeInTheDocument();
+    albumBackend.copyAlbumFilesToBoard.mockResolvedValueOnce([]);
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(albumBackend.copyAlbumFilesToBoard).toHaveBeenCalledTimes(2);
+    // The failed attempt's row gives way to the retry instead of lingering beside it.
+    await waitFor(() => expect(screen.queryByText("network error")).not.toBeInTheDocument());
   });
 });

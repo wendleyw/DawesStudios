@@ -34,6 +34,15 @@ import { PlaygroundViewport } from "./playground-viewport";
 import { usePlaygroundCloseLifecycle } from "./use-playground-close-lifecycle";
 import { usePlaygroundNavigationGuard } from "./use-playground-navigation-guard";
 import { usePlaygroundDrop } from "./use-playground-drop";
+import { downloadBrandAssetFile } from "@/features/brand/brand-data";
+import { downloadDesignAssetFile } from "@/features/projects/project-data";
+import {
+  copyAlbumFilesToBoard,
+  PLAYGROUND_ALBUM_DRAG_TYPE,
+  type AlbumFile,
+  type CopyStatus,
+} from "./playground-albums";
+import { PlaygroundAlbumsPanel } from "./playground-albums-panel";
 import type { PlaygroundItemInput } from "./playground-types";
 import "./playground.css";
 
@@ -66,6 +75,9 @@ export function PlaygroundBoard({
   const [removeRequested, setRemoveRequested] = useState(false);
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  // Album files being copied onto the board: a copy that is still downloading or that failed.
+  const [copies, setCopies] = useState<CopyStatus[]>([]);
+  const albumDrag = useRef<AlbumFile[] | null>(null);
   const items = mergePlaygroundDrafts(query.data?.items ?? [], drafts, query.dataUpdatedAt).filter(
     (draft) => !hiddenIds.has(draft.item.id),
   );
@@ -196,6 +208,7 @@ export function PlaygroundBoard({
     issues,
     setIssues,
     origin,
+    viewCenter,
     addFiles,
   } = usePlaygroundDrop({ boardId, itemCount: items.length, writeDraft, select, persist });
 
@@ -285,6 +298,34 @@ export function PlaygroundBoard({
     } finally {
       setDownloadBusy(false);
     }
+  }
+
+  function onCopyStatus(status: CopyStatus) {
+    setCopies((current) => {
+      const withoutId = current.filter((entry) => entry.id !== status.id);
+      return status.state === "done" ? withoutId : [...withoutId, status];
+    });
+  }
+
+  /** Downloads album files with the viewer's own session and adds them through the same `addFiles`
+   * a native drop uses, so validation, storage and retry are the Playground's own. */
+  async function copyAlbumFiles(files: AlbumFile[], point: { x: number; y: number }) {
+    const downloaded = await copyAlbumFilesToBoard(
+      files,
+      point,
+      {
+        downloadBrand: (storagePath) => downloadBrandAssetFile(database, { path: storagePath }),
+        downloadDesign: (assetPath, channel) =>
+          downloadDesignAssetFile(database, { assetPath, channel }),
+      },
+      onCopyStatus,
+    );
+    if (downloaded.length) await addFiles(downloaded, point);
+  }
+
+  function retryCopy(status: Extract<CopyStatus, { state: "error" }>) {
+    setCopies((current) => current.filter((entry) => entry.id !== status.id));
+    void copyAlbumFiles([status.file], status.point);
   }
 
   async function discardAndClose() {
@@ -485,6 +526,36 @@ export function PlaygroundBoard({
             <X size={17} />
           </button>
         </header>
+        <PlaygroundAlbumsPanel
+          clientId={clientId}
+          projectId={projectId}
+          canAdd={!!boardId && !closing && items.length < PLAYGROUND_MAX_ITEMS}
+          viewCenter={viewCenter}
+          onAdd={(files, point) => void copyAlbumFiles(files, point)}
+          onDragStart={(files) => {
+            albumDrag.current = files;
+          }}
+          onDragEnd={() => {
+            albumDrag.current = null;
+          }}
+        />
+        {copies.length > 0 && (
+          <div className="playground-upload-issues" role="status">
+            {copies.map((status) => (
+              <div key={status.id}>
+                <span>
+                  <strong>{status.file.title}:</strong>{" "}
+                  {status.state === "error" ? status.error : "Copying…"}
+                </span>
+                {status.state === "error" && (
+                  <button type="button" className="button" onClick={() => retryCopy(status)}>
+                    Try again
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {query.error && (
           <div className="playground-banner">
             <FormError>{query.error.message}</FormError>
@@ -560,7 +631,10 @@ export function PlaygroundBoard({
             ref={canvas}
             className={`playground-canvas${dragOver ? " is-dragging-over" : ""}`}
             onDragOver={(event) => {
-              if (event.dataTransfer.types.includes("Files")) {
+              if (
+                event.dataTransfer.types.includes("Files") ||
+                event.dataTransfer.types.includes(PLAYGROUND_ALBUM_DRAG_TYPE)
+              ) {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = "copy";
                 setDragOver(true);
@@ -574,10 +648,15 @@ export function PlaygroundBoard({
               event.preventDefault();
               event.stopPropagation();
               setDragOver(false);
-              const point = flow.current?.screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-              });
+              const point =
+                flow.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY }) ??
+                origin();
+              const dragged = albumDrag.current;
+              albumDrag.current = null;
+              if (dragged) {
+                void copyAlbumFiles(dragged, point);
+                return;
+              }
               void addFiles(Array.from(event.dataTransfer.files), point);
             }}
           >

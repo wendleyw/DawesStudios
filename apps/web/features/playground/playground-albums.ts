@@ -178,3 +178,59 @@ export function buildProjectAlbums(
   }
   return albums;
 }
+
+export type CopyDependencies = {
+  downloadBrand: (storagePath: string) => Promise<Blob>;
+  downloadDesign: (assetPath: string, channel: ProjectChannel) => Promise<Blob>;
+};
+
+export type CopyStatus =
+  | { id: string; file: AlbumFile; point: { x: number; y: number }; state: "loading" }
+  | { id: string; file: AlbumFile; point: { x: number; y: number }; state: "done" }
+  | { id: string; file: AlbumFile; point: { x: number; y: number }; state: "error"; error: string };
+
+/**
+ * Downloads every given album file (bounded to 3 at once, mirroring the queue already in
+ * `use-playground-drop.ts`'s `addFiles`) and wraps each into a `File`, reporting per-file progress
+ * through `onStatus`. Resolves to the successfully downloaded files, in the same relative order as
+ * `files` regardless of which one finished first — the caller passes this array to the Playground's
+ * existing `addFiles` in one call, so the existing multi-file stacking layout applies unchanged. A
+ * failed file is omitted from the result (its status stays `"error"` for the caller to offer
+ * "Try again" on) without blocking its siblings.
+ */
+export async function copyAlbumFilesToBoard(
+  files: AlbumFile[],
+  point: { x: number; y: number },
+  deps: CopyDependencies,
+  onStatus: (status: CopyStatus) => void,
+): Promise<File[]> {
+  const results: (File | undefined)[] = new Array(files.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < files.length) {
+      const index = cursor++;
+      const file = files[index];
+      const id = crypto.randomUUID();
+      onStatus({ id, file, point, state: "loading" });
+      try {
+        const path = file.source.kind === "brand" ? file.source.storagePath : file.source.assetPath;
+        const blob =
+          file.source.kind === "brand"
+            ? await deps.downloadBrand(file.source.storagePath)
+            : await deps.downloadDesign(file.source.assetPath, file.source.channel);
+        results[index] = new File([blob], fileNameFor(file.title, path), { type: file.mimeType });
+        onStatus({ id, file, point, state: "done" });
+      } catch (error) {
+        onStatus({
+          id,
+          file,
+          point,
+          state: "error",
+          error: error instanceof Error ? error.message : "This file could not be copied.",
+        });
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(3, files.length) }, worker));
+  return results.filter((file): file is File => file !== undefined);
+}

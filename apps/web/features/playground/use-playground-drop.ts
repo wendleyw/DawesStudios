@@ -58,6 +58,19 @@ export function usePlaygroundDrop({
       : { x: 40, y: 40 };
   }
 
+  /** The current viewport's center in flow coordinates — where a keyboard-triggered album add
+   * lands, as distinct from `origin()` (a native drop or file-picker batch, anchored near the
+   * viewport's top-left instead). */
+  function viewCenter() {
+    const bounds = canvas.current?.getBoundingClientRect();
+    return bounds && flow.current
+      ? flow.current.screenToFlowPosition({
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top + bounds.height / 2,
+        })
+      : { x: 40, y: 40 };
+  }
+
   async function addFiles(files: File[], point = origin()) {
     if (!boardId) return;
     const added: string[] = [];
@@ -115,6 +128,7 @@ export function usePlaygroundDrop({
     issues,
     setIssues,
     origin,
+    viewCenter,
     addFiles,
   };
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ARTWORK_MAX_BYTES } from "@/features/shared/upload-rules";
 import type { BrandAsset, BrandAssetFolder } from "@/features/brand/brand-data";
 import type { CanvasDesign, CanvasVersion, TableRow } from "@/features/projects/project-data";
@@ -6,6 +6,10 @@ import {
   buildBrandAlbums,
   buildProjectAlbums,
   computeDisabledReason,
+  copyAlbumFilesToBoard,
+  type AlbumFile,
+  type CopyDependencies,
+  type CopyStatus,
   fileNameFor,
   isPreviewableImage,
   PLAYGROUND_ALBUM_DRAG_TYPE,
@@ -244,5 +248,93 @@ describe("buildProjectAlbums", () => {
     // coercion is `useProjectDetail`'s own existing behavior (`project-data.ts:105`), not this
     // function's. What this function guarantees is the other half: given nothing, it shows nothing.
     expect(buildProjectAlbums(deliverables, [], [], "client")).toEqual([]);
+  });
+});
+
+function albumFile(id: string, kind: "brand" | "design" = "brand"): AlbumFile {
+  return {
+    id,
+    title: `File ${id}`,
+    mimeType: "image/png",
+    sizeBytes: null,
+    source:
+      kind === "brand"
+        ? { kind: "brand", storagePath: `client-1/${id}.png` }
+        : { kind: "design", channel: "internal", assetPath: `project-1/${id}.png` },
+  };
+}
+
+describe("copyAlbumFilesToBoard", () => {
+  it("downloads every file, reports loading then done, and resolves Files in input order", async () => {
+    const statuses: CopyStatus[] = [];
+    const deps: CopyDependencies = {
+      downloadBrand: async (path) => new Blob([path]),
+      downloadDesign: async () => new Blob(["x"]),
+    };
+    const files = await copyAlbumFilesToBoard(
+      [albumFile("a"), albumFile("b")],
+      { x: 1, y: 2 },
+      deps,
+      (status) => statuses.push(status),
+    );
+    expect(files.map((f) => f.name)).toEqual(["File a.png", "File b.png"]);
+    expect(statuses.filter((s) => s.state === "loading")).toHaveLength(2);
+    expect(statuses.filter((s) => s.state === "done")).toHaveLength(2);
+  });
+
+  it("reports an error for one failed file without affecting the others' success", async () => {
+    const statuses: CopyStatus[] = [];
+    const deps: CopyDependencies = {
+      downloadBrand: async (path) => {
+        if (path.includes("/b.")) throw new Error("network error");
+        return new Blob([path]);
+      },
+      downloadDesign: async () => new Blob(["x"]),
+    };
+    const files = await copyAlbumFilesToBoard(
+      [albumFile("a"), albumFile("b"), albumFile("c")],
+      { x: 0, y: 0 },
+      deps,
+      (status) => statuses.push(status),
+    );
+    expect(files.map((f) => f.name)).toEqual(["File a.png", "File c.png"]);
+    const failed = statuses.find((status) => status.state === "error");
+    expect(failed?.state).toBe("error");
+    expect(failed && failed.state === "error" && failed.error).toBe("network error");
+  });
+
+  it("never runs more than three downloads at once", async () => {
+    let active = 0;
+    let peak = 0;
+    const deps: CopyDependencies = {
+      downloadBrand: async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active--;
+        return new Blob(["x"]);
+      },
+      downloadDesign: async () => new Blob(["x"]),
+    };
+    await copyAlbumFilesToBoard(
+      [albumFile("a"), albumFile("b"), albumFile("c"), albumFile("d"), albumFile("e")],
+      { x: 0, y: 0 },
+      deps,
+      () => {},
+    );
+    expect(peak).toBe(3);
+  });
+
+  it("calls downloadDesign with the file's own channel for a design source, never downloadBrand", async () => {
+    const downloadDesign = vi.fn(async () => new Blob(["x"]));
+    const downloadBrand = vi.fn(async () => new Blob(["x"]));
+    await copyAlbumFilesToBoard(
+      [albumFile("a", "design")],
+      { x: 0, y: 0 },
+      { downloadBrand, downloadDesign },
+      () => {},
+    );
+    expect(downloadDesign).toHaveBeenCalledWith("project-1/a.png", "internal");
+    expect(downloadBrand).not.toHaveBeenCalled();
   });
 });
