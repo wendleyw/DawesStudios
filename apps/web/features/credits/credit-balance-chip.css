@@ -1,31 +1,14 @@
 /*
  * The chip renders inside `canvas-header.tsx`'s `.board-account` card on every client route, so
- * it carries its own stylesheet: `credits.css` loads only on the Credits route.
+ * it carries its own stylesheet: `credits.css` loads only on the Credits route. Its shape comes
+ * from `credit-chip.css`; this file holds what the linked balance adds.
  */
 .credit-balance-chip {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-subtle);
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
   text-decoration: none;
 }
 .credit-balance-chip:hover {
   border-color: var(--border-strong);
   color: var(--foreground);
-}
-.credit-balance-chip-amount {
-  color: var(--foreground);
-  font-weight: 600;
 }
 /* A zero or negative balance uses the shared attention tone of the status badge. */
 .credit-balance-chip-attention {
@@ -33,7 +16,7 @@
   background: var(--tone-attention-bg);
   color: var(--tone-attention-fg);
 }
-.credit-balance-chip-attention .credit-balance-chip-amount {
+.credit-balance-chip-attention .credit-chip-amount {
   color: inherit;
 }
 

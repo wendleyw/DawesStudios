@@ -3,6 +3,7 @@ import {
   creditCsv,
   csvCell,
   filterCreditEntries,
+  projectCreditsUsed,
   type CreditEntry,
   type CreditFilters,
 } from "./credit-model";
@@ -155,5 +156,26 @@ describe("credit CSV export", () => {
       briefings: [],
     });
     expect(csv.split("\r\n")).toHaveLength(2);
+  });
+});
+
+describe("projectCreditsUsed", () => {
+  it("is the project's debit, as a positive number of credits", () => {
+    expect(projectCreditsUsed([{ amount: -3, kind: "project_debit" }])).toBe(3);
+  });
+
+  it("adds every debit and ignores other kinds of entry", () => {
+    expect(
+      projectCreditsUsed([
+        { amount: -3, kind: "project_debit" },
+        { amount: -2, kind: "project_debit" },
+        { amount: 5, kind: "adjustment" },
+      ]),
+    ).toBe(5);
+  });
+
+  it("is null when the project has no debit", () => {
+    expect(projectCreditsUsed([])).toBeNull();
+    expect(projectCreditsUsed([{ amount: 100, kind: "allocation" }])).toBeNull();
   });
 });

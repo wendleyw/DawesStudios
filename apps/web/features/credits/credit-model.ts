@@ -52,6 +52,12 @@ export const creditRequestStatusTones: Record<CreditRequest["status"], StatusTon
   rejected: "neutral",
 };
 
+/** The credits a project used: its debits as a positive number, or null when it has none. */
+export function projectCreditsUsed(entries: Pick<CreditEntry, "amount" | "kind">[]): number | null {
+  const debits = entries.filter((entry) => entry.kind === "project_debit");
+  return debits.length ? debits.reduce((total, entry) => total - entry.amount, 0) : null;
+}
+
 export function filterCreditEntries(
   entries: CreditEntry[],
   projects: Project[],

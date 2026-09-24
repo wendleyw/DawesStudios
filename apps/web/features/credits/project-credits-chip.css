@@ -1,0 +1,14 @@
+/* On a phone the word yields to keep the title's room; it stays for screen readers. */
+@media (max-width: 720px) {
+  .project-credits-chip {
+    padding: 0 8px;
+  }
+  .project-credits-chip .credit-chip-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Coins } from "lucide-react";
 import type { Profile } from "@/lib/supabase";
 import { useCreditAccount } from "./credit-data";
+import "./credit-chip.css";
 import "./credit-balance-chip.css";
 
 const creditCountFormatter = new Intl.NumberFormat("en-US");
@@ -34,12 +35,12 @@ export function CreditBalanceChip({
   return (
     <Link
       href={`/clients/${clientId}/credits`}
-      className={`credit-balance-chip${needsAttention ? " credit-balance-chip-attention" : ""}`}
+      className={`credit-chip credit-balance-chip${needsAttention ? " credit-balance-chip-attention" : ""}`}
       aria-label={`Credit balance: ${label}. Open credits`}
       title={`Credit balance: ${label}`}
     >
       <Coins size={15} aria-hidden="true" />
-      <span className="credit-balance-chip-amount">{creditCountFormatter.format(balance)}</span>
+      <span className="credit-chip-amount">{creditCountFormatter.format(balance)}</span>
       <span className="credit-balance-chip-word">{word}</span>
     </Link>
   );

@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
-import type { CreditEntry, CreditRequest } from "./credit-model";
+import { projectCreditsUsed, type CreditEntry, type CreditRequest } from "./credit-model";
 
 export function useCreditAccount(clientId: string) {
   const { database, session, profile } = useAuth();
@@ -43,6 +43,29 @@ export function useCreditLedger(clientId: string) {
         if (page.length < 500) return entries;
       }
     },
+  });
+}
+
+/**
+ * The credits one project used, for its title card. Keyed under `credit-ledger`, so every write that
+ * already refreshes the ledger (accepting a briefing, an adjustment) refreshes this too. It waits
+ * for the profile, so a designer's page never sends the request at all.
+ */
+export function useProjectCreditUse(projectId: string) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: ["credit-ledger", session?.user.id, "project", projectId],
+    enabled: !!session && !!profile && profile.role !== "designer",
+    queryFn: async () =>
+      projectCreditsUsed(
+        assertResult(
+          await database
+            .from("credit_ledger")
+            .select("amount,kind")
+            .eq("project_id", projectId)
+            .eq("kind", "project_debit"),
+        ) as Pick<CreditEntry, "amount" | "kind">[],
+      ),
   });
 }
 

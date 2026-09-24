@@ -13,6 +13,7 @@ import {
   type Client,
 } from "@/features/workspace/workspace-data";
 import { statusToneClass } from "@/features/shared/status-tone";
+import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import type { ProjectChannel, TableRow } from "./project-data";
 
 export function ProjectHeader({
@@ -69,6 +70,7 @@ export function ProjectHeader({
               <span>{formatDate(project.due_date, "No due date")}</span>
             </div>
           </div>
+          <ProjectCreditsChip projectId={project.id} viewer={viewer} />
         </div>
       </div>
       {!reviewing && (

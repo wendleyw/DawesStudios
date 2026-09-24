@@ -9,7 +9,9 @@ Supabase policies rather than the interface deciding what each one may read.
 
 The client logo/name, client navigation (Board active) and signed-in profile use the same floating
 `workspace/canvas-header.tsx` as every client section and the main board. A full-width floating card
-centers the large project title with status and due date beside it; this group wraps on phones. Outside that card, a separate
+centers the large project title with status and due date beside it; this group wraps on phones.
+For the client and the studio, the card's right corner shows the credits the project used
+(`credits/project-credits-chip.tsx`; designers never see it). Outside that card, a separate
 row places Working files / Shared with client on the left and All deliverables beside the action
 icons on the right. These groups wrap on narrow screens and remain reachable above the canvas.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.

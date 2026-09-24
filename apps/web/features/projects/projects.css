@@ -29,14 +29,18 @@
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
+/* Equal flexible sides keep the title centred between the back arrow and the credits chip. */
 .project-title-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
   align-items: center;
   gap: 14px;
 }
 .project-title-row > .icon-button {
   justify-self: start;
+}
+.project-title-row > .project-credits-chip {
+  justify-self: end;
 }
 .project-heading {
   display: flex;
@@ -1174,7 +1178,6 @@
     -webkit-box-orient: vertical;
   }
   .project-title-row {
-    grid-template-columns: 28px minmax(0, 1fr) 28px;
     gap: 6px;
   }
   .project-title-row > .icon-button {

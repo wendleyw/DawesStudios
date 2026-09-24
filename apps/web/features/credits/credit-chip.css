@@ -1,0 +1,25 @@
+/*
+ * The look both credit chips share: the account card's balance (`credit-balance-chip`) and a
+ * project's own credits in its title card (`project-credits-chip`). Each chip imports this before
+ * its own stylesheet, so its own rules win where they differ.
+ */
+.credit-chip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.credit-chip-amount {
+  color: var(--foreground);
+  font-weight: 600;
+}
