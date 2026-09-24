@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 16:55 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
+Updated: 2026-09-24 17:25 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
 overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -11,8 +11,8 @@ history only when a task needs earlier evidence.
 
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
-- Other interactive Claude sessions of the user's also work here (`dawesstudios-52` committed the
-  deliverable frames, `317c7bc`). Every session stages explicit paths only; never run `git add -A`.
+- Other sessions also work here (at 17:20 one had uncommitted board edits and `zz-board-measure`).
+  Stage explicit paths only; give Playwright a private `--output`, since runs clear `test-results/`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
@@ -23,7 +23,7 @@ grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed a
 board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
 Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
 with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
-viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows. Sonnet
+viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows; wide briefing modal (`c63c27a`). Sonnet
 workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
 here, so general-purpose workers followed `implementer.md`.
 
