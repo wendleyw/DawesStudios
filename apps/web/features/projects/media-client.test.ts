@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deliverySchema, mediaErrorMessage, publicationSchema } from "./media-client";
+import {
+  deliverySchema,
+  MediaRequestError,
+  mediaErrorMessage,
+  publicationSchema,
+} from "./media-client";
 import { invitationRequestSchema } from "@/features/settings/settings-model";
 
 /*
@@ -93,5 +98,13 @@ describe("what a refused preparation says", () => {
     expect(mediaErrorMessage(500, "not json at all")).toBe(
       "The file could not be prepared. Please try again.",
     );
+  });
+});
+
+describe("MediaRequestError", () => {
+  it("carries the HTTP status a caller needs to classify the failure", () => {
+    const error = new MediaRequestError("Upload an MP4 or WebM video.", 415);
+    expect(error.status).toBe(415);
+    expect(error.message).toBe("Upload an MP4 or WebM video.");
   });
 });

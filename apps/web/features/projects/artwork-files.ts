@@ -8,7 +8,7 @@ import {
   uploadTypeMessage,
   videoUploadMimes,
 } from "@/features/shared/upload-rules";
-import { sanitizeVideoAsset } from "./media-client";
+import { discardRawAsset, MediaRequestError, sanitizeVideoAsset } from "./media-client";
 
 /**
  * The lifecycle of an uploaded design artwork: preparing the image, storing it, and removing one
@@ -17,6 +17,67 @@ import { sanitizeVideoAsset } from "./media-client";
  */
 
 const allowedImageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+/** The tus fingerprint used for a video's resumable transfer, scoped so the same file never
+ * resumes another project's or another user's upload. */
+export function videoFingerprint(userId: string, projectId: string, file: File): string {
+  return `dawes-video:${userId}:${projectId}:${file.name}:${file.size}:${file.lastModified}`;
+}
+
+/** Thrown when a person cancels an upload deliberately, so callers can tell it apart from a real
+ * failure and skip both the automatic retry and any "please try again" messaging. */
+export class UploadCancelledError extends Error {
+  constructor() {
+    super("Upload cancelled.");
+    this.name = "UploadCancelledError";
+  }
+}
+
+/** Thrown when the resumable upload URL a previous attempt created is gone — the 24-hour Supabase
+ * resumable window (or, in production, the R2 lifecycle rule) has passed. */
+export class UploadExpiredError extends Error {
+  constructor() {
+    super("The upload expired; choose the file again.");
+    this.name = "UploadExpiredError";
+  }
+}
+
+export type UploadErrorKind = "cancelled" | "expired" | "transient" | "permanent";
+
+/** Classifies a failure from the upload/processing path. A network-level rejection that never
+ * reached the media service (a dropped connection, `AbortSignal.timeout` firing) carries no HTTP
+ * status of its own and is treated the same as a 5xx: both deserve the one automatic retry. */
+export function classifyUploadError(error: unknown): UploadErrorKind {
+  if (error instanceof UploadCancelledError) return "cancelled";
+  if (error instanceof UploadExpiredError) return "expired";
+  // A cancel during the processing phase aborts `sanitizeVideoAsset`'s fetch directly, so the
+  // rejection is a plain DOMException named "AbortError". `AbortSignal.timeout` firing on its own
+  // (a genuine timeout, not a deliberate cancel) is named "TimeoutError" instead and must stay
+  // transient. The name is checked rather than the class, because the rejection's DOMException can
+  // come from another realm than this module's global (as it does under jsdom).
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: unknown }).name === "AbortError"
+  )
+    return "cancelled";
+  if (error instanceof MediaRequestError) {
+    if (error.status === 410) return "expired";
+    if (error.status === 408 || error.status === 429 || error.status >= 500) return "transient";
+    return "permanent";
+  }
+  return "transient";
+}
+
+/** Deletes a raw upload the person cancelled mid-processing. Deleting an already-missing raw file
+ * succeeds, so a repeated cancel is safe. */
+export async function discardRawUpload(
+  database: SupabaseDatabase,
+  mediaUrl: string,
+  input: { projectId: string; rawPath: string },
+): Promise<void> {
+  await discardRawAsset(database, mediaUrl, input);
+}
 
 /** Only `uploadArtwork` prepares an image, so this stays internal to the module. */
 async function sanitizeArtwork(file: Blob): Promise<Blob> {
@@ -71,44 +132,80 @@ export async function discardUnreferencedArtwork(database: SupabaseDatabase, pat
   if (!rows.length) assertResult(await database.storage.from("internal-assets").remove([path]));
 }
 
+/** The shape `apps/media` accepts for a raw upload of this project, `<projectId>/<uuid>.raw`. */
+function isRawVideoPath(projectId: string, path: unknown): path is string {
+  return (
+    typeof path === "string" &&
+    path.startsWith(`${projectId}/`) &&
+    /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.raw$/.test(path)
+  );
+}
+
+/** Forgets every stored resume point for a fingerprint, so a cancelled transfer is never resumed. */
+async function forgetResumePoints(fingerprint: string) {
+  const storage = tus.defaultOptions.urlStorage;
+  const stored = await storage.findUploadsByFingerprint(fingerprint);
+  await Promise.all(stored.map((entry) => storage.removeUpload(entry.urlStorageKey)));
+}
+
 /**
- * Uploads through Supabase's TUS endpoint, which retries a failed chunk mid-transfer without
- * restarting the whole file.
+ * Uploads through Supabase's TUS endpoint, resuming a previous attempt for the same file when one
+ * exists, and resolves with the raw path the file landed on.
  *
- * That resumption is scoped to one in-memory attempt. `tus-js-client`'s `findPreviousUploads` and
- * its URL-based resumption across page loads are not wired up here, so closing the tab or
- * reloading the page loses the upload URL this attempt created and the next call starts a new
- * upload from byte zero — it does not pick up where the closed tab left off. What this does
- * survive is the kind of transient failure `retryDelays` covers: a dropped packet, a brief
- * disconnect, a 5xx from the storage service.
+ * The fingerprint scopes resume to this exact user, project, file name, size and modification
+ * time, so the same file never resumes another project's or another user's upload, and a different
+ * file for the same project never resumes this one's transfer. A resume point lives only in this
+ * browser's storage and for the 24 hours Supabase keeps a resumable upload; a stored point whose
+ * object name is not this project's raw-path shape is ignored and the upload starts fresh.
+ *
+ * `signal` cancels the transfer: it asks the server to terminate the partial upload (a partial the
+ * server keeps expires within 24 hours) and forgets the resume point either way.
  *
  * A gigabyte over a single POST has no recovery at all: one network blip discards a ten-minute
  * transfer with nothing to show for it. Chunks are 6 MB because the storage service requires
- * exactly that size for every chunk but the last, and it must not be made configurable.
- *
- * There is deliberately no fallback to a single POST. A silent fallback would reintroduce
- * exactly the fragility this replaces, and would do it invisibly.
+ * exactly that size for every chunk but the last, and it must not be made configurable. There is
+ * deliberately no fallback to a single POST.
  */
 async function uploadResumable(
   database: SupabaseDatabase,
   bucket: string,
-  path: string,
+  projectId: string,
   file: File,
   onProgress?: (fraction: number) => void,
-): Promise<void> {
-  async function currentAccessToken(): Promise<string> {
+  signal?: AbortSignal,
+  onResuming?: () => void,
+): Promise<string> {
+  async function currentSession(): Promise<{ token: string; userId: string }> {
     const { data, error } = await database.auth.getSession();
     if (error) throw new Error(error.message);
     const token = data.session?.access_token;
-    if (!token)
+    const userId = data.session?.user?.id;
+    if (!token || !userId)
       throw new Error("Your sign-in is no longer valid. Sign out, sign in again, and retry.");
-    return token;
+    return { token, userId };
   }
 
+  if (signal?.aborted) throw new UploadCancelledError();
   // Fail before starting a transfer at all if there is no session to begin one with.
-  await currentAccessToken();
+  const { userId } = await currentSession();
+  const fingerprint = videoFingerprint(userId, projectId, file);
+  // One object for the lifetime of the upload. When a stored upload URL has expired,
+  // tus-js-client creates a new upload from these options on its own, so resuming rewrites the
+  // object name here too: whichever way the transfer ends, it lands on the path this resolves with.
+  const metadata = {
+    bucketName: bucket,
+    objectName: `${projectId}/${crypto.randomUUID()}.raw`,
+    contentType: file.type,
+  };
 
-  await new Promise<void>((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+    const finish = (run: () => void) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", onAbort);
+      run();
+    };
     const upload = new tus.Upload(file, {
       endpoint: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`,
       headers: { "x-upsert": "false" },
@@ -124,19 +221,74 @@ async function uploadResumable(
       // (confirmed against `sendRequest` in the library's own source), which is what makes
       // fetching the token here instead of once up front actually work.
       onBeforeRequest: async (request) => {
-        request.setHeader("authorization", `Bearer ${await currentAccessToken()}`);
+        const { token } = await currentSession();
+        request.setHeader("authorization", `Bearer ${token}`);
       },
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
       chunkSize: 6 * 1024 * 1024,
-      metadata: { bucketName: bucket, objectName: path, contentType: file.type },
-      onError: reject,
+      metadata,
+      fingerprint: async () => fingerprint,
+      onError: (error) => {
+        const status = (
+          error as { originalResponse?: { getStatus(): number } | null }
+        ).originalResponse?.getStatus();
+        finish(() => reject(status === 404 || status === 410 ? new UploadExpiredError() : error));
+      },
       onProgress: (sent, total) => onProgress?.(total ? sent / total : 0),
-      onSuccess: () => resolve(),
+      onSuccess: () => finish(() => resolve(metadata.objectName)),
     });
-    upload.start();
+    function onAbort() {
+      finish(() => reject(new UploadCancelledError()));
+      void forgetResumePoints(fingerprint).catch(() => {});
+      // Supabase does not document tus termination; a partial it keeps expires within 24 hours.
+      void upload.abort(true).catch(() => {});
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) return onAbort();
+    void (async () => {
+      try {
+        const previous = (await upload.findPreviousUploads()).find((candidate) =>
+          isRawVideoPath(projectId, candidate.metadata.objectName),
+        );
+        if (settled) return;
+        if (previous) {
+          metadata.objectName = previous.metadata.objectName;
+          upload.resumeFromPreviousUpload(previous);
+          onResuming?.();
+        }
+        upload.start();
+      } catch (error) {
+        finish(() => reject(error instanceof Error ? error : new Error(String(error))));
+      }
+    })();
   });
 }
+
+/** A transient processing failure is retried once automatically, with the same raw path. Invalid
+ * content, an authorization refusal, an expired raw file or a cancel are never retried. */
+async function sanitizeWithOneRetry(
+  database: SupabaseDatabase,
+  mediaUrl: string,
+  input: { projectId: string; rawPath: string; mimeType: string },
+  signal?: AbortSignal,
+) {
+  try {
+    return await sanitizeVideoAsset(database, mediaUrl, input, signal);
+  } catch (error) {
+    if (classifyUploadError(error) !== "transient") throw error;
+    return await sanitizeVideoAsset(database, mediaUrl, input, signal);
+  }
+}
+
+export type UploadDesignAssetOptions = {
+  onProgress?: (fraction: number) => void;
+  onRawPath?: (rawPath: string) => void;
+  /** Fires once, before the transfer starts, only when a previous attempt for this exact
+   * fingerprint was found and is being resumed — never for a fresh transfer. */
+  onResuming?: () => void;
+  signal?: AbortSignal;
+};
 
 /**
  * Uploads a design asset, choosing the path its type requires.
@@ -145,32 +297,23 @@ async function uploadResumable(
  * discards its metadata as a side effect and is why every stored image is already clean.
  *
  * A video cannot take that path — a canvas does not decode video — so it goes to storage as-is
- * under a `.raw` name and `apps/media` remuxes it into a clean object. Two objects exist only for
- * the length of one sanitisation; the service deletes the raw one once it has written the clean
- * copy.
+ * under a `.raw` name through a resumable upload, and `apps/media` remuxes it into a clean object.
+ * `options.onRawPath` fires once, right when the transfer finishes and processing is about to
+ * start: from that point a cancel (`options.signal`) must also discard the raw file explicitly
+ * (`discardRawUpload`), while a cancel before it only needs to abort the transfer.
  *
- * The upload is resumable because a gigabyte over a single POST has no way to recover from a
- * dropped connection, and losing a ten-minute transfer to one network blip is not acceptable.
- *
- * **If sanitisation fails**, the raw object at `internal-assets/${rawPath}` is not deleted here.
- * The upload that put it there just spent real time and real bandwidth; a failure at this last
- * step is often transient (an expired session, a dropped connection, the media service being
- * briefly unavailable) and should be answered by letting the person retry, not by discarding the
- * bytes they already sent. There is no equivalent of `discardUnreferencedArtwork` for video, so a
- * permanently failing sanitisation (for example, a container whose declared type does not match
- * its actual codec) leaves a real orphan in `internal-assets` with nothing here that removes it.
- * The failure is logged with the raw path before it is rethrown, but `console.error` is exactly
- * that and no more: this codebase has no logging or error-tracking sink, so that line is visible
- * only in the browser devtools of whoever was uploading, for as long as that tab stays open. It
- * does not reach an operator. Recording it here is honest about a gap, not a fix for it — the
- * actual fix is a server-side sweep, which does not exist yet either (see the task report).
+ * **If processing fails**, the raw object at `internal-assets/${rawPath}` is not deleted here: a
+ * transient failure is retried once with the same raw path, and after that the person can retry
+ * processing without sending the file again. The media service itself discards content it rejects
+ * (422), and its 24-hour sweep removes any raw upload nobody came back for. The failure is logged
+ * with the raw path, which is visible only in the uploader's browser devtools.
  */
 export async function uploadDesignAsset(
   database: SupabaseDatabase,
   mediaUrl: string,
   projectId: string,
   file: File,
-  onProgress?: (fraction: number) => void,
+  options: UploadDesignAssetOptions = {},
 ): Promise<string> {
   // Routing is decided by the "video/" prefix, not by `isVideoUpload`: that helper answers "is
   // this an *accepted* video type", which is exactly what the next check needs, but reusing it
@@ -182,20 +325,30 @@ export async function uploadDesignAsset(
   if (!isVideoUpload(file.type)) throw new Error(uploadTypeMessage(videoUploadMimes));
   if (file.size > VIDEO_MAX_BYTES) throw new Error(uploadSizeMessage(VIDEO_MAX_BYTES));
 
-  const rawPath = `${projectId}/${crypto.randomUUID()}.raw`;
-  await uploadResumable(database, "internal-assets", rawPath, file, onProgress);
+  const rawPath = await uploadResumable(
+    database,
+    "internal-assets",
+    projectId,
+    file,
+    options.onProgress,
+    options.signal,
+    options.onResuming,
+  );
+  options.onRawPath?.(rawPath);
   try {
-    const sanitized = await sanitizeVideoAsset(database, mediaUrl, {
-      projectId,
-      rawPath,
-      mimeType: file.type,
-    });
+    const sanitized = await sanitizeWithOneRetry(
+      database,
+      mediaUrl,
+      { projectId, rawPath, mimeType: file.type },
+      options.signal,
+    );
     return sanitized.path;
   } catch (error) {
-    console.error(
-      `Video sanitisation failed; the raw upload remains at internal-assets/${rawPath} and will not be cleaned up automatically.`,
-      error,
-    );
+    if (classifyUploadError(error) !== "cancelled")
+      console.error(
+        `Video processing failed; the raw upload remains at internal-assets/${rawPath} for a retry until the 24-hour sweep removes it.`,
+        error,
+      );
     throw error;
   }
 }

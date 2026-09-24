@@ -127,13 +127,9 @@ export function ProjectActionDialog({
           // only meaningful, and only shown, for the video path.
           const isVideo = file.type.startsWith("video/");
           if (isVideo) setUploadProgress(0);
-          path = await uploadDesignAsset(
-            database,
-            mediaUrl,
-            projectId,
-            file,
-            isVideo ? setUploadProgress : undefined,
-          );
+          path = await uploadDesignAsset(database, mediaUrl, projectId, file, {
+            onProgress: isVideo ? setUploadProgress : undefined,
+          });
         }
         if (path) setStagedArtwork(path);
         const designContent = {

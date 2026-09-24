@@ -25,6 +25,18 @@ export const deliverySchema = z.object({
   fileSize: z.number().int().positive(),
 });
 
+/** Carries the media service's HTTP status, so a caller can classify a processing failure as
+ * transient, permanent or expired without re-parsing the response body. */
+export class MediaRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "MediaRequestError";
+  }
+}
+
 /**
  * What a refused preparation should say to the person who asked for it.
  *
@@ -63,7 +75,8 @@ async function requestMedia<T>(
   {
     headers = {},
     timeoutMs = DEFAULT_TIMEOUT_MS,
-  }: { headers?: Record<string, string>; timeoutMs?: number } = {},
+    signal,
+  }: { headers?: Record<string, string>; timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<T> {
   if (!mediaUrl) throw new Error("File preparation is unavailable. Please contact the studio.");
   const {
@@ -80,10 +93,13 @@ async function requestMedia<T>(
       "Content-Type": contentType,
     },
     body,
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: signal
+      ? AbortSignal.any([AbortSignal.timeout(timeoutMs), signal])
+      : AbortSignal.timeout(timeoutMs),
   });
   const result: unknown = await response.json();
-  if (!response.ok) throw new Error(mediaErrorMessage(response.status, result));
+  if (!response.ok)
+    throw new MediaRequestError(mediaErrorMessage(response.status, result), response.status);
   const validated = schema.safeParse(result);
   if (!validated.success)
     throw new Error("The file service returned an incomplete response. Please try again.");
@@ -131,16 +147,17 @@ const VIDEO_SANITIZE_TIMEOUT_MS = 3 * 300_000 + 30_000;
 /**
  * Asks `apps/media` to remux a raw video upload into a clean object and delete the raw one.
  *
- * The raw object at `input.rawPath` is not removed by this function on failure: the service
- * only deletes it once the clean copy has been written, so a rejection here — network, auth,
- * or the video itself being unplayable — leaves the raw object in `internal-assets` with no
- * client-side equivalent of `discardUnreferencedArtwork` to clean it up. Callers decide what
- * that means for the person waiting on the upload; this function only reports the failure.
+ * This function never removes the raw object at `input.rawPath` itself. The service deletes it
+ * once the clean copy is written, or at once for content it rejects (422); a transient failure
+ * or a hang-up keeps it for a retry; a cancel removes it through `discardRawAsset`; and the
+ * service's 24-hour sweep removes whatever is left. `signal` aborts the request when the person
+ * cancels, and the rejection is then the fetch's own `AbortError`.
  */
 export async function sanitizeVideoAsset(
   database: SupabaseClient<Database>,
   mediaUrl: string,
   input: { projectId: string; rawPath: string; mimeType: string },
+  signal?: AbortSignal,
 ) {
   return requestMedia(
     database,
@@ -149,7 +166,26 @@ export async function sanitizeVideoAsset(
     JSON.stringify(input),
     "application/json",
     sanitizedVideoSchema,
-    { timeoutMs: VIDEO_SANITIZE_TIMEOUT_MS },
+    { timeoutMs: VIDEO_SANITIZE_TIMEOUT_MS, signal },
+  );
+}
+
+const discardRawSchema = z.object({ discarded: z.boolean() });
+
+/** Deletes a raw video upload the person cancelled during processing. Deleting a raw file that is
+ * already gone succeeds, so a repeated cancel is safe. */
+export async function discardRawAsset(
+  database: SupabaseClient<Database>,
+  mediaUrl: string,
+  input: { projectId: string; rawPath: string },
+): Promise<void> {
+  await requestMedia(
+    database,
+    mediaUrl,
+    "/designs/discard-raw",
+    JSON.stringify(input),
+    "application/json",
+    discardRawSchema,
   );
 }
 
