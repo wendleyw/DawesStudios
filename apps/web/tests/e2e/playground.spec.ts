@@ -2,7 +2,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createPlaygroundFixture } from "./playground-fixture";
+import { createPlaygroundFixture, seedPlaygroundAlbumsFixture } from "./playground-fixture";
 import { credentials, localAdmin, localCaller, screenshotDirectory, signIn } from "./test-support";
 
 const preview = fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url));
@@ -546,4 +546,91 @@ test("lost save responses retry once and stale edits retain the local draft", as
   expect(removed.error).toBeNull();
   await dialog.getByRole("button", { name: "Refresh Playground", exact: true }).click();
   await expect(dialog.getByText("An idempotent idea", { exact: true })).toHaveCount(0);
+});
+
+test("an agency session drags a Brand Hub asset and a working design onto the Playground board", async ({
+  page,
+  workspace,
+}) => {
+  const seed = await seedPlaygroundAlbumsFixture(workspace);
+  try {
+    await signIn(page, credentials.agency);
+    await page.goto(`/projects/${workspace.projectId}`);
+    await openPlayground(page);
+    const board = playground(page);
+
+    await board.getByRole("button", { name: "Acceptance logos" }).click();
+    const brandThumb = board.getByTitle("Acceptance wordmark");
+    await expect(brandThumb).toBeVisible();
+    await brandThumb.dragTo(board.locator(".playground-canvas"));
+    await expect(board.getByText("Acceptance wordmark.png")).toBeVisible();
+
+    await board.getByRole("button", { name: "Campaign square · V1" }).click();
+    const designThumb = board.getByTitle("Acceptance square design");
+    await designThumb.dragTo(board.locator(".playground-canvas"), {
+      targetPosition: { x: 400, y: 200 },
+    });
+    await expect(board.getByText("Acceptance square design.png")).toBeVisible();
+    await expect(board.getByText("All changes saved")).toBeVisible({ timeout: 15_000 });
+
+    const boardRow = await localAdmin
+      .from("playground_boards")
+      .select("id")
+      .eq("client_id", workspace.clientId)
+      .eq("project_id", workspace.projectId)
+      .eq("role", "agency")
+      .single();
+    if (boardRow.error) throw boardRow.error;
+    const items = await localAdmin
+      .from("playground_items")
+      .select("title,asset_path")
+      .eq("board_id", boardRow.data.id);
+    if (items.error) throw items.error;
+    expect(items.data.map((item) => item.title).sort()).toEqual(
+      ["Acceptance square design.png", "Acceptance wordmark.png"].sort(),
+    );
+    for (const item of items.data) {
+      if (!item.asset_path) continue;
+      const [boardId, itemId] = item.asset_path.split("/");
+      const listed = await localAdmin.storage
+        .from("playground-assets")
+        .list(`${boardId}/${itemId}`);
+      if (listed.error) throw listed.error;
+      expect(listed.data.length).toBeGreaterThan(0);
+    }
+  } finally {
+    await seed.cleanup();
+  }
+});
+
+test("a client session sees only its shared versions, drags a published design onto its board, and never requests internal-assets", async ({
+  page,
+  workspace,
+}) => {
+  const seed = await seedPlaygroundAlbumsFixture(workspace);
+  try {
+    const requestedInternalAssets: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.includes("/internal-assets/")) requestedInternalAssets.push(path);
+    });
+
+    await signIn(page, credentials.client);
+    await page.goto(`/projects/${workspace.projectId}`);
+    await openPlayground(page);
+    const board = playground(page);
+
+    await expect(board.getByRole("button", { name: "Acceptance logos" })).toBeVisible();
+    await expect(board.getByRole("button", { name: "Campaign square · V1" })).toBeVisible();
+
+    await board.getByRole("button", { name: "Campaign square · V1" }).click();
+    const designThumb = board.getByTitle("Acceptance square design");
+    await designThumb.dragTo(board.locator(".playground-canvas"));
+    await expect(board.getByText("Acceptance square design.png")).toBeVisible();
+    await expect(board.getByText("All changes saved")).toBeVisible({ timeout: 15_000 });
+
+    expect(requestedInternalAssets).toEqual([]);
+  } finally {
+    await seed.cleanup();
+  }
 });
