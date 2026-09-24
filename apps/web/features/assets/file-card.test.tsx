@@ -26,7 +26,6 @@ function renderCard(props: Partial<Parameters<typeof FileCard>[0]> = {}) {
   const view = render(
     <FileCard
       file={base}
-      projectTitle="Email Banner"
       preview={undefined}
       downloading={false}
       onDownload={onDownload}
@@ -63,7 +62,6 @@ describe("FileCard", () => {
     rerender(
       <FileCard
         file={{ ...base, mime: "video/mp4", name: "Launch.mp4" }}
-        projectTitle="Email Banner"
         preview={undefined}
         downloading={false}
         onDownload={vi.fn()}
@@ -78,15 +76,7 @@ describe("FileCard", () => {
       .setup()
       .click(screen.getByRole("button", { name: "Download Email Hero direction B.png" }));
     expect(onDownload).toHaveBeenCalledWith(base);
-    rerender(
-      <FileCard
-        file={base}
-        projectTitle="Email Banner"
-        preview={undefined}
-        downloading
-        onDownload={onDownload}
-      />,
-    );
+    rerender(<FileCard file={base} preview={undefined} downloading onDownload={onDownload} />);
     expect(
       screen.getByRole("button", { name: "Download Email Hero direction B.png" }),
     ).toBeDisabled();

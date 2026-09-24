@@ -189,7 +189,7 @@ export function BriefingEditor({
         {dialog ? (
           <span className="eyebrow">{clientName}</span>
         ) : (
-          <div className="briefing-title-row">
+          <div className="page-title-row">
             <Link
               href={`/clients/${clientId}/briefings`}
               className="icon-button"

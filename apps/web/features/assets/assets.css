@@ -68,11 +68,6 @@
   margin: 9px 0;
   overflow-wrap: anywhere;
 }
-.file-information > a {
-  font-size: var(--text-base);
-  color: var(--text-muted);
-  line-height: 1.5;
-}
 .file-information footer {
   display: flex;
   align-items: center;
@@ -86,6 +81,78 @@
   font-size: var(--text-sm);
   color: var(--muted);
 }
+
+/* Campaign view: one section per project, newest file first. The heading carries the project link
+   FileCard no longer repeats on every one of its own cards. */
+.file-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+}
+.file-group h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 var(--space-lg);
+}
+.file-group h2 > span {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Folder view: one card per campaign with a matching file, following .file-grid's own columns. */
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+
+  gap: var(--space-lg);
+}
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  min-width: 0;
+  overflow: hidden;
+  transition: border-color 140ms ease;
+}
+.folder-card:hover,
+.folder-card:focus-visible {
+  border-color: var(--muted);
+}
+.folder-cover {
+  background: var(--surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 155px;
+  color: var(--muted);
+}
+.folder-cover img {
+  display: block;
+  width: 100%;
+  height: 155px;
+  object-fit: cover;
+}
+.folder-information {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-lg);
+}
+.folder-information h2 {
+  font-size: 15px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.folder-information span {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 .delivery-callout {
   display: flex;
   align-items: center;
@@ -117,7 +184,8 @@
     align-items: flex-start;
     flex-direction: column;
   }
-  .file-grid {
+  .file-grid,
+  .folder-grid {
     grid-template-columns: 1fr;
   }
 }

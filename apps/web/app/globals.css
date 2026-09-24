@@ -1653,6 +1653,16 @@ select {
   letter-spacing: -0.035em;
   overflow-wrap: anywhere;
 }
+/* A back arrow beside a page title: briefing detail/editor and a Files campaign. */
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.page-title-row > .icon-button {
+  flex-shrink: 0;
+}
 .client-page-heading p {
   margin: 6px 0 0;
   font-size: var(--text-base);

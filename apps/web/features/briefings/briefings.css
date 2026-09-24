@@ -694,15 +694,6 @@
   }
 }
 
-.briefing-title-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.briefing-title-row > .icon-button {
-  flex-shrink: 0;
-}
 .briefing-editor:not(.briefing-editor-modal) > .briefing-progress {
   padding: 16px;
   margin: 16px 0;

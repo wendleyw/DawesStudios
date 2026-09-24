@@ -108,15 +108,41 @@ export function publishedDesignAsset(
   };
 }
 
+/**
+ * A project as the Files page's folder/campaign views need it: its own `id`/`title`/`status` plus
+ * the campaign its files fold into. `campaignId`/`campaignTitle` come from a single `campaigns(id,
+ * title)` embed on the `projects` read below — the FK is unambiguous (`projects` has exactly one
+ * relationship to `campaigns`) and every role may read campaigns (`campaigns_read` on
+ * `private.can_access_client`), so no second query or role branch is needed. `file-groups.ts` reads
+ * both fields structurally and never imports this type.
+ */
+export type AssetProject = {
+  id: string;
+  title: string;
+  status: string;
+  campaignId: string | null;
+  campaignTitle: string | null;
+};
+
 export function useProjectAssets(clientId: string) {
   const { database, profile, session } = useAuth();
   return useQuery({
     queryKey: ["assets", session?.user.id, clientId],
     enabled: !!session && !!profile,
     queryFn: async () => {
-      const projects = assertResult(
-        await database.from("projects").select("id,title,status").eq("client_id", clientId),
+      const projectRows = assertResult(
+        await database
+          .from("projects")
+          .select("id,title,status,campaign_id,campaigns(id,title)")
+          .eq("client_id", clientId),
       );
+      const projects: AssetProject[] = projectRows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        campaignId: row.campaign_id,
+        campaignTitle: row.campaigns?.title ?? null,
+      }));
       if (!projects.length) return { assets: [] as ProjectAsset[], projects };
       const ids = projects.map((project) => project.id);
       const assets: ProjectAsset[] = [];

@@ -53,7 +53,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
   return (
     <div className="page-content briefing-detail">
       <header className="page-heading client-page-heading">
-        <div className="briefing-title-row">
+        <div className="page-title-row">
           <Link
             href={`/clients/${clientId}/briefings`}
             className="icon-button"

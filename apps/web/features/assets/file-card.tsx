@@ -1,24 +1,23 @@
 "use client";
 
 import { Download, FileImage, FileText, FileVideo } from "lucide-react";
-import Link from "next/link";
 import { fileTypeLabel } from "@/features/shared/upload-rules";
 import { useDateFormat } from "@/features/workspace/workspace-data";
 import type { ProjectAsset } from "./asset-data";
 
 /**
  * One file in the Files grid: the image's own preview when one is signed, otherwise an icon and the
- * file's real type, then its category, name, project, size and date, and its download.
+ * file's real type, then its category, name, size and date, and its download. The project it
+ * belongs to is not repeated here — the campaign view's project group heading, which every card in
+ * a `.file-grid` sits under, already carries that link.
  */
 export function FileCard({
   file,
-  projectTitle,
   preview,
   downloading,
   onDownload,
 }: {
   file: ProjectAsset;
-  projectTitle: string | undefined;
   preview: string | undefined;
   downloading: boolean;
   onDownload: (file: ProjectAsset) => void;
@@ -46,7 +45,6 @@ export function FileCard({
       <div className="file-information">
         <span className="eyebrow">{file.category}</span>
         <h2>{file.name}</h2>
-        <Link href={`/projects/${file.projectId}`}>{projectTitle}</Link>
         <footer>
           <span>
             {file.size ? `${(file.size / 1024).toFixed(0)} KB · ` : ""}
