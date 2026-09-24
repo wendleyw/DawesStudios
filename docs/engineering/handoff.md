@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 01:58 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+Updated: 2026-09-24 04:40 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
 orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -27,22 +27,23 @@ published-number rule misjudged 7 of 101 local deliverables). Review: one Critic
 both fixed with tests. Record: [verification](../verification/bulk-image-drop-2026-09-23.md).
 Then **Playground albums**, all six tasks (`3fe4cac..5b2b4b3`); review: two Important (a disabled
 thumbnail's reason only in `title`; a silent no-op at the 500-item cap), both fixed test-first in
-`610b7e4`. Record: [verification](../verification/playground-albums-2026-09-23.md). From the system
-test so far: a client's **Waiting for you** now lists only versions awaiting their decision
-(`7918b48`).
+`610b7e4`. Record: [verification](../verification/playground-albums-2026-09-23.md). Then the user's
+**Competitor ads widget** (asked at 01:55; spec, plan and approvals delegated for the night): ten
+tasks, `26eea82..01b57d9`, migration `202609240001`; review approved with three deferred minors.
+Meta previews need `META_AD_LIBRARY_ACCESS_TOKEN` (see the production guide); TikTok and Google are
+links. Record: [verification](../verification/competitor-ads-2026-09-24.md).
 
 Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-09-23.md).
 
 ## In progress
 
-- **Competitor ads widget** (user request, 2026-09-24 01:55): a board widget listing the client's
-  competitors and their ads from free, official ad libraries (Meta for Facebook and Instagram,
-  TikTok, Google). It goes through the process: spec, plan, inline execution, review, checkpoint.
-- **Then the complete system test** of logic, UX, UI and every action for all roles, with a
-  screenshot of every screen. Started: `apps/web/tests/e2e/system-tour.spec.ts` (uncommitted,
-  `SYSTEM_TOUR=1`) captured 155 surfaces into `outputs/system-tour/`; findings still to fix are the
-  briefing summary labels, the Files grid footers and placeholders, the phone workspace nav, the
-  board's opening zoom, the designer's unavailable Credits page and the preset "12–12 credits".
+- **The complete system test** of logic, UX, UI and every action for all roles, with a screenshot
+  of every screen (`apps/web/tests/e2e/system-tour.spec.ts`, `SYSTEM_TOUR=1`, uncommitted until the
+  record). Fixed so far: a client's **Waiting for you** (`7918b48`), preset estimates (`58f8bf7`), the
+  briefing summary labels (`318dadf`), the designer's studio-managed pages (`8b79be0`), the header
+  squeezing the client's name after the credit chip (`003272e`), "(optional)" markers, and Files
+  previews and types (`f4fe18d`). Kept on purpose: the board's 40% opening zoom. Next: the
+  re-run tour's screenshots, the whole browser suite, fixes, then the verification record.
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
@@ -60,20 +61,20 @@ Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-
 
 - Next.js dev server on `http://localhost:3003`, restarted at 18:40 because its watcher had
   stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230014`);
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609240001`);
   trusted media on 55430. Do not reset or re-provision. The compose `media` container was rebuilt
   from the current tree at 2026-09-24 04:27 UTC, so it serves the video lifecycle routes.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (`a375ed7c`, after `610b7e4`)
+## Evidence (`a375ed7c`, after `f4fe18d`)
 
-- `npm run check`: 754 tests / 61 files. `npm --prefix apps/media test`: 70 of 70 (after `7f3d3f0`).
-- `npm run db:test`: 19 of 20 files pass. `access_and_workflows.test.sql` fails its known 6
+- `npm run check`: 855 tests / 73 files. `npm --prefix apps/media test`: 70 of 70 (after `7f3d3f0`).
+- Database: 20 of 21 pgTAP files pass (401 tests); `access_and_workflows.test.sql` fails its known 6
   assertions under the SABRE overlay, as expected.
-- Browser: `video-designs.spec.ts` 6 of 6, `bulk-image-drop.spec.ts` 5 of 5, `playground.spec.ts`
-  11 of 11. The whole suite was not run.
+- Browser: `competitor-ads` 1 of 1, `board-views` + `client-navigation` + `client-pages-layout` 15 of
+  15 after the header fix, and the earlier plans' specs. The whole suite has not run yet today.
 
 ## Open gaps
 
@@ -96,6 +97,5 @@ and the incomplete-multipart lifecycle rule, the Supabase storage override, the 
 per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
 checklist. The local rehearsal already proves the rest.
 
-1. Write the competitor ads widget spec and plan under `docs/superpowers/`, execute it inline with
-   one whole-branch review, then finish the complete system test. A fresh session resumes from the
-   plan's ledger in `.superpowers/sdd/` and `git log`.
+1. Finish the system test: review the re-run tour, run the whole browser suite, fix what they show,
+   write `docs/verification/system-test-2026-09-24.md` and commit the tour spec with it.
