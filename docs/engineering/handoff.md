@@ -41,10 +41,9 @@ The details and evidence are in the
   written (`4e56cdb`, 9 TDD tasks). **The user approved the plan and chose native execution in a
   fresh session** (a mid-tier model is enough), with one whole-branch review at the end on the
   most capable model. No code yet.
-- **J10 on staging:** 63 of 72 scenarios pass on the canonical dataset. The six failures are
-  classified in the record. A Sonnet agent is making four data- or layout-dependent specs
-  dataset-independent and verifying them locally and on staging
-  (`handoffs/2026-09-23-e2e-dataset-independence.md`).
+- **J10 on staging: done for everything a local rehearsal can prove.** 68 of 72 scenarios pass on the
+  canonical dataset. The only failure needs SMTP, and the 3 scenarios after it in its serial group
+  did not run. A real server is still needed for R2, TLS, SMTP and a restore drill.
 
 ## Accepted decisions
 
@@ -63,8 +62,8 @@ The details and evidence are in the
   stalled. It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a competing server.
 - Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609230012`);
   trusted media on 55430. Do not reset or re-provision.
-- Staging rehearsal is **running** on ports 56010–56014 and 3103, loaded with the canonical
-  dataset. Stop it with `deploy/staging/scripts/stage.sh down`; it is disposable.
+- Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
+  `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
 ## Evidence (this session)
@@ -91,4 +90,3 @@ The details and evidence are in the
    superpowers:executing-plans: TDD per step, gate and a conventional commit per task, explicit
    paths only, and the next free migration number. Finish with one whole-branch review by the
    reviewer agent, then update this checkpoint."`
-2. Rerun the full suite on staging after the dataset-independence fixes, then update J10.

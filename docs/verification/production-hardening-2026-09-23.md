@@ -88,6 +88,11 @@ After a clean rebuild: **63 passed, 6 failed, 3 did not run.**
 | `project-feedback.spec.ts:205`, `:458` | Test data dependency: look up "Retail Partner Introduction", which exists only in the SABRE overlay. |
 | `workspace-actions.spec.ts:14` | Test layout dependency: drags a card while the search panel covers its grip; the trace shows no write request. |
 
+**Final run, after `712828e`, `a2e7bdc` and `dc0e7b2` (72 scenarios, one worker): 68 passed, 1 failed,
+3 did not run.** The failure is `intake-admin.spec.ts:565` (no SMTP on staging). The three that
+did not run follow it in the same serial group. The staging database ended at 10 clients / 25
+projects with no leftover acceptance fixtures.
+
 ## Not verified here
 
 - A real R2 bucket (object tagging), the TLS proxy, SMTP delivery, and a restore drill on the
