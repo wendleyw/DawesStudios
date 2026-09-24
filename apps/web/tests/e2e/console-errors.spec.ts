@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { credentials, localAdmin, signIn } from "./test-support";
+import { credentials, isDevelopmentTimingNoise, localAdmin, signIn } from "./test-support";
 
 /**
  * Acceptance row I02 asks for "no runtime console errors". Nothing in this repository looked for
@@ -16,7 +16,9 @@ import { credentials, localAdmin, signIn } from "./test-support";
  *
  * There is **no allow-list**, and there should not be one. The measured count on every surface here
  * is zero, so any entry would be a place to hide a future regression. A real third-party console
- * error belongs in a fix or an explicit, commented exception — not in a silent filter. Note that a
+ * error belongs in a fix or an explicit, commented exception — not in a silent filter. The one
+ * explicit exception is React's development-only timing error (`isDevelopmentTimingNoise`), which
+ * `sabre-demo` and `system-tour` already make: production builds do not run that instrumentation. Note that a
  * browser extension can emit console noise in a human's browser (one was observed calling a
  * third-party endpoint from a real session on 2026-09-21); Playwright runs without extensions, so
  * what this file sees is the application alone.
@@ -26,7 +28,11 @@ function collectErrors(page: Page): string[] {
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(`console: ${message.text()}`);
   });
-  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("pageerror", (error) => {
+    // A server redirect such as `/clients/:id/brand` can leave React's development build a negative
+    // `performance.measure` start; see `isDevelopmentTimingNoise` in `test-support.ts`.
+    if (!isDevelopmentTimingNoise(error.message)) errors.push(`pageerror: ${error.message}`);
+  });
   return errors;
 }
 
