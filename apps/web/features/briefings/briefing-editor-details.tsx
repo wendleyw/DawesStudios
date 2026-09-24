@@ -206,7 +206,7 @@ export function BriefingEditorDetails({
           </div>
           {directionFields.map(({ id, label }) => (
             <label key={id}>
-              <span className="briefing-field-name">{label}</span>
+              <span>{label}</span>
               <textarea
                 rows={2}
                 value={draft.direction[id] ?? ""}

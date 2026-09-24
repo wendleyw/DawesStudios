@@ -51,36 +51,38 @@ export function BriefingSummary({
       </section>
       <section>
         <h3>Creative direction</h3>
-        <p className="preserve-lines">{draft.overview || "No overview added."}</p>
-        {draft.goals && (
-          <p>
-            <strong>Goals</strong>
-            <br />
-            {draft.goals}
-          </p>
-        )}
-        {directionFields.map(({ id, label }) => {
-          const value = draft.direction[id as keyof typeof draft.direction];
-          return typeof value === "string" && value ? (
-            <p className="preserve-lines" key={id}>
-              <strong className="briefing-field-name">{label}</strong>
-              <br />
-              {value}
-            </p>
-          ) : null;
-        })}
-        {service?.questions.map((question) => (
-          <p className="preserve-lines" key={question.id}>
-            <strong>{question.label}</strong>
-            <br />
-            {draft.direction.questions?.[question.id] || "Not provided"}
-          </p>
-        ))}
+        {/* Each value keeps the label the editor gave its field, the overview included. */}
+        <dl className="briefing-summary-fields">
+          <SummaryField label="Overview" value={draft.overview || "No overview added."} />
+          {draft.goals && <SummaryField label="Goals" value={draft.goals} />}
+          {directionFields.map(({ id, label }) => {
+            const value = draft.direction[id as keyof typeof draft.direction];
+            return typeof value === "string" && value ? (
+              <SummaryField key={id} label={label} value={value} />
+            ) : null;
+          })}
+          {service?.questions.map((question) => (
+            <SummaryField
+              key={question.id}
+              label={question.label}
+              value={draft.direction.questions?.[question.id] || "Not provided"}
+            />
+          ))}
+        </dl>
       </section>
       <section>
         <h3>Timing</h3>
         <p>{formatDate(draft.dueDate, "No target date. We will agree on timing together.")}</p>
       </section>
+    </div>
+  );
+}
+
+function SummaryField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd className="preserve-lines">{value}</dd>
     </div>
   );
 }

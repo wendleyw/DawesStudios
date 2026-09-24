@@ -245,8 +245,6 @@
 .briefing-direction label {
   margin-block: 18px;
 }
-.briefing-field-name {
-}
 .briefing-note {
   font-size: var(--text-base) !important;
   line-height: 1.6;
@@ -295,6 +293,23 @@
 .briefing-summary strong {
   color: #343430;
   font-weight: 500;
+}
+.briefing-summary-fields {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+.briefing-summary-fields dt {
+  font-size: 14px;
+  font-weight: 500;
+  color: #343430;
+}
+.briefing-summary-fields dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .briefing-deliverable-summary {
   display: flex;
