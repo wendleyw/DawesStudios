@@ -253,9 +253,14 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
           </dl>
         )}
         {confirm.error && <FormError>{confirm.error.message}</FormError>}
-        <button className="button" disabled={confirm.isPending || accept.isPending}>
-          {confirm.isPending ? "Saving…" : "Confirm budget"}
-        </button>
+        {/* One primary action at a time: Confirm budget stays the only button until the briefing is
+            budget_confirmed with no unsaved edits, at which point Accept & create project takes over
+            below. Editing any field flips `unconfirmedEdit` back to true and brings this back. */}
+        {!(briefing.status === "budget_confirmed" && !unconfirmedEdit) && (
+          <button className="button" disabled={confirm.isPending || accept.isPending}>
+            {confirm.isPending ? "Saving…" : "Confirm budget"}
+          </button>
+        )}
       </form>
       {briefing.status === "budget_confirmed" && (
         <div className="briefing-accept">
@@ -274,13 +279,15 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
               the confirmed values to accept as they stand.
             </p>
           )}
-          <button
-            className="button primary"
-            disabled={accept.isPending || confirm.isPending || !enough || unconfirmedEdit}
-            onClick={() => accept.mutate()}
-          >
-            {accept.isPending ? "Creating project…" : "Accept & create project"}
-          </button>
+          {!unconfirmedEdit && (
+            <button
+              className="button primary"
+              disabled={accept.isPending || confirm.isPending || !enough || unconfirmedEdit}
+              onClick={() => accept.mutate()}
+            >
+              {accept.isPending ? "Creating project…" : "Accept & create project"}
+            </button>
+          )}
           <Link href={`/clients/${briefing.client_id}/credits`} className="button quiet">
             View credits
           </Link>
