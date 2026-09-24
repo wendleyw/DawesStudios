@@ -128,7 +128,20 @@ transfer chunked at 6 MB so a dropped connection loses one chunk instead of the 
 matters at the `VIDEO_MAX_BYTES` gigabyte ceiling `sanitizeVideoAsset` then asks `apps/media` to
 remux the raw upload with a metadata-stripping `-c copy` pass and delete the raw object, which is
 why the caller reports upload progress only on this branch: the transfer itself is the part with a
-progress signal, and the remux that follows it can run for several more minutes with none.
+progress signal, and the remux that follows it can run for several more minutes with none. The
+transfer resumes across a reload or a dropped connection: its tus fingerprint (`videoFingerprint`)
+is scoped to the user, the project and the file's name, size and modification time, so choosing the
+same file again in the same browser within the 24-hour resumable window continues it, and the dialog
+says **Continuing from N%** instead of **Sending N%**. One Cancel stops the transfer (asking Storage
+to terminate the partial upload and forgetting the resume point) or the processing call (then
+deleting the raw upload through the media service's `POST /designs/discard-raw`) and returns the
+dialog to choosing a file; saving the design itself, like every other action, cannot be cancelled
+midway. A transient processing failure (network error, timeout, 408, 429 or 5xx) is retried once
+automatically with the same raw path, and a second one offers **Try processing again**, which
+reprocesses the stored raw file without sending it again; invalid content (415 or 422) is never
+retried, and a missing raw file (410) reads as **The upload expired; choose the file again**. The
+media service's hourly sweep removes raw uploads and orphaned processed outputs older than 24 hours.
+The full design is in `docs/superpowers/specs/2026-09-23-video-upload-lifecycle-design.md`.
 `isVideoAsset` (`video-pins.ts`) reads a stored design's kind back from the returned path's
 extension rather than a database column, for the same reason `apps/media` names every object after
 the container it verified: what a browser claims about a file at upload time is not what the file

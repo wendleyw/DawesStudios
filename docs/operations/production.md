@@ -83,8 +83,9 @@ FILE_SIZE_LIMIT: 1073741824
 ```
 
 The application does not use Storage image transformations, so `imgproxy` may stay disabled. Add
-an R2 lifecycle rule that aborts incomplete multipart uploads after a few days; abandoned
-resumable uploads leave those parts behind.
+an R2 lifecycle rule that aborts incomplete multipart uploads after one day; abandoned or cancelled
+resumable uploads leave those parts behind, and the video upload lifecycle promises they are gone
+within 24 hours when Storage does not terminate them itself.
 
 ### Migrations
 
@@ -188,10 +189,15 @@ Record the results in `docs/verification/` before serving clients. This is the J
 5. Invitation and password recovery emails arrive on the real domain. Sign-up is refused.
 6. A video larger than 50 MB uploads, publishes and plays for a client. This proves
    `FILE_SIZE_LIMIT`, TUS on R2 and media scratch space.
-7. The family C isolation checks pass on staging: no designer identity, internal comments or
+7. The video upload lifecycle holds on staging: cancelling mid-transfer and mid-processing leaves no
+   design and no stored object, reloading mid-transfer and choosing the same file continues it, a
+   forced transient processing failure recovers automatically or through **Try processing again**,
+   and raw uploads and orphaned outputs older than 24 hours are removed. The upload lifecycle
+   scenarios in `apps/web/tests/e2e/video-designs.spec.ts` are the evidence.
+8. The family C isolation checks pass on staging: no designer identity, internal comments or
    unpublished files reach a client.
-8. A backup and restore drill succeeds, and monitoring alerts fire on a forced failure.
-9. Rollback is ready: a pre-release dump plus the previous image tags.
+9. A backup and restore drill succeeds, and monitoring alerts fire on a forced failure.
+10. Rollback is ready: a pre-release dump plus the previous image tags.
 
 There is no payment processor. Client credit requests and agency ledger allocations never
 charge a card.
