@@ -175,7 +175,6 @@ function routesFor(
   const client = `/clients/${ids.clientId}`;
   const shared = [
     ["home", "/home"],
-    ["search", "/search"],
     ["notifications", "/notifications"],
     ["settings-account", "/settings/account"],
     ["project", `/projects/${ids.projectId}`],

@@ -290,7 +290,7 @@ system do I use here", established by the [repository structural refactor](../su
   `empty-state`, `page-heading`/`section-heading`, the `form-*` classes). Nothing feature-specific
   belongs here.
 - **`apps/web/features/<feature>/<feature>.css`** holds every rule specific to that one feature —
-  `board/board.css`, `board/timeline.css`, `workspace/workspace.css`, `workspace/activity.css`,
+  `board/board.css`, `board/timeline.css`, `workspace/workspace.css`,
   `auth/auth.css`, and the rest, one stylesheet per feature, plus `shared/forms.css` for the shared
   form-layout classes (`stack-form`, `form-row`, `checkbox-label`, `form-actions`), loaded once
   globally by `app/layout.tsx`.

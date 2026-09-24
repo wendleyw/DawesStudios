@@ -109,12 +109,11 @@ Consumers include: `assets/assets-page`,
 `settings/workspace-settings`, `team/team-page`,
 `workspace/notifications-page`.
 
-Three `form-error` paragraphs are deliberately **not** `FormError`:
-`workspace/search-page` and `workspace/notifications-page` nest theirs inside a
-`<div role="alert">` that already announces the whole block, and
-`briefings/briefing-detail` shows a standing balance note that is not an alert.
-Turning those into `FormError` would add a live region each site does not have
-today.
+Two `form-error` paragraphs are deliberately **not** `FormError`:
+`workspace/notifications-page` nests its paragraph inside a `<div role="alert">`
+that already announces the whole block, and `briefings/briefing-detail` shows a
+standing balance note that is not an alert. Turning those into `FormError` would
+add a live region each site does not have today.
 
 ### `PageStatus` — `page-status.tsx`
 
@@ -159,12 +158,13 @@ the input always carries its own accessible name.
 | `onChange`    | `(value: string) => void`             | —       | Receives the new input value.                                                                           |
 | `placeholder` | `string`                              | —       |                                                                                                         |
 | `iconSize`    | `number`                              | —       | Required: the icon size differs per page (15–20) and is preserved per call site rather than normalised. |
-| `className`   | `string`                              | —       | Appended to `search-field`.                                                                             |
 | `inputRef`    | `RefObject<HTMLInputElement \| null>` | —       | For pages that focus the field on mount.                                                                |
 
 Consumers: `assets/assets-page`, `board/board-toolbar`, `brand/brand-assets`,
-`briefings/briefing-service-picker`, `credits/credits-page`,
-`workspace/search-page`.
+`briefings/briefing-service-picker`, `credits/credits-page`.
+
+The field's own border becomes the focus ring (`.search-field:focus-within` in
+`globals.css`); the input inside it draws none, so a focused field reads as one box.
 
 ## Non-component modules
 

@@ -500,15 +500,6 @@ select {
   color: var(--sidebar-text);
   font-weight: 500;
 }
-.nav-item kbd {
-  margin-left: auto;
-  padding: 1px 5px;
-  border: 1px solid #4b4d44;
-  border-radius: 4px;
-  color: #bdc0b3;
-  font-family: inherit;
-  font-size: var(--text-xs);
-}
 .nav-section-label {
   margin: var(--space-lg) var(--space-sm) var(--space-sm);
 
@@ -1003,8 +994,14 @@ select {
   background: transparent;
   box-shadow: none;
 }
+/* The field's own border becomes the focus ring; a ring on the input inside it drew a second box. */
 .search-field:focus-within {
   border-color: var(--border-strong);
+  outline: 2px solid var(--ink);
+  outline-offset: -1px;
+}
+.search-field input:focus-visible {
+  outline: none;
 }
 .segmented-control {
   display: inline-flex;

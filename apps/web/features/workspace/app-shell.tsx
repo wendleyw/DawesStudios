@@ -7,7 +7,6 @@ import {
   LogOut,
   Menu,
   PanelLeftClose,
-  Search,
   Settings2,
   Users,
   X,
@@ -26,7 +25,6 @@ import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
 import { useClients, useProjectClient } from "./workspace-data";
 import "./workspace.css";
-import "./activity.css";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { database, session, profile, loading, error } = useAuth();
@@ -62,18 +60,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     focusHandled.current = true;
     if (consumePostSignInFocus()) mainContent.current?.focus();
   }, [loading, session]);
-
-  useEffect(() => {
-    function shortcut(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setMobileOpen(false);
-        router.push("/search");
-      }
-    }
-    document.addEventListener("keydown", shortcut);
-    return () => document.removeEventListener("keydown", shortcut);
-  }, [router]);
 
   useEffect(() => {
     if (!mobileOpen || !sidebar.current) return;
@@ -260,15 +246,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Home size={17} />
             <span>{homeLabel}</span>
-          </Link>
-          <Link
-            className={`nav-item ${pathname === "/search" ? "active" : ""}`}
-            aria-current={pathname === "/search" ? "page" : undefined}
-            href="/search"
-          >
-            <Search size={17} />
-            <span>Search</span>
-            <kbd>⌘ K</kbd>
           </Link>
         </nav>
         <div className="sidebar-footer">

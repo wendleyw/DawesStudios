@@ -55,7 +55,7 @@ Selecting a project version/design keeps the user inside the project canvas. The
 | Agency home | Cross-client overview with work requiring attention and links into projects; all ten seed clients are reachable. |
 | Client home | Own board; no workspace client directory, designer identity, internal assignments, administrative settings, or internal review counts. Personal account settings remain available. |
 | Designer home | My work and assigned projects; no other designers' unassigned work or client billing. |
-| Global Search | Search overlay with keyboard shortcut, scope-safe clients/projects, results, no results, keyboard navigation, and selected-result navigation. |
+| Global Search | Retired on 2026-09-24 at the user's request: it duplicated the board's search. Each page keeps its own search. |
 | Notifications | Persisted recipient-scoped events, unread state, mark read, empty/error states, and authorized project destinations. |
 | Account | Account/session actions for signed-in people; agency account surface additionally links workspace settings. |
 | Help | Current product navigation help; do not present the old wireframe instructions as live system behavior. |

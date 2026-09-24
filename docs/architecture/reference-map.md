@@ -51,7 +51,7 @@ Production routes below are the orchestrator-approved route proposal. Server aut
 | `/clients/:clientId/credits` | [Balance and activity](../ref/01-agencia/08-creditos/01-saldo-atividade.png), [Usage report](../ref/01-agencia/08-creditos/06-relatorio.png) | `#/client/sabre/credits` | Balance and ledger first; contextual filters/report/export |
 | `/clients/:clientId/brand/:section` | [Brand overview](../ref/01-agencia/07-brand-hub/01-overview/01-pagina.png) | `#/client/sabre/brand/overview` | Compact brand resources; consolidate ten source sections as useful |
 | `/settings` | [Workspace](../ref/01-agencia/09-configuracoes/workspace.png), [Clients](../ref/01-agencia/09-configuracoes/clients.png), [Team](../ref/01-agencia/09-configuracoes/team.png) | `#/settings` | Agency administration with contextual creation and permissions |
-| Global search | [Search](../ref/01-agencia/01-home-e-globais/02-search.png), [No results](../ref/01-agencia/01-home-e-globais/04-search-sem-resultados.png) | `#/home` | One search entry point; permission-scoped results |
+| Global search | [Search](../ref/01-agencia/01-home-e-globais/02-search.png), [No results](../ref/01-agencia/01-home-e-globais/04-search-sem-resultados.png) | `#/home` | Retired on 2026-09-24; each page keeps its own permission-scoped search |
 | Global notifications | [Notifications](../ref/01-agencia/01-home-e-globais/05-notificacoes.png) | `#/home` | Meaningful persisted events, safe targets, read state |
 | Missing/inaccessible resource | [Unavailable link](../ref/01-agencia/01-home-e-globais/09-link-indisponivel.png) | `#/project/session-expired` | Safe failure and useful navigation; no sensitive existence disclosure |
 

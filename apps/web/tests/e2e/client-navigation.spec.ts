@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { credentials, localAgency, screenshotDirectory, signIn } from "./test-support";
+import {
+  credentials,
+  localAgency,
+  openBoardSearch,
+  screenshotDirectory,
+  signIn,
+} from "./test-support";
 
 test("the client switcher searches authorized workspaces and keeps one navigation context", async ({
   page,
@@ -226,4 +232,28 @@ test("client links stay visible at the top across pages without duplicating side
     await menu.getByRole("link", { name: "Board", exact: true }).click();
     await expect(page).toHaveURL(`/clients/${result.data!.id}/board`);
   }
+});
+
+test("search lives on each page and a focused search field reads as one box", async ({ page }) => {
+  await signIn(page, credentials.agency);
+  await page.goto("/home");
+  // The workspace-wide search was removed on 2026-09-24 as a duplicate of the board's own search.
+  await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(page).toHaveURL(/\/home$/);
+  await page.goto("/search");
+  await expect(page.getByRole("heading", { name: "This page is unavailable." })).toBeVisible();
+
+  const caller = await localAgency();
+  const sabre = await caller.from("clients").select("id").eq("slug", "sabre").single();
+  expect(sabre.error).toBeNull();
+  await page.goto(`/clients/${sabre.data!.id}/board`);
+  const input = await openBoardSearch(page);
+  await input.focus();
+  // The field's box carries the focus ring; the input inside it draws none.
+  await expect(input).toHaveCSS("outline-style", "none");
+  const field = page.locator(".search-field:focus-within");
+  await expect(field).toHaveCSS("outline-style", "solid");
+  await expect(field).toHaveCSS("outline-offset", "-1px");
+  await page.screenshot({ path: `${screenshotDirectory}/board-search-focused.png` });
 });

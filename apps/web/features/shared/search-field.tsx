@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import type { RefObject } from "react";
 
 /**
- * The search input used by the board, the workspace search and the list pages.
+ * The search input used by the board and the list pages.
  * The label wraps the icon and the input so the whole control stays clickable,
  * and the input always carries its own accessible name.
  */
@@ -12,7 +12,6 @@ export function SearchField({
   onChange,
   placeholder,
   iconSize,
-  className,
   inputRef,
 }: {
   label: string;
@@ -20,11 +19,10 @@ export function SearchField({
   onChange: (value: string) => void;
   placeholder: string;
   iconSize: number;
-  className?: string;
   inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <label className={className ? `search-field ${className}` : "search-field"}>
+    <label className="search-field">
       <Search size={iconSize} />
       <input
         ref={inputRef}

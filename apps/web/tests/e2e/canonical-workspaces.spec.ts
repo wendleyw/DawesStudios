@@ -103,25 +103,11 @@ test("all ten clients and twenty-five projects render with matching records and 
         await page.getByRole("button", { name: "Approved", exact: true }).click();
         await expect(page.locator(".review-card")).toHaveCount(approved);
       }
-      await page.goto("/search");
-      const known = allowed[0];
-      await page.getByLabel("Search your workspace").fill(known.title);
-      await expect(page.locator(`.search-result[href="/projects/${known.id}"]`)).toBeVisible();
       if (actor.role !== "agency") {
-        // The title has to match nothing this actor may read, which is not the same as belonging to
-        // another workspace. SABRE's projects carry bare names like "Brand Guidelines", and search
-        // covers brand assets too, so "Brand Guidelines" finds Acme's own "Sample brand
-        // guidelines". A title that names another workspace cannot collide with anything in this
-        // one, so the negative case is taken from those.
+        // A project this actor may not read stays unavailable when opened by its direct URL.
         const forbidden = projects.find(
-          (project) =>
-            !allowed.some((item) => item.id === project.id) && project.title.includes(" / "),
+          (project) => !allowed.some((item) => item.id === project.id),
         )!;
-        await page.getByLabel("Search your workspace").fill(forbidden.title);
-        await expect(page.locator(`.search-result[href="/projects/${forbidden.id}"]`)).toHaveCount(
-          0,
-        );
-        await expect(page.getByRole("heading", { name: "No matches yet." })).toBeVisible();
         await page.goto(`/projects/${forbidden.id}?channel=client`);
         await expect(page.getByRole("heading", { name: "Project unavailable." })).toBeVisible();
       }

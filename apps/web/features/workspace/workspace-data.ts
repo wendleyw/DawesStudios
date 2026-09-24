@@ -3,19 +3,17 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { briefingStatusLabels } from "@/features/briefings/briefing-model";
 import type { StatusTone } from "@/features/shared/status-tone";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { assertResult, describeSupabaseError, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
- * Supabase access shared by the application shell, the home overview, the global search page and
- * notifications. Grouped like `features/settings/settings-data.ts`: each domain below holds its
- * read hook(s), and only the domains that own a write also export a `<domain>QueryKeys` /
- * `useInvalidate<Domain>()` pair — a single bundled `workspaceQueryKeys` invalidated by every
- * mutation would refresh the project list every time a notification is marked read, which is a
- * behavior neither call made before this migration. See the "Projects" and "Notifications" groups
- * below for the two keys this feature owns.
+ * Supabase access shared by the application shell, the home overview and notifications. Grouped
+ * like `features/settings/settings-data.ts`: each domain below holds its read hook(s), and only the
+ * domains that own a write also export a `<domain>QueryKeys` / `useInvalidate<Domain>()` pair — a
+ * single bundled `workspaceQueryKeys` invalidated by every mutation would refresh the project list
+ * every time a notification is marked read, which is a behavior neither call made before this
+ * migration. See the "Projects" and "Notifications" groups below for the two keys this feature owns.
  */
 
 // ---------------------------------------------------------------------------------------------
@@ -237,83 +235,6 @@ export function useWorkspaceCampaigns() {
         id: string;
         title: string;
       }[],
-  });
-}
-
-// ---------------------------------------------------------------------------------------------
-// Search: the cross-entity lookup behind the global search page (`search-page.tsx`). One hook
-// covering all four entities, because the page renders one combined, ordered result list rather
-// than four independent ones — the four queries run together and their results are concatenated in
-// the same clients/projects/briefings/brand-assets order the page always used.
-// ---------------------------------------------------------------------------------------------
-
-export type WorkspaceSearchResult = {
-  id: string;
-  title: string;
-  description: string;
-  type: "Client" | "Project" | "Briefing" | "Brand asset";
-  href: string;
-};
-
-export function useWorkspaceSearch(search: string) {
-  const { database, session, profile } = useAuth();
-  return useQuery({
-    queryKey: ["search", session?.user.id, search],
-    enabled: search.length > 1,
-    queryFn: async (): Promise<WorkspaceSearchResult[]> => {
-      const pattern = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
-      const [clients, projects, briefings, assets] = await Promise.all([
-        database
-          .from("clients")
-          .select("id,name,industry")
-          .eq("archived", false)
-          .ilike("name", pattern)
-          .limit(30),
-        database.from("projects").select("id,title,description").ilike("title", pattern).limit(40),
-        profile?.role !== "designer"
-          ? database
-              .from("briefings")
-              .select("id,title,client_id,status")
-              .ilike("title", pattern)
-              .limit(30)
-          : Promise.resolve({ data: [], error: null }),
-        database
-          .from("brand_assets")
-          .select("id,name,client_id,category")
-          .ilike("name", pattern)
-          .limit(30),
-      ]);
-      return [
-        ...assertResult(clients).map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.industry,
-          type: "Client" as const,
-          href: `/clients/${item.id}/board`,
-        })),
-        ...assertResult(projects).map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          type: "Project" as const,
-          href: `/projects/${item.id}`,
-        })),
-        ...assertResult(briefings).map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: briefingStatusLabels[item.status],
-          type: "Briefing" as const,
-          href: `/clients/${item.client_id}/briefings/${item.id}`,
-        })),
-        ...assertResult(assets).map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.category,
-          type: "Brand asset" as const,
-          href: `/clients/${item.client_id}/brand/assets?asset=${item.id}`,
-        })),
-      ];
-    },
   });
 }
 

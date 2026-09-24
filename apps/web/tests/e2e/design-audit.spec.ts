@@ -87,7 +87,6 @@ test("representative task surfaces pass responsive layout and accessibility chec
       await page.setViewportSize({ width, height: width === 1600 ? 1000 : 844 });
       for (const [name, route] of [
         ["home", "/home"],
-        ["search", "/search"],
         ["notifications", "/notifications"],
         ["account", "/settings/account"],
         ["settings", "/settings"],

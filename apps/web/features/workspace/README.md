@@ -1,8 +1,10 @@
-# Workspace shell, overview, search and notifications
+# Workspace shell, overview and notifications
 
 This feature holds the application chrome (`app-shell.tsx`), the home overview
-(`home-page.tsx`), the global cross-entity search page (`search-page.tsx`), and notifications
-(`notifications-page.tsx`, `notifications-bell.tsx`). `client-mark.tsx` renders a client's mark — the logo the agency set in
+(`home-page.tsx`) and notifications (`notifications-page.tsx`, `notifications-bell.tsx`). The
+workspace-wide search page (`/search`, the sidebar's Search item and its ⌘K shortcut) was removed
+on 2026-09-24 at the user's request because it duplicated the board's own search; each page keeps
+its own search field. `client-mark.tsx` renders a client's mark — the logo the agency set in
 Settings > Clients (`clients.logo_path`), else the first Brand Hub Logo image, else initials — and
 is used by this feature's shell, `features/board` and `features/settings`.
 
@@ -56,7 +58,7 @@ client is marked, and empty/error states remain actionable. Escape closes the pi
 focus; on mobile it leaves the containing navigation drawer open until the next Escape.
 
 The selected route determines client context, including directly opened project links. The sidebar
-retains client switching, Overview/My work, Search, studio controls, support and account/sign out.
+retains client switching, Overview/My work, studio controls, support and account/sign out.
 It uses tighter spacing in short client-workspace windows so those global actions fit without
 scrolling. Client links stay in the top navigation when the sidebar is collapsed or opened as a
 mobile drawer.
@@ -68,9 +70,8 @@ shared editor over the current route; direct URL loads use the full page. See th
 ## Data access
 
 `workspace-data.ts` owns every Supabase read and write this feature's own components issue, as
-[the data-access contract](../../../../docs/architecture/data-access.md) requires. It relocated the
-four queries that built `search-page.tsx`'s cross-entity result list and the one mutation in
-`notifications-page.tsx`.
+[the data-access contract](../../../../docs/architecture/data-access.md) requires. It holds the
+mutation relocated from `notifications-page.tsx`.
 
 `workspace-settings.ts` is this feature's one documented exception to that rule, listed in the
 contract's [Exceptions section](../../../../docs/architecture/data-access.md#exceptions): it calls
@@ -81,20 +82,11 @@ read without a workspace → settings dependency, and so that neither `workspace
 `settings/settings-data.ts` has to import the other feature to reach it — see
 [`features/settings/README.md`](../settings/README.md) for the full reasoning.
 
-| Source (component)                     | Destination in `workspace-data.ts`        | Table, columns, filters and order                                                                                                      | Unchanged? |
-| -------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `search-page.tsx` — clients query      | `useWorkspaceSearch()` (clients branch)   | `clients`, `.select("id,name,industry")`, `.eq("archived", false)`, `.ilike("name", pattern)`, `.limit(30)`                            | Yes        |
-| `search-page.tsx` — projects query     | `useWorkspaceSearch()` (projects branch)  | `projects`, `.select("id,title,description")`, `.ilike("title", pattern)`, `.limit(40)`                                                | Yes        |
-| `search-page.tsx` — briefings query    | `useWorkspaceSearch()` (briefings branch) | `briefings`, `.select("id,title,client_id,status")`, `.ilike("title", pattern)`, `.limit(30)`, gated on `profile?.role !== "designer"` | Yes        |
-| `search-page.tsx` — brand assets query | `useWorkspaceSearch()` (assets branch)    | `brand_assets`, `.select("id,name,client_id,category")`, `.ilike("name", pattern)`, `.limit(30)`                                       | Yes        |
-| `notifications-page.tsx` — mark read   | `markNotificationsRead()`                 | `notifications`, `.update({ read_at })`, `.eq("user_id", ...)`, `.is("read_at", null)`, then `.eq("id", ...)` when an id is given      | Yes        |
+| Source (component)                   | Destination in `workspace-data.ts` | Table, columns, filters and order                                                                                                 | Unchanged? |
+| ------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `notifications-page.tsx` — mark read | `markNotificationsRead()`          | `notifications`, `.update({ read_at })`, `.eq("user_id", ...)`, `.is("read_at", null)`, then `.eq("id", ...)` when an id is given | Yes        |
 
-The four search branches still run with `Promise.all` and their results are still concatenated in
-the same clients → projects → briefings → brand-assets order the page always produced; that order is
-user-visible and no test asserts it, so it was preserved rather than "improved." `search-page.tsx`
-previously issued this `useQuery` directly (it was already a hook, called at the top of a component
-that renders it); it is now `useWorkspaceSearch()`, a proper `use<Thing>()` hook, and the page no
-longer imports `useAuth` at all. `markNotificationsRead()` is a plain `async (database, input)`
+`markNotificationsRead()` is a plain `async (database, input)`
 function per rule 3; `new Date().toISOString()` for `read_at` moved with the update payload it is
 part of, not left behind as "trimming" under rule 4 — it is the write's data, not form input the
 component validates.
@@ -156,7 +148,7 @@ module's `useInvalidateWorkspace()` keeps the shorter name.
 
 ## CSS boundary
 
-`workspace.css` (32 namespaces from the stylesheet split) and `activity.css` are settled; no
+`workspace.css` (32 namespaces from the stylesheet split) is settled; no
 namespace change was made here. Auditing every class name this feature's markup uses against
 `app/globals.css` found exactly one namespace used only by this feature that still lives there:
 
@@ -185,12 +177,11 @@ likewise genuinely multi-feature and untouched.
 
 ## Shared primitives
 
-`search-page.tsx` already uses the shared `SearchField` (`@/features/shared/search-field`);
 `notification-feed.tsx` uses `FormError` for its mutation error and `PageStatus` is used by
 `home-page.tsx`. Nothing in this feature held a local copy of markup extracted into
-`features/shared/`. `search-page.tsx`'s and `notification-feed.tsx`'s inline `role="alert"` blocks
-around a `<p className="form-error">` are the two deliberate non-`FormError` exceptions already
-recorded in [`features/shared/README.md`](../shared/README.md).
+`features/shared/`. `notification-feed.tsx`'s inline `role="alert"` block around a
+`<p className="form-error">` is a deliberate non-`FormError` exception already recorded in
+[`features/shared/README.md`](../shared/README.md).
 
 ## Dead code
 

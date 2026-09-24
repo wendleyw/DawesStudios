@@ -56,7 +56,6 @@ test("no surface logs a console error or throws, for any role", async ({ page })
   await signIn(page, credentials.agency);
   await visit(page, [
     "/home",
-    "/search",
     "/notifications",
     "/settings",
     "/settings/workspace",
@@ -84,7 +83,7 @@ test("a designer's and a client's own surfaces are equally quiet", async ({ brow
     const page = await context.newPage();
     const errors = collectErrors(page);
     await signIn(page, email);
-    await visit(page, ["/home", "/notifications", "/search"]);
+    await visit(page, ["/home", "/notifications"]);
     expect(errors, `${email} logged: ${errors.join(" | ")}`).toEqual([]);
     await context.close();
   }

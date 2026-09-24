@@ -145,27 +145,11 @@ test("board views, filters, campaign validation, movement and scoped search", as
           .single()
       ).data,
     ).toEqual({ title: campaignTitle, start_date: "2026-10-20", end_date: "2026-10-30" });
+    // The workspace-wide search was removed on 2026-09-24 as a duplicate of the board's own
+    // search: no sidebar entry, and the old shortcut leaves the board where it is.
+    await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveCount(0);
     await page.keyboard.press("Meta+k");
-    await expect(page).toHaveURL(/\/search$/);
-    await expect(page.getByLabel("Search your workspace")).toBeFocused();
-    await page.getByLabel("Search your workspace").fill("No such acceptance project");
-    await expect(page.getByRole("heading", { name: "No matches yet." })).toBeVisible();
-    await page.route("**/rest/v1/projects?**", async (route) =>
-      route.fulfill({
-        status: 503,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Temporary acceptance outage" }),
-      }),
-    );
-    await page.getByLabel("Search your workspace").fill(project.title);
-    await expect(page.locator("main [role=alert]")).toContainText(
-      "We couldn’t complete the search.",
-      { timeout: 30000 },
-    );
-    await page.unroute("**/rest/v1/projects?**");
-    await page.getByRole("button", { name: "Try again", exact: true }).click();
-    await page.locator(`.search-result[href="/projects/${fixture.projectId}"]`).click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(project.title);
+    await expect(page).toHaveURL(new RegExp(`/clients/${fixture.clientId}/board(\\?.*)?$`));
   } finally {
     await restoreBoard();
     await cleanupTestProject(fixture.projectId);
