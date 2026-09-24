@@ -1,7 +1,7 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-23 22:45 EDT. Owner: **Claude Code** (session `dawesstudios-29`), active
-orchestrator since 17:50 EDT.
+Updated: 2026-09-23 23:55 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-through-2026-09-23.md) (or a newer history file). Read the
@@ -27,7 +27,8 @@ Playground split, jitless Zod); test harness for declared backends; the client l
 ## In progress
 
 - **Video upload lifecycle:** the [plan](../superpowers/plans/2026-09-23-video-upload-lifecycle.md)
-  (`4e56cdb`) is approved for native execution in a fresh session. No code yet.
+  (`4e56cdb`) is executing inline in `a375ed7c` on `main`, one commit per task. Progress ledger:
+  `.superpowers/sdd/2026-09-23-video-upload-lifecycle/progress.md` (git-ignored).
 - **Bulk image drop:** [plan](../superpowers/plans/2026-09-23-bulk-image-drop.md) approved for the
   same native, fresh-session execution. **Playground albums:** the
   [spec](../superpowers/specs/2026-09-23-playground-albums-design.md) is approved and a Sonnet agent
