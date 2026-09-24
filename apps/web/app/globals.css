@@ -1547,9 +1547,10 @@ select {
 }
 
 /* Below 980px one row cannot hold the client's name, the period, every section link and the account
-   card (credit balance, bell, avatar), so the links move to a second row instead of squeezing the
-   name. A short landscape phone keeps one row down to 700px, so the period panel still fits below
-   the header. */
+   card (credit balance, bell, avatar), so on the board and client pages the links move to a second
+   row instead of squeezing the name. A project page keeps one row down to 700px: its own title card
+   names the work, and the feedback panel below needs the height. So does a short landscape phone,
+   where the period panel must still fit below the header. */
 @container board (max-width: 700px) {
   .board-identity {
     flex-direction: column;
@@ -1563,12 +1564,12 @@ select {
 }
 @media (min-height: 651px) {
   @container board (max-width: 980px) {
-    .board-identity {
+    :not(.project-chrome) > .board-header .board-identity {
       flex-direction: column;
       align-items: stretch;
       gap: 4px;
     }
-    .board-identity .client-navigation {
+    :not(.project-chrome) > .board-header .board-identity .client-navigation {
       justify-content: space-between;
       gap: 12px;
     }
