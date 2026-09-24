@@ -1926,3 +1926,12 @@ to `:147`/`:161`, so correcting either side alone reproduces the defect in the o
 delete the line numbers and cite the symbols**, applied after the merge; the same for
 `design-system.md`'s selector count, which should point at `stylesheet-boundary.test.ts` rather than
 carry a copy that was corrected from 736 to 730 this morning and is already wrong again.
+
+## Moved from the checkpoint on 2026-09-24
+
+`dawesstudios-29` ([record](../../verification/production-hardening-2026-09-23.md)): consolidated
+618 files into commits; workflow rules and lean agents; production guide and local staging
+rehearsal; audit fixes (indexes, dead CSS, styling moves, CSP and HSTS, invitation cap, Playground
+split, jitless Zod); test harness for declared backends; the client logo feature from
+`dawesstudios-3b`; and, from user reports, briefing acceptance on the studio's local date and one
+budget action (`0d310d5`, migration `202609230013`).

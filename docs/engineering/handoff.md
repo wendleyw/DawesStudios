@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 01:40 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
+Updated: 2026-09-24 01:58 EDT. Owner: **Claude Code** (fresh session `a375ed7c`), active
 orchestrator since 23:55 EDT; it took over from `dawesstudios-29` to execute the approved plans.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
@@ -25,20 +25,24 @@ and the 24-hour sweep. Whole-branch review: no Critical or Important findings. R
 seven tasks (`422178d..0a274a1`): "shared" is the version's `reviewed` status (the plan's
 published-number rule misjudged 7 of 101 local deliverables). Review: one Critical and one Important,
 both fixed with tests. Record: [verification](../verification/bulk-image-drop-2026-09-23.md).
+Then **Playground albums**, all six tasks (`3fe4cac..5b2b4b3`); review: two Important (a disabled
+thumbnail's reason only in `title`; a silent no-op at the 500-item cap), both fixed test-first in
+`610b7e4`. Record: [verification](../verification/playground-albums-2026-09-23.md). From the system
+test so far: a client's **Waiting for you** now lists only versions awaiting their decision
+(`7918b48`).
 
-`dawesstudios-29` ([record](../verification/production-hardening-2026-09-23.md)): consolidated 618 files into commits; workflow rules and lean agents; production guide and local
-staging rehearsal; audit fixes (indexes, dead CSS, styling moves, CSP and HSTS, invitation cap,
-Playground split, jitless Zod); test harness for declared backends; the client logo feature from
-`dawesstudios-3b`; and the briefing acceptance date and single budget action (`0d310d5`).
+Earlier `dawesstudios-29` work is in the [history](history/handoff-through-2026-09-23.md).
 
 ## In progress
 
-- **Playground albums:** the [plan](../superpowers/plans/2026-09-23-playground-albums.md) (6 tasks)
-  executes next, inline in `a375ed7c` on `main` (ledger in the git-ignored
-  `.superpowers/sdd/2026-09-23-playground-albums/`). Then the user's requested complete test of
-  logic, UX, UI and every action for all roles, with a screenshot of every screen.
-- **Fixed today from user reports:** briefing acceptance on the studio's local date and one budget
-  action (`0d310d5`, migration `202609230013`).
+- **Competitor ads widget** (user request, 2026-09-24 01:55): a board widget listing the client's
+  competitors and their ads from free, official ad libraries (Meta for Facebook and Instagram,
+  TikTok, Google). It goes through the process: spec, plan, inline execution, review, checkpoint.
+- **Then the complete system test** of logic, UX, UI and every action for all roles, with a
+  screenshot of every screen. Started: `apps/web/tests/e2e/system-tour.spec.ts` (uncommitted,
+  `SYSTEM_TOUR=1`) captured 155 surfaces into `outputs/system-tour/`; findings still to fix are the
+  briefing summary labels, the Files grid footers and placeholders, the phone workspace nav, the
+  board's opening zoom, the designer's unavailable Credits page and the preset "12–12 credits".
 - **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
@@ -63,14 +67,13 @@ Playground split, jitless Zod); test harness for declared backends; the client l
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (`a375ed7c`, after `7f3d3f0`)
+## Evidence (`a375ed7c`, after `610b7e4`)
 
-- `npm run check`: 652 tests / 55 files (the tree included the other session's edits).
-  `npm --prefix apps/media test`: 70 of 70.
+- `npm run check`: 754 tests / 61 files. `npm --prefix apps/media test`: 70 of 70 (after `7f3d3f0`).
 - `npm run db:test`: 19 of 20 files pass. `access_and_workflows.test.sql` fails its known 6
   assertions under the SABRE overlay, as expected.
-- Browser: `video-designs.spec.ts` 6 of 6; the seven dialog-affected specs 23 of 23. The whole
-  suite was not run.
+- Browser: `video-designs.spec.ts` 6 of 6, `bulk-image-drop.spec.ts` 5 of 5, `playground.spec.ts`
+  11 of 11. The whole suite was not run.
 
 ## Open gaps
 
@@ -93,7 +96,6 @@ and the incomplete-multipart lifecycle rule, the Supabase storage override, the 
 per-IP limits, SMTP, the first agency account, backups plus a restore drill, then the release
 checklist. The local rehearsal already proves the rest.
 
-1. Continue the ordered run in `a375ed7c`: the bulk image drop plan, then
-   `docs/superpowers/plans/2026-09-23-playground-albums.md`, each with superpowers:executing-plans,
-   one whole-branch review and a checkpoint update. If this session ends first, a fresh session
-   resumes from the plan's ledger and `git log` (completed tasks have `Task N: complete` lines).
+1. Write the competitor ads widget spec and plan under `docs/superpowers/`, execute it inline with
+   one whole-branch review, then finish the complete system test. A fresh session resumes from the
+   plan's ledger in `.superpowers/sdd/` and `git log`.
