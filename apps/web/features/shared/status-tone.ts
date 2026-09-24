@@ -11,12 +11,14 @@
  * label map (`statusLabels`, `briefingStatusLabels`, `creditRequestStatusLabels`). A new domain
  * gets its tones for free.
  *
- * | Tone         | Meaning                                                  |
- * | ------------ | -------------------------------------------------------- |
- * | `neutral`    | A resting state. Nobody is waiting and nothing is running. |
- * | `active`     | Work is underway.                                          |
- * | `attention`  | The record is waiting on a person to act.                  |
- * | `complete`   | The work finished and produced its result.                 |
+ * Each tone pairs a shape cue with a restrained hue, so status never relies on color alone:
+ *
+ * | Tone         | Meaning                                                     | Shape                | Hue                         |
+ * | ------------ | ------------------------------------------------------------ | --------------------- | ---------------------------- |
+ * | `neutral`    | A resting state. Nobody is waiting and nothing is running.   | Filled dot            | Grey (the base surface)      |
+ * | `active`     | Work is underway.                                            | Hollow ring           | Calm blue                    |
+ * | `attention`  | The record is waiting on a person to act.                    | Dashed border         | Amber                        |
+ * | `complete`   | The work finished and produced its result.                   | Solid fill, square dot | Green                        |
  */
 export type StatusTone = "neutral" | "active" | "attention" | "complete";
 

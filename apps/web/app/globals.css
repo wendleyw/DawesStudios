@@ -71,6 +71,20 @@
   --focus-ring: rgb(39 42 48 / 8%);
   --overlay-shadow: 0 20px 64px rgb(20 23 29 / 16%);
   --overlay-scrim: rgb(20 23 29 / 36%);
+  /*
+   * The status badge's three colored tones (`neutral` stays grey). Each pairs a soft tinted
+   * background with a darker foreground and a mid-strength border; the credit balance chip reuses
+   * `--tone-attention-*`. Foreground-on-background contrast is 6:1 or better for 12px text.
+   */
+  --tone-active-fg: #1d4e89;
+  --tone-active-bg: #e7f0fb;
+  --tone-active-border: #a9c6ea;
+  --tone-attention-fg: #7a5400;
+  --tone-attention-bg: #fbf1dc;
+  --tone-attention-border: #e3bd6e;
+  --tone-complete-fg: #2f5d34;
+  --tone-complete-bg: #e7f0df;
+  --tone-complete-border: #a9c48a;
 }
 @theme inline {
   --color-background: var(--background);
@@ -726,7 +740,10 @@ select {
  * The badge styles four meanings, not four enum values: `neutral` (the base), `active`,
  * `attention` and `complete`. Every domain maps its own enum onto that vocabulary in TypeScript
  * beside its label map (see `features/shared/status-tone.ts`), so a new domain needs no CSS and no
- * database enum value appears in a selector here.
+ * database enum value appears in a selector here. Shape still carries the meaning on its own —
+ * dot, ring, dashed border, square dot — and each tone additionally carries a restrained hue
+ * (`--tone-active-*` blue, `--tone-attention-*` amber, `--tone-complete-*` green) so status is
+ * never read from color alone. `neutral` stays the existing grey.
  */
 .status-badge {
   display: inline-flex;
@@ -758,25 +775,28 @@ select {
   background: currentColor;
   content: "";
 }
-/* Work is underway: an open ring on the plain surface. */
+/* Work is underway: an open ring on a soft blue tint. */
 .status-badge.tone-active {
-  border-color: var(--border-strong);
-  background: var(--surface);
+  border-color: var(--tone-active-border);
+  background: var(--tone-active-bg);
+  color: var(--tone-active-fg);
 }
 .status-badge.tone-active::before {
   background: transparent;
   border: 1px solid currentColor;
 }
-/* Waiting on a person: a dashed edge, the one shape that reads as unsettled. */
+/* Waiting on a person: a dashed edge on a soft amber tint, the one shape that reads as unsettled. */
 .status-badge.tone-attention {
   border-style: dashed;
-  border-color: var(--border-strong);
+  border-color: var(--tone-attention-border);
+  background: var(--tone-attention-bg);
+  color: var(--tone-attention-fg);
 }
-/* Finished: a solid fill, full-strength text and a square mark. */
+/* Finished: a solid green fill, full-strength text and a square mark. */
 .status-badge.tone-complete {
-  border-color: var(--border-strong);
-  background: var(--border);
-  color: var(--foreground);
+  border-color: var(--tone-complete-border);
+  background: var(--tone-complete-bg);
+  color: var(--tone-complete-fg);
 }
 .status-badge.tone-complete::before {
   border-radius: 1px;
@@ -1448,7 +1468,8 @@ select {
   background: var(--border);
 }
 .board-account {
-  max-width: 264px;
+  /* Room for the credit balance chip, the bell and the avatar before the name truncates. */
+  max-width: 360px;
   flex-shrink: 0;
   gap: 8px;
 }

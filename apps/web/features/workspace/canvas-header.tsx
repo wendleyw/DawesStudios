@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { CreditBalanceChip } from "@/features/credits/credit-balance-chip";
 import { NotificationsPopover } from "./notifications-popover";
 import type { ReactNode } from "react";
 import { ClientMark } from "./client-mark";
@@ -52,6 +53,7 @@ export function CanvasHeader({
         {viewer && <ClientNavigation client={client} role={viewer.role} />}
       </div>
       <div className="board-account">
+        <CreditBalanceChip clientId={client.id} viewer={viewer} />
         <NotificationsPopover />
         <Link
           href="/settings/account"

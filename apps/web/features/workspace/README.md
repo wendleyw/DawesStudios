@@ -15,7 +15,10 @@ Board, Briefings, Reviews, Files, Brand Hub and Credits (hidden for designers). 
 active. No client destinations remain in the sidebar on any route.
 
 All client routes share `canvas-header.tsx`: floating client identity/navigation on the left
-and the signed-in viewer’s profile with a notification bell on its left in one account card. Only the board supplies the quarter control.
+and the signed-in viewer’s profile with a notification bell on its left in one account card. A
+compact credit balance chip (`features/credits/credit-balance-chip.tsx`) sits directly left of that
+bell, linking to the client's Credits page; it renders nothing for a designer viewer, since credits
+stay out of that role's view everywhere else. Only the board supplies the quarter control.
 Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
 Reviews, Files, Brand Hub and Credits receive the same header from the shell, positioned sticky
 inside the main scrolling region. Their white title/action cards and contextual tools sit below it

@@ -68,9 +68,10 @@ describe("status tones", () => {
   });
 
   it("agrees across domains on what a state means", () => {
-    // An accepted briefing produced its project; an approved project produced its work. Both are
-    // complete, and both must read the same on screen.
-    expect(briefingStatusTones.accepted).toBe(projectStatusTones.approved);
+    // An accepted briefing is labelled "In progress" because its project is now underway, so it
+    // must carry the same tone (and hue) as a project labelled "In progress".
+    expect(briefingStatusLabels.accepted).toBe(statusLabels.in_progress);
+    expect(briefingStatusTones.accepted).toBe(projectStatusTones.in_progress);
     // A briefing waiting on the studio and a project sent back for changes are both waiting on a
     // person.
     expect(briefingStatusTones.awaiting_review).toBe(projectStatusTones.changes_requested);

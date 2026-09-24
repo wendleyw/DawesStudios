@@ -152,7 +152,7 @@ export const briefingStatusTones: Record<Briefing["status"], StatusTone> = {
   draft: "neutral",
   awaiting_review: "attention",
   budget_confirmed: "attention",
-  accepted: "complete",
+  accepted: "active",
 };
 
 export function serviceEstimate(service: ServiceDefinition | undefined) {
