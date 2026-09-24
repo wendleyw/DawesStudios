@@ -18,21 +18,11 @@ history only when a task needs earlier evidence.
 
 ## Done in this session
 
-The details and evidence are in the
-[verification record](../verification/production-hardening-2026-09-23.md).
-
-- **Interrupted task:** brand-folder remote changes, plus consolidation of 618 files (`859e849..a5f610e`).
-- **Workflow rules:** lean project agents, 30-line reports, this checkpoint, commit per task.
-  E2e evidence goes to `outputs/` unless `WRITE_EVIDENCE=1`.
-- **Production:** the [production guide](../operations/production.md) and a local
-  [staging rehearsal](../../deploy/staging/README.md) with MinIO standing in for R2.
-- **Audit fixes:** cascade indexes, dead CSS and private exports, styling moves, full CSP with
-  HSTS, a streamed invitation cap, the Playground hook split, and jitless Zod (`712828e`).
-- **Test harness:** credentials for a declared backend (`155f976`), and privileged cleanup in that
-  backend's database (`a2e7bdc`).
-- **Client logo** (from `dawesstudios-3b`: `47b47d1`, `3650c2a`, `c529671`, `8506306`): the
-  agency sets a logo in Settings > Clients; it is raster only; the 48px mark appears only on the
-  wide client board header.
+Details and evidence: [verification record](../verification/production-hardening-2026-09-23.md).
+Consolidated 618 files into commits; workflow rules and lean agents; production guide and local
+staging rehearsal; audit fixes (indexes, dead CSS, styling moves, CSP and HSTS, invitation cap,
+Playground split, jitless Zod); test harness for declared backends; the client logo feature from
+`dawesstudios-3b`; and the briefing acceptance date and single budget action (`0d310d5`).
 
 ## In progress
 
