@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { boardViews } from "../../features/board/board-views";
 import {
   credentials,
+  isDevelopmentTimingNoise,
   localAgency,
   preserveBoardPreference,
   screenshotDirectory,
@@ -22,7 +23,9 @@ for (const role of ["agency", "client"] as const) {
     test.setTimeout(120_000);
     const restore = await preserveBoardPreference(credentials[role], clientId);
     const errors: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("pageerror", (error) => {
+      if (!isDevelopmentTimingNoise(error.message)) errors.push(error.message);
+    });
     try {
       await signIn(page, credentials[role]);
       await page.goto(`/clients/${clientId}/board`);
@@ -82,7 +85,9 @@ for (const role of ["agency", "client"] as const) {
     };
     const errors: string[] = [];
     const forbidden: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("pageerror", (error) => {
+      if (!isDevelopmentTimingNoise(error.message)) errors.push(error.message);
+    });
     page.on("request", (request) => {
       if (
         role === "client" &&

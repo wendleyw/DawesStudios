@@ -78,6 +78,16 @@ export async function localCaller(email: string): Promise<SupabaseClient<Databas
 export async function localAgency() {
   return localCaller(credentials.agency);
 }
+/**
+ * React 19.2's development build times each component with `performance.measure`, and after a
+ * client-side navigation it can hand the browser a negative start time, which the page reports as
+ * an uncaught "… cannot have a negative time stamp" error. Production builds do not run that
+ * instrumentation, so the message is development-server noise rather than a product error.
+ */
+export function isDevelopmentTimingNoise(message: string): boolean {
+  return message.includes("cannot have a negative time stamp");
+}
+
 export async function signIn(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("Email address").fill(email);
