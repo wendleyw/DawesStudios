@@ -6,6 +6,12 @@ floating client navigation/account card, a white title card and the workspace gr
 links retain their bounded horizontal scrolling on narrow screens; client navigation wraps above.
 Notifications open beside the signed-in profile, using the shared account popover.
 
+The Logos section shows the client's Logo-category files under **Logo files**, each with the
+Assets page's own preview (a raster image is previewed through a short-lived signed URL; SVG and
+PDF show a labelled icon, since they are downloaded rather than embedded), beside **Find logo
+files**, which opens Assets filtered to logos. With no logo files, the section keeps to its
+guidance.
+
 Templates has been removed from navigation and the gallery/creation UI. Old `/brand/templates`
 links redirect to Assets. Existing `brand_templates` and owner-private `template_drafts` records are
 preserved. Direct saved-draft URLs still support editing, optimistic revision checks and return to

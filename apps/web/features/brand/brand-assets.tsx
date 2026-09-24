@@ -31,7 +31,17 @@ import { CopyButton } from "@/features/shared/copy-button";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 
-function AssetPreview({ asset }: { asset: BrandAsset }) {
+/**
+ * A brand asset's preview: raster images as signed previews, anything else as a labelled icon.
+ * `decorative` leaves the image without alternative text where the asset's name is printed beside it.
+ */
+export function AssetPreview({
+  asset,
+  decorative = false,
+}: {
+  asset: BrandAsset;
+  decorative?: boolean;
+}) {
   const canPreview =
     !!asset.storage_path &&
     ["image/png", "image/jpeg", "image/webp"].includes(asset.mime_type ?? "");
@@ -41,7 +51,7 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
       {preview.data ? (
         // Keep expiring, caller-scoped signed URLs out of Next.js's shared image optimization cache.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview.data} alt={asset.name} loading="lazy" />
+        <img src={preview.data} alt={decorative ? "" : asset.name} loading="lazy" />
       ) : (
         <>
           <FileText size={30} />

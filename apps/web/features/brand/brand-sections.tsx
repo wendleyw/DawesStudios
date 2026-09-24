@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Type } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Json } from "@database";
 import {
   formatBrandColor,
@@ -18,6 +18,7 @@ import {
   type ColorCopyFormat,
   type EditableSectionId,
 } from "./brand-model";
+import { AssetPreview } from "./brand-assets";
 import { useBrandAssets, type BrandSection } from "./brand-data";
 import { CopyButton } from "@/features/shared/copy-button";
 
@@ -69,6 +70,7 @@ export function BrandSectionContent({
 }) {
   const [colorFormat, setColorFormat] = useState<ColorCopyFormat>("hex");
   const [sample, setSample] = useState("Every detail, considered.");
+  const logoFilesId = useId();
   const assets = useBrandAssets(clientId, sectionsLinkingFilteredAssets.has(section));
   const hasAssets = (category: string, search = "") =>
     (assets.data ?? []).some((asset) => matchesBrandSearch(asset, search, category));
@@ -106,7 +108,8 @@ export function BrandSectionContent({
         </Link>
       </div>
     );
-  if (section === "logos")
+  if (section === "logos") {
+    const logos = (assets.data ?? []).filter((asset) => asset.category === "Logo");
     return (
       <div className="brand-content-stack">
         <section className="brand-panel">
@@ -114,14 +117,29 @@ export function BrandSectionContent({
           <p>{textValue(content, "guidance", "Logo usage guidance has not been added yet.")}</p>
         </section>
         <GuidanceList title="Approved variations" items={textList(content, "variants")} />
-        {hasAssets("Logo") && (
-          <Link className="button" href={`/clients/${clientId}/brand/assets?category=Logo`}>
-            Find logo files
-            <ArrowUpRight size={15} />
-          </Link>
+        {logos.length > 0 && (
+          <section className="brand-panel">
+            <div className="brand-inline-heading">
+              <h3 id={logoFilesId}>Logo files</h3>
+              <Link className="button" href={`/clients/${clientId}/brand/assets?category=Logo`}>
+                Find logo files
+                <ArrowUpRight size={15} />
+              </Link>
+            </div>
+            {/* The files themselves, so the Logos page shows the logos rather than only links. */}
+            <ul className="brand-logo-files" aria-labelledby={logoFilesId}>
+              {logos.map((asset) => (
+                <li key={asset.id}>
+                  <AssetPreview asset={asset} decorative />
+                  <span>{asset.name}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
     );
+  }
   if (section === "colors")
     return (
       <div className="brand-content-stack">
