@@ -269,6 +269,55 @@ export function scaleInterval(
   return intervalIn(start, due, periodStart, spec.span, spec.unit);
 }
 
+export type TimelinePointer = {
+  /** Whether the work lies before or after the visible window. */
+  direction: "before" | "after";
+  /** The boundary date the button names. */
+  date: string;
+  /** Which date `date` is, and so the word the button prints for it. */
+  kind: "due" | "started" | "starts";
+  /** The Monday `onStart` should jump to: the week of the work's first known date. */
+  jumpTo: number;
+};
+
+/**
+ * Where to point when a project's work does not overlap the visible window.
+ *
+ * A lane never goes blank: work entirely before or after the window still keeps a lane, so instead
+ * of a bare "outside this window" notice it points at itself. Before the window, the button names
+ * the *last* known date — the due date, or the start date when there is no due date yet, since that
+ * is as close to "now" as the window can show. After the window, it names the *first* known date —
+ * the start date, or the due date when there is no start date. Either way the jump target is the
+ * Monday of the first known date, so paging there shows the work from its beginning rather than
+ * mid-stream.
+ *
+ * Returns null for work `scaleInterval` already draws as a bar (it overlaps the window), for work
+ * with no dates at all, and for a reversed range, which is invalid data rather than a direction.
+ */
+export function scalePointer(
+  start: string | null,
+  due: string | null,
+  periodStart: number,
+  scale: TimelineScale,
+): TimelinePointer | null {
+  if (!start && !due) return null;
+  const first = dateNumber(start ?? due!);
+  const last = dateNumber(due ?? start!);
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last < first) return null;
+  const jumpTo = mondayOfDay(first);
+  if (last < periodStart) {
+    return due
+      ? { direction: "before", date: due, kind: "due", jumpTo }
+      : { direction: "before", date: start!, kind: "started", jumpTo };
+  }
+  if (first >= periodStart + timelineScaleSpan(scale)) {
+    return start
+      ? { direction: "after", date: start, kind: "starts", jumpTo }
+      : { direction: "after", date: due!, kind: "due", jumpTo };
+  }
+  return null;
+}
+
 /**
  * The visible window, written as tightly as it still reads.
  *
@@ -303,6 +352,11 @@ export function scalePeriodLabel(start: number, scale: TimelineScale): string {
 /** A day written out in full, for the tooltip and accessible name of a bar. */
 export function longDate(date: string): string {
   return fullDate.format(new Date(date.slice(0, 10)));
+}
+
+/** A day the short way the period label uses — `Aug 3`, no year — for a pointer button's own text. */
+export function shortDate(date: string): string {
+  return monthDay.format(new Date(date.slice(0, 10)));
 }
 
 /**

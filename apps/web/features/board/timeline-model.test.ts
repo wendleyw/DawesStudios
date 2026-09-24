@@ -12,8 +12,10 @@ import {
   periodLabel,
   scaleInterval,
   scalePeriodLabel,
+  scalePointer,
   scheduleLabel,
   sharedTitlePrefix,
+  shortDate,
   smallestScaleFor,
   timelineColumns,
   timelineDays,
@@ -436,6 +438,97 @@ describe("schedule label", () => {
     expect(scheduleLabel(null, "2026-09-25")).toBe("due Friday, September 25, 2026");
     expect(scheduleLabel("2026-09-14", null)).toBe("starts Monday, September 14, 2026");
     expect(scheduleLabel(null, null)).toBe("no dates set");
+  });
+});
+
+describe("short date", () => {
+  it("prints the month and day the period label uses, with no year", () => {
+    expect(shortDate("2026-08-03")).toBe("Aug 3");
+    expect(shortDate("2026-12-04")).toBe("Dec 4");
+  });
+});
+
+describe("out-of-window pointer", () => {
+  const span = timelineScaleSpan("fortnight");
+  it("points at the due date when work is entirely before the window", () => {
+    expect(scalePointer(null, "2026-08-03", MONDAY, "fortnight")).toEqual({
+      direction: "before",
+      date: "2026-08-03",
+      kind: "due",
+      jumpTo: mondayOf("2026-08-03"),
+    });
+  });
+  it("points at the start date when only a start date exists before the window", () => {
+    expect(scalePointer("2026-08-03", null, MONDAY, "fortnight")).toEqual({
+      direction: "before",
+      date: "2026-08-03",
+      kind: "started",
+      jumpTo: mondayOf("2026-08-03"),
+    });
+  });
+  it("prefers the due date — the last known date — when both dates fall before the window", () => {
+    expect(scalePointer("2026-08-01", "2026-08-03", MONDAY, "fortnight")).toEqual({
+      direction: "before",
+      date: "2026-08-03",
+      kind: "due",
+      jumpTo: mondayOf("2026-08-01"),
+    });
+  });
+  it("points at the start date when work is entirely after the window", () => {
+    expect(scalePointer("2026-12-04", null, MONDAY, "fortnight")).toEqual({
+      direction: "after",
+      date: "2026-12-04",
+      kind: "starts",
+      jumpTo: mondayOf("2026-12-04"),
+    });
+  });
+  it("points at the due date when only a due date exists after the window", () => {
+    expect(scalePointer(null, "2026-12-04", MONDAY, "fortnight")).toEqual({
+      direction: "after",
+      date: "2026-12-04",
+      kind: "due",
+      jumpTo: mondayOf("2026-12-04"),
+    });
+  });
+  it("prefers the start date — the first known date — when both dates fall after the window", () => {
+    expect(scalePointer("2026-12-04", "2026-12-10", MONDAY, "fortnight")).toEqual({
+      direction: "after",
+      date: "2026-12-04",
+      kind: "starts",
+      jumpTo: mondayOf("2026-12-04"),
+    });
+  });
+  it("treats the window's own edges as overlap, not before or after", () => {
+    expect(scalePointer(null, dateLabel(MONDAY), MONDAY, "fortnight")).toBeNull();
+    expect(scalePointer(dateLabel(MONDAY + span - 1), null, MONDAY, "fortnight")).toBeNull();
+    expect(scalePointer(dateLabel(MONDAY + span), null, MONDAY, "fortnight")).toEqual({
+      direction: "after",
+      date: dateLabel(MONDAY + span),
+      kind: "starts",
+      jumpTo: mondayOfDay(MONDAY + span),
+    });
+    expect(scalePointer(null, dateLabel(MONDAY - 1), MONDAY, "fortnight")).toEqual({
+      direction: "before",
+      date: dateLabel(MONDAY - 1),
+      kind: "due",
+      jumpTo: mondayOfDay(MONDAY - 1),
+    });
+  });
+  it("judges after by the scale's own span, not the fortnight's", () => {
+    // Nov 20 sits inside a fortnight-scale window starting the same Monday, but well inside a
+    // quarter that starts there too, so the two scales disagree about the same date.
+    expect(scalePointer("2026-11-20", null, MONDAY, "fortnight")).not.toBeNull();
+    expect(scalePointer("2026-11-20", null, MONDAY, "quarter")).toBeNull();
+  });
+  it("returns null for work that overlaps the window at any scale", () => {
+    for (const scale of timelineScales.map((entry) => entry.id)) {
+      expect(scalePointer("2026-09-10", "2026-10-01", MONDAY, scale)).toBeNull();
+      expect(scalePointer("2026-09-20", "2026-09-20", MONDAY, scale)).toBeNull();
+    }
+  });
+  it("returns null for undated work and for a reversed range", () => {
+    expect(scalePointer(null, null, MONDAY, "fortnight")).toBeNull();
+    expect(scalePointer("2026-09-16", "2026-09-15", MONDAY, "fortnight")).toBeNull();
   });
 });
 

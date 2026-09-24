@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
 import { useMemo, type CSSProperties } from "react";
@@ -11,12 +11,15 @@ import {
   timelineScaleSpec,
   scaleInterval,
   scalePeriodLabel,
+  scalePointer,
+  type TimelinePointer,
   type TimelineScale,
   dateNumber,
   distinctTitle,
   mondayOf,
   scheduleLabel,
   sharedTitlePrefix,
+  shortDate,
 } from "./timeline-model";
 import "./timeline.css";
 
@@ -24,10 +27,19 @@ import "./timeline.css";
 /** Columns, not days: below this a bar has no room for a word, whatever the scale. */
 const LABELLED_BAR_COLUMNS = 2;
 
+/** The word a pointer button leads with, keyed by what its date actually is. */
+const POINTER_VERB: Record<TimelinePointer["kind"], string> = {
+  due: "Due",
+  started: "Started",
+  starts: "Starts",
+};
+
 /**
  * Project schedules at Fortnight, Month and Quarter scales with a fixed identity column.
- * Every in-scope project keeps a lane, including work outside the period or without dates.
- * The sticky header keeps period navigation available while the work area scrolls.
+ * Every in-scope project keeps a lane. Work that overlaps the window draws a bar; work whose dates
+ * fall entirely before or after it shows a quiet button pointing at where it is instead, naming the
+ * nearest known date and jumping the window to it on click. Work with no dates at all stays plain
+ * text. The sticky header keeps period navigation available while the work area scrolls.
  */
 export function ProjectTimeline({
   projects,
@@ -68,6 +80,7 @@ export function ProjectTimeline({
       project,
       label: distinctTitle(project.title, prefix),
       interval: scaleInterval(project.start_date, project.due_date, start, scale),
+      pointer: scalePointer(project.start_date, project.due_date, start, scale),
     }));
   }, [projects, campaignOrder, start, scale]);
   const period = scalePeriodLabel(start, scale);
@@ -121,7 +134,7 @@ export function ProjectTimeline({
             ))}
           </div>
           {rows.length ? (
-            rows.map(({ project, label, interval }) => (
+            rows.map(({ project, label, interval, pointer }) => (
               <div
                 className={`timeline-lane ${project.id === selectedId ? "selected" : ""}`}
                 key={project.id}
@@ -166,12 +179,24 @@ export function ProjectTimeline({
                       <span className="timeline-bar-status">{statusLabels[project.status]}</span>
                     )}
                   </span>
+                ) : pointer ? (
+                  <button
+                    type="button"
+                    className="timeline-pointer"
+                    onClick={() => onStart(pointer.jumpTo)}
+                    onDoubleClick={(event) => {
+                      // A double click here must jump, not open: stop it reaching the lane's own
+                      // double-click handler, which is what opens the project.
+                      event.stopPropagation();
+                    }}
+                    aria-label={`Show ${project.title}: ${POINTER_VERB[pointer.kind].toLowerCase()} ${shortDate(pointer.date)}`}
+                  >
+                    {pointer.direction === "before" && <ArrowLeft size={13} aria-hidden="true" />}
+                    {POINTER_VERB[pointer.kind]} {shortDate(pointer.date)}
+                    {pointer.direction === "after" && <ArrowRight size={13} aria-hidden="true" />}
+                  </button>
                 ) : (
-                  <span className="timeline-unscheduled">
-                    {project.start_date || project.due_date
-                      ? "Outside this window"
-                      : "No dates set"}
-                  </span>
+                  <span className="timeline-unscheduled">No dates set</span>
                 )}
               </div>
             ))

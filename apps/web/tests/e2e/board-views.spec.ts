@@ -274,6 +274,40 @@ test("calendar places deadlines by date, keeps undated work, preserves filters a
   }
 });
 
+test("timeline points to work outside the period and jumps to it", async ({ page }) => {
+  const fixture = await createPlaygroundFixture();
+  const today = new Date();
+  // Six months out lies after the opening window at every scale.
+  const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 6, 10))
+    .toISOString()
+    .slice(0, 10);
+  const due = `${start.slice(0, 8)}20`;
+  try {
+    expect(
+      (
+        await localAdmin
+          .from("projects")
+          .update({ start_date: start, due_date: due })
+          .eq("id", fixture.projectId)
+      ).error,
+    ).toBeNull();
+    await signIn(page, credentials.agency);
+    await page.goto(`/clients/${fixture.clientId}/board`);
+    await chooseView(page, "timeline");
+    const lane = page.locator(`.timeline-lane:has(a[href="/projects/${fixture.projectId}"])`);
+    const pointer = lane.getByRole("button", { name: /^Show .+: starts / });
+    await expect(pointer).toBeVisible();
+    await expect(page.getByText("Outside this window")).toHaveCount(0);
+    await expect(lane.locator(".timeline-project-bar")).toHaveCount(0);
+    await pointer.click();
+    await expect(lane.locator(".timeline-project-bar")).toBeVisible();
+    await expect(pointer).toHaveCount(0);
+    await page.screenshot({ path: `${screenshotDirectory}/timeline-pointer-jumped.png` });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test("view choices are isolated by viewer and client", async ({ browser }) => {
   const first = await createPlaygroundFixture();
   const second = await createPlaygroundFixture();
