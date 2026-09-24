@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { versionStatusLabels } from "@/features/workspace/workspace-data";
 import { publishedVersionStatus } from "./review-data";
-import { isFinished } from "./reviews-page";
+import { inReviewTab, isFinished } from "./reviews-page";
 
 describe("which version statuses are finished", () => {
   /**
@@ -52,5 +52,33 @@ describe("a published version's outcome, read from its project", () => {
   it("leaves a version that was never published alone", () => {
     for (const status of ["draft", "submitted", "pending", "approved", "changes_requested"])
       expect(publishedVersionStatus(status, "changes_requested")).toBe(status);
+  });
+});
+
+describe("which rows each review tab shows", () => {
+  const row = (status: string, internal = false) => ({ status, internal });
+
+  it("shows a client only the versions still waiting on their decision under Waiting for you", () => {
+    expect(inReviewTab("waiting", row("pending"), "client")).toBe(true);
+    expect(inReviewTab("waiting", row("changes_requested"), "client")).toBe(false);
+    expect(inReviewTab("waiting", row("approved"), "client")).toBe(false);
+  });
+
+  it("files a version the client sent back under With the studio", () => {
+    expect(inReviewTab("with-studio", row("changes_requested"), "client")).toBe(true);
+    expect(inReviewTab("with-studio", row("pending"), "client")).toBe(false);
+  });
+
+  it("keeps the agency's In review tab for every published version not yet approved", () => {
+    expect(inReviewTab("waiting", row("pending"), "agency")).toBe(true);
+    expect(inReviewTab("waiting", row("changes_requested"), "agency")).toBe(true);
+    expect(inReviewTab("waiting", row("submitted", true), "agency")).toBe(false);
+    expect(inReviewTab("studio", row("submitted", true), "agency")).toBe(true);
+  });
+
+  it("keeps a designer's own unfinished versions under In progress", () => {
+    expect(inReviewTab("waiting", row("submitted", true), "designer")).toBe(true);
+    expect(inReviewTab("waiting", row("changes_requested"), "designer")).toBe(true);
+    expect(inReviewTab("approved", row("approved"), "designer")).toBe(true);
   });
 });

@@ -8,6 +8,9 @@ navigation in the sidebar.
 `reviews-page.tsx` lists the design versions currently in review: a designer's own in-progress
 versions, or (for an agency/client session) the published versions awaiting client review, plus,
 for an agency session, the versions a designer has submitted for internal studio review.
+`inReviewTab` decides which tab shows a row. A client's **Waiting for you** holds only versions
+still waiting on their decision; a version they sent back is waiting on the studio and appears under
+**With the studio**, and an approved one under **Approved**.
 
 `review-data.ts` owns the feature's Supabase access, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useReviews` is

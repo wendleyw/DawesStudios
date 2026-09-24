@@ -21,6 +21,24 @@ import { useReviews } from "./review-data";
  */
 export const isFinished = (status: string) => status === "approved";
 
+/**
+ * Whether a row belongs to a review tab for the signed-in role. A client's **Waiting for you** holds
+ * only versions still waiting on their decision; one they sent back is waiting on the studio, so it
+ * moves to **With the studio**. The agency's **In review** keeps every published version that is not
+ * approved, and a designer's **In progress** every unfinished version of their own.
+ */
+export function inReviewTab(
+  tab: string,
+  row: { status: string; internal: boolean },
+  role: string | undefined,
+): boolean {
+  if (tab === "approved") return isFinished(row.status);
+  if (tab === "studio") return row.internal && row.status === "submitted";
+  if (tab === "with-studio") return !row.internal && row.status === "changes_requested";
+  if (role === "client") return !row.internal && row.status === "pending";
+  return !isFinished(row.status) && (role === "designer" || !row.internal);
+}
+
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -38,13 +56,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
       </div>
     );
   const rows = data.data ?? [];
-  const visible = rows.filter((row) =>
-    filter === "approved"
-      ? isFinished(row.status)
-      : filter === "studio"
-        ? row.internal && row.status === "submitted"
-        : !isFinished(row.status) && (profile?.role === "designer" || !row.internal),
-  );
+  const visible = rows.filter((row) => inReviewTab(filter, row, profile?.role));
   return (
     <div className="page-content">
       <header className="page-heading client-page-heading">
@@ -68,6 +80,9 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
                     : "In review",
             },
             ...(profile?.role === "agency" ? [{ id: "studio", label: "Studio review" }] : []),
+            ...(profile?.role === "client"
+              ? [{ id: "with-studio", label: "With the studio" }]
+              : []),
             { id: "approved", label: "Approved" },
           ].map((item) => (
             <button

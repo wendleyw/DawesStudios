@@ -87,12 +87,19 @@ test("all ten clients and twenty-five projects render with matching records and 
             latest.get(version.deliverable_id)!.version_number < version.version_number
           )
             latest.set(version.deliverable_id, version);
-        const approved = [...latest.values()].filter(
-          (version) =>
-            reviews.find((review) => review.publication_id === version.id)?.status === "approved",
-        ).length;
+        const decided = (status: string) =>
+          [...latest.values()].filter(
+            (version) =>
+              reviews.find((review) => review.publication_id === version.id)?.status === status,
+          ).length;
+        const approved = decided("approved");
+        const sentBack = decided("changes_requested");
+        // Waiting for you holds only the versions still waiting on the client's decision; one the
+        // client sent back is waiting on the studio.
         await page.goto(`/clients/${actor.clientId}/reviews`);
-        await expect(page.locator(".review-card")).toHaveCount(latest.size - approved);
+        await expect(page.locator(".review-card")).toHaveCount(latest.size - approved - sentBack);
+        await page.getByRole("button", { name: "With the studio", exact: true }).click();
+        await expect(page.locator(".review-card")).toHaveCount(sentBack);
         await page.getByRole("button", { name: "Approved", exact: true }).click();
         await expect(page.locator(".review-card")).toHaveCount(approved);
       }
