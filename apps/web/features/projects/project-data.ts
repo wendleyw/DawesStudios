@@ -318,6 +318,27 @@ export function useDesignAssetUrl(
 }
 
 /**
+ * The raw bytes behind a stored design's artwork, for the Playground albums' copy-into-board flow
+ * (`features/playground/playground-albums.ts`).
+ *
+ * A plain function, not a `use<Thing>()` hook: it runs from the album drag/keyboard-add handler,
+ * not on render — the same "read that cannot be a hook" shape as `findUnchangedDesign`/
+ * `findDesignByAsset` (rule 2, `docs/architecture/data-access.md`). The bucket is chosen by
+ * channel, exactly like `useDesignAssetUrl` above, so a client-channel copy can never reach into
+ * `internal-assets`.
+ */
+export async function downloadDesignAssetFile(
+  database: SupabaseDatabase,
+  input: { assetPath: string; channel: ProjectChannel },
+) {
+  return assertResult(
+    await database.storage
+      .from(input.channel === "internal" ? "internal-assets" : "published-assets")
+      .download(input.assetPath),
+  );
+}
+
+/**
  * The keys every project write invalidates.
  *
  * `assignments` and `asset-url` are deliberately absent. Assignments are refetched by the panel

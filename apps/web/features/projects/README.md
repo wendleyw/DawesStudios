@@ -220,10 +220,10 @@ existing exports (`uploadArtwork`, `discardUnreferencedArtwork`) are called. `cr
 now returns the created version's id, which bulk drop needs to register several designs into a
 version it just created.
 
-## Deviation from the data-access contract: two reads that are not hooks
+## Deviation from the data-access contract: reads that are not hooks
 
-`findUnchangedDesign` and `findDesignByAsset` in `project-data.ts` are exported as plain
-`async (database, input)` functions instead of `use<Thing>()` hooks.
+`findUnchangedDesign`, `findDesignByAsset` and `downloadDesignAssetFile` in `project-data.ts` are
+exported as plain `async (database, input)` functions instead of `use<Thing>()` hooks.
 
 Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx`
 (both by name, inside `mutationFn`), where React does not permit a hook
@@ -239,6 +239,14 @@ would answer from a cache populated before the upload it is meant to judge, and 
 put on screen. Both still live in `project-data.ts`, still return through `assertResult(...)`, and
 are unit-tested like the writes: exact table, exact columns, exact filters and their order — including
 the `.is("internal_asset_path", null)` branch — and the surfacing of the database error message.
+
+`downloadDesignAssetFile` exists for the Playground's album copy flow
+(`apps/web/features/playground/playground-albums.ts`): dragging or Enter-adding a design onto a
+Playground board downloads that design's stored bytes with the viewer's own session, from whichever
+bucket its channel maps to — the same choice `useDesignAssetUrl` makes for display. It runs from a
+drag or keyboard handler, never on render, so it is a plain function for the same reason as the two
+above. It is unit-tested the same way: which bucket it downloads from per channel, and its entry in
+the shared failures table.
 
 ## Verification
 

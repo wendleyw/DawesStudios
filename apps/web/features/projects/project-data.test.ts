@@ -3,6 +3,7 @@ import {
   addDesign,
   assignDesigner,
   createDesignVersion,
+  downloadDesignAssetFile,
   findDesignByAsset,
   findUnchangedDesign,
   postComment,
@@ -44,7 +45,11 @@ function stubDatabase(result: Result) {
     return chain;
   });
   const rpc = vi.fn().mockResolvedValue(result);
-  return { database: { from, rpc } as never, calls, rpc };
+  const storageFrom = vi.fn((bucket: string) => {
+    calls.push({ method: "storage.from", args: [bucket] });
+    return chain;
+  });
+  return { database: { from, rpc, storage: { from: storageFrom } } as never, calls, rpc };
 }
 
 const ok: Result = { data: [], error: null };
@@ -443,8 +448,42 @@ describe("project row writes", () => {
   });
 });
 
+describe("downloadDesignAssetFile", () => {
+  it("downloads from internal-assets on the internal channel", async () => {
+    const blob = new Blob(["x"]);
+    const { database, calls } = stubDatabase({ data: blob, error: null });
+    const result = await downloadDesignAssetFile(database, {
+      assetPath: "project-1/design-1.png",
+      channel: "internal",
+    });
+    expect(calls).toEqual([
+      { method: "storage.from", args: ["internal-assets"] },
+      { method: "download", args: ["project-1/design-1.png"] },
+    ]);
+    expect(result).toBe(blob);
+  });
+
+  it("downloads from published-assets on the client channel", async () => {
+    const blob = new Blob(["x"]);
+    const { database, calls } = stubDatabase({ data: blob, error: null });
+    await downloadDesignAssetFile(database, {
+      assetPath: "project-1/design-1.png",
+      channel: "client",
+    });
+    expect(calls[0]).toEqual({ method: "storage.from", args: ["published-assets"] });
+  });
+});
+
 describe("project write failures", () => {
   const failures: [string, (database: never) => Promise<unknown>][] = [
+    [
+      "downloadDesignAssetFile",
+      (database) =>
+        downloadDesignAssetFile(database, {
+          assetPath: "project-1/design-1.png",
+          channel: "internal",
+        }),
+    ],
     [
       "updateProjectDetails",
       (database) =>
