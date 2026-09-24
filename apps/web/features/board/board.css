@@ -506,21 +506,21 @@
 }
 
 /* The version names the artwork above it and the type names the deliverable; a separator keeps the
-   two from reading as one string. */
-/* The version names the artwork above it and the type names the deliverable; a separator keeps the
-   two from reading as one string. `justify-content` is inert while this element is laid out by the
-   higher-specificity `.board-card-body > p` rule above, and is kept because removing it would be a
-   design change rather than the de-duplication this is. */
+   two from reading as one string. Baseline alignment keeps the row on the paragraph's first line. */
 .board-card-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
   gap: 7px;
   min-width: 0;
   margin: 0;
   color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.3;
+}
+/* `.board-card-body > p` clamps a card paragraph as a -webkit-box, which would drop this flex line's
+   gap and leave the dash against the badge; the row stays flex so the dash has 7px on each side. */
+.board-card-body > .board-card-meta {
+  display: flex;
 }
 /* A dash between the version and the deliverable type, so "V1" and "Infographic" read as two
    facts rather than one run-on label. */
