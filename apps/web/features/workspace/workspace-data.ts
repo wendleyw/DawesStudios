@@ -6,7 +6,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { briefingStatusLabels } from "@/features/briefings/briefing-model";
 import type { StatusTone } from "@/features/shared/status-tone";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
-import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
+import { assertResult, describeSupabaseError, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
  * Supabase access shared by the application shell, the home overview, the global search page and
@@ -145,6 +145,9 @@ export type WorkspaceNotification = {
   created_at: string;
 };
 
+/** The feed lists the latest notifications only; the unread count below covers all of them. */
+export const NOTIFICATION_FEED_LIMIT = 100;
+
 export function useNotifications() {
   const { database, session } = useAuth();
   return useQuery({
@@ -157,8 +160,32 @@ export function useNotifications() {
           .from("notifications")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(100),
+          .limit(NOTIFICATION_FEED_LIMIT),
       ) as WorkspaceNotification[],
+  });
+}
+
+/**
+ * Every unread notification of the caller's, counted by the database without sending rows, so the
+ * bell and the feed never report only the unread share of the latest page.
+ */
+export async function unreadNotificationCount(database: SupabaseDatabase): Promise<number> {
+  const { count, error } = await database
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
+  if (error) throw new Error(describeSupabaseError(error));
+  return count ?? 0;
+}
+
+/** Keyed under `notifications`, so the feed's invalidation refreshes it with the list. */
+export function useUnreadNotificationCount() {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["notifications", session?.user.id, "unread"],
+    enabled: !!session,
+    refetchInterval: 30_000,
+    queryFn: () => unreadNotificationCount(database),
   });
 }
 

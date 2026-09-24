@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { markNotificationsRead } from "./workspace-data";
+import { markNotificationsRead, unreadNotificationCount } from "./workspace-data";
 
 type Result = { data: unknown; error: { message: string } | null };
 type Call = { method: string; args: unknown[] };
@@ -68,5 +68,28 @@ describe("markNotificationsRead", () => {
     await expect(markNotificationsRead(database, { userId: "user-1" })).rejects.toThrow(
       "permission denied",
     );
+  });
+});
+
+describe("unreadNotificationCount", () => {
+  it("asks the database for an exact count of the caller's unread notifications, without rows", async () => {
+    const select = vi.fn().mockReturnValue({
+      is: vi.fn().mockResolvedValue({ count: 271, error: null }),
+    });
+    const database = { from: vi.fn().mockReturnValue({ select }) };
+    expect(await unreadNotificationCount(database as never)).toBe(271);
+    expect(database.from).toHaveBeenCalledWith("notifications");
+    expect(select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+  });
+
+  it("surfaces a failed count", async () => {
+    const database = {
+      from: () => ({
+        select: () => ({
+          is: vi.fn().mockResolvedValue({ count: null, error: { message: "offline" } }),
+        }),
+      }),
+    };
+    await expect(unreadNotificationCount(database as never)).rejects.toThrow("offline");
   });
 });

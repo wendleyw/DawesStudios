@@ -6,9 +6,11 @@ import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
   markNotificationsRead,
+  NOTIFICATION_FEED_LIMIT,
   useDateFormat,
   useInvalidateNotifications,
   useNotifications,
+  useUnreadNotificationCount,
 } from "./workspace-data";
 import { FormError } from "@/features/shared/form-error";
 
@@ -21,7 +23,8 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
     mutationFn: (id?: string) => markNotificationsRead(database, { userId: session!.user.id, id }),
     onSuccess: () => invalidateNotifications(),
   });
-  const unread = notifications.data?.filter((item) => !item.read_at).length ?? 0;
+  const unread = useUnreadNotificationCount().data ?? 0;
+  const capped = (notifications.data?.length ?? 0) >= NOTIFICATION_FEED_LIMIT;
   return (
     <div className={compact ? "notification-feed" : "page-content"}>
       <div className={compact ? "notification-feed-heading" : "page-heading"}>
@@ -32,6 +35,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
               ? `${unread} notification${unread === 1 ? "" : "s"} waiting for you.`
               : "You’re up to date."}
           </p>
+          {!compact && capped && <p>Showing the latest {NOTIFICATION_FEED_LIMIT}.</p>}
         </div>
         <button
           className="button"

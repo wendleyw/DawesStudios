@@ -36,6 +36,10 @@ briefly (no animation with reduced motion). Escape/close returns focus; an outsi
 without stealing focus, and route changes close it. The scrolling feed reuses recipient-scoped reads
 and explicit read mutations from `workspace-data.ts`; opening alone does not mark activity as read.
 The full notifications page remains available from its footer. No new notification backend exists.
+The unread count comes from `useUnreadNotificationCount`, an exact head-only count of the caller's
+unread rows, so the bell's label and the feed's heading report every unread notification rather than
+the unread share of the loaded page. The feed lists the latest `NOTIFICATION_FEED_LIMIT` (100), and
+the full page says so when the list reaches it.
 
 ## Visual layout and active navigation
 
