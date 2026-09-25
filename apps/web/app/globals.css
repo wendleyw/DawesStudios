@@ -52,8 +52,6 @@
   --space-lg: 24px;
 
   --space-page: 40px;
-  /* The studio mark's one display height, shared by the sidebar, sign-in and account screens. */
-  --brand-mark-height: 56px;
   --sidebar-active: #36393f;
   --sidebar-border: #3a3d44;
   --sidebar-muted: #b4b8c1;
@@ -1436,27 +1434,15 @@ select {
 .board-identity .client-navigation {
   flex-shrink: 0;
 }
-.board-identity-mark {
-  --client-mark-size: 36px;
-}
-/* The client board's own header shows a larger logo where it has room; project headers keep 36px so
-   the feedback panel below them keeps its reading space. */
-@media (min-width: 901px) and (min-height: 651px) {
-  .board-identity-mark-large {
-    --client-mark-size: 48px;
-  }
-}
-.board-identity :is(h1, .canvas-client-name) {
-  min-width: 0;
+.board-identity-logo {
+  display: flex;
+  flex-shrink: 0;
   margin: 0;
-  overflow: hidden;
-  max-width: 180px;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.025em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-radius: calc(var(--client-mark-size) / 4.3);
+}
+/* The client's logo is the header's only identity, at one size on every client page. */
+.board-identity-mark {
+  --client-mark-size: 48px;
 }
 .board-header-divider {
   height: 22px;
@@ -1528,11 +1514,8 @@ select {
   .board-client-context {
     gap: 8px;
   }
-  .board-identity :is(h1, .canvas-client-name) {
-    font-size: 15px;
-  }
   .board-identity-mark {
-    --client-mark-size: 26px;
+    --client-mark-size: 32px;
   }
   .board-account {
     min-height: 46px;

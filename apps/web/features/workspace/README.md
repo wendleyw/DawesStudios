@@ -175,15 +175,15 @@ a consumer grep and are unchanged. `.client-mark` (shared with `board/board-page
 the `ClientMark` component from this feature) is likewise genuinely multi-feature and untouched. The
 sidebar no longer uses `.brand-logo`, which moved to `auth.css` with its one remaining consumer.
 
-## Sidebar brand mark
+## Sidebar brand lockup
 
-The top of the sidebar shows the animated studio mark alone, without the wordmark, at the shared
-`--brand-mark-height` token (`app/globals.css`) that the sign-in and account screens also use. `brand-mark.tsx` plays
+The top of the sidebar shows the animated studio mark beside the wordmark. `brand-mark.tsx` plays
 `public/brand/logo-mark.webm` once when the shell mounts (muted, inline, no loop) and it rests on
 the finished mark; with reduced motion, or if the video cannot play, it shows the still
-`public/brand/logo-mark.webp` instead. Both are decorative: the link's label carries the name.
-Collapsed, the whole mark stays visible; only short client-context windows (650px or less) shrink it
-to 40px. The web video is a 76 × 120, silent, inverted
+`public/brand/logo-mark.webp` instead. Both are decorative: the link's label carries the name. The
+wordmark is `public/brand/wordmark.webp`, cut from `logo.webp` at x = 589. `workspace.css` lays the
+lockup out in `logo.webp`'s own units (`--brand-unit`), so the finished mark lands where the static
+mark was, and each breakpoint changes only that unit. The web video is a 76 × 120, silent, inverted
 cut of the master `brand/logo-animation.webm` (black on white), shown with `mix-blend-mode: screen`
 on the dark sidebar. To regenerate it after the master changes:
 

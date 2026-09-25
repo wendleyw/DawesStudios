@@ -23,7 +23,7 @@ grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed a
 board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
 Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
 with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
-viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows; wide briefing modal (`c63c27a`); boards open as List when no view is saved, with the header gap measured; the studio mark alone (no wordmark) at one shared 56px `--brand-mark-height` on the sidebar, sign-in and account screens, and an 18px canvas campaign title. Sonnet
+viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows; wide briefing modal (`c63c27a`); boards open as List when no view is saved, with the header gap measured; an 18px canvas campaign title; the client header shows the client's logo alone at 48px on every client page (32px on phones and short windows), `6ced8dd` reverted for the studio logo. Sonnet
 workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
 here, so general-purpose workers followed `implementer.md`.
 
@@ -49,7 +49,7 @@ Overnight work (`a375ed7c`) and the complete system test are in the
 
 ## Environment (observed 2026-09-24)
 
-- Next.js dev server on `http://localhost:3003`, restarted again at 21:20 (and 11:12) after clearing
+- Next.js dev server on `http://localhost:3003`, restarted again at 21:40 (and 11:12) after clearing
   `apps/web/.next/dev/cache`: Turbopack's disk cache stopped picking up `globals.css` edits twice
   today (a `touch` fixed the first, not the second). It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a
   competing server; if edits stop showing, clear that cache and restart it on the same port.

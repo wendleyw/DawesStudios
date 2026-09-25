@@ -47,12 +47,12 @@ export function LoginPage() {
     <main className="login-layout">
       <section className="login-story">
         <Image
-          src="/brand/logo-mark.webp"
+          src="/brand/logo.webp"
           alt="Brianna Dawes Studios"
           className="brand-logo"
-          width={76}
-          height={120}
-          unoptimized
+          width={2409}
+          height={619}
+          sizes="280px"
           priority
         />
         <div>

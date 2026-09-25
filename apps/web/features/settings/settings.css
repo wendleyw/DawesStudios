@@ -90,13 +90,11 @@
 }
 .account-flow-brand {
   display: block;
+  width: 220px;
 }
-/* The mark is white artwork; inverting it keeps it legible on this light page. */
 .account-flow-brand img {
-  display: block;
-  width: auto;
-  height: var(--brand-mark-height);
-  filter: invert(1);
+  width: 100%;
+  height: auto;
 }
 .account-flow-card {
   max-width: 460px;

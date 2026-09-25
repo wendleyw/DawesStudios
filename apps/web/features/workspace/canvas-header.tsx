@@ -31,21 +31,18 @@ export function CanvasHeader({
     <header className="board-header">
       <div className="board-identity">
         <div className="board-client-context">
-          <ClientMark
-            client={client}
-            className={
-              heading ? "board-identity-mark board-identity-mark-large" : "board-identity-mark"
-            }
-          />
+          {/* The client's logo stands in for their name; the name stays its accessible label. */}
           {heading ? (
-            <h1 title={client.name}>{client.name}</h1>
+            <h1 className="board-identity-logo" title={client.name}>
+              <ClientMark client={client} className="board-identity-mark" alt={client.name} />
+            </h1>
           ) : (
             <Link
-              className="canvas-client-name"
+              className="board-identity-logo"
               href={`/clients/${client.id}/board`}
               title={client.name}
             >
-              {client.name}
+              <ClientMark client={client} className="board-identity-mark" alt={client.name} />
             </Link>
           )}
           {context}

@@ -43,11 +43,11 @@ export function AccountRecovery() {
     <main className="account-flow">
       <Link href="/login" className="account-flow-brand">
         <Image
-          src="/brand/logo-mark.webp"
+          src="/brand/logo.webp"
           alt="Brianna Dawes Studios"
-          width={76}
-          height={120}
-          unoptimized
+          width={2409}
+          height={619}
+          sizes="220px"
         />
       </Link>
       <div className="account-flow-card">
