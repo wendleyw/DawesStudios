@@ -421,45 +421,6 @@
 .home-content {
   max-width: var(--content-width);
 }
-.overview-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-
-  gap: var(--space-md);
-
-  margin-bottom: var(--space-section);
-
-  border: 0;
-
-  border-radius: 0;
-
-  background: transparent;
-  overflow: hidden;
-}
-.overview-stats > div {
-  padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-}
-.overview-stats strong {
-  display: block;
-
-  font-size: var(--text-metric);
-
-  font-weight: 600;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
-}
-.overview-stats span {
-  display: block;
-
-  margin-top: var(--space-xs);
-  color: var(--muted);
-
-  font-size: var(--text-sm);
-}
 .home-actions {
   display: flex;
   flex-wrap: wrap;
@@ -620,17 +581,13 @@
   .workspace-card {
     padding-inline: 18px;
   }
-  .overview-stats small {
-    display: none;
-  }
 }
 @media (max-width: 1000px) {
   .workspace-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .overview-stats {
-    gap: 20px;
-  }
+  /* The base `.overview-stats`/`> div`/`strong` breakpoint rules moved to globals.css with the
+     shared tile styles; `> div + div` stays here because no other file declares that selector. */
   .overview-stats > div + div {
     padding-left: 20px;
   }
@@ -692,14 +649,6 @@
   .topbar-identity > svg {
     display: none;
   }
-  .overview-stats {
-    gap: var(--space-sm);
-    padding-bottom: 0;
-    margin-bottom: var(--space-section);
-  }
-  .overview-stats > div {
-    padding: var(--space-md);
-  }
   .overview-stats > div + div {
     padding-left: var(--space-md);
   }
@@ -708,10 +657,6 @@
     min-height: 32px;
     font-size: var(--text-sm);
     line-height: 1.6;
-  }
-  .overview-stats strong {
-    margin-top: 0;
-    font-size: var(--text-metric);
   }
   .attention-section {
     margin-bottom: 32px;

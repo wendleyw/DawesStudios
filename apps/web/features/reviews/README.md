@@ -22,3 +22,9 @@ small-features migration (task 15) — same tables, same column selections, same
 ordering, same `refetchInterval`. The feature has no writes, so it has no accompanying
 `<feature>-data.test.ts`: the contract's unit-testing requirement is for extracted write functions
 and for reads that cannot be hooks, and this feature's one read is a proper hook.
+
+`isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,
+rather than in `reviews-page.tsx`, so another feature can read the tab rule without importing the
+page component. `reviews-page.tsx` imports `inReviewTab` from there to filter its rows; the page
+still declares its own `versionStatusTones`, which is presentation (a `StatusTone` per status for
+the badge), not the tab rule.

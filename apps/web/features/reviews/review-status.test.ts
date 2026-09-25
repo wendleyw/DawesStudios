@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { versionStatusLabels } from "@/features/workspace/workspace-data";
-import { publishedVersionStatus } from "./review-data";
-import { inReviewTab, isFinished } from "./reviews-page";
+import { inReviewTab, isFinished, publishedVersionStatus } from "./review-data";
 
 describe("which version statuses are finished", () => {
   /**

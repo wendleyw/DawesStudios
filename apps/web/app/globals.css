@@ -304,6 +304,52 @@ h3 {
 
   text-transform: var(--eyebrow-case);
 }
+/* The Overview number tiles, shared by the studio's /home and the overview dashboards. */
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+
+  gap: var(--space-md);
+
+  margin-bottom: var(--space-section);
+
+  border: 0;
+
+  border-radius: 0;
+
+  background: transparent;
+  overflow: hidden;
+}
+.overview-stats > div {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.overview-stats strong {
+  display: block;
+
+  font-size: var(--text-metric);
+
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+.overview-stats span {
+  display: block;
+
+  margin-top: var(--space-xs);
+  color: var(--muted);
+
+  font-size: var(--text-sm);
+}
+.overview-stats small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 .muted,
 .text-muted {
   color: var(--muted);
@@ -1249,6 +1295,9 @@ img.client-mark {
   .project-row > :nth-child(4) {
     display: none;
   }
+  .overview-stats {
+    gap: 20px;
+  }
 }
 @media (max-width: 900px) {
   :root {
@@ -1322,6 +1371,18 @@ img.client-mark {
   }
   .page-heading > .button {
     align-self: flex-start;
+  }
+  .overview-stats {
+    gap: var(--space-sm);
+    padding-bottom: 0;
+    margin-bottom: var(--space-section);
+  }
+  .overview-stats > div {
+    padding: var(--space-md);
+  }
+  .overview-stats strong {
+    margin-top: 0;
+    font-size: var(--text-metric);
   }
   .section-heading {
     gap: 12px;

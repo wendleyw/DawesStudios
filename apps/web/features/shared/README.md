@@ -136,6 +136,26 @@ Consumers: `assets/assets-page`, `board/board-page`, `brand/brand-page`,
 `reviews/reviews-page`, `settings/settings-page`, `workspace/app-shell`,
 `workspace/home-page`.
 
+### `WelcomeHeader` — `welcome-header.tsx`
+
+The greeting at the top of a dashboard: `eyebrow` (the page's role name) above an `<h1>`, an
+optional `subtitle` paragraph and `actions` — the same `page-heading` markup every page already
+used, so no page's look changes by adopting it. `card` (default `false`) switches the wrapping
+`<header>` from the plain `page-heading` on `/home` to `page-heading client-page-heading`, the
+white client header card the client-facing routes use. Callers wrap `actions` in their own
+container; the component adds none. `welcomeTitle(displayName)` builds the greeting's copy —
+`"Welcome back, <first name>"`, or plain `"Welcome back"` when there is no name.
+
+| Prop       | Type        | Default | Notes                                              |
+| ---------- | ----------- | ------- | -------------------------------------------------- |
+| `eyebrow`  | `string`    | —       | The role name shown above the greeting.            |
+| `title`    | `string`    | —       | Usually `welcomeTitle(displayName)`.               |
+| `subtitle` | `string`    | —       | Optional; omitted when there is nothing to show.   |
+| `actions`  | `ReactNode` | —       | Optional; rendered after the heading text.         |
+| `card`     | `boolean`   | `false` | `true` on client routes for the white header card. |
+
+Consumers: `workspace/home-page`, `overview` (the welcome dashboards).
+
 ### `StudioManagedNotice` — `studio-managed-notice.tsx`
 
 The page a designer reaches by URL for an area only the studio and the client use: an `<h1>` of

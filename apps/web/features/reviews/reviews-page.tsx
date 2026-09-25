@@ -8,19 +8,7 @@ import { useClients, useDateFormat, versionStatusLabel } from "@/features/worksp
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass, type StatusTone } from "@/features/shared/status-tone";
-import { useReviews } from "./review-data";
-
-/**
- * A version that is finished: it has been through review and nothing further is waiting on anyone.
- *
- * Of the six statuses `versionStatusLabels` names, only `approved` qualifies. `reviewed` reads
- * "Shared with client" — it is `design_versions.status` recording that a version was published, not
- * that the client accepted it, and a version the client then rejected keeps it. Treating it as
- * finished filed rejected work under Approved for the designer who had to revise it. `pending` and
- * `draft`/`submitted` are waiting on the client and on the studio, and `changes_requested` is
- * waiting on the designer.
- */
-export const isFinished = (status: string) => status === "approved";
+import { inReviewTab, useReviews } from "./review-data";
 
 /** Badge tone for a version status: waiting on a person reads as attention, approved as complete. */
 const versionStatusTones: Record<string, StatusTone> = {
@@ -29,24 +17,6 @@ const versionStatusTones: Record<string, StatusTone> = {
   changes_requested: "attention",
   approved: "complete",
 };
-
-/**
- * Whether a row belongs to a review tab for the signed-in role. A client's **Waiting for you** holds
- * only versions still waiting on their decision; one they sent back is waiting on the studio, so it
- * moves to **With the studio**. The agency's **In review** keeps every published version that is not
- * approved, and a designer's **In progress** every unfinished version of their own.
- */
-export function inReviewTab(
-  tab: string,
-  row: { status: string; internal: boolean },
-  role: string | undefined,
-): boolean {
-  if (tab === "approved") return isFinished(row.status);
-  if (tab === "studio") return row.internal && row.status === "submitted";
-  if (tab === "with-studio") return !row.internal && row.status === "changes_requested";
-  if (role === "client") return !row.internal && row.status === "pending";
-  return !isFinished(row.status) && (role === "designer" || !row.internal);
-}
 
 export function ReviewsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
