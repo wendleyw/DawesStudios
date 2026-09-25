@@ -39,7 +39,7 @@ vi.mock("@/features/credits/credit-data", () => ({
         id: "l1",
         client_id: "c1",
         project_id: "p1",
-        amount: -10,
+        amount: -1,
         balance_after: 40,
         kind: "project_debit",
         description: "",
@@ -117,7 +117,7 @@ describe("ClientOverviewPage", () => {
     render(<ClientOverviewPage clientId="c1" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Beth");
     expect(tiles().getByText("Credits remaining").closest("div")).toHaveTextContent("40");
-    expect(tiles().getByText("10 of 50 used")).toBeInTheDocument();
+    expect(tiles().getByText("1 of 41 used")).toBeInTheDocument();
     expect(tiles().getByText("Active projects").closest("div")).toHaveTextContent("1");
     expect(tiles().getByText("1 delivered this month")).toBeInTheDocument();
     expect(tiles().getByText("Needs your review").closest("div")).toHaveTextContent("1");
@@ -133,6 +133,19 @@ describe("ClientOverviewPage", () => {
     expect(screen.getByText("Campus Welcome · Portrait Feed")).toBeInTheDocument();
     expect(screen.queryByText(/Studio-only draft/)).not.toBeInTheDocument();
     expect(screen.getByText("Holiday Poster")).toBeInTheDocument();
+  });
+
+  it("singularises a one-credit project's meta line", () => {
+    render(<ClientOverviewPage clientId="c1" />);
+    expect(screen.getByText("1 credit · Due Sep 30")).toBeInTheDocument();
+  });
+
+  it("gives each 'See all' link its own accessible name", () => {
+    render(<ClientOverviewPage clientId="c1" />);
+    expect(screen.getByRole("link", { name: "Your turn: see all" })).toHaveAttribute(
+      "href",
+      "/clients/c1/reviews",
+    );
   });
 
   it("tells the studio whose view it is", () => {

@@ -125,7 +125,7 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
               <Link key={project.id} className="overview-row" href={projectHref(project.id)}>
                 <strong>{project.title}</strong>
                 <span className="overview-row-meta">
-                  {credits ? `${credits} credits · ` : ""}Due{" "}
+                  {credits ? `${credits} credit${credits === 1 ? "" : "s"} · ` : ""}Due{" "}
                   {formatDate(project.due_date, "not set")}
                 </span>
                 <span className={statusToneClass(projectStatusTones[project.status])}>

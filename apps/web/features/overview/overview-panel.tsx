@@ -26,7 +26,7 @@ export function OverviewPanel({
           <h2 id={id}>{title}</h2>
         </div>
         {seeAll && (
-          <Link className="overview-see-all" href={seeAll}>
+          <Link className="overview-see-all" href={seeAll} aria-label={`${title}: see all`}>
             See all <ArrowRight size={14} />
           </Link>
         )}
