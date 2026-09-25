@@ -1,7 +1,7 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-24 17:25 EDT. Owner: **Claude Code** (interactive session `ab0cd20e`). The
-overnight orchestrator `a375ed7c`, which took over from `dawesstudios-29`, has finished.
+Updated: 2026-09-25 10:05 EDT. Owner: **Claude Code** (the interactive session that ran the light
+and dark themes plan). The overnight orchestrator `a375ed7c` has finished.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-through-2026-09-23.md) (or a newer history file). Read the
@@ -11,30 +11,31 @@ history only when a task needs earlier evidence.
 
 - The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
   the previous owner and is not running.
-- Other sessions also work here (at 17:20 one had uncommitted board edits and `zz-board-measure`).
-  Stage explicit paths only; give Playwright a private `--output`, since runs clear `test-results/`.
+- Other sessions also work here (three were idle on 2026-09-25). Stage explicit paths only; give
+  Playwright a private `--output`, since runs clear `test-results/`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
-## Done today
+## Done (2026-09-25)
 
-`ab0cd20e`, one commit per approved request: client sections on the plain page background, the
-grid kept for canvases (`0cec368`); sidebar Search, ⌘K and `/search` removed as duplicates of the
-board's search, acceptance D03 retired by amendment, one-box search focus ring (`a4e5c02`);
-Timeline lanes outside the window point to their work (`f30a39f`); List sorts by column title,
-with a phone "Sort by" menu (`5ca4f71`); Files opens as campaign folders (`924fac9`); the design
-viewer's feedback column runs full height, no General tab (`e130c95`); even card meta (`092e918`); project credits in the title card; animated sidebar mark (`310efb3`); single-line briefing and review list rows; wide briefing modal (`c63c27a`); boards open as List when no view is saved, with the header gap measured; an 18px canvas campaign title; the client header shows the client's logo alone 48px tall on every client page (32px on phones and short windows) and up to 3× as wide, `6ced8dd` reverted for the studio logo. Sonnet
-workers built the last three (reports: `handoffs/2026-09-24-*`); `.claude/agents/` did not load
-here, so general-purpose workers followed `implementer.md`.
+The user's **light and dark themes** request, from an approved
+[spec](../superpowers/specs/2026-09-24-themes-and-canvas-design.md) and
+[plan](../superpowers/plans/2026-09-24-themes-and-canvas.md), commits `47b50a7..8bdedd6`:
+**Theme: System / Light / Dark** in the sidebar, applied before the first paint by a head script
+that also follows other tabs; every colour a `light-dark()` pair, guarded by
+`features/shared/theme-colors.test.ts` (literal gate plus WCAG AA pairs); every canvas a dot grid
+with one horizontal zoom pill; Project details, Conversation and Playground in a bar at the bottom
+of the project canvas; the Playground rises from the bottom. Sonnet workers built each task
+(reports: `handoffs/2026-09-25-themes-*`), each reviewed; an Opus whole-branch review led to one
+fix wave. Record: [verification](../verification/themes-and-canvas-2026-09-25.md).
 
-Overnight work (`a375ed7c`) and the complete system test are in the
-[history](history/handoff-2026-09-24.md); earlier work in the [older history](history/handoff-through-2026-09-23.md).
+The 2026-09-24 daytime session (`ab0cd20e`), the overnight work (`a375ed7c`) and the complete
+system test are in the [history](history/handoff-2026-09-24.md); earlier work in the
+[older history](history/handoff-through-2026-09-23.md).
 
 ## In progress
 
-- Nothing. Version-wide feedback now opens in the version's panel on the board; Review version
-  shows in the viewer's feedback column, that panel and the version card (one `reviewFor` rule).
-- **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
+- Nothing. **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
 
@@ -46,13 +47,15 @@ Overnight work (`a375ed7c`) and the complete system test are in the
   [demo guide](../../supabase/demo/sabre/README.md).
 - **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
   a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
+- **Themes:** System by default, the choice kept per browser (`dawes-theme`), no account sync; the
+  canvas follows the theme; chrome stays monochrome; client logos sit on a light plate in dark
+  mode. With a side panel open the project bar centres beside it and hides below an 800 px canvas.
 
-## Environment (observed 2026-09-24)
+## Environment (observed 2026-09-24; server still up on 2026-09-25)
 
-- Next.js dev server on `http://localhost:3003`, restarted again at 21:40 (and 11:12) after clearing
-  `apps/web/.next/dev/cache`: Turbopack's disk cache stopped picking up `globals.css` edits twice
-  today (a `touch` fixed the first, not the second). It runs detached, logging to `/tmp/dawes-next-dev.log`. Do not start a
-  competing server; if edits stop showing, clear that cache and restart it on the same port.
+- Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`.
+  Turbopack's disk cache has missed `globals.css` edits before: if edits stop showing, clear
+  `apps/web/.next/dev/cache` and restart it on the same port. Never start a competing server.
 - Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609240001`);
   trusted media on 55430. Do not reset or re-provision. The compose `media` container was rebuilt
   from the current tree at 2026-09-24 04:27 UTC, so it serves the video lifecycle routes.
@@ -60,17 +63,13 @@ Overnight work (`a375ed7c`) and the complete system test are in the
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - Branch `main`, local commits only. Nothing has been pushed or deployed.
 
-## Evidence (`a375ed7c`, 2026-09-24 05:00, after `7842df2`, unless noted)
+## Evidence (this session, 2026-09-25)
 
-- `ab0cd20e` at 11:20 and again at 11:58: `npm run check` 927 tests / 78 files, no lint warnings;
-  browser: `client-pages-layout production-workflow client-navigation console-errors board-views
-  files-campaigns` 23 of 23; `project-feedback production-workflow video-designs video-loading
-  playground` 23 of 23; `workspace-actions design-audit` fail only on the overlay's counts.
-- `npm run check`: 863 tests / 75 files. `npm --prefix apps/media test`: 70 of 70.
-- `supabase test db`: 21 files, 456 tests; only `access_and_workflows.test.sql` fails its known 6
-  overlay assertions (2, 4, 9, 18, 32, 54).
-- Browser, whole suite: 85 passed, 3 skipped (the `SYSTEM_TOUR` tours), 5 failed on the overlay's
-  counts only (`canonical-workspaces`, `design-audit`, `workspace-actions`, both `workspace`).
+- At `8bdedd6`: `npm run check` 1013 tests / 86 files, clean; ten browser specs (theme,
+  playground, project, board, workflow, console, video, canvas, creation, navigation) 49 of 49.
+- Two-theme visual audit, 12 views at 1440/900/390, no defects (captures in ignored `outputs/`).
+- Not re-run this session: `supabase test db`, `apps/media` tests and the overlay-count suites;
+  their last results are in the [history](history/handoff-2026-09-24.md).
 
 ## Open gaps
 
@@ -86,6 +85,8 @@ Overnight work (`a375ed7c`) and the complete system test are in the
   The tracked root `login.png` was deleted in the working tree by someone else; left for the user.
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
+- Themes: Safari and Firefox not run (the CSS pipeline compiles a `light-dark()` fallback); the
+  zoom pill's and project bar's vertical centres differ by 4–6 px (parked, cosmetic).
 
 ## Next actions
 
