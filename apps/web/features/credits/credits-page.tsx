@@ -144,6 +144,28 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             {profile?.role === "agency" ? "Adjust credits" : "Request credits"}
           </button>
         </div>
+        <div className="credit-navigation client-page-tools">
+          <nav className="credit-tabs section-tabs" aria-label="Credit views">
+            <button
+              className={tab === "activity" ? "active" : ""}
+              aria-pressed={tab === "activity"}
+              onClick={() => setTab("activity")}
+            >
+              Balance & activity
+            </button>
+            <button
+              className={tab === "report" ? "active" : ""}
+              aria-pressed={tab === "report"}
+              onClick={() => setTab("report")}
+            >
+              Client report
+            </button>
+          </nav>
+          <button className="button quiet" onClick={downloadCsv}>
+            <ArrowDownToLine size={16} />
+            Export CSV
+          </button>
+        </div>
       </header>
       <div className="credit-overview">
         <section>
@@ -169,28 +191,6 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             starts.
           </p>
         </section>
-      </div>
-      <div className="credit-navigation">
-        <nav className="credit-tabs section-tabs" aria-label="Credit views">
-          <button
-            className={tab === "activity" ? "active" : ""}
-            aria-pressed={tab === "activity"}
-            onClick={() => setTab("activity")}
-          >
-            Balance & activity
-          </button>
-          <button
-            className={tab === "report" ? "active" : ""}
-            aria-pressed={tab === "report"}
-            onClick={() => setTab("report")}
-          >
-            Client report
-          </button>
-        </nav>
-        <button className="button quiet" onClick={downloadCsv}>
-          <ArrowDownToLine size={16} />
-          Export CSV
-        </button>
       </div>
       <div className="credit-toolbar">
         <SearchField
@@ -285,50 +285,30 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           <p>Try another period or clear your filters.</p>
         </div>
       ) : (
-        <div className="credit-table-wrap">
-          <table className="credit-table">
-            <thead>
-              <tr>
-                <th scope="col">{tab === "report" ? "Project / activity" : "Activity"}</th>
-                <th scope="col">Date</th>
-                <th scope="col">Credits</th>
-                <th scope="col">Balance after</th>
-                <th scope="col">
-                  <span className="visually-hidden">Details</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((entry) => (
-                <tr key={entry.id}>
-                  <td>
-                    <strong>{projectFor(entry)?.title ?? entry.description}</strong>
-                    <span>
-                      {tab === "report"
-                        ? (campaignList.find((item) => item.id === projectFor(entry)?.campaign_id)
-                            ?.title ?? creditKindLabels[entry.kind])
-                        : creditKindLabels[entry.kind]}
-                    </span>
-                  </td>
-                  <td>{formatDateLong(entry.created_at)}</td>
-                  <td className="credit-number">
-                    {entry.amount > 0 ? "+" : ""}
-                    {entry.amount}
-                  </td>
-                  <td className="credit-number">{entry.balance_after}</td>
-                  <td>
-                    <button
-                      className="button quiet"
-                      aria-label={`View ${entry.description} credit details`}
-                      onClick={() => setDetail(entry)}
-                    >
-                      <ArrowUpRight size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="credit-list">
+          {visible.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="credit-list-row"
+              onClick={() => setDetail(entry)}
+            >
+              <strong>{projectFor(entry)?.title ?? entry.description}</strong>
+              <span className="credit-list-kind">
+                {tab === "report"
+                  ? (campaignList.find((item) => item.id === projectFor(entry)?.campaign_id)
+                      ?.title ?? creditKindLabels[entry.kind])
+                  : creditKindLabels[entry.kind]}
+              </span>
+              <span className="credit-list-date">{formatDateLong(entry.created_at)}</span>
+              <span className="credit-list-amount credit-number">
+                {entry.amount > 0 ? "+" : ""}
+                {entry.amount}
+              </span>
+              <span className="credit-list-balance credit-number">{entry.balance_after} left</span>
+              <ArrowUpRight size={16} />
+            </button>
+          ))}
         </div>
       )}
       <section className="credit-requests">
@@ -343,23 +323,33 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             </button>
           </FormError>
         ) : requests.data?.length ? (
-          requests.data.map((item) => (
-            <div key={item.id} className="credit-request">
-              <div>
+          <div className="credit-request-list">
+            {requests.data.map((item) => (
+              <div key={item.id} className="credit-request-row">
                 <strong>{item.amount} credits</strong>
-                <p>{item.note || "Additional credits requested"}</p>
-                {item.response_note && <p>{item.response_note}</p>}
+                <span
+                  className="credit-request-note"
+                  title={[item.note || "Additional credits requested", item.response_note]
+                    .filter(Boolean)
+                    .join(" · ")}
+                >
+                  {item.note || "Additional credits requested"}
+                  {item.response_note ? ` · ${item.response_note}` : ""}
+                </span>
+                <span className="credit-request-date">{formatDateLong(item.created_at)}</span>
+                <span className={statusToneClass(creditRequestStatusTones[item.status])}>
+                  {creditRequestStatusLabels[item.status]}
+                </span>
+                {profile?.role === "agency" && item.status === "pending" ? (
+                  <button className="button" onClick={() => setRequest(item)}>
+                    Review
+                  </button>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
               </div>
-              <span className={statusToneClass(creditRequestStatusTones[item.status])}>
-                {creditRequestStatusLabels[item.status]}
-              </span>
-              {profile?.role === "agency" && item.status === "pending" && (
-                <button className="button" onClick={() => setRequest(item)}>
-                  Review
-                </button>
-              )}
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
           <div className="empty-state">
             <h2>No credit requests yet.</h2>

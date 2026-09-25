@@ -1,9 +1,12 @@
 # Credits
 
-The Credits page uses the shared floating client navigation/profile and white title/action card
-on the plain page background. Balance, requests, ledger/report tabs and accounting actions remain in their
-existing content panels below. The layout follows the same desktop/mobile gutters as other client
-sections without changing billing or export behavior.
+The Credits page uses the shared floating client navigation/profile and white title/action card on
+the plain page background, with the balance/report tabs and Export CSV inside that header card, the
+same placement Briefings uses for its own filters. Activity and credit requests render as one-line
+rows in bordered list cards, matching the Briefings and Reviews row style; clicking an activity row
+opens the credit details dialog, and an agency's pending request keeps its Review button inline. The
+layout follows the same desktop/mobile gutters as other client sections, with each row dropping to
+two lines on phones, without changing billing or export behavior.
 
 This feature displays a real Supabase credit account, immutable ledger and additional-credit requests. Agency and client sessions read only backend-authorized records; designers have no credit interface.
 

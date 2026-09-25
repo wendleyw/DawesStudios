@@ -319,8 +319,19 @@ test.describe("Briefing intake, credits, and account administration", () => {
       ).toHaveLength(1);
       expect(await balance()).toBe(91);
       await page.goto(`/clients/${fixture.clientId}/credits?project=${projectId}`);
+      // Tabs and export live in the header card, like Briefings; activity rows stay on one line.
+      const heading = page.locator(".client-page-heading");
       await expect(
-        page.getByRole("cell").filter({ has: page.getByText(title, { exact: true }) }),
+        heading.getByRole("button", { name: "Client report", exact: true }),
+      ).toBeVisible();
+      await expect(heading.getByRole("button", { name: "Export CSV", exact: true })).toBeVisible();
+      await expect(page.locator(".credit-table")).toHaveCount(0);
+      expect(
+        (await page.locator(".credit-list-row").first().boundingBox())!.height,
+      ).toBeLessThanOrEqual(64);
+      // The table's cell role is gone with the table; the row itself now carries the project title.
+      await expect(
+        page.locator(".credit-list-row").filter({ has: page.getByText(title, { exact: true }) }),
       ).toBeVisible();
       const reportProject = (
         await client.from("projects").select("campaign_id").eq("id", projectId).single()
@@ -342,7 +353,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("added");
       await expect(page.getByRole("heading", { name: "No activity in this view." })).toBeVisible();
       await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("used");
-      await page.locator(".credit-table").getByRole("button").click();
+      await page.locator(".credit-list").getByRole("button").click();
       await expect(page.getByRole("dialog")).toContainText("Second audience variation");
       await expect(page.getByRole("dialog")).toContainText(
         "Additional story adaptation and edit coverage",

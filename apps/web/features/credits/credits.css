@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-top: 22px;
+  margin-top: 0;
   border-bottom: 1px solid var(--border);
 }
 .credit-tabs {
@@ -108,61 +108,97 @@
   resize: vertical;
   line-height: 1.6;
 }
-.credit-table-wrap {
-  position: relative;
-  overflow: auto;
-  max-width: 100%;
-  min-width: 0;
+.credit-list {
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
-.credit-table {
-  border-collapse: collapse;
+/* One line per activity: title, type (or campaign), date, credits, balance after. */
+.credit-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 120px 72px 96px 16px;
+  gap: var(--space-md);
+  align-items: center;
   width: 100%;
-  text-align: left;
-  font-size: var(--text-lg);
-}
-.credit-table th {
-  font-size: var(--text-sm);
-  font-weight: 500;
-
-  text-transform: var(--eyebrow-case);
-  letter-spacing: var(--eyebrow-tracking);
-  color: var(--muted);
-
-  padding: var(--space-md);
+  min-height: 56px;
+  padding: 10px var(--space-lg);
+  border: 0;
   border-bottom: 1px solid var(--border);
-  white-space: nowrap;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+.credit-list-row:last-child {
+  border-bottom: 0;
+}
+.credit-list-row:hover {
   background: var(--surface-hover);
 }
-.credit-table td {
-  padding: var(--space-lg) var(--space-md);
-
-  border-bottom: 1px solid var(--border);
-  color: var(--muted);
+.credit-list-row:focus-visible {
+  outline-offset: -3px;
 }
-.credit-table td:first-child {
-  min-width: 220px;
-}
-.credit-table td:first-child strong {
-  display: block;
-  font-weight: 500;
-  color: var(--foreground);
-  margin-bottom: 7px;
-}
-.credit-table td:first-child span {
-  font-size: var(--text-base);
-}
-.credit-table td:nth-child(2) {
+.credit-list-row > strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+.credit-list-kind,
+.credit-list-date,
+.credit-list-balance {
+  overflow: hidden;
+  font-size: var(--text-base);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.credit-list-amount {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  text-align: right;
+}
+.credit-list-balance {
+  text-align: right;
 }
 .credit-number {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.credit-table td.credit-number {
-  color: var(--foreground);
+@media (max-width: 1000px) {
+  .credit-list-row {
+    grid-template-columns: minmax(0, 1.4fr) 120px 72px 96px 16px;
+  }
+  .credit-list-kind {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .credit-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    padding: 10px var(--space-md);
+  }
+  .credit-list-row > strong,
+  .credit-list-amount {
+    grid-row: 1;
+  }
+  .credit-list-date,
+  .credit-list-balance {
+    grid-row: 2;
+  }
+  .credit-list-amount,
+  .credit-list-balance {
+    grid-column: 2;
+  }
+  .credit-list-balance {
+    font-size: var(--text-sm);
+  }
+  .credit-list-row > svg {
+    display: none;
+  }
 }
 .credit-requests {
   margin-top: 44px;
@@ -172,24 +208,66 @@
   font-weight: 500;
   margin-bottom: 20px;
 }
-.credit-request {
-  display: flex;
-  gap: 20px;
+.credit-request-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+/* One line per request: amount, note (with the studio's reply), date, status, review. */
+.credit-request-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 120px 136px 88px;
+  gap: var(--space-md);
   align-items: center;
-  padding: 20px 0;
+  min-height: 56px;
+  padding: 10px var(--space-lg);
   border-bottom: 1px solid var(--border);
-}
-.credit-request > div {
-  flex: 1;
-}
-.credit-request strong {
-  font-size: 14px;
-  font-weight: 500;
-}
-.credit-request p {
-  font-size: var(--text-base);
   color: var(--muted);
-  line-height: 1.6;
+}
+.credit-request-row:last-child {
+  border-bottom: 0;
+}
+.credit-request-row > strong {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.credit-request-note,
+.credit-request-date {
+  overflow: hidden;
+  font-size: var(--text-base);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.credit-request-row .status-badge {
+  justify-self: start;
+}
+.credit-request-row > .button {
+  justify-self: end;
+}
+@media (max-width: 720px) {
+  .credit-request-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 10px var(--space-md);
+  }
+  .credit-request-row > strong,
+  .credit-request-row .status-badge {
+    grid-row: 1;
+  }
+  .credit-request-note {
+    grid-row: 2;
+  }
+  .credit-request-row .status-badge,
+  .credit-request-row > .button {
+    grid-column: 2;
+  }
+  .credit-request-date,
+  .credit-request-row > span[aria-hidden="true"] {
+    display: none;
+  }
 }
 .credit-form {
   display: flex;
@@ -310,20 +388,6 @@
   .credit-filters select {
     max-width: none;
     width: 100%;
-  }
-  .credit-table td,
-  .credit-table th {
-    padding-inline: 8px;
-  }
-  .credit-table td:first-child {
-    min-width: 180px;
-  }
-  .credit-request {
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .credit-request > div {
-    min-width: 180px;
   }
   .credit-dialog-actions {
     flex-wrap: wrap;
