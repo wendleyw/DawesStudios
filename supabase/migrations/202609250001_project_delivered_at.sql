@@ -3,7 +3,10 @@
 alter table public.projects add column delivered_at timestamptz;
 
 -- Projects delivered before this column existed take their last update, the best record left.
+-- The trigger stays off for the backfill alone, so it does not restamp updated_at to the deploy time.
+alter table public.projects disable trigger project_updated_at;
 update public.projects set delivered_at = updated_at where status = 'delivered' and delivered_at is null;
+alter table public.projects enable trigger project_updated_at;
 
 -- Unchanged from 202609200014_delivery_integrity.sql apart from stamping `delivered_at`.
 create or replace function public.mark_project_delivered(p_project_id uuid) returns void language plpgsql security definer set search_path='' as $$
