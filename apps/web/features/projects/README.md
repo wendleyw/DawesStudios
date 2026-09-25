@@ -70,7 +70,7 @@ Clients never query working versions, designs or internal comments.
 
 The **Playground** action opens a persistent brainstorm canvas for the current role and project.
 It is also available as **Open Playground** in the design upload/edit form. The form remains
-mounted while its dialog is temporarily closed. The project-owned Playground board slides down over the entire viewport, covering the header and sidebar in a native fullscreen dialog. Covered app controls are inert until it closes. Closing slides it up; **Back to upload** restores the selected file and all
+mounted while its dialog is temporarily closed. The project-owned Playground board rises from the bottom over the entire viewport, covering the header and sidebar in a native fullscreen dialog. Covered app controls are inert until it closes. Closing slides it back down; **Back to upload** restores the selected file and all
 unsent fields. Brainstorm attachments stay in a separate private bucket and do not automatically
 become production designs or client publications. See the [Playground and widgets specification](../../../../docs/architecture/playground-and-board-widgets.md).
 

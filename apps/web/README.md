@@ -123,7 +123,7 @@ The production image uses Next.js standalone output with the repository as the t
 - `tests/`: test setup and browser scenarios.
 - `public/brand/`: application branding.
 
-The [board feature](features/board/README.md) owns five mutually exclusive views and per-viewer/client preferences. The [Playground feature](features/playground/README.md) provides persistent, role-isolated brainstorming canvases inside each project, with a layer sliding down over the entire viewport and a preserved return to the design upload form. Their focused browser checks run with `npm --prefix apps/web run test:e2e -- playground board-views` from the repository root against the running local stack.
+The [board feature](features/board/README.md) owns five mutually exclusive views and per-viewer/client preferences. The [Playground feature](features/playground/README.md) provides persistent, role-isolated brainstorming canvases inside each project, with a layer rising from the bottom over the entire viewport and a preserved return to the design upload form. Their focused browser checks run with `npm --prefix apps/web run test:e2e -- playground board-views` from the repository root against the running local stack.
 
 Vitest remains the unit test runner and uses Vite internally; the web application itself builds and runs through Next.js.
 

@@ -4,8 +4,9 @@ Playground is a persistent brainstorming canvas inside an individual project. Ea
 
 `PlaygroundBoard({ clientId, projectId, onClose, returnLabel? })` requires both scope IDs and mounts
 only while open. Its named native dialog occupies the entire viewport in the browser's top layer,
-covering the sidebar, client/project headers and canvas. It slides down from the screen's top edge
-on entry and up before invoking `onClose` once; `returnLabel` defaults to **Back to project**.
+covering the sidebar, client/project headers and canvas. It rises from the screen's bottom edge
+on entry, the edge its button sits at in the project's bottom bar, and slides back down before
+invoking `onClose` once; `returnLabel` defaults to **Back to project**.
 Reduced motion skips animation, and a short timer ensures completion if an animation event is
 unavailable. The transparent backdrop lets the previous surface remain visible during the slide.
 The covered app is inert and body scrolling is locked until exit completes. Focus starts on the

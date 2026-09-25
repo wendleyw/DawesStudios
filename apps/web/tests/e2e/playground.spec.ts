@@ -52,7 +52,7 @@ test("Playground slides over the entire viewport and preserves the project under
     const frames = (animation?.effect as KeyframeEffect | null)?.getKeyframes();
     return frames?.map((frame) => frame.transform);
   });
-  expect(entry).toEqual(["translateY(-100%)", "translateY(0px)"]);
+  expect(entry).toEqual(["translateY(100%)", "translateY(0px)"]);
   await expect(layer).toHaveAttribute("data-phase", "active");
   expect(
     await layer.evaluate((element) => ({
@@ -87,7 +87,7 @@ test("Playground slides over the entire viewport and preserves the project under
       ?.getKeyframes()
       .map((frame) => frame.transform);
   });
-  expect(exit).toEqual(["translateY(0px)", "translateY(-100%)"]);
+  expect(exit).toEqual(["translateY(0px)", "translateY(100%)"]);
   await expect(layer).toHaveCount(0);
   await expect(viewport).toHaveAttribute("style", transform!);
   await expect(page.locator(".project-workspace-content")).not.toHaveAttribute("inert");

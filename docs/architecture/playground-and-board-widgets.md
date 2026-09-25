@@ -6,7 +6,7 @@ The widget presentation described by the original verification is superseded by 
 
 ## Required behavior
 
-Every supported role (agency, designer, client) can open **Playground** from an accessible project/design board. It opens a fullscreen canvas sliding down over the entire viewport, covering app navigation and the project header, with pan, zoom, draggable/resizable items, notes, and multi-file drag/drop for images and documents. Content persists across closing, navigation and reload. Closing returns to the exact underlying surface. In particular, opening it from the design upload dialog must retain the form and selected file and return to that dialog.
+Every supported role (agency, designer, client) can open **Playground** from an accessible project/design board. It opens a fullscreen canvas rising from the bottom over the entire viewport, covering app navigation and the project header, with pan, zoom, draggable/resizable items, notes, and multi-file drag/drop for images and documents. Content persists across closing, navigation and reload. Closing returns to the exact underlying surface. In particular, opening it from the design upload dialog must retain the form and selected file and return to that dialog.
 
 The playground is a brainstorming space, separate from project production assets and immutable client publication. Each project has a separate board for each role. Existing workspace-only records are archived and preserved, with authenticated access denied. Backend authorization enforces role and workspace/project access; clients never receive agency/designer boards, files or identities. Removed users lose access. This is a role collaboration space, not a cross-role publication channel.
 
