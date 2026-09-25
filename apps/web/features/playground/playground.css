@@ -106,7 +106,7 @@
 }
 .playground-canvas {
   --canvas-background: light-dark(#e9e9e2, #0f1012);
-  --canvas-grid: light-dark(#cdcdc3, #2a2b2f);
+  --canvas-grid: light-dark(#bdbdb2, #333438);
   min-width: 0;
   flex: 1;
   position: relative;

@@ -24,8 +24,9 @@ The CSS-only `.section-tabs` primitive is consumed by `brand/brand-page`, `brief
 
 ### Canvas background and controls
 
-`CanvasBackground` (`canvas-background.tsx`) renders a 24-unit line grid using
-`--canvas-background` and `--canvas-grid`. Each instance has a unique SVG pattern
+`CanvasBackground` (`canvas-background.tsx`) renders a 24-unit dot grid (1.5-unit dots, after the
+Higgsfield canvas the user chose) using `--canvas-background` and `--canvas-grid`. Each instance
+has a unique SVG pattern
 ID so the mounted project and Playground backgrounds remain independent. The
 Playground feature overrides the tokens locally for a slightly darker surface.
 

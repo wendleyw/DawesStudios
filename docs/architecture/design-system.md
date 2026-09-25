@@ -41,9 +41,9 @@ The shared shell styles are implemented in [globals.css](../../apps/web/app/glob
 | `color.controlBorder` | `#ccd0d7` | Implemented stronger input boundary |
 | `color.primary` | `#272a30` | Implemented filled primary action |
 | `color.focus` | `#272a30` | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces |
-| `--canvas-background` | `#f3f4f6` | Shared board, project and single-design canvas surface |
-| `--canvas-grid` | `#dcdfe4` | Shared 24-unit line grid with a 0.75 px stroke; follows pan/zoom |
-| Playground canvas overrides | `#e9e9e2` / `#cdcdc3` | Slightly darker background/grid, scoped to the Playground canvas |
+| `--canvas-background` | `#f3f4f6` / dark `#131416` | Shared board, project and single-design canvas surface |
+| `--canvas-grid` | `#c5c9d0` / dark `#363739` | Shared 24-unit dot grid, 1.5-unit dots; follows pan/zoom |
+| Playground canvas overrides | `#e9e9e2` / `#bdbdb2` light, `#0f1012` / `#333438` dark | Slightly darker background and dots, scoped to the Playground canvas |
 | `radius.small` | `8px` | `--radius`. Implemented controls; reference was approximately 4 px |
 | `radius.medium` | `12px` | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners |
 | `radius.round` | `999px` | Decision: only avatars, pins, and circular marks. No token; one call site |
@@ -64,7 +64,7 @@ The implementation uses Geist from [the application layout](../../apps/web/app/l
 
 ### Unified document surfaces
 
-Non-client document pages share `--content-width: 1280px`, a 40 px desktop gutter, 32 px section spacing and 24 px panel padding. Client sections use the full available width with 16 px desktop and 12 px mobile gutters, the plain `--background` page surface and a white title/action card below the floating workspace header. The line grid stays on the xyflow canvases; behind document content it competed with the text. Briefing/review filters, Files tools and Brand Hub section links live inside that card. Existing responsive breakpoints reduce the gutter. The page header and its action group align at the top; overview date and creation action form one group. Overview figures use separate bordered panels. Briefings, credit history, review cards and settings sections use the same white surface, neutral border and 12 px panel radius; artwork geometry is unchanged.
+Non-client document pages share `--content-width: 1280px`, a 40 px desktop gutter, 32 px section spacing and 24 px panel padding. Client sections use the full available width with 16 px desktop and 12 px mobile gutters, the plain `--background` page surface and a white title/action card below the floating workspace header. The dot grid stays on the xyflow canvases; behind document content it competed with the text. Briefing/review filters, Files tools and Brand Hub section links live inside that card. Existing responsive breakpoints reduce the gutter. The page header and its action group align at the top; overview date and creation action form one group. Overview figures use separate bordered panels. Briefings, credit history, review cards and settings sections use the same white surface, neutral border and 12 px panel radius; artwork geometry is unchanged.
 
 `.section-tabs` in `app/globals.css` serves Brand Hub, briefings, credits and settings. It provides one scrollable row, a 48 px target and an underline for the active item. Each feature retains its navigation semantics: routes remain links with `aria-current`, and filters remain buttons with their existing state attributes. Feature styles own placement only. See the [shared UI contract](../../apps/web/features/shared/README.md).
 
@@ -141,7 +141,7 @@ once. Preserve scoped drafts, image/video pins, read errors and full historical 
 
 ## Board and project canvas
 
-The board and project canvases use XYFlow/React Flow. Use a shared canvas frame with a subtle line-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
+The board and project canvases use XYFlow/React Flow. Use a shared canvas frame with a subtle dot-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
 
 Every `ReactFlow` instance sets `proOptions={{ hideAttribution: true }}`, so the library's attribution badge does not sit over the bottom-right corner of the work surface. The package is MIT licensed and its licence carries no interface attribution clause, so hiding the badge is permitted; xyflow asks that projects removing it subscribe to React Flow Pro to support the library, which is a request rather than a condition. Restoring the badge means dropping the prop from the board, project, design viewer and Playground canvases.
 
