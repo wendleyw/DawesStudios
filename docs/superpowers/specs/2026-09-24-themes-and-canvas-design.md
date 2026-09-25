@@ -105,7 +105,9 @@ the visual audit:
 - Status tones (`--tone-*`) and the timeline's olive/amber bar family get dark variants that keep
   badge text at 4.5:1 or better and bar edges at 3:1 or better.
 - Dark surfaces separate with borders; shadows become darker and subtler.
-- xyflow's own variables (`--xy-*`: controls, selection box, default node) map to these tokens.
+- xyflow's control variables (`--xy-controls-*`) map to these tokens. Its translucent blue
+  selection box reads on both themes and stays; the canvases use custom nodes only, so xyflow's
+  default node colours never show.
 - The sidebar stays dark in both themes. The white studio logos are unchanged.
 - Client logos are uploaded images, often black on transparent. In dark mode an `img.client-mark`
   sits on a small light plate so a dark mark stays legible. Initials fall back to the tokens.
@@ -159,7 +161,8 @@ the visual audit:
 - The Playground button keeps the ref that restores focus after the Playground closes.
 - The header's right card keeps only the deliverable filter.
 - Below 640 px wide the bar moves to the bottom right and the zoom pill stays at the bottom left.
-  At 360 px and narrower the pill drops its percentage so both fit.
+  Phone buttons use the 44 px touch size, so at 380 px and narrower the pill drops its percentage
+  so both fit.
 
 ### 7. Playground motion
 
@@ -204,11 +207,12 @@ contrast for text tokens and a search for literal colors outside `light-dark()` 
 
 ## Delivery
 
-Three commits, each after a passing `npm run check` and its browser checks:
+Three stages, each made of plan tasks that end in their own commit after a passing
+`npm run check` and their browser checks (the project requires a commit per integrated task):
 
-1. `feat(theme): add light and dark themes with a sidebar switch`
-2. `feat(canvas): draw a dot grid and a horizontal zoom pill on every canvas`
-3. `feat(project): move project tools to a bottom bar and raise the Playground from below`
+1. Theme: preference and script, sidebar switch, dark tokens, feature colours, browser check.
+2. Canvas: dot grid, then the horizontal zoom pill.
+3. Project: the bottom tool bar, then the Playground rising from below.
 
 ## Risks
 
