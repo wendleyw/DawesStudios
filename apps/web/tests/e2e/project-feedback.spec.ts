@@ -367,6 +367,19 @@ test("floating project chrome fits desktop and mobile, including feedback and se
             : page.getByRole("button", { name: label, exact: true });
         await trigger.click();
         await expect(page.locator(content)).toBeInViewport();
+        // The bar never sits under the open panel: it re-centres beside it, or steps aside.
+        const bar = await page.evaluate(() => {
+          const element = document.querySelector<HTMLElement>(".project-tool-bar")!;
+          if (getComputedStyle(element).display === "none") return { hidden: true, clear: true };
+          const rect = element.getBoundingClientRect();
+          const panel = document.querySelector(".project-inspector")!.getBoundingClientRect();
+          const zoom = document
+            .querySelector(".project-canvas .canvas-zoom")!
+            .getBoundingClientRect();
+          return { hidden: false, clear: rect.right <= panel.left && rect.left >= zoom.right };
+        });
+        expect(bar.clear).toBe(true);
+        if (width >= 1440) expect(bar.hidden).toBe(false);
         const bounds = await page.locator(".project-inspector").boundingBox();
         if (panelBounds) expect(bounds).toEqual(panelBounds);
         panelBounds = bounds;

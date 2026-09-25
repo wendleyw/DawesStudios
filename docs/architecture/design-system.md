@@ -133,8 +133,9 @@ controls sit below on the left and All deliverables on the right. Project detail
 Playground sit in a floating tool bar at the bottom centre of the canvas: a 16 px-radius pill with
 40 px buttons, a divider before Playground and the open panel's button selected, after the
 Higgsfield canvas the user chose, in the product's monochrome palette. On phones it moves to the
-bottom right. During design review, a compact deliverable toolbar replaces the channel row and the
-bar, and includes Playground.
+bottom right. While a side panel is open, the bar re-centres in the space between the zoom pill and
+the panel, and steps aside on a canvas narrower than 800 px until the panel closes. During design
+review, a compact deliverable toolbar replaces the channel row and the bar, and includes Playground.
 The artwork has its own space above the design/version navigation footer. Desktop double-click,
 keyboard activation, the explicit open arrow and a single touch tap enter feedback.
 
