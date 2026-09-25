@@ -50,6 +50,7 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
   const designers = (
     await localAdmin.from("profiles").select("display_name").eq("role", "designer")
   ).data!;
+  expect(designers.length).toBeGreaterThan(0);
   for (const designer of designers) expect(text).not.toContain(designer.display_name);
   const notes = (
     await localAdmin
@@ -60,8 +61,11 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
         projects.map((project) => project.id),
       )
   ).data!;
-  for (const note of notes.filter((item) => item.body.length >= 20))
-    expect(text).not.toContain(note.body.slice(0, 40));
+  // Below 12 characters a note (e.g. "Approved") can collide with ordinary UI copy, so only
+  // longer notes are checked, and compared in full rather than by a truncated prefix.
+  expect(notes.filter((item) => item.body.length >= 12).length).toBeGreaterThan(0);
+  for (const note of notes.filter((item) => item.body.length >= 12))
+    expect(text).not.toContain(note.body);
 });
 
 test("a designer's home shows only assigned work and no credits", async ({ page }) => {
@@ -69,17 +73,24 @@ test("a designer's home shows only assigned work and no credits", async ({ page 
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
   const caller = await localCaller(credentials.designer);
-  const allowed = (await caller.from("projects").select("title,status")).data!;
+  const allowed = (await caller.from("projects").select("id,status")).data!;
   await expect
     .poll(() => tile(page, "Active projects"))
     .toBe(allowed.filter((project) => project.status !== "delivered").length);
-  const titles = new Set(allowed.map((project) => project.title));
-  for (const row of await page.locator(".overview-row > strong").allInnerTexts())
-    expect(titles.has(row.split(" · ")[0])).toBe(true);
+  const allowedIds = new Set(allowed.map((project) => project.id));
+  const hrefs = await page
+    .locator(".overview-row")
+    .evaluateAll((rows) => rows.map((row) => row.getAttribute("href") ?? ""));
+  expect(hrefs.length).toBeGreaterThan(0);
+  for (const href of hrefs) {
+    const match = href.match(/^\/projects\/([^/?]+)/);
+    expect(match).not.toBeNull();
+    expect(allowedIds.has(match![1])).toBe(true);
+  }
   await expect(page.getByText(/credits/i)).toHaveCount(0);
 });
 
-test("the studio sees a client's Overview as the client does", async ({ page }) => {
+test("the studio sees a client's Overview as the client does", async ({ page, browser }) => {
   const client = await sabre();
   await signIn(page, credentials.agency);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
@@ -90,6 +101,19 @@ test("the studio sees a client's Overview as the client does", async ({ page }) 
       .getByRole("navigation", { name: `${client.name} navigation`, exact: true })
       .getByRole("link", { name: "Overview", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+
+  // Every number the studio sees matches what the client itself sees on its own Overview.
+  const clientContext = await browser.newContext();
+  try {
+    const clientPage = await clientContext.newPage();
+    await signIn(clientPage, credentials.client); // lands on the same Overview
+    await expect(clientPage.locator(".overview-panel")).toHaveCount(3);
+    for (const label of ["Credits remaining", "Active projects", "Needs your review"])
+      await expect.poll(() => tile(page, label)).toBe(await tile(clientPage, label));
+  } finally {
+    await clientContext.close();
+  }
+
   const projects = (await localAdmin.from("projects").select("status").eq("client_id", client.id))
     .data!;
   await expect
