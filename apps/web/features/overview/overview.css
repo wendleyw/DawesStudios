@@ -1,0 +1,110 @@
+/* The welcome dashboards: client Overview and designer /home (features/overview). */
+.overview-page .overview-stats {
+  margin-bottom: var(--space-md);
+}
+.overview-flight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm) var(--space-lg);
+  margin-bottom: var(--space-section);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-base);
+}
+.overview-flight strong {
+  margin-right: 4px;
+  color: var(--ink);
+  font-size: var(--text-section);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.overview-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-md);
+  align-items: start;
+}
+.overview-panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.overview-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+.overview-panel-head h2 {
+  margin: 2px 0 0;
+  font-size: var(--text-section);
+  font-weight: 600;
+}
+.overview-see-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--text-base);
+  white-space: nowrap;
+}
+.overview-see-all:hover {
+  color: var(--foreground);
+}
+/* One line of title with a quieter line below, and a status badge at the right when it has one. */
+.overview-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-sm);
+  align-items: center;
+  min-height: 56px;
+  padding: 10px var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.overview-row:last-child {
+  border-bottom: 0;
+}
+.overview-row:hover {
+  background: var(--surface-hover);
+}
+.overview-row:focus-visible {
+  outline-offset: -3px;
+}
+.overview-row > strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.overview-row-meta {
+  grid-column: 1;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.overview-row > .status-badge {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.overview-empty {
+  margin: 0;
+  padding: var(--space-lg);
+  color: var(--muted);
+  font-size: var(--text-base);
+}
+@media (max-width: 1000px) {
+  .overview-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
