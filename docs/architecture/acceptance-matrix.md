@@ -101,13 +101,13 @@ restore it. The global-search parts of C09 and I07 are historical in the same wa
 those rows still applies. Page-level searches (board, Files, Brand Hub assets) remain.
 
 Product amendment (2026-09-25): the user asked for welcome dashboards. A client with one workspace
-now lands on its **Overview** (`/clients/:clientId/overview`, the first client destination for the
-client and the studio), one click from the Board. The studio's and the designer's `/home` headings
-greet the viewer ("Welcome back, <first name>") and keep their role names, **Overview** and **My
-work**, as the page eyebrow and the sidebar label; the designer's `/home` is now a dashboard of their
-assigned work. D01's 2026-09-21 evidence describes the earlier landing and is not a requirement to
-restore it; the rest of D01 (role-consistent navigation) still applies and `overview.spec.ts` covers
-the new landing.
+now lands on its **Overview** (`/clients/:clientId/overview`, the first link in the client
+navigation for the client and the studio), one click from the Board. The studio's and the designer's
+`/home` headings greet the viewer ("Welcome back, <first name>") and keep their role names,
+**Overview** and **My work**, as the page eyebrow and the sidebar label; the designer's `/home` is
+now a dashboard of their assigned work. D01's 2026-09-21 evidence describes the earlier landing and
+is not a requirement to restore it; the rest of D01 (role-consistent navigation) still applies and
+`overview.spec.ts` covers the new landing.
 
 ## E. Briefings and catalog
 

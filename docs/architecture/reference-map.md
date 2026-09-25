@@ -94,7 +94,7 @@ The following images were opened with the image-viewing tool during this referen
 | [Insufficient credits](../ref/01-agencia/04-briefings/06-aceite/02-saldo-insuficiente.png) | 1600 × 1000 | Quote context and blocked acceptance without losing request |
 | [Credits](../ref/01-agencia/08-creditos/01-saldo-atividade.png) | 1600 × 1000 | Balance hierarchy and auditable ledger |
 | [Brand overview](../ref/01-agencia/07-brand-hub/01-overview/01-pagina.png) | 1600 × 1000 | Content groups and editorial restraint |
-| [Client Home](../ref/02-cliente/01-home-e-globais/01-home.png) | 1600 × 1000 | Direct client-board entry with reduced permissions |
+| [Client Home](../ref/02-cliente/01-home-e-globais/01-home.png) | 1600 × 1000 | Reference shows a direct client-board entry with reduced permissions; the product opens the client's Overview |
 | [Designer Home](../ref/03-designer/01-home-e-globais/01-home.png) | 1600 × 1000 | Assigned work and distinct production context |
 
 Flat-color sampling confirmed `#202020` sidebar, `#353535` active navigation, `#ededed` reference workspace, `#ffffff` surfaces, and `#e0e0e0` home rules. The fresh product intentionally may use a lighter workspace, more spacious typography, consolidated actions, and simplified navigation. Compare usability and consistency against the documented decisions, not raw screenshot differences.

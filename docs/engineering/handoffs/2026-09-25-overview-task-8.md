@@ -20,6 +20,7 @@
 - `npx prettier --check` on both feature READMEs — clean, unchanged.
 - `npm run check` (apps/web) — typecheck, lint, format:check, vitest all pass: 91 files / 1037 tests.
 - Ruling-5 grep from repo root — 2 hits: acceptance-matrix.md:86 (the superseded D01 2026-09-21 row, the named exception) and specs/...design.md:60 ("Current state" quote of pre-change D01 text, outside my 2-line scope for that file).
+- Fix round 1: corrected design-system.md's date/subtitle sentence (studio's reading of a client's Overview shows the fixed subtitle, no date, per client-overview-page.tsx:72-74), reference-map.md:97 (reference-vs-product wording), acceptance-matrix.md:104 ("first link in the client navigation", rewrapped, rest verbatim); `npm run check` (apps/web) re-run clean: 91 files / 1037 tests.
 
 ## Risks and next action
 - specs/2026-09-25-role-overview-dashboards-design.md:60 quotes old D01 wording as historical rationale; not in the ruling's exception list but outside my authorized lines (~90, ~106) — left unchanged, flag for controller.
