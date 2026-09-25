@@ -300,7 +300,9 @@
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
-  font-size: 14px;
+  font-size: var(--text-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

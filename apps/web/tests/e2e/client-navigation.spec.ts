@@ -258,13 +258,13 @@ test("search lives on each page and a focused search field reads as one box", as
   await page.screenshot({ path: `${screenshotDirectory}/board-search-focused.png` });
 });
 
-test("the sidebar's animated mark plays once beside the wordmark", async ({ page }) => {
+test("the sidebar shows only the animated mark, which plays once", async ({ page }) => {
   await signIn(page, credentials.agency);
   await page.goto("/home");
   const brand = page.locator(".sidebar .brand-link");
   const mark = brand.locator("video.brand-mark");
   await expect(brand).toHaveAccessibleName(/ home$/);
-  await expect(brand.locator("img.brand-wordmark")).toBeVisible();
+  await expect(brand.locator("img")).toHaveCount(0);
   await expect(mark).toHaveJSProperty("loop", false);
   await expect(mark).toHaveJSProperty("muted", true);
   // It plays through once and rests on the finished mark.
@@ -273,27 +273,20 @@ test("the sidebar's animated mark plays once beside the wordmark", async ({ page
       timeout: 10_000,
     })
     .toBe(true);
-  // The finished mark sits where the static one did: level with the wordmark's top, left of it.
-  const layout = await brand.evaluate((link) => {
-    const video = link.querySelector("video")!.getBoundingClientRect();
-    const words = link.querySelector(".brand-wordmark")!.getBoundingClientRect();
-    return { gap: words.left - video.right, top: Math.abs(words.top - video.top) };
-  });
-  expect(layout.gap).toBeGreaterThan(8);
-  expect(layout.top).toBeLessThan(2);
+  // The mark shows at the shared brand height every screen uses.
+  expect(Math.round((await mark.boundingBox())!.height)).toBe(56);
   await page
     .locator(".sidebar")
     .screenshot({ path: `${screenshotDirectory}/sidebar-brand-mark.png` });
 
-  // Collapsed, only the mark shows.
+  // Collapsed, the whole mark still fits inside the sidebar.
   await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
   await expect
     .poll(() =>
       brand.evaluate((link) => {
-        const box = link.getBoundingClientRect();
+        const sidebar = link.closest(".sidebar")!.getBoundingClientRect();
         const video = link.querySelector("video")!.getBoundingClientRect();
-        const words = link.querySelector(".brand-wordmark")!.getBoundingClientRect();
-        return video.width > 0 && video.right <= box.right + 1 && words.left >= box.right;
+        return video.height === 56 && video.left >= sidebar.left && video.right <= sidebar.right;
       }),
     )
     .toBe(true);
@@ -307,5 +300,5 @@ test("with reduced motion the sidebar shows the finished mark still", async ({ p
   const brand = page.locator(".sidebar .brand-link");
   await expect(brand.locator("video")).toHaveCount(0);
   await expect(brand.locator("img.brand-mark")).toBeVisible();
-  await expect(brand.locator("img.brand-wordmark")).toBeVisible();
+  await expect(brand.locator("img")).toHaveCount(1);
 });

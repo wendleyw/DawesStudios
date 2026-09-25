@@ -20,34 +20,21 @@
 .sidebar :focus-visible {
   outline-color: var(--sidebar-text);
 }
-/*
- * The sidebar lockup, laid out in the original logo image's own units (2409 across): the animated
- * mark's finished frame lands exactly where the static mark was, and the wordmark keeps its place.
- * The breakpoints below change only `--brand-unit`.
- */
+/* The sidebar shows the studio mark alone, at the shared `--brand-mark-height`. */
 .brand-link {
-  --brand-unit: calc(166px / 2409);
   display: flex;
-  min-height: 42px;
-  align-items: flex-start;
-
+  width: fit-content;
   margin: 0 var(--space-xs) var(--space-lg);
 }
 .brand-link > .brand-mark {
   flex-shrink: 0;
-  width: calc(380 * var(--brand-unit));
-  height: calc(600 * var(--brand-unit));
-  margin: calc(-9 * var(--brand-unit)) 0 0 calc(-25 * var(--brand-unit));
+  width: auto;
+  height: var(--brand-mark-height);
+  aspect-ratio: 76 / 120;
 }
 /* The animation is stored as a white mark on black; screening drops the black into the sidebar. */
 .brand-link > video.brand-mark {
   mix-blend-mode: screen;
-}
-.brand-link > .brand-wordmark {
-  flex-shrink: 0;
-  width: calc(1820 * var(--brand-unit));
-  height: calc(619 * var(--brand-unit));
-  margin-left: calc(234 * var(--brand-unit));
 }
 .sidebar > nav {
   min-height: 0;
@@ -562,10 +549,7 @@
     padding-inline: 12px;
   }
   .sidebar-collapsed .brand-link {
-    width: 32px;
-    height: 42px;
-    margin: 0 10px 36px;
-    overflow: hidden;
+    margin: 0 auto var(--space-lg);
   }
   .sidebar-collapsed .sidebar-collapse svg {
     transform: rotate(180deg);
@@ -613,9 +597,6 @@
   .sidebar {
     padding-inline: 13px;
   }
-  .sidebar .brand-link {
-    --brand-unit: calc(157px / 2409);
-  }
   .workspace-card {
     padding-inline: 18px;
   }
@@ -640,9 +621,6 @@
     padding-inline: 20px;
     transform: translateX(-100%);
     visibility: hidden;
-  }
-  .sidebar .brand-link {
-    --brand-unit: calc(166px / 2409);
   }
   .sidebar-collapse {
     display: none;
@@ -816,12 +794,10 @@
     padding-block: 12px;
   }
   .has-client-context .sidebar .brand-link {
-    min-height: 30px;
-    height: 30px;
     margin-bottom: 10px;
   }
-  .has-client-context .sidebar .brand-link {
-    --brand-unit: calc(132px / 2409);
+  .has-client-context .sidebar .brand-mark {
+    height: 40px;
   }
   .has-client-context .sidebar .client-switcher {
     margin-bottom: 8px;

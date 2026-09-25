@@ -50,11 +50,11 @@ export function InvitationAcceptance() {
     <main className="account-flow">
       <Link href="/login" className="account-flow-brand">
         <Image
-          src="/brand/logo.webp"
+          src="/brand/logo-mark.webp"
           alt="Brianna Dawes Studios"
-          width={2409}
-          height={619}
-          sizes="220px"
+          width={76}
+          height={120}
+          unoptimized
         />
       </Link>
       <div className="account-flow-card">

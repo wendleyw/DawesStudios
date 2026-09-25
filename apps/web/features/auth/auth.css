@@ -18,11 +18,8 @@
 }
 .brand-logo {
   display: block;
-  width: 168px;
-  height: auto;
-}
-.login-story > .brand-logo {
-  width: 192px;
+  width: auto;
+  height: var(--brand-mark-height);
 }
 .login-story > div {
   padding-top: 40px;
@@ -125,9 +122,6 @@
   .login-story {
     padding: 36px;
   }
-  .login-story > .brand-logo {
-    width: 166px;
-  }
   .login-story h1 {
     font-size: 44px;
     letter-spacing: -1.7px;
@@ -152,9 +146,6 @@
   .login-story {
     min-height: 0;
     padding: 28px 28px 32px;
-  }
-  .login-story > .brand-logo {
-    width: 152px;
   }
   .login-story > div {
     padding-top: 32px;

@@ -12,7 +12,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
@@ -209,14 +208,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <Link href="/home" className="brand-link" aria-label={`${studioName} home`}>
           <BrandMark />
-          <Image
-            src="/brand/wordmark.webp"
-            alt=""
-            width={1820}
-            height={619}
-            sizes="126px"
-            className="brand-wordmark"
-          />
         </Link>
         <button
           className="icon-button mobile-sidebar-close"

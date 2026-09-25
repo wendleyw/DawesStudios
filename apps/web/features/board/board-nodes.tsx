@@ -66,7 +66,7 @@ const CampaignFrame = memo(function CampaignFrame({ data }: NodeProps<CampaignNo
   return (
     <section className="board-campaign">
       <header className="board-campaign-head">
-        <Folder size={15} />
+        <Folder size={18} />
         <h2>{data.campaign.title}</h2>
         <span className="count-badge">{data.count}</span>
         <span className="board-campaign-dates">{campaignDateRange(data.campaign, formatDate)}</span>
