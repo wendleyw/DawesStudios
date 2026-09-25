@@ -13,8 +13,12 @@ is used by this feature's shell, `features/board` and `features/settings`.
 `app-shell.tsx` resolves the active client from `/clients/:id/*` or through `useProjectClient`
 for `/projects/:id`. Client destinations appear once, as visible text links at the top, with an
 underline on the active section. `client-navigation.tsx` owns their shared routing and role rules:
-Board, Briefings, Reviews, Files, Brand Hub and Credits (hidden for designers). Projects keep Board
-active. No client destinations remain in the sidebar on any route.
+Overview, Board, Briefings, Reviews, Files, Brand Hub and Credits, with Overview and Credits hidden
+for designers, so a designer's five destinations start on Board. Projects keep Board active. No
+client destinations remain in the sidebar on any route. A client signed into exactly one workspace
+lands on its Overview after sign-in (`home-page.tsx`'s single-workspace redirect); the sidebar's own
+single-workspace link (`client-switcher.tsx`) opens the same Overview for clients and the studio,
+and the Board for designers, since designers have no Overview destination.
 
 All client routes share `canvas-header.tsx`: floating client identity/navigation on the left
 and the signed-in viewer’s profile with a notification bell on its left in one account card. A

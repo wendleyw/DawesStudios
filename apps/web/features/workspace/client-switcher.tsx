@@ -3,6 +3,7 @@
 import { Building2, Check, ChevronsUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { useAuth } from "@/features/auth/auth-provider";
 import type { Client } from "./workspace-data";
 
 /** Uses the shell's authorized client query; the picker never loads a separate client directory. */
@@ -19,6 +20,7 @@ export function ClientSwitcher({
   failed: boolean;
   onRetry: () => void;
 }) {
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const root = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export function ClientSwitcher({
     >
       {clients.length === 1 && !failed ? (
         <Link
-          href={`/clients/${clients[0].id}/board`}
+          href={`/clients/${clients[0].id}/${profile?.role === "designer" ? "board" : "overview"}`}
           className="client-switcher-trigger"
           title={`${clients[0].name} workspace`}
           aria-label={`${clients[0].name} workspace`}

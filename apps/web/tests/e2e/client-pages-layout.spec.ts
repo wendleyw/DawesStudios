@@ -31,6 +31,7 @@ for (const role of ["agency", "client"] as const) {
     for (const [width, height] of sizes) {
       await page.setViewportSize({ width, height });
       for (const [label, route] of [
+        ["Overview", "overview"],
         ["Briefings", "briefings"],
         ["Reviews", "reviews"],
         ["Files", "assets"],

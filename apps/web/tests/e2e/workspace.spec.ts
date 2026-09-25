@@ -47,6 +47,11 @@ test("agency signs in, sees ten workspaces, and opens a live project canvas", as
 
 test("client sees only its own workspace and no internal production controls", async ({ page }) => {
   await signIn(page, "sabre@client.dawes.local");
+  await expect(page).toHaveURL(/\/clients\/[^/]+\/overview$/);
+  await page
+    .getByRole("navigation", { name: "SABRE navigation", exact: true })
+    .getByRole("link", { name: "Board", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/clients\/[^/]+\/board$/);
   await expect(page.getByRole("link", { name: "SABRE workspace", exact: true })).toBeVisible();
   await expect(page.locator(".client-navigation")).toHaveCount(1);

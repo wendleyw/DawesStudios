@@ -23,7 +23,7 @@ export function HomePage() {
   const router = useRouter();
   useEffect(() => {
     if (profile?.role === "client" && clients.data?.length === 1)
-      router.replace(`/clients/${clients.data[0].id}/board`);
+      router.replace(`/clients/${clients.data[0].id}/overview`);
   }, [profile, clients.data, router]);
   const projects = useProjects();
   const campaigns = useWorkspaceCampaigns();

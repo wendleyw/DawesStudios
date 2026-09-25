@@ -8,6 +8,7 @@ import type { Client } from "./workspace-data";
 export function ClientNavigation({ client, role }: { client: Client; role: Profile["role"] }) {
   const pathname = usePathname();
   const destinations = [
+    ...(role !== "designer" ? [{ path: "overview", label: "Overview" }] : []),
     { path: "board", label: "Board" },
     { path: "briefings", label: "Briefings" },
     { path: "reviews", label: "Reviews" },

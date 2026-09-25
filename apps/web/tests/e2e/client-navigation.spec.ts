@@ -106,7 +106,7 @@ test("mobile client switching contains focus and a single-client account needs n
   await expect(page.locator(".client-switcher button")).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "SABRE navigation", exact: true }).getByRole("link"),
-  ).toHaveCount(6);
+  ).toHaveCount(7);
 });
 
 test("client links stay visible at the top across pages without duplicating sidebar navigation", async ({
@@ -131,7 +131,7 @@ test("client links stay visible at the top across pages without duplicating side
       "aria-current",
       "page",
     );
-    await expect(menu.getByRole("link")).toHaveCount(6);
+    await expect(menu.getByRole("link")).toHaveCount(7);
     await expect(menu.getByRole("link", { name: "Studio settings", exact: true })).toHaveCount(0);
     await expect
       .poll(() =>
