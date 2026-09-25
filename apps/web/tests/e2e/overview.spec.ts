@@ -132,7 +132,11 @@ test("the client Overview fits a phone in dark mode", async ({ page }) => {
   const tiles = page.locator(".overview-stats > div");
   const label = (await tiles.first().locator("span").boundingBox())!;
   const note = (await tiles.first().locator("small").boundingBox())!;
-  expect(note.y - (label.y + label.height)).toBeLessThanOrEqual(4);
+  const lineHeight = await tiles
+    .first()
+    .locator("span")
+    .evaluate((node) => parseFloat(getComputedStyle(node).lineHeight));
+  expect(note.y - label.y).toBeLessThanOrEqual(lineHeight + 4);
   const row = (await page.locator(".overview-stats").boundingBox())!;
   expect(Math.abs((await tiles.last().boundingBox())!.width - row.width)).toBeLessThanOrEqual(1);
 });
