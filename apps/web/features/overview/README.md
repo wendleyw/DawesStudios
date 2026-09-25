@@ -1,7 +1,7 @@
 # Overview
 
-The welcome dashboards shown right after sign-in: the client Overview (`client-overview-page.tsx`,
-this task) and the designer's `/home` (added in a later task). Both read the same pure model in
+The welcome dashboards shown right after sign-in: the client Overview (`client-overview-page.tsx`)
+and a designer's `/home` (`designer-overview.tsx`). Both read the same pure model in
 `overview-model.ts` and share the `OverviewPanel` column component and `overview.css`.
 
 ## Client Overview
@@ -37,6 +37,42 @@ addition, so what the agency sees here is exactly the client's page.
 **Designer redirect**: a designer has no Overview destination. If one opens this route by hand, an
 effect replaces it with `/clients/:clientId/board` before the data queries are read.
 
+## Designer `/home`
+
+Route: `/home` (`features/workspace/home-page.tsx`), whose `HomePage` returns `DesignerOverview`
+(`designer-overview.tsx`) for `profile.role === "designer"`, right after its own hooks resolve and
+before it renders the agency/client dashboard below. It uses the same `WelcomeHeader`/`welcomeTitle`
+for its plain (non-card) heading, eyebrow "My work".
+
+**The four tiles** (`designerOverview` in `overview-model.ts`):
+
+- **Active projects** — the designer's own projects whose status is not `delivered`.
+- **Your turn** — their own design versions sent back for changes (`status === "changes_requested"`,
+  after `publishedVersionStatus` folds in the client's decision — see below).
+- **In studio review** — their own versions awaiting the studio's internal review
+  (`status === "submitted"`).
+- **Delivered this month** — their own projects delivered in the current calendar month
+  (`useDateFormat().formatMonth`, studio time zone).
+
+**Three columns**, left to right, each up to `ROW_LIMIT` (5) rows, with no "See all" link (a
+designer's `/home` has no board-wide list route to point one at):
+
+1. **What's moving** — active projects soonest-due first (`bySoonestDue`), linking to the project.
+2. **Your turn** — sent-back versions, oldest first, linking to the project.
+3. **Recently delivered** — delivered projects, most recently delivered first, linking to the
+   project.
+
+**`useDesignerVersions`** (`overview-data.ts`) is this feature's one Supabase read: the
+`design_versions` and `deliverables` rows for the designer's own project ids, row-level security
+already scoping both to their assignments. `designerVersions` (`overview-model.ts`) reduces that raw
+pair to each deliverable's latest version and applies `publishedVersionStatus`
+(`features/reviews/review-data.ts`) — a version shared with the client (`status: "reviewed"`) takes
+its outcome from the project's own status, so a share the client sent back reads as
+`changes_requested` even though the designer cannot read the client's review row directly.
+
+**No credits**: `DesignerOverview` imports no credit hook and renders no credits figure or word,
+matching the product-wide rule that a designer's view never carries credits.
+
 ## Isolation
 
 The page renders only client-visible data. Reviews are filtered through the client's own
@@ -51,10 +87,11 @@ and this page redirects designers away before rendering the tiles regardless.
 - `overview-model.ts` — pure functions and types (`clientOverview`, `deliveredOn`, `relativeAge`,
   `bySoonestDue`, `ROW_LIMIT`, plus the designer-only `designerOverview`/`designerVersions` used by
   `/home`). No Supabase import; every input is a plain value the page already has.
-- `overview-data.ts` — added in a later task, once `/home` needs a designer-scoped read this
-  feature does not yet have. The client Overview page above reads entirely through hooks other
-  features already own (`useClients`, `useProjects`, `useBriefings`, `useCreditAccount`,
-  `useCreditLedger`, `useReviews`).
+- `overview-data.ts` — `useDesignerVersions`, the one Supabase read this feature owns (design
+  versions and deliverable names for a designer's own projects). The client Overview page reads
+  entirely through hooks other features already own (`useClients`, `useProjects`, `useBriefings`,
+  `useCreditAccount`, `useCreditLedger`, `useReviews`); only the designer's `/home` needed a read
+  this feature did not already have.
 - `overview-panel.tsx` — `OverviewPanel`, the one-column-of-rows layout both dashboards share.
 - `overview.css` — `.overview-page`, `.overview-flight`, `.overview-columns`, `.overview-panel*`,
   `.overview-row*`, `.overview-empty`.

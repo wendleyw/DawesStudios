@@ -8,6 +8,17 @@ its own search field. `client-mark.tsx` renders a client's mark — the logo the
 Settings > Clients (`clients.logo_path`), else the first Brand Hub Logo image, else initials — and
 is used by this feature's shell, `features/board` and `features/settings`.
 
+## `/home`
+
+`/home` (`home-page.tsx`) greets every role with the shared `WelcomeHeader`/`welcomeTitle`
+(`features/shared`): an eyebrow — `Overview` for the agency, `Home` for a client — and "Welcome
+back, `<first name>`" as the title. The agency and client roles keep `HomePage`'s own dashboard below
+that header (the tile row, "Needs attention" table and clients grid, unchanged). A designer's `/home`
+instead renders `DesignerOverview` (`features/overview/designer-overview.tsx`, eyebrow "My work"),
+returned right after `HomePage`'s own hooks resolve and before any of that dashboard renders, since a
+designer's `/home` is their own assigned-work dashboard, scoped to their own projects and excluding
+credits — see [`features/overview/README.md`](../overview/README.md) for its numbers and columns.
+
 ## One client navigation across the workspace
 
 `app-shell.tsx` resolves the active client from `/clients/:id/*` or through `useProjectClient`

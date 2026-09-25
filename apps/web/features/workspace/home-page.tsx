@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, ArrowUpRight, FolderKanban, Plus } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { DesignerOverview } from "@/features/overview/designer-overview";
 import {
   projectStatusTones,
   statusLabels,
@@ -15,6 +16,7 @@ import {
 } from "./workspace-data";
 import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass } from "@/features/shared/status-tone";
+import { WelcomeHeader, welcomeTitle } from "@/features/shared/welcome-header";
 
 export function HomePage() {
   const { profile } = useAuth();
@@ -27,6 +29,7 @@ export function HomePage() {
   }, [profile, clients.data, router]);
   const projects = useProjects();
   const campaigns = useWorkspaceCampaigns();
+  if (profile?.role === "designer") return <DesignerOverview />;
   const activeProjects = projects.data?.filter((project) => project.status !== "delivered") ?? [];
   const needsAttentionStatuses = ["internal_review", "client_review", "changes_requested"] as const;
   const reviewProjects = activeProjects.filter((project) =>
@@ -70,31 +73,26 @@ export function HomePage() {
     );
   return (
     <div className="page-content home-content">
-      <div className="page-heading">
-        <div>
-          <h1>
-            {profile?.role === "agency"
-              ? "Overview"
-              : profile?.role === "designer"
-                ? "My work"
-                : "Home"}
-          </h1>
-          <p>
-            {profile?.role === "agency"
-              ? "Projects and next steps across your clients."
-              : "Your projects and next steps."}
-          </p>
-        </div>
-        <div className="home-actions">
-          <span className="home-date">{today}</span>
-          {profile?.role === "agency" && (
-            <Link className="button" href="/settings/clients">
-              <Plus size={16} />
-              New client
-            </Link>
-          )}
-        </div>
-      </div>
+      <WelcomeHeader
+        eyebrow={profile?.role === "agency" ? "Overview" : "Home"}
+        title={welcomeTitle(profile?.display_name)}
+        subtitle={
+          profile?.role === "agency"
+            ? "Projects and next steps across your clients."
+            : "Your projects and next steps."
+        }
+        actions={
+          <div className="home-actions">
+            <span className="home-date">{today}</span>
+            {profile?.role === "agency" && (
+              <Link className="button" href="/settings/clients">
+                <Plus size={16} />
+                New client
+              </Link>
+            )}
+          </div>
+        }
+      />
       <div className="overview-stats">
         {tiles.map((tile) => (
           <div key={tile.label}>

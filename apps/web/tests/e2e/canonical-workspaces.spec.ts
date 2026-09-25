@@ -35,8 +35,10 @@ test("all ten clients and twenty-five projects render with matching records and 
     page.on("pageerror", (error) => errors.push(error.message));
     try {
       await signIn(page, actor.email);
-      if (actor.role === "designer")
-        await expect(page.getByRole("heading", { level: 1 })).toHaveText("My work");
+      if (actor.role === "designer") {
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
+        await expect(page.locator(".page-heading .eyebrow")).toHaveText("My work");
+      }
       const caller = await localCaller(actor.email);
       const allowed = (await caller.from("projects").select("id,title,client_id").order("title"))
         .data!;
