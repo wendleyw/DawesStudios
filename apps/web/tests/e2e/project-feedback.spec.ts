@@ -358,9 +358,14 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           .getByRole("button", { name: "Playground", exact: true }),
       ).toBeVisible();
       await page.getByRole("button", { name: "Fit View", exact: true }).click();
+      // Fit View keeps the last row above the tool bar whenever the content can fit; at the 20%
+      // zoom floor a tall project cannot, and the view pans instead.
       await expect
         .poll(() =>
           page.evaluate(() => {
+            const viewport = document.querySelector(".project-canvas .react-flow__viewport")!;
+            const zoom = new DOMMatrix(getComputedStyle(viewport).transform).a;
+            if (zoom <= 0.201) return true;
             const bar = document.querySelector(".project-tool-bar")!.getBoundingClientRect();
             const frames = [...document.querySelectorAll(".deliverable-frame")].map((frame) =>
               frame.getBoundingClientRect(),
