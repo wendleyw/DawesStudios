@@ -1444,6 +1444,13 @@ select {
 .board-identity-mark {
   --client-mark-size: 48px;
 }
+/* A logo keeps the card's height but may run wider than it is tall, so wide wordmarks read at
+   full size instead of shrinking into a square. Initials stay square. */
+img.board-identity-mark {
+  width: auto;
+  max-width: calc(var(--client-mark-size) * 3);
+  flex-basis: auto;
+}
 .board-header-divider {
   height: 22px;
   width: 1px;
