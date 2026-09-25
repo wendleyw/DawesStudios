@@ -9,8 +9,7 @@ history only when a task needs earlier evidence.
 
 ## Ownership
 
-- The user asked Claude Code to take over after the previous run hit its usage limit. Codex was
-  the previous owner and is not running.
+- Claude Code took over when the previous run hit its usage limit; Codex is not running.
 - Other sessions also work here (three were idle on 2026-09-25). Stage explicit paths only; give
   Playwright a private `--output`, since runs clear `test-results/`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
@@ -27,7 +26,9 @@ that also follows other tabs; every colour a `light-dark()` pair, guarded by
 with one horizontal zoom pill; Project details, Conversation and Playground in a bar at the bottom
 of the project canvas; the Playground rises from the bottom. Sonnet workers built each task
 (reports: `handoffs/2026-09-25-themes-*`), each reviewed; an Opus whole-branch review led to one
-fix wave. Record: [verification](../verification/themes-and-canvas-2026-09-25.md).
+fix wave. Record: [verification](../verification/themes-and-canvas-2026-09-25.md). Then Credits
+took the Briefings/Reviews layout: tabs and Export CSV in the header card, activity and requests as
+one-line rows (`722785b`, reviewed; report `handoffs/2026-09-25-credits-inline-rows.md`).
 
 The 2026-09-24 daytime session (`ab0cd20e`), the overnight work (`a375ed7c`) and the complete
 system test are in the [history](history/handoff-2026-09-24.md); earlier work in the
@@ -47,9 +48,8 @@ system test are in the [history](history/handoff-2026-09-24.md); earlier work in
   [demo guide](../../supabase/demo/sabre/README.md).
 - **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
   a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
-- **Themes:** System by default, the choice kept per browser (`dawes-theme`), no account sync; the
-  canvas follows the theme; chrome stays monochrome; client logos sit on a light plate in dark
-  mode. With a side panel open the project bar centres beside it and hides below an 800 px canvas.
+- **Themes:** System by default, kept per browser (`dawes-theme`); the canvas follows the theme;
+  chrome stays monochrome. With a panel open the project bar centres beside it (hidden < 800 px).
 
 ## Environment (observed 2026-09-24; server still up on 2026-09-25)
 

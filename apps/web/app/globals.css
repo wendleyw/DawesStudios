@@ -289,8 +289,8 @@ h3 {
 /*
  * The eyebrow: the single treatment for the small label that sits above a heading, a value or a
  * column. Size, weight, tracking and casing are declared here once; the rules that cannot carry
- * this class (`.nav-section-label`, `.board-identity p`, `.credit-table th`) consume the same
- * tokens instead of restating their own numbers. Casing is the stylesheet's job, so the copy is
+ * this class (`.nav-section-label`, `.board-identity p`) consume the same tokens instead of
+ * restating their own numbers. Casing is the stylesheet's job, so the copy is
  * written in sentence case and no call site upper-cases a string in JavaScript.
  */
 .eyebrow {
