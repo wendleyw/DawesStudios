@@ -418,21 +418,6 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.home-content {
-  max-width: var(--content-width);
-}
-.home-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-lg);
-}
-.home-date {
-  align-self: center;
-  color: var(--muted);
-  font-size: var(--text-base);
-  white-space: nowrap;
-}
 .attention-section {
   margin-bottom: var(--space-section);
 }

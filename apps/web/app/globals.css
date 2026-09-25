@@ -350,6 +350,22 @@ h3 {
   color: var(--muted);
   font-size: var(--text-sm);
 }
+/* The /home welcome header's own layout, shared by the studio's /home (home-page.tsx) and the designer's /home (overview/designer-overview.tsx). */
+.home-content {
+  max-width: var(--content-width);
+}
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-lg);
+}
+.home-date {
+  align-self: center;
+  color: var(--muted);
+  font-size: var(--text-base);
+  white-space: nowrap;
+}
 .muted,
 .text-muted {
   color: var(--muted);
