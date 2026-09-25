@@ -32,7 +32,7 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
   const account = useCreditAccount(clientId);
   const ledger = useCreditLedger(clientId);
   const reviews = useReviews(clientId);
-  const { formatDate, formatMonth, formatWeekdayDate } = useDateFormat();
+  const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
   // Designers have no Overview destination; one typed by hand opens the client's board.
   useEffect(() => {
     if (profile?.role === "designer") router.replace(`/clients/${clientId}/board`);
@@ -146,7 +146,9 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
               <strong>
                 {row.title} · {row.deliverable}
               </strong>
-              <span className="overview-row-meta">Review · {relativeAge(row.date, now)}</span>
+              <span className="overview-row-meta">
+                Review · {relativeAge(row.date, now, formatDayKey)}
+              </span>
             </Link>
           ))}
         </OverviewPanel>

@@ -63,19 +63,27 @@ function debit(projectId: string, amount: number): CreditEntry {
 }
 
 describe("relativeAge", () => {
+  // The studio is in New York; `now` sits at 09:00 EDT, so a UTC instant close to midnight can name
+  // a different calendar day there than a raw 24-hour-block count would give.
+  const { formatDayKey } = createDateFormatters("America/New_York");
+  const nowInStudio = new Date("2026-09-25T13:00:00Z");
+
+  it("counts calendar days in the studio time zone, not elapsed 24-hour blocks", () => {
+    expect(relativeAge("2026-09-25T04:30:00Z", nowInStudio, formatDayKey)).toBe("today");
+    expect(relativeAge("2026-09-25T00:30:00Z", nowInStudio, formatDayKey)).toBe("yesterday");
+    expect(relativeAge("2026-09-23T14:00:00Z", nowInStudio, formatDayKey)).toBe("2 days ago");
+    expect(relativeAge("2026-09-17T12:00:00Z", nowInStudio, formatDayKey)).toBe("last week");
+  });
+
   it("names how long ago a date was", () => {
-    expect(relativeAge("2026-09-25T09:00:00Z", now)).toBe("today");
-    expect(relativeAge("2026-09-24T12:00:00Z", now)).toBe("yesterday");
-    expect(relativeAge("2026-09-22T12:00:00Z", now)).toBe("3 days ago");
-    expect(relativeAge("2026-09-17T12:00:00Z", now)).toBe("last week");
-    expect(relativeAge("2026-09-08T12:00:00Z", now)).toBe("2 weeks ago");
-    expect(relativeAge("2026-08-20T12:00:00Z", now)).toBe("last month");
-    expect(relativeAge("2026-07-20T12:00:00Z", now)).toBe("2 months ago");
-    expect(relativeAge("2025-09-01T12:00:00Z", now)).toBe("last year");
+    expect(relativeAge("2026-09-08T12:00:00Z", nowInStudio, formatDayKey)).toBe("2 weeks ago");
+    expect(relativeAge("2026-08-20T12:00:00Z", nowInStudio, formatDayKey)).toBe("last month");
+    expect(relativeAge("2026-07-20T12:00:00Z", nowInStudio, formatDayKey)).toBe("2 months ago");
+    expect(relativeAge("2025-09-01T12:00:00Z", nowInStudio, formatDayKey)).toBe("last year");
   });
 
   it("never reads a future instant as ahead", () => {
-    expect(relativeAge("2026-09-26T12:00:00Z", now)).toBe("today");
+    expect(relativeAge("2026-09-26T12:00:00Z", nowInStudio, formatDayKey)).toBe("today");
   });
 });
 

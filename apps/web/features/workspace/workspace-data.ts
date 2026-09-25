@@ -318,6 +318,8 @@ export type DateFormatters = {
   formatMonth: (date: string | null, emptyLabel?: string) => string;
   /** Today, named as a day rather than as a record: `Monday, September 21`. */
   formatWeekdayDate: (date: string | null, emptyLabel?: string) => string;
+  /** The calendar day in the studio zone as `2026-09-21`, for counting days. */
+  formatDayKey: (date: string) => string;
 };
 
 /**
@@ -338,12 +340,24 @@ export function createDateFormatters(timeZone: string): DateFormatters {
       return (isCalendarDate(date) ? calendar : instant).format(value);
     };
   };
+  const dayKey = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
   return {
     formatDate: format({ month: "short", day: "numeric" }),
     formatDateLong: format({ month: "short", day: "numeric", year: "numeric" }),
     formatDateTime: format({ dateStyle: "medium", timeStyle: "short" }),
     formatMonth: format({ month: "long", year: "numeric" }),
     formatWeekdayDate: format({ weekday: "long", month: "long", day: "numeric" }),
+    formatDayKey: (date: string) => {
+      if (isCalendarDate(date)) return date;
+      const parts = dayKey.formatToParts(new Date(date));
+      const part = (type: string) => parts.find((piece) => piece.type === type)!.value;
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    },
   };
 }
 

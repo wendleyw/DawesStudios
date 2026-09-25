@@ -23,7 +23,7 @@ export function DesignerOverview() {
   const clients = useClients();
   const projects = useProjects();
   const versions = useDesignerVersions(projects.data?.map((project) => project.id));
-  const { formatDate, formatMonth, formatWeekdayDate } = useDateFormat();
+  const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
   const reads = [clients, projects, versions];
   if (reads.some((read) => read.isPending)) return <PageStatus>Loading your work…</PageStatus>;
   if (reads.some((read) => read.error))
@@ -107,7 +107,7 @@ export function DesignerOverview() {
                 {row.title} · {row.deliverable}
               </strong>
               <span className="overview-row-meta">
-                Changes requested · {relativeAge(row.date, now)}
+                Changes requested · {relativeAge(row.date, now, formatDayKey)}
               </span>
             </Link>
           ))}

@@ -17,9 +17,22 @@ export function deliveredOn(project: Project): string {
   return project.delivered_at ?? project.updated_at;
 }
 
-/** "today", "yesterday", "3 days ago", "last week", "2 months ago" … never a future phrase. */
-export function relativeAge(date: string, now: Date): string {
-  const days = Math.max(0, Math.floor((now.getTime() - new Date(date).getTime()) / DAY));
+/**
+ * "today", "yesterday", "3 days ago", "last week", "2 months ago" … never a future phrase.
+ *
+ * Counted in calendar days in the studio's time zone (`formatDayKey`, from `useDateFormat()`), not
+ * elapsed 24-hour blocks — a New York evening after 20:00 EDT is already the next UTC calendar day,
+ * which used to make "yesterday" read as "today" and shift every later bucket by one.
+ */
+export function relativeAge(
+  date: string,
+  now: Date,
+  formatDayKey: (date: string) => string,
+): string {
+  const days = Math.max(
+    0,
+    (Date.parse(formatDayKey(now.toISOString())) - Date.parse(formatDayKey(date))) / DAY,
+  );
   if (days < 7) return relative.format(-days, "day");
   if (days < 30) return relative.format(-Math.floor(days / 7), "week");
   if (days < 365) return relative.format(-Math.floor(days / 30), "month");

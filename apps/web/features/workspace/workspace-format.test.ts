@@ -82,3 +82,19 @@ describe("createDateFormatters", () => {
     expect(studio.formatDate("not a date", "To be planned")).toBe("To be planned");
   });
 });
+
+describe("formatDayKey", () => {
+  const newYork = createDateFormatters("America/New_York");
+  const utcZone = createDateFormatters("UTC");
+
+  it("names the calendar day in the studio zone, for counting days", () => {
+    // 02:00Z is still the previous evening in New York, so it counts as the previous calendar day
+    // — the bug `relativeAge` carried before this formatter existed.
+    expect(newYork.formatDayKey("2026-09-21T02:00:00.000Z")).toBe("2026-09-20");
+    expect(utcZone.formatDayKey("2026-09-21T02:00:00.000Z")).toBe("2026-09-21");
+  });
+
+  it("returns a calendar date unchanged", () => {
+    expect(newYork.formatDayKey("2026-09-21")).toBe("2026-09-21");
+  });
+});
