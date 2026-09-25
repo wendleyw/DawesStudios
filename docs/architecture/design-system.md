@@ -129,8 +129,12 @@ Canvas has the shared zoom pill (zoom out, zoom level, zoom in, fit) at the bott
 
 Project pages use a full-width floating title card below the client identity/account cards.
 The title is 28 px on desktop, with status and due date alongside and responsive wrapping. Channel
-controls sit below on the left; All deliverables, Playground, details and conversation sit on the
-right. During design review, a compact deliverable toolbar replaces this row and includes Playground.
+controls sit below on the left and All deliverables on the right. Project details, Conversation and
+Playground sit in a floating tool bar at the bottom centre of the canvas: a 16 px-radius pill with
+40 px buttons, a divider before Playground and the open panel's button selected, after the
+Higgsfield canvas the user chose, in the product's monochrome palette. On phones it moves to the
+bottom right. During design review, a compact deliverable toolbar replaces the channel row and the
+bar, and includes Playground.
 The artwork has its own space above the design/version navigation footer. Desktop double-click,
 keyboard activation, the explicit open arrow and a single touch tap enter feedback.
 

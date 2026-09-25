@@ -305,11 +305,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
               .querySelector('[aria-label="Project channel"]')!
               .getBoundingClientRect();
             const actions = element
-              .querySelector('[aria-label="Project actions"]')!
-              .getBoundingClientRect();
-            const filter = element.querySelector("select")!.getBoundingClientRect();
-            const playground = element
-              .querySelector('[aria-label="Playground"]')!
+              .querySelector(".project-header-actions")!
               .getBoundingClientRect();
             return (
               (innerWidth < 800 ||
@@ -318,10 +314,6 @@ test("floating project chrome fits desktop and mobile, including feedback and se
                     2)) &&
               channels.top > card.bottom &&
               actions.top > card.bottom &&
-              filter.right <= playground.left &&
-              Math.abs(
-                (filter.top + filter.bottom) / 2 - (playground.top + playground.bottom) / 2,
-              ) < 2 &&
               controls.every((control) => {
                 const rect = control.getBoundingClientRect();
                 return (
@@ -338,6 +330,27 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           }),
         )
         .toBe(true);
+      // The project's tools float at the bottom of the canvas, clear of the zoom pill.
+      await expect
+        .poll(() =>
+          page.locator(".project-canvas").evaluate((canvas) => {
+            const bounds = canvas.getBoundingClientRect();
+            const bar = canvas.querySelector(".project-tool-bar")!.getBoundingClientRect();
+            const zoom = canvas.querySelector(".canvas-zoom")!.getBoundingClientRect();
+            return (
+              bar.left >= bounds.left &&
+              bar.right <= bounds.right &&
+              bar.bottom <= Math.min(bounds.bottom, innerHeight) &&
+              (bar.left >= zoom.right || bar.right <= zoom.left)
+            );
+          }),
+        )
+        .toBe(true);
+      await expect(
+        page
+          .getByRole("group", { name: "Project actions" })
+          .getByRole("button", { name: "Playground", exact: true }),
+      ).toBeVisible();
       await page.getByRole("button", { name: "Fit View", exact: true }).click();
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.screenshot({
@@ -404,6 +417,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           ),
       ).toBe(true);
       await expect(page.locator(".project-toolbar")).toHaveCount(0);
+      await expect(page.locator(".project-tool-bar")).toHaveCount(0);
       await expect(
         page
           .locator(".design-viewer-tools")

@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Info, MessageSquare } from "lucide-react";
-import type { ProjectPanelKind } from "./project-panel";
-import type { ReactNode, Ref } from "react";
+import { ArrowLeft } from "lucide-react";
+import type { Ref } from "react";
 import type { Profile } from "@/lib/supabase";
 import { CanvasHeader } from "@/features/workspace/canvas-header";
 import {
@@ -25,9 +24,6 @@ export function ProjectHeader({
   format,
   onChannel,
   onFormat,
-  panel,
-  onPanel,
-  quickActions,
   playgroundOpen,
   reviewing,
   chromeRef,
@@ -40,9 +36,6 @@ export function ProjectHeader({
   format: string;
   onChannel: (channel: ProjectChannel) => void;
   onFormat: (id: string) => void;
-  panel: ProjectPanelKind | null;
-  onPanel: (panel: ProjectPanelKind | null) => void;
-  quickActions: ReactNode;
   playgroundOpen: boolean;
   reviewing: boolean;
   chromeRef: Ref<HTMLDivElement>;
@@ -101,52 +94,23 @@ export function ProjectHeader({
               )}
             </div>
           )}
-          <div className="project-header-actions" role="group" aria-label="Project actions">
-            {!reviewing && (
-              <>
-                <label className="visually-hidden" htmlFor="deliverable-filter">
-                  Filter deliverable
-                </label>
-                <select
-                  id="deliverable-filter"
-                  disabled={playgroundOpen}
-                  value={format}
-                  onChange={(event) => onFormat(event.target.value)}
-                >
-                  <option value="">All deliverables</option>
-                  {deliverables.map((deliverable) => (
-                    <option key={deliverable.id} value={deliverable.id}>
-                      {deliverable.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            )}
-            {!reviewing && (
-              <>
-                <button
-                  className={`icon-button ${panel === "details" ? "selected" : ""}`}
-                  disabled={playgroundOpen}
-                  aria-label="Project details"
-                  title="Project details"
-                  aria-expanded={panel === "details"}
-                  onClick={() => onPanel(panel === "details" ? null : "details")}
-                >
-                  <Info size={18} />
-                </button>
-                <button
-                  className={`icon-button ${panel === "conversation" ? "selected" : ""}`}
-                  disabled={playgroundOpen}
-                  aria-label="Conversation"
-                  title="Conversation"
-                  aria-expanded={panel === "conversation"}
-                  onClick={() => onPanel(panel === "conversation" ? null : "conversation")}
-                >
-                  <MessageSquare size={18} />
-                </button>
-              </>
-            )}
-            {quickActions}
+          <div className="project-header-actions">
+            <label className="visually-hidden" htmlFor="deliverable-filter">
+              Filter deliverable
+            </label>
+            <select
+              id="deliverable-filter"
+              disabled={playgroundOpen}
+              value={format}
+              onChange={(event) => onFormat(event.target.value)}
+            >
+              <option value="">All deliverables</option>
+              {deliverables.map((deliverable) => (
+                <option key={deliverable.id} value={deliverable.id}>
+                  {deliverable.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       )}

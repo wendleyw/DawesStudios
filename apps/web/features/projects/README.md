@@ -12,8 +12,12 @@ The client logo/name, client navigation (Board active) and signed-in profile use
 centers the large project title with status and due date beside it; this group wraps on phones.
 For the client and the studio, the card's right corner shows the credits the project used
 (`credits/project-credits-chip.tsx`; designers never see it). Outside that card, a separate
-row places Working files / Shared with client on the left and All deliverables beside the action
-icons on the right. These groups wrap on narrow screens and remain reachable above the canvas.
+row places Working files / Shared with client on the left and All deliverables on the right; both
+wrap on narrow screens and remain reachable above the canvas. Project details, Conversation and
+Playground live in `project-tool-bar.tsx`, a floating bar (group **Project actions**) at the bottom
+centre of the canvas, centred in the width the side panel leaves. The open panel's button is
+selected. On phones it moves to the bottom right with touch-sized buttons, clear of the zoom pill.
+It is not shown while reviewing a design; the viewer keeps its own Playground button.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.
 The header's measured height keeps the first deliverable, Fit View and secondary panels
 clear of the floating controls. Playground independently fills the entire viewport above the app. Opening preserves a readable width-based zoom; Fit View includes

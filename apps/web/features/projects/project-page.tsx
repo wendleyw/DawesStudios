@@ -34,6 +34,7 @@ import "./projects.css";
 import { PageStatus } from "@/features/shared/page-status";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectHeader } from "./project-header";
+import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 
@@ -355,9 +356,6 @@ export function ProjectPage({ projectId }: { projectId: string }) {
           setAgencyChannel(next);
         }}
         onFormat={setFormat}
-        panel={panel}
-        onPanel={changePanel}
-        quickActions={quickActions}
         playgroundOpen={playgroundOpen}
         reviewing={!!selected?.designId}
         chromeRef={setChrome}
@@ -467,6 +465,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                         : "Your studio will share designs here when they’re ready."}
                     </div>
                   )}
+                  <ProjectToolBar panel={panel} onPanel={changePanel} disabled={playgroundOpen}>
+                    {quickActions}
+                  </ProjectToolBar>
                 </div>
               </div>
             </>
