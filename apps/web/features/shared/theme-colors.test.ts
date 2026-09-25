@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,10 +12,30 @@ import { describe, expect, it } from "vitest";
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (path: string) => readFileSync(join(webRoot, path), "utf8");
 
-const stylesheets = ["app/globals.css"];
+const stylesheets = [
+  "app/globals.css",
+  ...readdirSync(join(webRoot, "features"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((feature) =>
+      readdirSync(join(webRoot, "features", feature.name))
+        .filter((name) => name.endsWith(".css"))
+        .map((name) => `features/${feature.name}/${name}`),
+    ),
+];
 
 const themeIndependent: Record<string, string> = {
   "::selection": "White on the dark olive highlight reads on either theme.",
+  ".login-story": "The login story panel always uses the dark sidebar colour.",
+  ".sidebar-collapse:hover:not(:disabled)": "The sidebar is dark in both themes.",
+  ".profile-bar strong": "The sidebar is dark in both themes.",
+  ".profile-bar .icon-button:hover": "The sidebar is dark in both themes.",
+  ".mobile-sidebar-close:hover:not(:disabled)": "The sidebar is dark in both themes.",
+  ".artwork-video": "Video letterboxing is black in any theme.",
+  ".video-pin-marker": "Comment pins keep one look over artwork and on the video track.",
+  ".video-pin-marker.selected": "Comment pins keep one look over artwork and on the video track.",
+  ".artwork-pin": "Comment pins keep one look over artwork.",
+  ".artwork-pin.selected": "Comment pins keep one look over artwork.",
+  ".artwork-pin.pending": "Comment pins keep one look over artwork.",
 };
 
 type Declaration = { selector: string; property: string; value: string };
@@ -139,5 +159,30 @@ describe("text keeps WCAG AA contrast in both themes", () => {
     const [lightSurface, darkSurface] = token(surface);
     expect(contrast(lightText, lightSurface)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(darkText, darkSurface)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("timeline bars stay legible in both themes", () => {
+  const bars = new Map<string, Map<string, string>>();
+  for (const { selector, property, value } of declarations(read("features/board/timeline.css")))
+    if (property.startsWith("--bar-")) {
+      if (!bars.has(selector)) bars.set(selector, new Map());
+      bars.get(selector)!.set(property, value);
+    }
+
+  it("finds the default bar and its seven statuses", () => {
+    expect(bars.size).toBe(8);
+  });
+
+  it.each([...bars.keys()])("%s", (selector) => {
+    const bar = bars.get(selector)!;
+    const [lightFill, darkFill] = sides(bar.get("--bar-fill") ?? "");
+    const [lightInk, darkInk] = sides(bar.get("--bar-ink") ?? "");
+    const [lightEdge, darkEdge] = sides(bar.get("--bar-edge") ?? "");
+    const [lightLane, darkLane] = token("--surface");
+    expect(contrast(lightInk, lightFill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(darkInk, darkFill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(lightEdge, lightLane)).toBeGreaterThanOrEqual(3);
+    expect(contrast(darkEdge, darkLane)).toBeGreaterThanOrEqual(3);
   });
 });

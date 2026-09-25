@@ -759,8 +759,8 @@
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  background: #242424;
-  color: #fff;
+  background: var(--ink);
+  color: var(--on-ink);
   padding: 10px 16px;
   border-radius: 6px;
   font-size: var(--text-base);
@@ -925,8 +925,8 @@
   margin-bottom: 1px;
 }
 .send-comment {
-  background: #242424 !important;
-  color: white !important;
+  background: var(--ink) !important;
+  color: var(--on-ink) !important;
 }
 .send-comment:disabled {
   opacity: 0.3;

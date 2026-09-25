@@ -16,6 +16,7 @@
   transition:
     width 180ms ease,
     transform 180ms ease;
+  box-shadow: inset -1px 0 0 light-dark(transparent, var(--sidebar-border));
 }
 .sidebar :focus-visible {
   outline-color: var(--sidebar-text);
@@ -677,7 +678,7 @@
     width: 100%;
     height: 100%;
     border: 0;
-    background: rgb(25 27 21 / 35%);
+    background: var(--overlay-scrim);
   }
 }
 @media (max-width: 640px) {

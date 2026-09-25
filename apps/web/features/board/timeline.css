@@ -71,7 +71,7 @@
   grid-row: 1;
 }
 .timeline-lane + .timeline-lane {
-  border-top: 1px solid #f1f1ec;
+  border-top: 1px solid light-dark(#f1f1ec, #222327);
 }
 .timeline-lane-head + .timeline-lane {
   border-top: 0;
@@ -178,8 +178,8 @@
      the bold today column especially — from breaking onto a second line while their neighbours stay
      on one, which is what made the header row ragged. */
   padding: 8px 2px;
-  border-right: 1px solid #efefe9;
-  color: #66665f;
+  border-right: 1px solid light-dark(#efefe9, #232428);
+  color: light-dark(#66665f, #9a9ca3);
   font-size: var(--text-base);
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -193,21 +193,21 @@
 /* The current day is marked in the header and carried down through every lane, so the reference
    point survives once the eye is among the bars. */
 .timeline-day.today {
-  background: #ecefe3;
-  color: #222;
+  background: light-dark(#ecefe3, #262a1f);
+  color: light-dark(#222, #eef0e6);
   font-weight: 600;
 }
 .timeline-cell {
   height: 100%;
-  border-right: 1px solid #f0f0eb;
+  border-right: 1px solid light-dark(#f0f0eb, #202125);
 }
 .timeline-cell.weekend,
 .timeline-day.weekend {
-  background: #fafaf7;
+  background: light-dark(#fafaf7, #17181b);
 }
 .timeline-cell.today {
-  background: #f4f6ef;
-  border-right-color: #dfe3d3;
+  background: light-dark(#f4f6ef, #1d2019);
+  border-right-color: light-dark(#dfe3d3, #3a4030);
 }
 
 /*
@@ -216,9 +216,9 @@
  * started. Only the tint changes with the status, so the calendar gains no palette of its own.
  */
 .timeline-project-bar {
-  --bar-fill: #eef1e7;
-  --bar-edge: #87975f;
-  --bar-ink: #3b4828;
+  --bar-fill: light-dark(#eef1e7, #232a1a);
+  --bar-edge: light-dark(#87975f, #8a9c5c);
+  --bar-ink: light-dark(#3b4828, #d6e0c0);
 
   z-index: 1;
   display: flex;
@@ -258,41 +258,41 @@
   border-radius: 5px 0 0 5px;
 }
 .timeline-project-bar.planned {
-  --bar-fill: #fff;
-  --bar-edge: #93938a;
-  --bar-ink: #5d5d57;
+  --bar-fill: light-dark(#fff, #1c1e21);
+  --bar-edge: light-dark(#93938a, #86867f);
+  --bar-ink: light-dark(#5d5d57, #c9c9c2);
 
   border-style: dashed;
 }
 .timeline-project-bar.in_progress {
-  --bar-fill: #d3dcbc;
-  --bar-edge: #7f9152;
-  --bar-ink: #333f1e;
+  --bar-fill: light-dark(#d3dcbc, #2f3a1f);
+  --bar-edge: light-dark(#7f9152, #93a664);
+  --bar-ink: light-dark(#333f1e, #e0e9c9);
 }
 .timeline-project-bar.internal_review {
-  --bar-fill: #e7ebde;
-  --bar-edge: #8b9a6b;
-  --bar-ink: #3f4d2c;
+  --bar-fill: light-dark(#e7ebde, #262b1e);
+  --bar-edge: light-dark(#8b9a6b, #86956a);
+  --bar-ink: light-dark(#3f4d2c, #d3dcc0);
 }
 .timeline-project-bar.client_review {
-  --bar-fill: #e0e7d0;
-  --bar-edge: #87975f;
-  --bar-ink: #3b4828;
+  --bar-fill: light-dark(#e0e7d0, #29321c);
+  --bar-edge: light-dark(#87975f, #8fa062);
+  --bar-ink: light-dark(#3b4828, #d7e2bf);
 }
 .timeline-project-bar.changes_requested {
-  --bar-fill: #f6ead0;
-  --bar-edge: #b08b2f;
-  --bar-ink: #61470e;
+  --bar-fill: light-dark(#f6ead0, #33280f);
+  --bar-edge: light-dark(#b08b2f, #b6923a);
+  --bar-ink: light-dark(#61470e, #f0d99c);
 }
 .timeline-project-bar.approved {
-  --bar-fill: #e8e8e0;
-  --bar-edge: #93938a;
-  --bar-ink: #45453f;
+  --bar-fill: light-dark(#e8e8e0, #28292a);
+  --bar-edge: light-dark(#93938a, #8a8a83);
+  --bar-ink: light-dark(#45453f, #d6d6cf);
 }
 .timeline-project-bar.delivered {
-  --bar-fill: #dededa;
-  --bar-edge: #8e8e86;
-  --bar-ink: #4c4c45;
+  --bar-fill: light-dark(#dededa, #2c2c2e);
+  --bar-edge: light-dark(#8e8e86, #85857e);
+  --bar-ink: light-dark(#4c4c45, #cfcfc8);
 }
 
 /* Dot shapes follow the status badge: hollow while the studio still holds the work, square once it
@@ -354,7 +354,7 @@
 }
 .timeline-no-work {
   padding: 50px 24px;
-  color: #74746d;
+  color: light-dark(#74746d, #8f9097);
   font-size: var(--text-lg);
 }
 

@@ -126,13 +126,13 @@
   outline-offset: 4px;
 }
 .board-canvas .react-flow__node.selected .board-card {
-  border-color: #888b7d;
-  box-shadow: 0 0 0 1px #888b7d;
+  border-color: light-dark(#888b7d, #8d9084);
+  box-shadow: 0 0 0 1px light-dark(#888b7d, #8d9084);
 }
 .board-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid #d9d9d2;
+  border: 1px solid light-dark(#d9d9d2, #303236);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
@@ -142,7 +142,7 @@
   height: 22px;
   align-items: center;
   justify-content: center;
-  color: #a3a397;
+  color: light-dark(#a3a397, #5d5f64);
   cursor: grab;
 }
 .board-card-grip:active {
@@ -286,7 +286,7 @@
   height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: #f6f5f4;
+  background: light-dark(#f6f5f4, #17181b);
 }
 .board-campaign-head {
   display: flex;
@@ -433,8 +433,8 @@
   margin-bottom: 11px;
   overflow: hidden;
   border-radius: var(--radius);
-  background: #f1f1ec;
-  color: #b4b4a7;
+  background: light-dark(#f1f1ec, #232428);
+  color: light-dark(#b4b4a7, #55575c);
 }
 .board-card-media.empty {
   gap: 5px;

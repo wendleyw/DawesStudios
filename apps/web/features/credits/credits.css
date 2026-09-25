@@ -212,7 +212,7 @@
   background: var(--surface);
 }
 .credit-packages button.selected {
-  border-color: #292927;
+  border-color: var(--ink);
   background: var(--surface-subtle);
 }
 .credit-packages strong {

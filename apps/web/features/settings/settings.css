@@ -67,7 +67,7 @@
 }
 .settings-success {
   font-size: var(--text-lg);
-  color: #53694f;
+  color: light-dark(#53694f, #a7c09f);
   line-height: 1.7;
 }
 .settings-preset-value {

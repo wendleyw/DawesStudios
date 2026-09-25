@@ -92,9 +92,9 @@
   color: var(--foreground);
 }
 .briefing-progress button.active span {
-  background: #252525;
-  color: white;
-  border-color: #252525;
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
 }
 .service-grid {
   display: grid;
@@ -115,11 +115,11 @@
   transition: border-color 0.15s;
 }
 .service-card:hover {
-  border-color: #aaa;
+  border-color: light-dark(#aaa, #55575d);
 }
 .service-card.selected {
-  border-color: #252525;
-  box-shadow: inset 0 0 0 1px #252525;
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
 }
 .service-card h3 {
   font-size: 17px;
@@ -301,7 +301,7 @@
   overflow-wrap: anywhere;
 }
 .briefing-summary strong {
-  color: #343430;
+  color: light-dark(#343430, #dcdcd6);
   font-weight: 500;
 }
 .briefing-summary-fields {
@@ -312,7 +312,7 @@
 .briefing-summary-fields dt {
   font-size: 14px;
   font-weight: 500;
-  color: #343430;
+  color: light-dark(#343430, #dcdcd6);
 }
 .briefing-summary-fields dd {
   margin: 2px 0 0;
@@ -350,8 +350,8 @@
 .briefing-validation {
   scroll-margin-top: 16px;
   padding: 20px;
-  border: 1px solid #d3bfb4;
-  background: #fcf5f1;
+  border: 1px solid light-dark(#d3bfb4, #5a4238);
+  background: light-dark(#fcf5f1, #2a1f1a);
   border-radius: var(--radius);
   font-size: var(--text-lg);
   margin-bottom: 24px;
@@ -363,7 +363,7 @@
 }
 .briefing-save-status {
   font-size: var(--text-base);
-  color: #52604a;
+  color: light-dark(#52604a, #a9b99e);
 }
 .briefing-detail-layout {
   display: grid;

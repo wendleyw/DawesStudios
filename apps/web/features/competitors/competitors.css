@@ -3,7 +3,7 @@
   height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: #f6f5f4;
+  background: light-dark(#f6f5f4, #17181b);
   pointer-events: auto;
 }
 .competitor-widget-head {
@@ -62,7 +62,7 @@
   cursor: pointer;
 }
 .competitor-tile:hover {
-  border-color: #b9b9b1;
+  border-color: light-dark(#b9b9b1, #4a4b50);
 }
 .competitor-initial {
   grid-row: span 3;
@@ -71,8 +71,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #e6ebe4;
-  color: #3d4a3d;
+  background: light-dark(#e6ebe4, #252c24);
+  color: light-dark(#3d4a3d, #c3d0c1);
   font-weight: 600;
 }
 .competitor-tile strong,

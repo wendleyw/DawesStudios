@@ -26,6 +26,6 @@
   display: grid;
   place-items: center;
   font-size: var(--text-sm);
-  color: #65655e;
+  color: light-dark(#65655e, #a3a39b);
   flex-shrink: 0;
 }
