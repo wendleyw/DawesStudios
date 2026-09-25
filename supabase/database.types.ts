@@ -1332,6 +1332,7 @@ export type Database = {
           campaign_id: string | null
           client_id: string
           created_at: string
+          delivered_at: string | null
           description: string
           due_date: string | null
           id: string
@@ -1347,6 +1348,7 @@ export type Database = {
           campaign_id?: string | null
           client_id: string
           created_at?: string
+          delivered_at?: string | null
           description?: string
           due_date?: string | null
           id?: string
@@ -1362,6 +1364,7 @@ export type Database = {
           campaign_id?: string | null
           client_id?: string
           created_at?: string
+          delivered_at?: string | null
           description?: string
           due_date?: string | null
           id?: string

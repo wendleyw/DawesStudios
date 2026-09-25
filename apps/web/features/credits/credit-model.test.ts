@@ -20,6 +20,7 @@ const project: Project = {
   service_type: "social",
   status: "planned",
   due_date: null,
+  delivered_at: null,
   start_date: null,
   board_position: { x: 0, y: 0 },
   created_at: "2026-09-20T00:00:00Z",

@@ -130,6 +130,7 @@ function project(overrides: Partial<Project> & { id: string; title: string }): P
     status: "planned",
     service_type: "",
     due_date: null,
+    delivered_at: null,
     start_date: null,
     board_position: { x: 0, y: 0 },
     created_at: "2026-01-01T00:00:00Z",

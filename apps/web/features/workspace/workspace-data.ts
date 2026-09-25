@@ -96,6 +96,8 @@ export type Project = {
   status: ProjectStatus;
   service_type: string;
   due_date: string | null;
+  /** When the studio marked the project delivered; null until then. */
+  delivered_at: string | null;
   start_date: string | null;
   board_position: { x: number; y: number };
   created_at: string;

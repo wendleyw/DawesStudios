@@ -195,10 +195,16 @@ test("production, private feedback, immutable client revisions, approval and rea
       (await clientApi.from("internal_comments").select("*").eq("project_id", fixture.projectId))
         .data,
     ).toEqual([]);
-    expect(
-      (await clientApi.from("projects").select("status").eq("id", fixture.projectId).single()).data
-        ?.status,
-    ).toBe("delivered");
+    const delivered = (
+      await clientApi
+        .from("projects")
+        .select("status,delivered_at")
+        .eq("id", fixture.projectId)
+        .single()
+    ).data;
+    expect(delivered?.status).toBe("delivered");
+    // `mark_project_delivered` stamps the delivery instant for the dashboards.
+    expect(Date.now() - new Date(delivered!.delivered_at!).getTime()).toBeLessThan(10 * 60_000);
     expect(
       (await localAdmin.from("client_comments").select("*").eq("project_id", fixture.projectId))
         .data,
