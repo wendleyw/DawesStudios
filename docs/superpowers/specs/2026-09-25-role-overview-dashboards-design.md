@@ -87,8 +87,8 @@ Success means all of the following hold:
 - **Columns.** Three cards side by side on desktop and stacked below 1000 px. Each card has an
   eyebrow, a title, an optional "See all →" link and up to five rows in the same one-line style as
   Briefings, Reviews and Credits. Each column has its own short empty state.
-- **Relative time.** "today", "yesterday", "8 days ago", "3 weeks ago", "2 months ago" from
-  `Intl.RelativeTimeFormat`, computed in the studio time zone.
+- **Relative time.** "today", "yesterday", "3 days ago", "last week", "2 weeks ago", "last month",
+  "2 months ago", "last year" from `Intl.RelativeTimeFormat`, computed in the studio time zone.
 
 ### 3. Client Overview (`/clients/:clientId/overview`)
 
@@ -103,7 +103,7 @@ Success means all of the following hold:
   **delivered** (all time).
 - **What's moving.** Active projects, soonest due first (no due date last): title, the credits it
   used (from its project debit), due date and stage badge; the row opens the project. See all → Board.
-- **Your turn.** Versions waiting on the client, longest waiting first: "Review · 8 days ago" above
+- **Your turn.** Versions waiting on the client, longest waiting first: "Review · last week" above
   "<project> · <deliverable>"; the row opens the project on its client channel. See all → Reviews.
 - **Recently shipped.** Delivered projects, newest delivery first, with the delivery date; the row
   opens the project. See all → Board.

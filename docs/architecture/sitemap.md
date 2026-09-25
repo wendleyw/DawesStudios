@@ -17,7 +17,8 @@ The following paths are proposed canonical routes and may be consolidated during
 | `/login` | Yes | Yes | Yes | Authenticate; return to an authorized intended destination. |
 | `/auth/recovery` | Yes | Yes | Yes | Request a real recovery email; `?mode=update` completes the verified password reset. |
 | `/auth/invite?token=:token` | Invitee | Invitee | Invitee | Validate a time-limited, single-use invitation before joining. |
-| `/home` | Studio overview | Redirect to own client board | My work | [Home and global actions](../ref/01-agencia/01-home-e-globais/README.md). |
+| `/home` | Studio overview | One workspace → that client's Overview; several → the Home page | "My work" dashboard of assigned work | [Home and global actions](../ref/01-agencia/01-home-e-globais/README.md). |
+| `/clients/:clientId/overview` | "What `<client>` sees" (read) | Own client, lands here | None (sent to the board) | Client welcome dashboard: numbers, what's moving, your turn, recently shipped. |
 | `/clients/:clientId/board` | Workspace clients | Own client | Assigned work only | [Board](../ref/01-agencia/02-board/README.md); Five icon views: Canvas, List, Timeline, Kanban and Calendar. |
 | `/clients/:clientId/briefings` | Read/create | Read/create | Assigned accepted only | [Briefing list](../ref/01-agencia/04-briefings/01-lista/README.md); All, Draft, With the studio (awaiting review and budget confirmed), In progress. |
 | `/clients/:clientId/briefings/new` | Yes | Yes | No | Start a new Service → Details → Review flow with no inherited campaign; in-app links open a modal, direct loads use the full page. |

@@ -26,8 +26,9 @@ Production routes below are the orchestrator-approved route proposal. Server aut
 | Product route / experience | Exact representative source screenshot | Source route | Keep / simplify |
 |---|---|---|---|
 | `/home` — agency overview | [Agency Home](../ref/01-agencia/01-home-e-globais/01-home.png) | `#/home` | One clear attention queue and scoped summary; avoid ornamental metric duplication |
-| `/home` — client entry | [Client Home](../ref/02-cliente/01-home-e-globais/01-home.png) | `#/client-view/client/sabre/board` | Open the client's board directly |
+| `/home` — client entry | [Client Home](../ref/02-cliente/01-home-e-globais/01-home.png) | `#/client-view/client/sabre/board` | Open the client's Overview (welcome dashboard), one click from the board |
 | `/home` — designer work | [Designer My work](../ref/03-designer/01-home-e-globais/01-home.png) | `#/designer-view/home` | Show assigned production work, not studio-wide private data |
+| `/clients/:clientId/overview` | [Client Home](../ref/02-cliente/01-home-e-globais/01-home.png) | `#/client-view/client/sabre/board` | Client welcome dashboard: numbers, what's moving, your turn, recently shipped |
 | `/clients/:clientId/board` | [Canvas board](../ref/01-agencia/02-board/01-canvas.png) | `#/client/sabre/board` | Campaign groups and project cards on the XYFlow work surface |
 | Same board, optional list view | [Project list](../ref/01-agencia/02-board/06-lista.png) | `#/client/sabre/board` | Scannable accessible alternative using the same records |
 | Same board, Planning frame | [Kanban](../ref/01-agencia/02-board/03-kanban.png), [Timeline navigation](../ref/01-agencia/02-board/02-timeline-proxima-semana.png), [Planning collapsed](../ref/01-agencia/02-board/05-planning-recolhido.png) | `#/client/sabre/board` | Reference planning semantics informed the standalone Timeline and Kanban views; the current board also provides Canvas, List and monthly Calendar through one icon selector |

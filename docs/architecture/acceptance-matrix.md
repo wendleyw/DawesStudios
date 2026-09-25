@@ -100,6 +100,15 @@ D03 is retired; its 2026-09-21 evidence describes the earlier product and is not
 restore it. The global-search parts of C09 and I07 are historical in the same way; the rest of
 those rows still applies. Page-level searches (board, Files, Brand Hub assets) remain.
 
+Product amendment (2026-09-25): the user asked for welcome dashboards. A client with one workspace
+now lands on its **Overview** (`/clients/:clientId/overview`, the first client destination for the
+client and the studio), one click from the Board. The studio's and the designer's `/home` headings
+greet the viewer ("Welcome back, <first name>") and keep their role names, **Overview** and **My
+work**, as the page eyebrow and the sidebar label; the designer's `/home` is now a dashboard of their
+assigned work. D01's 2026-09-21 evidence describes the earlier landing and is not a requirement to
+restore it; the rest of D01 (role-consistent navigation) still applies and `overview.spec.ts` covers
+the new landing.
+
 ## E. Briefings and catalog
 
 The [catalog](../ref/00-guia/CATALOGO-DE-SERVICOS.json) contains 20 `types` and 25 `formats`. Run the catalog assertions for every entry and all declared question options, not only the default Short Video / Reel path. A single declarative wizard should handle these combinations without twenty bespoke screens.
