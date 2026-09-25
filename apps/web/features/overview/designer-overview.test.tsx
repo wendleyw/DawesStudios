@@ -27,6 +27,22 @@ const project = (overrides: Partial<Project>): Project => ({
   ...overrides,
 });
 
+const defaultVersions = {
+  versions: [
+    {
+      id: "v1",
+      project_id: "p1",
+      deliverable_id: "d1",
+      version_number: 2,
+      status: "reviewed",
+      created_at: "2026-09-23T00:00:00Z",
+    },
+  ],
+  deliverables: [{ id: "d1", name: "Portrait Feed" }],
+};
+const data = vi.hoisted(() => ({ projects: [] as Project[] }));
+const mocks = vi.hoisted(() => ({ useDesignerVersions: vi.fn() }));
+
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ profile: { role: "designer", display_name: "Alex Morgan" } }),
 }));
@@ -35,32 +51,19 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => {
   return {
     ...actual,
     useClients: () => query([{ id: "c1", name: "SABRE" }]),
-    useProjects: () => query([project({})]),
+    useProjects: () => query(data.projects),
     useDateFormat: () => actual.createDateFormatters("UTC"),
   };
 });
-vi.mock("./overview-data", () => ({
-  useDesignerVersions: () =>
-    query({
-      versions: [
-        {
-          id: "v1",
-          project_id: "p1",
-          deliverable_id: "d1",
-          version_number: 2,
-          status: "reviewed",
-          created_at: "2026-09-23T00:00:00Z",
-        },
-      ],
-      deliverables: [{ id: "d1", name: "Portrait Feed" }],
-    }),
-}));
+vi.mock("./overview-data", () => ({ useDesignerVersions: mocks.useDesignerVersions }));
 
 import { DesignerOverview } from "./designer-overview";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-25T15:00:00Z"));
+  data.projects = [project({})];
+  mocks.useDesignerVersions.mockReturnValue(query(defaultVersions));
 });
 afterEach(() => vi.useRealTimers());
 
@@ -73,5 +76,14 @@ describe("DesignerOverview", () => {
     expect(screen.getByText("Changes requested · 2 days ago")).toBeInTheDocument();
     expect(screen.getByText("Launch · Portrait Feed")).toBeInTheDocument();
     expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
+  });
+
+  it("asks for versions on active projects only, never a delivered one", () => {
+    data.projects = [
+      project({ id: "p1", status: "changes_requested" }),
+      project({ id: "p2", status: "delivered", delivered_at: "2026-09-10T00:00:00Z" }),
+    ];
+    render(<DesignerOverview />);
+    expect(mocks.useDesignerVersions).toHaveBeenCalledWith(["p1"]);
   });
 });

@@ -88,10 +88,13 @@ and this page redirects designers away before rendering the tiles regardless.
   `bySoonestDue`, `ROW_LIMIT`, plus the designer-only `designerOverview`/`designerVersions` used by
   `/home`). No Supabase import; every input is a plain value the page already has.
 - `overview-data.ts` — `useDesignerVersions`, the one Supabase read this feature owns (design
-  versions and deliverable names for a designer's own projects). The client Overview page reads
-  entirely through hooks other features already own (`useClients`, `useProjects`, `useBriefings`,
-  `useCreditAccount`, `useCreditLedger`, `useReviews`); only the designer's `/home` needed a read
-  this feature did not already have.
+  versions and deliverable names for a designer's own **active** (non-delivered) projects — nothing
+  on a delivered project still waits on the designer or the studio, so its versions are never
+  requested). Both reads page past PostgREST's row cap (`supabase/config.toml` `max_rows`) in blocks
+  of 500, the way `features/credits/credit-data.ts`'s `useCreditLedger` does. The client Overview
+  page reads entirely through hooks other features already own (`useClients`, `useProjects`,
+  `useBriefings`, `useCreditAccount`, `useCreditLedger`, `useReviews`); only the designer's `/home`
+  needed a read this feature did not already have.
 - `overview-panel.tsx` — `OverviewPanel`, the one-column-of-rows layout both dashboards share.
 - `overview.css` — `.overview-page`, `.overview-flight`, `.overview-columns`, `.overview-panel*`,
   `.overview-row*`, `.overview-empty`.

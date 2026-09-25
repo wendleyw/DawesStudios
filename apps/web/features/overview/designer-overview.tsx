@@ -22,7 +22,12 @@ export function DesignerOverview() {
   const { profile } = useAuth();
   const clients = useClients();
   const projects = useProjects();
-  const versions = useDesignerVersions(projects.data?.map((project) => project.id));
+  // Nothing on a delivered project still waits on the designer or the studio, so only active
+  // projects need their versions read.
+  const activeProjectIds = projects.data
+    ?.filter((project) => project.status !== "delivered")
+    .map((project) => project.id);
+  const versions = useDesignerVersions(activeProjectIds);
   const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
   const reads = [clients, projects, versions];
   if (reads.some((read) => read.isPending)) return <PageStatus>Loading your work…</PageStatus>;
