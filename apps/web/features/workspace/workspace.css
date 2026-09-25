@@ -586,11 +586,6 @@
   .workspace-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  /* The base `.overview-stats`/`> div`/`strong` breakpoint rules moved to globals.css with the
-     shared tile styles; `> div + div` stays here because no other file declares that selector. */
-  .overview-stats > div + div {
-    padding-left: 20px;
-  }
 }
 @media (max-width: 900px) {
   .sidebar {
@@ -649,15 +644,6 @@
   .topbar-identity > svg {
     display: none;
   }
-  .overview-stats > div + div {
-    padding-left: var(--space-md);
-  }
-  .overview-stats > div > span {
-    display: block;
-    min-height: 32px;
-    font-size: var(--text-sm);
-    line-height: 1.6;
-  }
   .attention-section {
     margin-bottom: 32px;
   }
@@ -709,9 +695,6 @@
   }
   .workspace-card-footer {
     font-size: var(--text-sm);
-  }
-  .overview-stats > div > span {
-    font-size: var(--text-xs);
   }
 }
 

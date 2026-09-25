@@ -1510,6 +1510,10 @@ img.client-mark {
   .topbar {
     padding-inline: 16px;
   }
+  .overview-stats > div > span,
+  .overview-stats small {
+    font-size: var(--text-xs);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1831,5 +1835,12 @@ img.board-identity-mark {
   }
   .client-page-heading > .page-actions {
     justify-content: flex-start;
+  }
+  /* Phones hold two tiles per row; a lone last tile (the client Overview's third) fills its row. */
+  .overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .overview-stats > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 }

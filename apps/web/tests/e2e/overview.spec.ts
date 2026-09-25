@@ -127,4 +127,12 @@ test("the client Overview fits a phone in dark mode", async ({ page }) => {
   await signIn(page, credentials.client);
   await expect(page.locator(".overview-panel")).toHaveCount(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  // Tile notes sit right under their labels, and the lone third tile fills its row.
+  const tiles = page.locator(".overview-stats > div");
+  const label = (await tiles.first().locator("span").boundingBox())!;
+  const note = (await tiles.first().locator("small").boundingBox())!;
+  expect(note.y - (label.y + label.height)).toBeLessThanOrEqual(4);
+  const row = (await page.locator(".overview-stats").boundingBox())!;
+  expect(Math.abs((await tiles.last().boundingBox())!.width - row.width)).toBeLessThanOrEqual(1);
 });
