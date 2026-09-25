@@ -18,7 +18,7 @@ Numeric values below have one of three meanings:
 
 Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`. The sidebar animates the symbol: [`brand/logo-animation.webm`](../../brand/logo-animation.webm) plays once when the app opens and rests on the finished symbol, beside the wordmark cut from this asset, so the lockup keeps the original composition and proportions (see `workspace/brand-mark.tsx`). Sign-in, invitation and recovery screens and the favicon keep the static logo.
 
-The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. The status badge is the one documented exception — see the Decision below — added at the user's request on 2026-09-24. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
+The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. Both themes keep that rule; neither recolours artwork. The status badge is the one documented exception — see the Decision below — added at the user's request on 2026-09-24. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
 
 **Decision**: status chrome differentiates by shape first, so status never reads from color alone, and now also carries a restrained hue per tone, added at the user's request on 2026-09-24. `.status-badge` styles four *meanings* rather than the enum values of any one domain: `neutral` (the base — a filled grey dot on the subtle surface), `active` (a hollow ring on a soft blue tint), `attention` (a dashed border on a soft amber tint) and `complete` (a solid green fill, full-strength text and a square dot). The three colored tones are `--tone-active-fg/-bg/-border` (`#1d4e89` / `#e7f0fb` / `#a9c6ea`), `--tone-attention-fg/-bg/-border` (`#7a5400` / `#fbf1dc` / `#e3bd6e`) and `--tone-complete-fg/-bg/-border` (`#2f5d34` / `#e7f0df` / `#a9c48a`, harmonizing with the board timeline's olive/green family below) in `app/globals.css`; foreground-on-background contrast measures 7.29:1 (active), 6.05:1 (attention) and 6.55:1 (complete) against the 4.5:1 WCAG AA floor for the 12 px badge text. Each domain maps its own enum onto that vocabulary in TypeScript beside its label map, so briefings, credit requests and projects read consistently and a new domain needs no new CSS — see [`features/shared/status-tone.ts`](../../apps/web/features/shared/status-tone.ts). The board timeline is the documented exception to sharing this exact palette: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
 
@@ -26,41 +26,52 @@ The brand's italic “Studios” lettering is part of the image, not the applica
 
 The shared shell styles are implemented in [globals.css](../../apps/web/app/globals.css). The following product values reflect the September 23 unified UI refresh; measured reference values are identified separately. Functional and visual conformance remain subject to the audit gate.
 
-| Token | Target | Basis and use |
-|---|---|---|
-| `color.canvas` | `#f7f8fa` | Implemented lighter workspace; reference dominant background was `#ededed` |
-| `color.surface` | `#ffffff` | Measured panels and topbar |
-| `color.surfaceSubtle` | `#f2f3f5` | Implemented subtle control surface; reference used `#f4f4f4` |
-| `color.navigation` | `#202226` | Implemented dark navigation; reference was `#202020` |
-| `color.navigationActive` | `#36393f` | Implemented selected navigation; reference was `#353535` |
-| `color.text` | `#272a30` | Implemented primary copy, headings, icons |
-| `color.textMuted` | `#636872` | Implemented secondary text on light surfaces |
-| `color.textOnDark` | `#ffffff` | Decision: primary navigation and filled buttons |
-| `color.textMutedOnDark` | `#b4b8c1` | Implemented secondary navigation copy |
-| `color.border` | `#e5e7eb` | Implemented surface rules; measured home reference was `#e0e0e0` |
-| `color.controlBorder` | `#ccd0d7` | Implemented stronger input boundary |
-| `color.primary` | `#272a30` | Implemented filled primary action |
-| `color.focus` | `#272a30` | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces |
-| `--canvas-background` | `#f3f4f6` / dark `#131416` | Shared board, project and single-design canvas surface |
-| `--canvas-grid` | `#c5c9d0` / dark `#363739` | Shared 24-unit dot grid, 1.5-unit dots; follows pan/zoom |
-| Playground canvas overrides | `#e9e9e2` / `#bdbdb2` light, `#0f1012` / `#333438` dark | Slightly darker background and dots, scoped to the Playground canvas |
-| `radius.small` | `8px` | `--radius`. Implemented controls; reference was approximately 4 px |
-| `radius.medium` | `12px` | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners |
-| `radius.round` | `999px` | Decision: only avatars, pins, and circular marks. No token; one call site |
-| `text.xs` | `11px` | `--text-xs`. Compact annotations |
-| `text.sm` | `12px` | `--text-sm`. Timestamps, counts, badges, table headers and secondary metadata |
-| `text.base` | `13px` | `--text-base`. Navigation, supporting copy, small controls |
-| `text.lg` | `14px` | `--text-lg`. Inputs, labels, action copy, list titles |
-| `eyebrow.tracking` | `0.015em` | `--eyebrow-tracking`. The one tracking every eyebrow-shaped rule reads |
-| `space.xs` / `sm` / `md` / `lg` | `8` / `12` / `16` / `24px` | `--space-xs`…`--space-lg`. The four steps the stylesheets lean on most |
-| `space.page` | `40px` | `--space-page`. The page gutter |
-| `border.default` | `1px solid` | Measured surface separation |
-| `shadow.surface` | `none` | Shell/list/workspace cards use borders; draggable board cards have a subtle 2% shadow |
-| `shadow.overlay` | `0 20px 64px rgb(20 23 29 / 16%)` | Implemented dialogs only |
+| Token | Target | Dark | Basis and use |
+|---|---|---|---|
+| `color.canvas` | `#f7f8fa` | `#131416` | Implemented lighter workspace; reference dominant background was `#ededed` |
+| `color.surface` | `#ffffff` | `#1c1e21` | Measured panels and topbar |
+| `color.surfaceSubtle` | `#f2f3f5` | `#25272b` | Implemented subtle control surface; reference used `#f4f4f4` |
+| `color.navigation` | `#202226` | `#0f1012` | Implemented dark navigation; reference was `#202020` |
+| `color.navigationActive` | `#36393f` | `#25272b` | Implemented selected navigation; reference was `#353535` |
+| `color.text` | `#272a30` | `#ececee` | Implemented primary copy, headings, icons |
+| `color.textMuted` | `#636872` | `#9ea1a8` | Implemented secondary text on light surfaces |
+| `color.textOnDark` | `#ffffff` | `#ececee` | Decision: primary navigation and filled buttons |
+| `color.textMutedOnDark` | `#b4b8c1` | `#a3a6ae` | Implemented secondary navigation copy |
+| `color.border` | `#e5e7eb` | `#28292c` | Implemented surface rules; measured home reference was `#e0e0e0` |
+| `color.controlBorder` | `#ccd0d7` | `#3a3c41` | Implemented stronger input boundary |
+| `color.primary` | `#272a30` | `#ececee` | Implemented filled primary action |
+| `color.focus` | `#272a30` | `#ececee` | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces |
+| `--on-ink` | `#fff` | `#131416` | Text on filled `--ink` controls |
+| `--canvas-background` | `#f3f4f6` | `#131416` | Shared board, project and single-design canvas surface |
+| `--canvas-grid` | `#c5c9d0` | `#363739` | Shared 24-unit dot grid, 1.5-unit dots; follows pan/zoom |
+| Playground canvas overrides | `#e9e9e2` / `#bdbdb2` | `#0f1012` / `#333438` | Slightly darker background and dots, scoped to the Playground canvas |
+| `radius.small` | `8px` | — | `--radius`. Implemented controls; reference was approximately 4 px |
+| `radius.medium` | `12px` | — | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners |
+| `radius.round` | `999px` | — | Decision: only avatars, pins, and circular marks. No token; one call site |
+| `text.xs` | `11px` | — | `--text-xs`. Compact annotations |
+| `text.sm` | `12px` | — | `--text-sm`. Timestamps, counts, badges, table headers and secondary metadata |
+| `text.base` | `13px` | — | `--text-base`. Navigation, supporting copy, small controls |
+| `text.lg` | `14px` | — | `--text-lg`. Inputs, labels, action copy, list titles |
+| `eyebrow.tracking` | `0.015em` | — | `--eyebrow-tracking`. The one tracking every eyebrow-shaped rule reads |
+| `space.xs` / `sm` / `md` / `lg` | `8` / `12` / `16` / `24px` | — | `--space-xs`…`--space-lg`. The four steps the stylesheets lean on most |
+| `space.page` | `40px` | — | `--space-page`. The page gutter |
+| `border.default` | `1px solid` | — | Measured surface separation |
+| `shadow.surface` | `none` | — | Shell/list/workspace cards use borders; draggable board cards have a subtle 2% shadow |
+| `shadow.overlay` | `0 20px 64px rgb(20 23 29 / 16%)` | `0 20px 64px rgb(0 0 0 / 55%)` | Implemented dialogs only |
 
 Spacing uses `4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 64px`. These form an inferred four-pixel scale. Prefer 8–12 px within a compact control group, 16–24 px inside panels, 24–32 px between sections, and 36–40 px at large content boundaries. Add a new spacing value only when a named component requires it.
 
 The implementation uses Geist from [the application layout](../../apps/web/app/layout.tsx), followed by system sans-serif fallbacks. Body text and primary controls are 14 px, navigation and supporting rows 13 px, metadata and status badges 12 px, and compact annotations 11 px. Shared page headings are 28 px/600, section headings 18 px/600, and overview figures 30 px/600. Project chrome uses a 28 px title with smaller responsive sizes. The four supporting sizes use `--text-xs`, `--text-sm`, `--text-base`, and `--text-lg`; headings and figures use `--text-title`, `--text-section`, and `--text-metric`. The shared eyebrow uses sentence case, `--text-sm`, weight 500 and `--eyebrow-tracking`. Supporting captions remain subordinate through size and contrast rather than widely tracked uppercase text.
+
+### Light and dark themes
+
+`:root` in [globals.css](../../apps/web/app/globals.css) sets `color-scheme: light dark` and writes every color token once, as `light-dark(<light>, <dark>)`; the browser's own light/dark choice, ordinarily the operating system's, picks a side, so native controls (scrollbars, form fields) theme themselves along with the product. `:root[data-theme="light"]` and `:root[data-theme="dark"]` each pin `color-scheme` to one side once a preference is set, overriding the OS default. The preference — `system`, `light` or `dark`, default `system` — is defined in [`features/workspace/theme.ts`](../../apps/web/features/workspace/theme.ts) and stored in `localStorage` under `dawes-theme`; choosing System removes that key rather than writing it. A short inline script from the same module runs in `<head>` in [`app/layout.tsx`](../../apps/web/app/layout.tsx), before hydration, and sets `data-theme` on `<html>` from the stored value, so a saved choice never flashes the other theme on load; `<html>` carries `suppressHydrationWarning` because the server cannot know that stored value. The sidebar footer's [`ThemeToggle`](../../apps/web/features/workspace/theme-toggle.tsx) button reads `Theme: System`, `Theme: Light` or `Theme: Dark` with a matching Monitor/Sun/Moon icon; each click saves and applies the next choice in that order (System → Light → Dark → System), and a change made in one tab reaches this browser's other open tabs through the native `storage` event.
+
+The styling boundary extends to color: a color that only one feature uses is written `light-dark()` in that feature's own stylesheet, and a color shared by two or more features is a token in `globals.css`, the same rule as any other shared-versus-feature selector. A few surfaces are deliberately identical in both themes rather than tokenized: the dark sidebar (`.login-story`, `.sidebar-collapse`, `.profile-bar`, `.mobile-sidebar-close`) keeps its navigation color regardless of theme, comment pins (`.artwork-pin`, `.video-pin-marker`) keep one look over artwork in either theme, video letterboxing (`.artwork-video`) stays black, and `::selection` keeps its dark olive highlight — all four listed with their reason in `theme-colors.test.ts`'s `themeIndependent` map. A declaration whose property ends in `shadow` may also keep a literal black value, any opacity, outside `light-dark()` — the board and client identity cards' `0 3px 14px rgb(0 0 0 / 7%)` and the zoom pill's `--xy-controls-box-shadow: 0 4px 18px rgb(0 0 0 / 8%)` among them — because black reads as a shadow regardless of the surface under it. Uploaded client logos need their own fix rather than a token: they are often a dark mark on transparency, so `img.client-mark` seats them on a small light plate in dark mode — `background` and a 3px `box-shadow` ring, both `light-dark(transparent, #f4f4f5)` — while light mode leaves the plate transparent.
+
+[`features/shared/theme-colors.test.ts`](../../apps/web/features/shared/theme-colors.test.ts) is the standing gate behind all of this, parallel to `stylesheet-boundary.test.ts` above: it parses `globals.css` and every feature stylesheet and fails on any literal color found outside `light-dark()` unless its selector is named in `themeIndependent` (each with a stated reason) or its property ends in `shadow` and holds only black. The same file measures WCAG AA contrast — 4.5:1 or better, on both the light and dark side — for the text-on-surface token pairs (`--foreground`, `--muted` and `--on-ink` against their surfaces, plus the sidebar and status-tone pairs) and for the board timeline's eight bar variants (the default bar and its seven statuses), so a dark value that passes the color gate but reads poorly still fails the suite.
+
+`light-dark()` needs Chrome 123, Safari 17.5 or Firefox 120, all released in 2024. In an older browser a token that uses it is invalid, so colors go missing rather than falling back to light. This sits beside the product's existing reliance on the top-layer `<dialog>` element (used by both [Modal](../../apps/web/features/shared/modal.tsx) and Playground) and the `inert` attribute (Playground's covered controls), and on the `:has()` selector, which `.client-page-heading:has(.page-actions > :not(.page-bell))` already depends on.
 
 ### Unified document surfaces
 
