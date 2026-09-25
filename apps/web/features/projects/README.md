@@ -69,7 +69,7 @@ mounted while its dialog is temporarily closed. The project-owned Playground boa
 unsent fields. Brainstorm attachments stay in a separate private bucket and do not automatically
 become production designs or client publications. See the [Playground and widgets specification](../../../../docs/architecture/playground-and-board-widgets.md).
 
-The project board and single-design viewer share a subtle 24-unit line grid,
+The project board and single-design viewer share a subtle 24-unit dot grid,
 two-axis trackpad/scroll panning and pinch zoom. Zoom/fit buttons animate over
 200 ms unless reduced motion is requested. Direct dragging remains immediate;
 pin placement still disables canvas dragging. See the
