@@ -67,6 +67,17 @@ The workspace layout also renders the briefing `@modal` slot. In-app New briefin
 shared editor over the current route; direct URL loads use the full page. See the
 [briefing feature](../briefings/README.md) and [current verification](../../../../docs/verification/board-views-2026-09-23.md).
 
+## Theme
+
+`theme-toggle.tsx` adds **Theme: System / Light / Dark** to the sidebar footer, above Help &
+support, for every role; each click moves to the next choice in that order. `theme.ts` keeps the
+choice in this browser (`localStorage` key `dawes-theme`; System removes the key) and sets
+`<html data-theme>`, which `color-scheme` in `app/globals.css` reads. Every colour token is a
+`light-dark()` pair, so System needs no script. `app/layout.tsx` runs the same logic as an inline
+`<head>` script, so a reload never flashes the other theme, and other open tabs follow through the
+`storage` event. Blocked storage still applies the choice for the current page. The collapsed rail
+keeps the label for assistive technology, like the other sidebar items.
+
 ## Data access
 
 `workspace-data.ts` owns every Supabase read and write this feature's own components issue, as

@@ -24,6 +24,7 @@ import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { BrandMark } from "./brand-mark";
 import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
+import { ThemeToggle } from "./theme-toggle";
 import { useClients, useProjectClient } from "./workspace-data";
 import "./workspace.css";
 
@@ -275,6 +276,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span>Team</span>
             </Link>
           )}
+          <ThemeToggle />
           <button
             className="nav-item"
             onClick={() => {
