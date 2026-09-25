@@ -53,7 +53,7 @@ export function BoardCanvasControls({
     <CanvasControls
       onFit={fit}
       fitLabel="Fit board to view"
-      fitIcon={<CornerUpLeft size={13} />}
+      fitIcon={<CornerUpLeft size={16} />}
       portalTarget={portalTarget}
     />
   );

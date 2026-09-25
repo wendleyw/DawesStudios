@@ -816,10 +816,11 @@
   position: absolute;
   z-index: 20;
   top: var(--board-header-space);
+  bottom: 16px;
   left: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   pointer-events: none;
 }
@@ -934,6 +935,7 @@
     left: 50%;
     max-width: calc(100% - 24px);
     gap: 8px;
+    align-items: center;
     transform: translateX(-50%);
   }
   .board-floating-toolbar {
@@ -991,42 +993,9 @@
   }
 }
 
-/* The canvas remains full bleed beneath two floating control cards. */
-.board-zoom-dock .react-flow__controls {
-  display: flex;
-  width: max-content;
-  flex-direction: column;
-  gap: 3px;
-  padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
-}
-.board-zoom-dock .react-flow__controls-button {
-  width: var(--board-tool-size);
-  height: var(--board-tool-size);
-  border: 0;
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-}
-.board-zoom-dock .react-flow__controls-button:hover {
-  background: var(--surface-subtle);
-  color: var(--foreground);
-}
-.board-zoom-dock .react-flow__controls-button svg {
-  width: 16px;
-  height: 16px;
-  max-width: none;
-  max-height: none;
-}
-@media (max-width: 900px), (max-height: 700px) {
-  .board-zoom-dock .react-flow__controls {
-    flex-direction: row;
-    gap: 2px;
-    padding: 6px;
-  }
+/* On a wide board the rail's column runs to the bottom, where the shared zoom pill sits. */
+.board-zoom-dock {
+  margin-top: auto;
 }
 @media (max-width: 640px), (max-height: 650px) {
   .board-period-trigger {

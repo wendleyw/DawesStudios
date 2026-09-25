@@ -1046,6 +1046,63 @@ img.client-mark {
   color: var(--muted);
 }
 
+/*
+ * The zoom pill every xyflow canvas shares (`features/shared/canvas-controls.tsx`). xyflow's own
+ * variables carry its colours, so it follows the theme tokens. The four-class button selector
+ * outranks xyflow's horizontal button border, which loads after this file.
+ */
+.react-flow__controls.canvas-zoom {
+  --xy-controls-button-background-color: transparent;
+  --xy-controls-button-background-color-hover: var(--surface-subtle);
+  --xy-controls-button-color: var(--muted);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+  align-items: center;
+  gap: 2px;
+  margin: 16px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.react-flow__controls.canvas-zoom.horizontal .react-flow__controls-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+}
+.react-flow__controls.canvas-zoom .react-flow__controls-button:disabled {
+  opacity: 0.4;
+}
+.react-flow__controls.canvas-zoom .react-flow__controls-button svg {
+  width: 16px;
+  height: 16px;
+  max-width: none;
+  max-height: none;
+  fill: none;
+}
+.canvas-zoom-level {
+  min-width: 44px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.canvas-zoom-divider {
+  width: 1px;
+  height: 20px;
+  margin-inline: 4px;
+  background: var(--border);
+}
+/* Phones need both the pill and the project's tool bar on one row. */
+@media (max-width: 380px) {
+  .canvas-zoom-level,
+  .canvas-zoom-divider {
+    display: none;
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

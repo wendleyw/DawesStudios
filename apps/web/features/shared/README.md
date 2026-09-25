@@ -30,13 +30,16 @@ has a unique SVG pattern
 ID so the mounted project and Playground backgrounds remain independent. The
 Playground feature overrides the tokens locally for a slightly darker surface.
 
-`CanvasControls` (`canvas-controls.tsx`) provides zoom and fit buttons with 200 ms
-transitions, or immediate movement when reduced motion is requested. Zoom buttons
-respect the current canvas limits. The optional `onFit(duration)`, `fitLabel` and
-`fitIcon` preserve the board's custom readable framing and return icon.
-The optional `portalTarget` mounts the same controls in the board's floating dock
-while retaining its xyflow context. A null target waits for the dock to mount;
-omitting it keeps the default in-canvas position for the other consumers.
+`CanvasControls` (`canvas-controls.tsx`) is one horizontal pill at the bottom left: Zoom Out, the
+live zoom level (a whole percent in tabular figures, hidden at 380 px and narrower), Zoom In, a
+divider and the fit button. Moves animate over 200 ms, or immediately when reduced motion is
+requested. Zoom buttons respect the current canvas limits. The optional `onFit(duration)`,
+`fitLabel` and `fitIcon` preserve the board's custom readable framing and return icon. Its look
+lives in `app/globals.css` (`.canvas-zoom`) and takes its colours from the theme tokens through
+xyflow's variables. The optional `portalTarget` mounts the same pill in the board's tool dock,
+which places it at the bottom left of a wide board and below the rail's bottom bar on small
+screens; a null target waits for the dock to mount, and omitting it keeps the in-canvas position
+for the other consumers.
 
 Consumers: `board/board-page` and `board/board-canvas-controls`,
 `projects/project-page`, `projects/design-viewer`, `playground/playground-board`.

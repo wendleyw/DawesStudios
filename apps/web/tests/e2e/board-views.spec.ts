@@ -575,6 +575,12 @@ test("the live SABRE board fits every view across desktop, tablet and phone size
               !zoom ||
               (zoom.top > toolbar.bottom &&
                 Math.abs(zoom.left + zoom.width / 2 - dock.left - dock.width / 2) <= 1),
+            zoomAtBottomLeft:
+              !zoom ||
+              innerWidth <= 900 ||
+              innerHeight <= 700 ||
+              (Math.abs(workArea.bottom - 16 - zoom.bottom) <= 1 &&
+                Math.abs(zoom.left - dock.left) <= 1),
             boardBottom: bounds.bottom,
             surfaceBottom: surface.bottom,
             surfaceHeight: surface.height,
@@ -593,6 +599,7 @@ test("the live SABRE board fits every view across desktop, tablet and phone size
         if (view.id !== "canvas") expect(geometry.toolbarClear).toBe(true);
         expect(geometry.canvasFullBleed).toBe(true);
         expect(geometry.zoomBelowToolbar).toBe(true);
+        expect(geometry.zoomAtBottomLeft).toBe(true);
         expect(geometry.horizontalOverflow).toBe(false);
         expect(geometry.verticalOverflow).toBe(false);
         expect(geometry.boardBottom).toBeLessThanOrEqual(height + 1);
