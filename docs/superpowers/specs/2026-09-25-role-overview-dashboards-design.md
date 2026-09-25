@@ -74,8 +74,9 @@ Success means all of the following hold:
 
 ### 2. Shared look
 
-- **Welcome header.** An eyebrow with the page's role name (Overview, My work) or, on a client page,
-  the client's logo; the heading "Welcome back, <first name>" (the first word of the viewer's display
+- **Welcome header.** An eyebrow with the page's role name (Overview, My work; on a client page
+  also Overview, because the floating client header directly above already shows the client's
+  logo); the heading "Welcome back, <first name>" (the first word of the viewer's display
   name); today's date in the studio time zone; one primary action at the right: **New briefing** for
   a client (and for the studio on a client's Overview), **New client** for the studio's `/home`, none
   for a designer. On a client route it is the white client header card like the other client pages;
@@ -136,8 +137,9 @@ The welcome header replaces the plain "Overview" heading (the eyebrow keeps "Ove
   need), `overview-model.ts` (pure functions for every count, filter, ordering and the relative
   time), the two page components, `overview.css` and a README. It reuses the hooks listed under
   Current state rather than repeating their queries.
-- `publishedVersionStatus` (today in `reviews/review-data.ts`) moves to
-  `features/shared/version-row.ts`, since both reviews and the designer dashboard read it.
+- The review tab rule (`inReviewTab`, `isFinished`) moves from `reviews-page.tsx` into
+  `reviews/review-data.ts`, beside `publishedVersionStatus`, so the overview reads both without
+  importing a page module.
 - **Migration.** `projects.delivered_at timestamptz` (nullable). `mark_project_delivered` sets it
   to `now()` alongside the status. Existing delivered projects are backfilled from `updated_at`.
   Database types are regenerated. No policy changes: every role that reads a project already reads
