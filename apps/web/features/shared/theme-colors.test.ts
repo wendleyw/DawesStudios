@@ -12,16 +12,14 @@ import { describe, expect, it } from "vitest";
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (path: string) => readFileSync(join(webRoot, path), "utf8");
 
-const stylesheets = [
-  "app/globals.css",
-  ...readdirSync(join(webRoot, "features"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .flatMap((feature) =>
-      readdirSync(join(webRoot, "features", feature.name))
-        .filter((name) => name.endsWith(".css"))
-        .map((name) => `features/${feature.name}/${name}`),
-    ),
-];
+function cssUnder(directory: string): string[] {
+  return readdirSync(join(webRoot, directory), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) return entry.name === "node_modules" ? [] : cssUnder(path);
+    return entry.name.endsWith(".css") ? [path] : [];
+  });
+}
+const stylesheets = [...cssUnder("app"), ...cssUnder("features")];
 
 const themeIndependent: Record<string, string> = {
   "::selection": "White on the dark olive highlight reads on either theme.",
@@ -136,6 +134,11 @@ describe("every colour has a dark value", () => {
   it.each(stylesheets)("%s writes each colour for both themes", (path) => {
     expect(violations(path)).toEqual([]);
   });
+
+  it("finds every stylesheet", () => {
+    expect(stylesheets).toContain("app/globals.css");
+    expect(stylesheets.length).toBeGreaterThanOrEqual(19);
+  });
 });
 
 describe("text keeps WCAG AA contrast in both themes", () => {
@@ -185,4 +188,62 @@ describe("timeline bars stay legible in both themes", () => {
     expect(contrast(lightEdge, lightLane)).toBeGreaterThanOrEqual(3);
     expect(contrast(darkEdge, darkLane)).toBeGreaterThanOrEqual(3);
   });
+});
+
+/** A pair side: a `light-dark()` value on a stylesheet rule, or a `:root` token. */
+function colourOf(path: string, selector: string, property: string): [string, string] {
+  if (selector === ":root") return token(property);
+  const found = declarations(read(path)).find(
+    (declaration) => declaration.selector === selector && declaration.property === property,
+  );
+  if (!found) throw new Error(`No ${property} on ${selector} in ${path}`);
+  return sides(found.value.match(/light-dark\([^()]*\)/)?.[0] ?? found.value);
+}
+
+describe("feature text keeps WCAG AA contrast in both themes", () => {
+  const playground = "features/playground/playground.css";
+  const timeline = "features/board/timeline.css";
+  const briefings = "features/briefings/briefings.css";
+  it.each([
+    [
+      playground,
+      ".playground-item-status",
+      "color",
+      playground,
+      ".playground-item-note",
+      "background",
+    ],
+    [playground, ".playground-item-status", "color", "", ":root", "--surface"],
+    [
+      playground,
+      ".playground-item-status.is-error",
+      "color",
+      playground,
+      ".playground-item-note",
+      "background",
+    ],
+    [playground, ".playground-item-status.is-error", "color", "", ":root", "--surface"],
+    [timeline, ".timeline-day", "color", "", ":root", "--surface"],
+    [timeline, ".timeline-day.today", "color", timeline, ".timeline-day.today", "background"],
+    [timeline, ".timeline-no-work", "color", "", ":root", "--surface"],
+    [briefings, ".briefing-summary strong", "color", "", ":root", "--surface"],
+    [briefings, ".briefing-save-status", "color", "", ":root", "--surface"],
+    [
+      "features/competitors/competitors.css",
+      ".competitor-initial",
+      "color",
+      "features/competitors/competitors.css",
+      ".competitor-initial",
+      "background",
+    ],
+    ["features/settings/settings.css", ".settings-success", "color", "", ":root", "--surface"],
+  ])(
+    "%s %s on %s %s",
+    (textPath, textSelector, textProperty, surfacePath, surfaceSelector, surfaceProperty) => {
+      const [lightText, darkText] = colourOf(textPath, textSelector, textProperty);
+      const [lightSurface, darkSurface] = colourOf(surfacePath, surfaceSelector, surfaceProperty);
+      expect(contrast(lightText, lightSurface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(darkText, darkSurface)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 });

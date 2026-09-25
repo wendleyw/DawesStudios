@@ -417,6 +417,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                     }
                   }}
                 >
+                  <ProjectToolBar panel={panel} onPanel={changePanel} disabled={playgroundOpen}>
+                    {quickActions}
+                  </ProjectToolBar>
                   <ReactFlow
                     {...canvasNavigation}
                     key={`${channel}:${format}`}
@@ -465,9 +468,6 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                         : "Your studio will share designs here when they’re ready."}
                     </div>
                   )}
-                  <ProjectToolBar panel={panel} onPanel={changePanel} disabled={playgroundOpen}>
-                    {quickActions}
-                  </ProjectToolBar>
                 </div>
               </div>
             </>

@@ -181,7 +181,7 @@ describe("Playground fullscreen layer", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("waits for its upward exit before closing and ignores descendant animations", async () => {
+  it("waits for its downward exit before closing and ignores descendant animations", async () => {
     reducedMotion = false;
     const user = userEvent.setup();
     const onClose = vi.fn();

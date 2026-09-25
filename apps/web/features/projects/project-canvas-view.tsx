@@ -6,6 +6,9 @@ import { fitToContent } from "@/features/shared/canvas-fit";
 import { canvasFit } from "./canvas-layout";
 import { CanvasControls } from "@/features/shared/canvas-controls";
 
+/** The project tool bar's height plus its bottom inset (`.project-tool-bar` in projects.css). */
+const TOOL_BAR_SPACE = 70;
+
 function projectViewport(
   content: { width: number; height: number },
   view: { width: number; height: number },
@@ -33,7 +36,7 @@ export function ProjectCanvasControls({
       onFit={(duration) => {
         const viewport = fitToContent(
           content,
-          { width: view.width, height: Math.max(1, view.height - topInset) },
+          { width: view.width, height: Math.max(1, view.height - topInset - TOOL_BAR_SPACE) },
           { minZoom: 0.2, constrainHeight: true },
         );
         void setViewport({ ...viewport, y: viewport.y + topInset }, { duration });

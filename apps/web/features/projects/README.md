@@ -16,7 +16,7 @@ row places Working files / Shared with client on the left and All deliverables o
 wrap on narrow screens and remain reachable above the canvas. Project details, Conversation and
 Playground live in `project-tool-bar.tsx`, a floating bar (group **Project actions**) centred at the
 bottom of the canvas. While a side panel is open the bar re-centres in the space between the zoom
-pill and the panel; on canvases narrower than 800 px it steps aside until the panel closes. The open
+pill and the panel; on canvases narrower than 800 px it hides until the panel closes. The open
 panel's button is selected. On phones it moves to the bottom right with touch-sized buttons, clear of
 the zoom pill. It is not shown while reviewing a design; the viewer keeps its own Playground button.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.

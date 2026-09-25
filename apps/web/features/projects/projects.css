@@ -458,7 +458,7 @@
 /*
  * An open side panel floats over the canvas's right edge. The bar then centres in the space between
  * the zoom pill (bottom left, about 185 px with its inset) and the panel; on a canvas too narrow for
- * that, it steps aside until the panel closes.
+ * that, it hides until the panel closes.
  */
 .project-workspace:has(> .project-inspector) .project-tool-bar {
   left: calc(200px + (100% - 200px - min(380px, 100% - 32px) - 32px) / 2);

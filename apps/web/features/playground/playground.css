@@ -201,7 +201,7 @@
   flex-shrink: 0;
   padding: 5px 10px;
   font-size: 10px;
-  color: light-dark(#65655d, #9d9d95);
+  color: light-dark(#65655d, #a09f98);
 }
 .playground-item-status.is-error {
   color: light-dark(#9a332a, #f08a7c);

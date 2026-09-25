@@ -35,7 +35,7 @@ The shared shell styles are implemented in [globals.css](../../apps/web/app/glob
 | `color.navigationActive` | `#36393f` | `#25272b` | Implemented selected navigation; reference was `#353535` |
 | `color.text` | `#272a30` | `#ececee` | Implemented primary copy, headings, icons |
 | `color.textMuted` | `#636872` | `#9ea1a8` | Implemented secondary text on light surfaces |
-| `color.textOnDark` | `#ffffff` | `#ececee` | Decision: primary navigation (filled controls: `--on-ink`) |
+| `color.textOnDark` | `#f5f6f8` | `#ececee` | Decision: primary navigation (filled controls: `--on-ink`) |
 | `color.textMutedOnDark` | `#b4b8c1` | `#a3a6ae` | Implemented secondary navigation copy |
 | `color.border` | `#e5e7eb` | `#28292c` | Implemented surface rules; measured home reference was `#e0e0e0` |
 | `color.controlBorder` | `#ccd0d7` | `#3a3c41` | Implemented stronger input boundary |
@@ -71,7 +71,7 @@ The styling boundary extends to color: a color that only one feature uses is wri
 
 [`features/shared/theme-colors.test.ts`](../../apps/web/features/shared/theme-colors.test.ts) is the standing gate behind all of this, parallel to `stylesheet-boundary.test.ts` above: it parses `globals.css` and every feature stylesheet and fails on any literal color found outside `light-dark()` unless its selector is named in `themeIndependent` (each with a stated reason) or its property ends in `shadow` and holds only black. The same file measures WCAG AA contrast on both the light and dark side: 4.5:1 or better for the text-on-surface token pairs (`--foreground`, `--muted` and `--on-ink` against their surfaces, plus the sidebar and status-tone pairs), and, for the board timeline's eight bar variants (the default bar and its seven statuses), 4.5:1 or better for the bar's text against its fill and 3:1 or better for the bar's edge against the lane surface — so a dark value that passes the color gate but reads poorly still fails the suite.
 
-`light-dark()` needs Chrome 123, Safari 17.5 or Firefox 120, all released in 2024. In an older browser a token that uses it is invalid, so colors go missing rather than falling back to light. This sits beside the product's existing reliance on the top-layer `<dialog>` element (used by both [Modal](../../apps/web/features/shared/modal.tsx) and Playground) and the `inert` attribute (Playground's covered controls), and on the `:has()` selector, which `.client-page-heading:has(.page-actions > :not(.page-bell))` already depends on.
+Tokens are authored with `light-dark()`, but no browser ever receives that function literally: Tailwind's PostCSS step and Lightning CSS compile it into a `--lightningcss-light`/`--lightningcss-dark` custom-property fallback, toggled by `color-scheme` and `prefers-color-scheme`, so a browser without native `light-dark()` support still gets both themes rather than a missing color. Confirmed by serving `/login` and inspecting its compiled stylesheet: it contains no `light-dark(` and 40+ `--lightningcss-light`/`--lightningcss-dark` declarations toggled under `@media (prefers-color-scheme: dark)`. If the Content-Security-Policy in [`next.config.ts`](../../apps/web/next.config.ts) ever drops `script-src`'s `'unsafe-inline'`, allow the fixed [theme script](../../apps/web/features/workspace/theme.ts) by its sha256 hash instead, since its content is static and never varies per request. This sits beside the product's existing reliance on the top-layer `<dialog>` element (used by both [Modal](../../apps/web/features/shared/modal.tsx) and Playground) and the `inert` attribute (Playground's covered controls), and on the `:has()` selector, which `.client-page-heading:has(.page-actions > :not(.page-bell))` already depends on.
 
 ### Unified document surfaces
 
@@ -145,7 +145,7 @@ Playground sit in a floating tool bar at the bottom centre of the canvas: a 16 p
 40 px buttons, a divider before Playground and the open panel's button selected, after the
 Higgsfield canvas the user chose, in the product's monochrome palette. On phones it moves to the
 bottom right. While a side panel is open, the bar re-centres in the space between the zoom pill and
-the panel, and steps aside on a canvas narrower than 800 px until the panel closes. During design
+the panel, and hides on a canvas narrower than 800 px until the panel closes. During design
 review, a compact deliverable toolbar replaces the channel row and the bar, and includes Playground.
 The artwork has its own space above the design/version navigation footer. Desktop double-click,
 keyboard activation, the explicit open arrow and a single touch tap enter feedback.

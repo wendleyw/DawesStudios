@@ -75,7 +75,7 @@ choice in this browser (`localStorage` key `dawes-theme`; System removes the key
 `<html data-theme>`, which `color-scheme` in `app/globals.css` reads. Every colour token is a
 `light-dark()` pair, so System needs no script. `app/layout.tsx` runs the same logic as an inline
 `<head>` script, so a reload never flashes the other theme, and other open tabs follow through the
-`storage` event. Blocked storage still applies the choice for the current page. The collapsed rail
+`storage` event; the head script also follows other tabs on every page. Blocked storage still applies the choice for the current page. The collapsed rail
 keeps the label for assistive technology, like the other sidebar items.
 
 ## Data access

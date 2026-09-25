@@ -67,4 +67,12 @@ describe("theme preference", () => {
     new Function(themeScript)();
     expect(document.documentElement).not.toHaveAttribute("data-theme");
   });
+
+  it("follows another tab's change from the head script alone", () => {
+    new Function(themeScript)();
+    window.dispatchEvent(new StorageEvent("storage", { key: THEME_STORAGE_KEY, newValue: "dark" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    window.dispatchEvent(new StorageEvent("storage", { key: THEME_STORAGE_KEY, newValue: null }));
+    expect(document.documentElement).not.toHaveAttribute("data-theme");
+  });
 });

@@ -44,5 +44,8 @@ export function saveThemePreference(preference: ThemePreference) {
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
 }
 
-/** `parseThemePreference` and `applyThemePreference` in plain script, run before any bundle. */
-export const themeScript = `try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+/**
+ * `parseThemePreference` and `applyThemePreference` in plain script, run before any bundle. It also
+ * follows a change made in another tab on every page, including those without the sidebar switch.
+ */
+export const themeScript = `try{var d=document.documentElement,a=function(t){if(t==="light"||t==="dark")d.dataset.theme=t;else delete d.dataset.theme};a(localStorage.getItem("${THEME_STORAGE_KEY}"));addEventListener("storage",function(e){if(e.key==="${THEME_STORAGE_KEY}"||e.key===null)a(e.newValue)})}catch(e){}`;

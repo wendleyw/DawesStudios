@@ -346,12 +346,29 @@ test("floating project chrome fits desktop and mobile, including feedback and se
           }),
         )
         .toBe(true);
+      // The project's tools follow the deliverable filter in keyboard order, before any canvas node.
+      await page.locator("#deliverable-filter").focus();
+      await page.keyboard.press("Tab");
+      await expect(
+        page.getByRole("button", { name: "Project details", exact: true }),
+      ).toBeFocused();
       await expect(
         page
           .getByRole("group", { name: "Project actions" })
           .getByRole("button", { name: "Playground", exact: true }),
       ).toBeVisible();
       await page.getByRole("button", { name: "Fit View", exact: true }).click();
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const bar = document.querySelector(".project-tool-bar")!.getBoundingClientRect();
+            const frames = [...document.querySelectorAll(".deliverable-frame")].map((frame) =>
+              frame.getBoundingClientRect(),
+            );
+            return Math.max(...frames.map((frame) => frame.bottom)) <= bar.top + 1;
+          }),
+        )
+        .toBe(true);
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.screenshot({
         path: `${screenshotDirectory}/project-floating-header-${width}.png`,
