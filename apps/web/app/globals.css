@@ -1,28 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 
-  --background: #f7f8fa;
+  --background: light-dark(#f7f8fa, #131416);
 
-  --foreground: #272a30;
-  --surface: #fff;
+  --foreground: light-dark(#272a30, #ececee);
+  --surface: light-dark(#fff, #1c1e21);
 
-  --surface-subtle: #f2f3f5;
+  --surface-subtle: light-dark(#f2f3f5, #25272b);
 
-  --canvas-background: #f3f4f6;
+  --canvas-background: light-dark(#f3f4f6, #131416);
 
-  --canvas-grid: #dcdfe4;
+  --canvas-grid: light-dark(#dcdfe4, #363739);
 
-  --muted: #636872;
+  --muted: light-dark(#636872, #9ea1a8);
 
-  --border: #e5e7eb;
+  --border: light-dark(#e5e7eb, #28292c);
 
-  --border-strong: #ccd0d7;
+  --border-strong: light-dark(#ccd0d7, #3a3c41);
 
-  --ink: #272a30;
+  --ink: light-dark(#272a30, #ececee);
+  --on-ink: light-dark(#fff, #131416);
 
-  --sidebar: #202226;
+  --sidebar: light-dark(#202226, #0f1012);
 
   --sidebar-width: 248px;
   --topbar-height: 64px;
@@ -52,10 +53,10 @@
   --space-lg: 24px;
 
   --space-page: 40px;
-  --sidebar-active: #36393f;
-  --sidebar-border: #3a3d44;
-  --sidebar-muted: #b4b8c1;
-  --sidebar-text: #f5f6f8;
+  --sidebar-active: light-dark(#36393f, #25272b);
+  --sidebar-border: light-dark(#3a3d44, #28292c);
+  --sidebar-muted: light-dark(#b4b8c1, #a3a6ae);
+  --sidebar-text: light-dark(#f5f6f8, #ececee);
   --text-title: 28px;
   --text-section: 18px;
   --text-metric: 30px;
@@ -66,25 +67,32 @@
   --control-height: 40px;
   --control-height-small: 32px;
   --control-height-touch: 44px;
-  --surface-hover: #fafbfc;
-  --ink-hover: #40444c;
-  --focus-ring: rgb(39 42 48 / 8%);
-  --overlay-shadow: 0 20px 64px rgb(20 23 29 / 16%);
-  --overlay-scrim: rgb(20 23 29 / 36%);
+  --surface-hover: light-dark(#fafbfc, #212327);
+  --ink-hover: light-dark(#40444c, #d4d5d9);
+  --focus-ring: light-dark(rgb(39 42 48 / 8%), rgb(236 236 238 / 14%));
+  --overlay-shadow: 0 20px 64px light-dark(rgb(20 23 29 / 16%), rgb(0 0 0 / 55%));
+  --overlay-scrim: light-dark(rgb(20 23 29 / 36%), rgb(0 0 0 / 60%));
   /*
    * The status badge's three colored tones (`neutral` stays grey). Each pairs a soft tinted
    * background with a darker foreground and a mid-strength border; the credit balance chip reuses
    * `--tone-attention-*`. Foreground-on-background contrast is 6:1 or better for 12px text.
    */
-  --tone-active-fg: #1d4e89;
-  --tone-active-bg: #e7f0fb;
-  --tone-active-border: #a9c6ea;
-  --tone-attention-fg: #7a5400;
-  --tone-attention-bg: #fbf1dc;
-  --tone-attention-border: #e3bd6e;
-  --tone-complete-fg: #2f5d34;
-  --tone-complete-bg: #e7f0df;
-  --tone-complete-border: #a9c48a;
+  --tone-active-fg: light-dark(#1d4e89, #9cc3f2);
+  --tone-active-bg: light-dark(#e7f0fb, #16263a);
+  --tone-active-border: light-dark(#a9c6ea, #2d4b72);
+  --tone-attention-fg: light-dark(#7a5400, #efc56a);
+  --tone-attention-bg: light-dark(#fbf1dc, #2d2410);
+  --tone-attention-border: light-dark(#e3bd6e, #6b5321);
+  --tone-complete-fg: light-dark(#2f5d34, #a8d08e);
+  --tone-complete-bg: light-dark(#e7f0df, #1a2716);
+  --tone-complete-border: light-dark(#a9c48a, #3e5b32);
+}
+/* `app/layout.tsx` pins a saved choice before the first paint; without it the system decides. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 @theme inline {
   --color-background: var(--background);
@@ -221,7 +229,7 @@ h3 {
 .button.primary {
   border-color: var(--ink);
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
 }
 .button.primary:hover:not(:disabled) {
   border-color: var(--ink-hover);
@@ -359,7 +367,7 @@ select {
 }
 input::placeholder,
 textarea::placeholder {
-  color: #82827b;
+  color: light-dark(#82827b, #85878e);
   opacity: 1;
 }
 input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -372,7 +380,7 @@ select:focus {
 input:disabled,
 textarea:disabled,
 select:disabled {
-  color: #777970;
+  color: light-dark(#777970, #7a7c83);
   background: var(--surface-subtle);
   cursor: not-allowed;
 }
@@ -397,7 +405,7 @@ select {
 .form-error {
   padding: 12px 14px;
   border-left: 2px solid var(--ink);
-  background: #eeeee8;
+  background: light-dark(#eeeee8, #26272a);
   color: var(--foreground);
   font-size: var(--text-lg);
   line-height: 1.6;
@@ -520,7 +528,7 @@ select {
   gap: 16px;
   padding: 0 32px;
   border-bottom: 1px solid var(--border);
-  background: rgb(255 255 255 / 96%);
+  background: light-dark(rgb(255 255 255 / 96%), rgb(28 30 33 / 96%));
 }
 .client-mark {
   /* One mark at several scales: each surface sets `--client-mark-size` on its own class. */
@@ -542,6 +550,11 @@ select {
   font-weight: 500;
   letter-spacing: -0.25px;
   text-transform: uppercase;
+}
+/* Uploaded logos are often dark marks on transparency, so dark mode seats them on a light plate. */
+img.client-mark {
+  background: light-dark(transparent, #f4f4f5);
+  box-shadow: 0 0 0 3px light-dark(transparent, #f4f4f5);
 }
 .main-content {
   min-width: 0;
@@ -1042,7 +1055,7 @@ select {
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
-  background: rgb(25 27 21 / 35%);
+  background: var(--overlay-scrim);
   backdrop-filter: blur(3px);
 }
 .modal {
@@ -1055,7 +1068,7 @@ select {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 20px 64px rgb(25 27 21 / 16%);
+  box-shadow: var(--overlay-shadow);
 }
 .modal h2 {
   padding-right: 28px;
