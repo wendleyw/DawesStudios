@@ -4,6 +4,7 @@ import "./globals.css";
 import "@/features/shared/forms.css";
 import "@xyflow/react/dist/style.css";
 import { ApplicationProviders } from "@/features/auth/auth-provider";
+import { themeScript } from "@/features/workspace/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // The head script sets `data-theme` before hydration, so this element differs from the server's.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ApplicationProviders
           configuration={{
