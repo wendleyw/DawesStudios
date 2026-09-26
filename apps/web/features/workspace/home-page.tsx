@@ -171,7 +171,13 @@ export function HomePage() {
               (projects.data?.filter((project) => project.client_id === client.id).length ?? 0) -
               clientProjects.length;
             return (
-              <Link key={client.id} className="workspace-card" href={`/clients/${client.id}/board`}>
+              <Link
+                key={client.id}
+                className="workspace-card"
+                // A client with several workspaces opens each workspace's Overview from here; the
+                // studio and designers keep opening the Board.
+                href={`/clients/${client.id}/${profile?.role === "client" ? "overview" : "board"}`}
+              >
                 <div className="workspace-card-top">
                   <span className="brand-monogram">
                     {client.initials || client.name.slice(0, 2)}

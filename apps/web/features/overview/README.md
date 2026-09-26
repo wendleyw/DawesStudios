@@ -31,11 +31,16 @@ title card and the shared `.overview-stats` tiles for its three numbers.
 3. **Recently shipped** — delivered projects, most recently delivered first, linking to the board.
 
 **Studio view**: when `profile.role === "agency"`, the heading reads "What `<client name>` sees"
-and the subtitle explains it is the client's own overview — same data, same query, no studio-only
-addition, so what the agency sees here is exactly the client's page.
+and the subtitle explains it is the client's own overview. The studio's own `useReviews` call does
+add the internal submitted-versions read (`features/reviews/review-data.ts` ~156, since it runs
+with the `agency` role), but `clientOverview`'s waiting-reviews filter drops every internal row
+regardless of viewer (see Isolation below), so what the agency sees here is exactly the client's
+page.
 
 **Designer redirect**: a designer has no Overview destination. If one opens this route by hand, an
-effect replaces it with `/clients/:clientId/board` before the data queries are read.
+effect replaces it with `/clients/:clientId/board` — but this page's own reads (`useClients`,
+`useProjects`, `useBriefings`, `useReviews`) are already under way by the time that effect runs;
+only the credit hooks stay disabled for a designer.
 
 ## Designer `/home`
 

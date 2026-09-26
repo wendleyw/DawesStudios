@@ -30,7 +30,9 @@ export function DesignerOverview() {
   const versions = useDesignerVersions(activeProjectIds);
   const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
   const reads = [clients, projects, versions];
-  if (reads.some((read) => read.isPending)) return <PageStatus>Loading your work…</PageStatus>;
+  // Checked before `isPending`: when `projects` fails, `activeProjectIds` stays undefined and
+  // `versions` stays disabled (so pending) forever, which used to hide this error behind an
+  // unending "Loading your work…" with no retry.
   if (reads.some((read) => read.error))
     return (
       <div className="page-content">
@@ -40,6 +42,7 @@ export function DesignerOverview() {
         </button>
       </div>
     );
+  if (reads.some((read) => read.isPending)) return <PageStatus>Loading your work…</PageStatus>;
   const now = new Date();
   const list = projects.data ?? [];
   const overview = designerOverview({
@@ -112,7 +115,7 @@ export function DesignerOverview() {
                 {row.title} · {row.deliverable}
               </strong>
               <span className="overview-row-meta">
-                Changes requested · {relativeAge(row.date, now, formatDayKey)}
+                Changes requested · submitted {relativeAge(row.date, now, formatDayKey)}
               </span>
             </Link>
           ))}

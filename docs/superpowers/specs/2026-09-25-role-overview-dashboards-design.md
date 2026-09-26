@@ -120,8 +120,8 @@ Success means all of the following hold:
   **In studio review** (latest versions submitted) · **Delivered this month**.
 - **What's moving.** Assigned active projects, soonest due first: title, client name, due date,
   stage badge.
-- **Your turn.** Versions sent back, longest waiting first: "Changes requested · 2 days ago" above
-  "<project> · <deliverable>"; the row opens the project.
+- **Your turn.** Versions sent back, longest waiting first: "Changes requested · submitted 2 days
+  ago" above "<project> · <deliverable>"; the row opens the project.
 - **Recently delivered.** Assigned delivered projects, newest delivery first.
 - No credits anywhere. The existing row-level policies already limit the reads to assignments.
 

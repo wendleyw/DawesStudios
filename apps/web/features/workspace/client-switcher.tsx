@@ -125,7 +125,9 @@ export function ClientSwitcher({
               visible.map((client) => (
                 <Link
                   key={client.id}
-                  href={`/clients/${client.id}/board`}
+                  // A client with several workspaces opens each workspace's Overview from here;
+                  // the studio and designers keep opening the Board.
+                  href={`/clients/${client.id}/${profile?.role === "client" ? "overview" : "board"}`}
                   className="client-switcher-option"
                   aria-current={client.id === selected?.id ? "location" : undefined}
                   onClick={() => setOpen(false)}

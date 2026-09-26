@@ -40,7 +40,10 @@ const defaultVersions = {
   ],
   deliverables: [{ id: "d1", name: "Portrait Feed" }],
 };
-const data = vi.hoisted(() => ({ projects: [] as Project[] }));
+const data = vi.hoisted(() => ({
+  projects: [] as Project[],
+  projectsError: null as Error | null,
+}));
 const mocks = vi.hoisted(() => ({ useDesignerVersions: vi.fn() }));
 
 vi.mock("@/features/auth/auth-provider", () => ({
@@ -51,7 +54,12 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => {
   return {
     ...actual,
     useClients: () => query([{ id: "c1", name: "SABRE" }]),
-    useProjects: () => query(data.projects),
+    useProjects: () => ({
+      data: data.projectsError ? undefined : data.projects,
+      isPending: false,
+      error: data.projectsError,
+      refetch: vi.fn(),
+    }),
     useDateFormat: () => actual.createDateFormatters("UTC"),
   };
 });
@@ -63,6 +71,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-25T15:00:00Z"));
   data.projects = [project({})];
+  data.projectsError = null;
   mocks.useDesignerVersions.mockReturnValue(query(defaultVersions));
 });
 afterEach(() => vi.useRealTimers());
@@ -73,7 +82,7 @@ describe("DesignerOverview", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Alex");
     expect(screen.getByText("My work")).toHaveClass("eyebrow");
     expect(tiles().getByText("Your turn").closest("div")).toHaveTextContent("1");
-    expect(screen.getByText("Changes requested · 2 days ago")).toBeInTheDocument();
+    expect(screen.getByText("Changes requested · submitted 2 days ago")).toBeInTheDocument();
     expect(screen.getByText("Launch · Portrait Feed")).toBeInTheDocument();
     expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
   });
@@ -85,5 +94,29 @@ describe("DesignerOverview", () => {
     ];
     render(<DesignerOverview />);
     expect(mocks.useDesignerVersions).toHaveBeenCalledWith(["p1"]);
+  });
+
+  it("shows each column's empty text when it has no rows", () => {
+    data.projects = [];
+    mocks.useDesignerVersions.mockReturnValue(query({ versions: [], deliverables: [] }));
+    render(<DesignerOverview />);
+    expect(screen.getByText("No active assignments.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing sent back to you.")).toBeInTheDocument();
+    expect(screen.getByText("Delivered work will appear here.")).toBeInTheDocument();
+  });
+
+  it("shows the error state rather than a forever-pending read when projects fails", () => {
+    data.projectsError = new Error("boom");
+    mocks.useDesignerVersions.mockReturnValue({
+      data: undefined,
+      isPending: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    render(<DesignerOverview />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "We couldn’t load your work.",
+    );
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

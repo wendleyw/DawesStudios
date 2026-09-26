@@ -4,6 +4,9 @@ import type { Project } from "@/features/workspace/workspace-data";
 
 /** The number tiles only: panel eyebrows repeat some of their labels. */
 const tiles = () => within(document.querySelector(".overview-stats") as HTMLElement);
+/** A tile's own number, not its supporting note — which can itself start with a digit. */
+const tileNumber = (label: string) =>
+  tiles().getByText(label).closest("div")!.querySelector("strong")!.textContent;
 const replace = vi.fn();
 const viewer = vi.hoisted(() => ({ role: "client", display_name: "Beth Morgan" }));
 const data = vi.hoisted(() => ({
@@ -116,11 +119,11 @@ describe("ClientOverviewPage", () => {
   it("greets the client and shows their numbers", () => {
     render(<ClientOverviewPage clientId="c1" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Beth");
-    expect(tiles().getByText("Credits remaining").closest("div")).toHaveTextContent("40");
+    expect(tileNumber("Credits remaining")).toBe("40");
     expect(tiles().getByText("1 of 41 used")).toBeInTheDocument();
-    expect(tiles().getByText("Active projects").closest("div")).toHaveTextContent("1");
+    expect(tileNumber("Active projects")).toBe("1");
     expect(tiles().getByText("1 delivered this month")).toBeInTheDocument();
-    expect(tiles().getByText("Needs your review").closest("div")).toHaveTextContent("1");
+    expect(tileNumber("Needs your review")).toBe("1");
     expect(screen.getByRole("link", { name: /New briefing/ })).toHaveAttribute(
       "href",
       "/clients/c1/briefings/new",
@@ -146,6 +149,15 @@ describe("ClientOverviewPage", () => {
       "href",
       "/clients/c1/reviews",
     );
+  });
+
+  it("shows each column's empty text when it has no rows", () => {
+    data.projects = [];
+    data.reviews = [];
+    render(<ClientOverviewPage clientId="c1" />);
+    expect(screen.getByText("Nothing in production right now.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing waiting on you.")).toBeInTheDocument();
+    expect(screen.getByText("Delivered work will appear here.")).toBeInTheDocument();
   });
 
   it("tells the studio whose view it is", () => {

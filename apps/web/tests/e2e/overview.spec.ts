@@ -15,6 +15,20 @@ async function tile(page: Page, label: string) {
   return Number(text);
 }
 
+/** A tile's supporting note, e.g. "1 delivered this month" or "15 of 100 used". */
+function tileNote(page: Page, label: string) {
+  return page.locator(".overview-stats > div", { hasText: label }).locator("small").innerText();
+}
+
+/** The number beside `label` in the "In flight" strip below the tiles. */
+async function flightCount(page: Page, label: string) {
+  const text = await page
+    .locator(".overview-flight > span", { hasText: label })
+    .locator("strong")
+    .innerText();
+  return Number(text);
+}
+
 test("a client lands on its Overview and sees its own numbers", async ({ page }) => {
   const client = await sabre();
   await signIn(page, credentials.client);
@@ -26,8 +40,12 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     `Welcome back, ${me.display_name.trim().split(/\s+/)[0]}`,
   );
-  const projects = (await caller.from("projects").select("id,status").eq("client_id", client.id))
-    .data!;
+  const projects = (
+    await caller
+      .from("projects")
+      .select("id,status,delivered_at,updated_at")
+      .eq("client_id", client.id)
+  ).data!;
   const account = (
     await caller.from("credit_accounts").select("balance").eq("client_id", client.id).single()
   ).data!;
@@ -36,6 +54,58 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
     .toBe(projects.filter((project) => project.status !== "delivered").length);
   await expect.poll(() => tile(page, "Credits remaining")).toBe(account.balance);
   const waiting = await tile(page, "Needs your review");
+
+  // The in-flight strip agrees with the database, across each of its three counts.
+  const briefings = (await caller.from("briefings").select("status").eq("client_id", client.id))
+    .data!;
+  const withStudioStatuses = new Set(["awaiting_review", "budget_confirmed"]);
+  const inProgressStatuses = new Set([
+    "planned",
+    "in_progress",
+    "internal_review",
+    "changes_requested",
+  ]);
+  await expect
+    .poll(() => flightCount(page, "with the studio"))
+    .toBe(briefings.filter((briefing) => withStudioStatuses.has(briefing.status)).length);
+  await expect
+    .poll(() => flightCount(page, "in progress"))
+    .toBe(projects.filter((project) => inProgressStatuses.has(project.status)).length);
+  await expect
+    .poll(() => flightCount(page, "delivered"))
+    .toBe(projects.filter((project) => project.status === "delivered").length);
+
+  // The credits note sums the client's project debits the way clientOverview does in
+  // overview-model.ts: used = the sum of project-debit amounts, total = balance + used.
+  const ledger = (
+    await caller.from("credit_ledger").select("amount,kind").eq("client_id", client.id)
+  ).data!;
+  const used = ledger
+    .filter((entry) => entry.kind === "project_debit")
+    .reduce((total, entry) => total - entry.amount, 0);
+  await expect
+    .poll(() => tileNote(page, "Credits remaining"))
+    .toBe(`${used} of ${account.balance + used} used`);
+
+  // The active note counts deliveries in the current calendar month, studio time zone.
+  const workspace = (
+    await localAdmin.from("workspace_settings").select("timezone").eq("id", 1).single()
+  ).data!;
+  const monthFormat = new Intl.DateTimeFormat("en-US", {
+    timeZone: workspace.timezone,
+    month: "long",
+    year: "numeric",
+  });
+  const thisMonth = monthFormat.format(new Date());
+  const deliveredThisMonth = projects.filter(
+    (project) =>
+      project.status === "delivered" &&
+      monthFormat.format(new Date(project.delivered_at ?? project.updated_at)) === thisMonth,
+  ).length;
+  await expect
+    .poll(() => tileNote(page, "Active projects"))
+    .toBe(`${deliveredThisMonth} delivered this month`);
+
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // The client's own Reviews tab agrees with the Overview.

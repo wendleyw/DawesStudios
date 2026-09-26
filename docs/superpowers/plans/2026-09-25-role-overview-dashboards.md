@@ -1463,7 +1463,7 @@ describe("DesignerOverview", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Alex");
     expect(screen.getByText("My work")).toHaveClass("eyebrow");
     expect(tiles().getByText("Your turn").closest("div")).toHaveTextContent("1");
-    expect(screen.getByText("Changes requested · 2 days ago")).toBeInTheDocument();
+    expect(screen.getByText("Changes requested · submitted 2 days ago")).toBeInTheDocument();
     expect(screen.getByText("Launch · Portrait Feed")).toBeInTheDocument();
     expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
   });
@@ -1619,7 +1619,7 @@ export function DesignerOverview() {
                 {row.title} · {row.deliverable}
               </strong>
               <span className="overview-row-meta">
-                Changes requested · {relativeAge(row.date, now)}
+                Changes requested · submitted {relativeAge(row.date, now, formatDayKey)}
               </span>
             </Link>
           ))}

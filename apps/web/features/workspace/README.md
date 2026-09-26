@@ -29,7 +29,10 @@ for designers, so a designer's five destinations start on Board. Projects keep B
 client destinations remain in the sidebar on any route. A client signed into exactly one workspace
 lands on its Overview after sign-in (`home-page.tsx`'s single-workspace redirect); the sidebar's own
 single-workspace link (`client-switcher.tsx`) opens the same Overview for clients and the studio,
-and the Board for designers, since designers have no Overview destination.
+and the Board for designers, since designers have no Overview destination. A client signed into
+several workspaces stays on `/home` and opens each one's Overview from there — the switcher's
+multi-workspace options and `home-page.tsx`'s workspace cards both link to `/clients/:id/overview`
+for that role, and to `/clients/:id/board` for the studio and designers.
 
 All client routes share `canvas-header.tsx`: floating client identity/navigation on the left
 and the signed-in viewer’s profile with a notification bell on its left in one account card. A
