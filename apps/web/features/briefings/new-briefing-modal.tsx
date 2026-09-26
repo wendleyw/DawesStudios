@@ -2,14 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { BriefingEditorPage } from "./briefing-editor";
 
 export function NewBriefingModal({ clientId }: { clientId: string }) {
   const router = useRouter();
+  const { profile } = useAuth();
   const [editorState, setEditorState] = useState({ busy: false, dirty: false });
   const [confirmClose, setConfirmClose] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<string | null>(null);
   function close() {
     if (editorState.busy) return;
     if (editorState.dirty && !submitted) setConfirmClose(true);
@@ -25,10 +27,31 @@ export function NewBriefingModal({ clientId }: { clientId: string }) {
     >
       {submitted ? (
         <div className="briefing-modal-confirmation">
-          <p>Your briefing is ready for the studio to review. No credits have been used.</p>
-          <button className="button primary" onClick={() => router.back()}>
-            Done
-          </button>
+          {profile?.role === "agency" ? (
+            <>
+              {/* The studio filed it, so the studio is the reviewer: lead straight to the budget,
+                  where Confirm budget and Accept & create project live. */}
+              <p>No credits have been used yet. Confirm its budget to create the project.</p>
+              <div className="form-actions">
+                <button className="button" onClick={() => router.back()}>
+                  Done
+                </button>
+                <button
+                  className="button primary"
+                  onClick={() => router.push(`/clients/${clientId}/briefings/${submitted}`)}
+                >
+                  Review budget
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>Your briefing is ready for the studio to review. No credits have been used.</p>
+              <button className="button primary" onClick={() => router.back()}>
+                Done
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -50,9 +73,9 @@ export function NewBriefingModal({ clientId }: { clientId: string }) {
               clientId={clientId}
               dialog={{
                 onStateChange: setEditorState,
-                onSubmitted: () => {
+                onSubmitted: (briefingId) => {
                   setEditorState({ busy: false, dirty: false });
-                  setSubmitted(true);
+                  setSubmitted(briefingId);
                 },
               }}
             />

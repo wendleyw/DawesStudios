@@ -209,16 +209,41 @@ for (const role of ["agency", "client"] as const)
       await expect(
         sent.getByRole("button", { name: "Close Briefing sent", exact: true }),
       ).toBeEnabled();
-      await sent
-        .getByRole("button", {
-          name: role === "agency" ? "Done" : "Close Briefing sent",
-          exact: true,
-        })
-        .click();
-      await expect(page).toHaveURL(board);
-      await expect(
-        page.getByRole("button", { name: "Calendar view", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true");
+      if (role === "agency") {
+        // The studio filed it, so it is also the reviewer: the confirmation leads to the budget,
+        // and confirming then accepting there creates the project.
+        await expect(sent.getByRole("button", { name: "Done", exact: true })).toBeEnabled();
+        await page.screenshot({ path: `${screenshotDirectory}/briefing-sent-agency-1440.png` });
+        await sent.getByRole("button", { name: "Review budget", exact: true }).click();
+        await expect(page).toHaveURL(`/clients/${fixture.clientId}/briefings/${saved.data!.id}`);
+        await expect(sent).toHaveCount(0);
+        await page.getByRole("button", { name: "Confirm budget", exact: true }).click();
+        await page.getByRole("button", { name: "Accept & create project", exact: true }).click();
+        await expect
+          .poll(async () => {
+            const accepted = await localAdmin
+              .from("briefings")
+              .select("status")
+              .eq("id", saved.data!.id)
+              .single();
+            return accepted.data?.status;
+          })
+          .toBe("accepted");
+        const projects = await localAdmin
+          .from("projects")
+          .select("id")
+          .eq("client_id", fixture.clientId);
+        expect(projects.data).toHaveLength(1);
+      } else {
+        await expect(sent.getByRole("button", { name: "Review budget", exact: true })).toHaveCount(
+          0,
+        );
+        await sent.getByRole("button", { name: "Close Briefing sent", exact: true }).click();
+        await expect(page).toHaveURL(board);
+        await expect(
+          page.getByRole("button", { name: "Calendar view", exact: true }),
+        ).toHaveAttribute("aria-pressed", "true");
+      }
       await page.goto(`/clients/${fixture.clientId}/briefings/new`);
       await expect(page.getByRole("heading", { name: "New briefing", exact: true })).toBeVisible();
       await expect(page.getByRole("dialog", { name: "New briefing", exact: true })).toHaveCount(0);

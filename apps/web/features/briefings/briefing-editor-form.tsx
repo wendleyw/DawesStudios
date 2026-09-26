@@ -33,7 +33,8 @@ import { FormError } from "@/features/shared/form-error";
 
 export type BriefingDialogOptions = {
   onStateChange: (state: { busy: boolean; dirty: boolean }) => void;
-  onSubmitted: () => void;
+  /** Called with the submitted briefing's id. */
+  onSubmitted: (briefingId: string) => void;
 };
 
 /**
@@ -149,7 +150,7 @@ export function BriefingEditor({
       void queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] });
       void invalidateNotifications();
       if (dialog) {
-        if (submit) dialog.onSubmitted();
+        if (submit) dialog.onSubmitted(id);
       } else if (submit) router.push(`/clients/${clientId}/briefings/${id}`);
       else router.replace(`/clients/${clientId}/briefings/${id}/edit`);
     },

@@ -32,7 +32,10 @@ In-app links to `/clients/:clientId/briefings/new` use the workspace `@modal` in
 `new-briefing-modal.tsx` renders the existing editor in the shared accessible dialog, leaving the
 underlying page and board view mounted. Direct visits and reloads still render the full editor page.
 Draft saves remain inside the modal so attachments and editing can continue; successful submission
-shows a confirmation and Done returns to the previous page. Close/Escape/backdrop ask before
+shows a confirmation and Done returns to the previous page. When the studio files the briefing it
+is also the reviewer, so its confirmation adds **Review budget**, which opens the briefing page
+where Confirm budget and Accept & create project live; a client's confirmation only says the studio
+will review it. Close/Escape/backdrop ask before
 discarding unsaved edits and refuse closure during saving or attachment writes. Browser history
 navigation retains native routing behavior; it is not an unsaved-draft guard.
 
