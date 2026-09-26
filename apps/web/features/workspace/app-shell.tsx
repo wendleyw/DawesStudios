@@ -178,8 +178,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
   const activeClient = clients.data?.find((client) => client.id === activeClientId);
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
-  // The tab names the studio and, inside a client workspace, the client: "Studio | Client".
-  const tabTitle = activeClient ? `${studioName} | ${activeClient.name}` : studioName;
+  // The tab names the client first inside a client workspace, then the studio: "Client | Studio".
+  const tabTitle = activeClient ? `${activeClient.name} | ${studioName}` : studioName;
   // Next.js re-applies the root metadata title on in-app navigation, so the shell puts its own back
   // whenever the head's <title> changes.
   useEffect(() => {

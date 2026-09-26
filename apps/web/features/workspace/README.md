@@ -210,9 +210,9 @@ sidebar no longer uses `.brand-logo`, which moved to `auth.css` with its one rem
 
 ## Sidebar brand lockup
 
-The tab title is the studio's name (Studio settings, `workspace_settings.studio_name`), followed by
-` | <client>` inside a client workspace, including a project opened from it; the shell sets it and
-restores it when Next.js re-applies the root metadata title (`Brianna Dawes Studios`) on
+The tab title is `<client> | <studio>` inside a client workspace, including a project opened from
+it, and the studio's name (Studio settings, `workspace_settings.studio_name`) elsewhere; the shell
+sets it and restores it when Next.js re-applies the root metadata title (`Brianna Dawes Studios`) on
 navigation. The browser tab repeats the mark. `layout.tsx` points the favicon at `public/brand/favicon.png` (the
 white symbol on a rounded tile of the menu colour), and `animated-favicon.tsx`, mounted by the app
 shell, draws each frame of `logo-mark.webm` onto a 64 px canvas and sets it as the icon while the
