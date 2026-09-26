@@ -62,6 +62,20 @@ test("the client works in Miro mode beside the project's tools", async ({ page, 
   await page.getByRole("button", { name: "Conversation", exact: true }).click();
   await expect(page.locator(".project-inspector").first()).toBeVisible();
   await expect(frame).toBeVisible();
+  // The version canvas stays mounted under Miro but must not show anywhere, including the strip
+  // the narrowed embed leaves beside the panel: React Flow marks each measured node
+  // `visibility: visible`, which outlives a hidden ancestor.
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>(".react-flow__node")].some(
+        (node) =>
+          getComputedStyle(node).visibility === "visible" &&
+          Number(getComputedStyle(node.closest(".react-flow")!).opacity) > 0 &&
+          node.getBoundingClientRect().width > 0,
+      ),
+    ),
+  ).toBe(false);
+  await expect(page.locator(".react-flow")).toHaveAttribute("inert", "");
   await page.getByRole("button", { name: "Conversation", exact: true }).click();
   // The Playground opens as the asset strip.
   await page.getByRole("button", { name: "Playground" }).click();

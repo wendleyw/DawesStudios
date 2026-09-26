@@ -551,8 +551,12 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                     defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                     minZoom={0.2}
                     maxZoom={1.5}
-                    style={miroActive ? { visibility: "hidden" } : undefined}
-                    aria-hidden={miroActive || undefined}
+                    // Hidden under Miro yet still mounted, so Versions returns instantly. Opacity,
+                    // not visibility: React Flow sets `visibility: visible` on every measured node,
+                    // which overrides a hidden ancestor and showed the cards beside an open panel.
+                    // `inert` keeps them out of reach of clicks, focus and assistive technology.
+                    style={miroActive ? { opacity: 0 } : undefined}
+                    inert={miroActive || undefined}
                   >
                     <CanvasOpeningView
                       key="opening-view"

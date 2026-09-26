@@ -300,8 +300,9 @@ a link (so a client only ever sees client-board links and a designer only intern
 `pickMiroVersion` resolves the requested version if it is still linked or otherwise the newest linked
 one, and `readProjectView`/`writeProjectView` keep `view=miro` and `version=<id>` in the URL so a
 reload or a shared link returns to the same frame. `project-page.tsx` mounts `MiroView`
-(`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`visibility:
-hidden`, `aria-hidden`) rather than unmounting, so switching back to **Versions** is instant. The
+(`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`opacity: 0`
+and `inert`; not `visibility: hidden`, which React Flow's per-node `visibility: visible` overrides)
+rather than unmounting, so switching back to **Versions** is instant. The
 header folds into one compact bar, `MiroBar` (same file), so the board keeps the height: back, `Project
 title / Deliverable`, a **Miro version** toggle (`V1`, `V2`, … — the linked versions of the shown
 deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miroBoardUrl`,
