@@ -247,6 +247,7 @@ export type Database = {
           goals: string
           id: string
           overview: string
+          requested_by: string | null
           requested_deliverables: Json
           service_type: string
           status: Database["public"]["Enums"]["briefing_status"]
@@ -266,6 +267,7 @@ export type Database = {
           goals?: string
           id?: string
           overview?: string
+          requested_by?: string | null
           requested_deliverables?: Json
           service_type: string
           status?: Database["public"]["Enums"]["briefing_status"]
@@ -285,6 +287,7 @@ export type Database = {
           goals?: string
           id?: string
           overview?: string
+          requested_by?: string | null
           requested_deliverables?: Json
           service_type?: string
           status?: Database["public"]["Enums"]["briefing_status"]
@@ -309,6 +312,13 @@ export type Database = {
           {
             foreignKeyName: "briefings_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "briefings_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -472,14 +482,17 @@ export type Database = {
       client_memberships: {
         Row: {
           client_id: string
+          notify_all: boolean
           user_id: string
         }
         Insert: {
           client_id: string
+          notify_all?: boolean
           user_id: string
         }
         Update: {
           client_id?: string
+          notify_all?: boolean
           user_id?: string
         }
         Relationships: [
@@ -1412,6 +1425,7 @@ export type Database = {
           project_id: string
           publication_id: string
           reviewed_at: string | null
+          reviewed_by: string | null
           status: string
         }
         Insert: {
@@ -1420,6 +1434,7 @@ export type Database = {
           project_id: string
           publication_id: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
         }
         Update: {
@@ -1428,6 +1443,7 @@ export type Database = {
           project_id?: string
           publication_id?: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
         }
         Relationships: [
@@ -1451,6 +1467,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "published_versions"
             referencedColumns: ["id", "project_id"]
+          },
+          {
+            foreignKeyName: "publication_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1748,6 +1771,14 @@ export type Database = {
         Args: { p_designer_id: string; p_project_id: string }
         Returns: undefined
       }
+      client_team: {
+        Args: { p_client_id: string }
+        Returns: {
+          display_name: string
+          email: string
+          user_id: string
+        }[]
+      }
       confirm_briefing_budget: {
         Args: { p_briefing_id: string; p_credits: number; p_note?: string }
         Returns: undefined
@@ -1963,6 +1994,7 @@ export type Database = {
           p_expected_updated_at?: string
           p_goals?: string
           p_overview?: string
+          p_requested_by?: string
           p_service_type: string
           p_title?: string
         }
@@ -1980,6 +2012,7 @@ export type Database = {
           p_expected_updated_at?: string
           p_goals?: string
           p_overview?: string
+          p_requested_by?: string
           p_service_type: string
           p_title?: string
         }
@@ -1998,6 +2031,14 @@ export type Database = {
           p_service_type: string
         }
         Returns: number
+      }
+      set_briefing_requester: {
+        Args: { p_briefing_id: string; p_requested_by: string }
+        Returns: undefined
+      }
+      set_client_notifications: {
+        Args: { p_all: boolean; p_client_id: string }
+        Returns: undefined
       }
       set_team_member_role: {
         Args: {

@@ -102,7 +102,7 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
     # Artwork of this deliverable is rendered at the true canvas of the format it was ordered in, so
     # a square post is 1080x1080 and a portrait feed 1080x1350 on the board and inside the project.
     artwork_width,artwork_height=format_pixel_size(format_spec)
-    insert('public.briefings',id=briefing,client_id=client,campaign_id=campaign,title=title,service_type=service['id'],status='accepted',overview=f'Create a focused {service["name"].lower()} for {campaign_label}.',goals='Build awareness and give our audience one clear next step.',direction={'source':'brand_hub','tone':'Clear, confident and human','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=credits,confirmed_credits=credits,budget_note='Scope confirmed.',created_by=customer)
+    insert('public.briefings',id=briefing,client_id=client,campaign_id=campaign,title=title,service_type=service['id'],status='accepted',overview=f'Create a focused {service["name"].lower()} for {campaign_label}.',goals='Build awareness and give our audience one clear next step.',direction={'source':'brand_hub','tone':'Clear, confident and human','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=credits,confirmed_credits=credits,budget_note='Scope confirmed.',created_by=customer,requested_by=customer)
     insert('public.projects',id=project,client_id=client,campaign_id=campaign,briefing_id=briefing,title=title,description=description,service_type=service['id'],status=status,due_date=due_date,start_date=start_date,board_position={'x':0,'y':0})
     insert('public.project_assignments',project_id=project,designer_id=designer)
     insert('public.deliverables',id=deliverable,project_id=project,**spec)
@@ -246,7 +246,7 @@ for index,(name,slug,industry) in enumerate(CLIENTS):
             for dname,dformat,scope in deliverables:
                 definition=next(f for f in CATALOG['formats'] if f['id']==dformat)
                 specs.append({'name':dname,'format':dformat,'width':definition.get('width'),'height':definition.get('height'),'quantity':1,'scope':scope})
-            insert('public.briefings',id=uid(f'briefing-sabre-open-{key}'),client_id=client,campaign_id=campaigns[ckey] if ckey else None,title=btitle,service_type=service['id'],status=status,overview='Introduce the new range with one clear, memorable moment.',goals='Give the audience a reason to look twice and one next step.',direction={'source':'brand_hub','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=service.get('min') or 3,created_by=customer)
+            insert('public.briefings',id=uid(f'briefing-sabre-open-{key}'),client_id=client,campaign_id=campaigns[ckey] if ckey else None,title=btitle,service_type=service['id'],status=status,overview='Introduce the new range with one clear, memorable moment.',goals='Give the audience a reason to look twice and one next step.',direction={'source':'brand_hub','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=service.get('min') or 3,created_by=customer,requested_by=customer)
     if ci in (7,8,9):
         request=uid(f'credit-request-{ci}');request_status={7:'pending',8:'fulfilled',9:'rejected'}[ci];ledger=uid(f'credit-request-ledger-{ci}') if ci==8 else None
         if ci==8:
@@ -256,7 +256,7 @@ for index,(name,slug,industry) in enumerate(CLIENTS):
     insert('public.credit_accounts',client_id=client,balance=balance)
     if ci<=3:
         draft_state=['draft','awaiting_review','budget_confirmed'][ci-1]
-        insert('public.briefings',id=uid(f'pending-{ci}'),client_id=client,campaign_id=campaign,title=['Seasonal social exploration','Product launch campaign','Expanded brand rollout'][ci-1],service_type='social',status=draft_state,overview='Introduce the new collection with a concise visual story.',direction={'source':'brand_hub','questions':answers(next(s for s in CATALOG['types'] if s['id']=='social'))},requested_deliverables=[{'name':'Launch post','format':'feed','width':1080,'height':1350,'quantity':1,'scope':'original'}],estimated_credits=3,confirmed_credits=500 if ci==3 else None,budget_note='Expanded rollout across markets.' if ci==3 else None,created_by=customer)
+        insert('public.briefings',id=uid(f'pending-{ci}'),client_id=client,campaign_id=campaign,title=['Seasonal social exploration','Product launch campaign','Expanded brand rollout'][ci-1],service_type='social',status=draft_state,overview='Introduce the new collection with a concise visual story.',direction={'source':'brand_hub','questions':answers(next(s for s in CATALOG['types'] if s['id']=='social'))},requested_deliverables=[{'name':'Launch post','format':'feed','width':1080,'height':1350,'quantity':1,'scope':'original'}],estimated_credits=3,confirmed_credits=500 if ci==3 else None,budget_note='Expanded rollout across markets.' if ci==3 else None,created_by=customer,requested_by=customer)
 
 (ROOT/'supabase/seed.sql').write_text('\n'.join(lines)+'\n')
 (ROOT/'supabase/fixtures.json').write_text(json.dumps(manifest,indent=2)+'\n')

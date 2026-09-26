@@ -210,6 +210,7 @@ describe("briefing catalog and validation", () => {
       confirmed_credits: null,
       budget_note: null,
       created_by: "person",
+      requested_by: null,
       created_at: "2026-09-20T00:00:00Z",
       updated_at: "2026-09-20T00:00:00Z",
     };

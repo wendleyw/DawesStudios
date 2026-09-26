@@ -32,6 +32,7 @@ const review = (publicationId: string): Row<"publication_reviews"> => ({
   status: "changes_requested",
   feedback: "Please give the headline more breathing room.",
   reviewed_at: "2026-09-21T12:00:00.000Z",
+  reviewed_by: null,
 });
 
 describe("canvas versions and their client review", () => {
