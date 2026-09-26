@@ -67,6 +67,28 @@ row, without affecting the other files of the same drag. `playground-albums.ts` 
 `playground-albums-panel.tsx` renders it. A client's `useProjectDetail` read resolves only published
 versions and designs, so a client session never requests an `internal-assets` object.
 
+`PlaygroundAlbumsPanel`'s props are `{ clientId; projectId; extraAlbums? } & (BoardMode | ClipboardMode)`.
+Board mode (`mode?: "board"`, the default) is everything above, unchanged. Clipboard mode
+(`mode: "clipboard"`, plus `onCopy`/`onDownload`) renders the same chip row and album but clicking a
+thumbnail calls `onCopy(file)` instead of selecting or dragging it — there is no selection, Shift
+range, Enter-to-add or drag in this mode. Every open album's files are filtered through
+`clipboardDisabledReason` (only images can be copied, overriding any board-only reason), and each
+thumbnail's accessible name becomes **Copy \<title\>** with no `aria-pressed`. A status line below
+the row announces **Copied — paste in Miro with ⌘V / Ctrl+V**, or **Couldn't copy this image.** with
+a **Download \<title\>** fallback button that calls `onDownload(file)`. `extraAlbums` (used by
+`PlaygroundAssetStrip` for the viewer's own Playground album) render first, ahead of the Brand Hub
+and project albums, with the existing divider now also drawn before the first Brand Hub album
+whenever at least one extra album is present.
+
+`PlaygroundAssetStrip({ clientId, projectId, onOpenPlayground })` is the Miro-mode header strip: it
+reads `usePlayground` for the viewer's own images (`buildPlaygroundAlbum`, newest first) and renders
+`PlaygroundAlbumsPanel` in clipboard mode alongside an **Open full Playground** button. Copying
+downloads the source file with the viewer's own session — `downloadBrandAssetFile`,
+`downloadDesignAssetFile`, or a signed `getPlaygroundDownload` URL for a Playground-owned image —
+and hands it to `copyImageToClipboard` (`album-clipboard.ts`), which converts it to PNG and writes it
+with the Clipboard API inside the same click's user activation. Download falls back to `saveBlob`
+with `fileNameFor`'s stored-extension name. Task 5 mounts this strip on the project's Miro view.
+
 ## Compact header
 
 A single header contains the title, a short team-visibility caption, Add note/Add files icons,
@@ -93,7 +115,7 @@ Full page navigation/reload while unsaved work exists uses the browser's unsaved
 Run the colocated validation and recovery tests from `apps/web`:
 
 ```sh
-npx vitest run features/playground/playground-model.test.ts features/playground/playground-board.test.tsx features/playground/playground-viewport.test.tsx features/playground/playground-albums.test.ts features/playground/playground-albums-panel.test.tsx
+npx vitest run features/playground/playground-model.test.ts features/playground/playground-board.test.tsx features/playground/playground-viewport.test.tsx features/playground/playground-albums.test.ts features/playground/playground-albums-panel.test.tsx features/playground/playground-asset-strip.test.tsx
 ```
 
 The component tests mock the data boundary and canvas renderer to exercise user-visible retry, conflict, cleanup, closing and batch behavior, plus dialog semantics, scroll restoration, native cancellation, animation completion, reduced motion, Escape, focus and guarded navigation. jsdom stubs native dialog methods; real top-layer bounds and background focus isolation are verified in Playwright. Responsive framing tests use the installed xyflow bounds calculation with explicit item sizes, including controlled nodes whose internal measurement flag remains false. The viewport waits for pan/zoom readiness and item arrival; it does not wait for transient node measurements. These tests do not prove backend isolation or rendered browser geometry. The orchestrator verifies those through the Playground database tests and real browser workflows, including exact full-viewport bounds at five sizes, slide keyframes, background focus isolation,

@@ -23,15 +23,16 @@ import {
 import {
   buildBrandAlbums,
   buildProjectAlbums,
+  clipboardDisabledReason,
   isPreviewableImage,
   PLAYGROUND_ALBUM_DRAG_TYPE,
   type Album,
   type AlbumFile,
 } from "./playground-albums";
 
-export type PlaygroundAlbumsPanelProps = {
-  clientId: string;
-  projectId: string;
+/** Today's Playground usage: dragging or Enter-adding an album file onto the board. */
+type BoardMode = {
+  mode?: "board";
   /** False while the board has no id yet, is closing, or is already at its 500-item cap — mirrors
    * the same gate the header's Add note/Add files buttons already use. */
   canAdd: boolean;
@@ -44,16 +45,34 @@ export type PlaygroundAlbumsPanelProps = {
   onDragEnd: () => void;
 };
 
-export function PlaygroundAlbumsPanel({
-  clientId,
-  projectId,
-  canAdd,
-  blockedReason,
-  viewCenter,
-  onAdd,
-  onDragStart,
-  onDragEnd,
-}: PlaygroundAlbumsPanelProps) {
+/** The Miro asset strip's usage: clicking a thumbnail copies it to the clipboard instead of adding
+ * it to a board — there is no board to add to, select a range on, or drag onto. */
+type ClipboardMode = {
+  mode: "clipboard";
+  onCopy: (file: AlbumFile) => Promise<void>;
+  onDownload: (file: AlbumFile) => Promise<void>;
+};
+
+export type PlaygroundAlbumsPanelProps = {
+  clientId: string;
+  projectId: string;
+  /** Albums shown before the Brand Hub/project albums this panel already builds — the caller's own
+   * album, such as `buildPlaygroundAlbum`'s Playground album for the asset strip. */
+  extraAlbums?: Album[];
+} & (BoardMode | ClipboardMode);
+
+export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
+  const { clientId, projectId, extraAlbums = [] } = props;
+  const mode = props.mode ?? "board";
+  const canAdd = props.mode === "clipboard" ? false : props.canAdd;
+  const blockedReason = props.mode === "clipboard" ? undefined : props.blockedReason;
+  const viewCenter = props.mode === "clipboard" ? undefined : props.viewCenter;
+  const onAdd = props.mode === "clipboard" ? undefined : props.onAdd;
+  const onDragStart = props.mode === "clipboard" ? undefined : props.onDragStart;
+  const onDragEnd = props.mode === "clipboard" ? undefined : props.onDragEnd;
+  const onCopy = props.mode === "clipboard" ? props.onCopy : undefined;
+  const onDownload = props.mode === "clipboard" ? props.onDownload : undefined;
+
   const { profile } = useAuth();
   const channel: ProjectChannel = profile?.role === "client" ? "client" : "internal";
   const folders = useBrandAssetFolders(clientId);
@@ -62,8 +81,13 @@ export function PlaygroundAlbumsPanel({
   const [openId, setOpenId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
+  const [copyState, setCopyState] = useState<{
+    fileId: string;
+    state: "copying" | "copied" | "failed";
+  } | null>(null);
 
   const albums: Album[] = [
+    ...extraAlbums,
     ...buildBrandAlbums(folders.data ?? [], assets.data ?? []),
     ...buildProjectAlbums(
       project.data?.deliverables ?? [],
@@ -73,11 +97,20 @@ export function PlaygroundAlbumsPanel({
     ),
   ];
   const openAlbum = albums.find((album) => album.id === openId);
+  const openFiles =
+    openAlbum && mode === "clipboard"
+      ? openAlbum.files.map((file) => ({ ...file, disabledReason: clipboardDisabledReason(file) }))
+      : (openAlbum?.files ?? []);
+  const firstBrandIndex = albums.findIndex((album) => album.group === "brand");
   const firstProjectIndex = albums.findIndex((album) => album.group === "project");
+  const copiedFile = copyState
+    ? openAlbum?.files.find((file) => file.id === copyState.fileId)
+    : undefined;
 
   function openAlbumChip(id: string) {
     setSelectedIds([]);
     setLastIndex(null);
+    setCopyState(null);
     setOpenId((current) => (current === id ? null : id));
   }
 
@@ -95,6 +128,17 @@ export function PlaygroundAlbumsPanel({
     setLastIndex(index);
   }
 
+  async function copy(file: AlbumFile) {
+    if (!onCopy) return;
+    setCopyState({ fileId: file.id, state: "copying" });
+    try {
+      await onCopy(file);
+      setCopyState({ fileId: file.id, state: "copied" });
+    } catch {
+      setCopyState({ fileId: file.id, state: "failed" });
+    }
+  }
+
   function handleDragStart(event: DragEvent, file: AlbumFile, index: number) {
     if (!canAdd || file.disabledReason) {
       event.preventDefault();
@@ -110,7 +154,7 @@ export function PlaygroundAlbumsPanel({
       setSelectedIds([file.id]);
       setLastIndex(index);
     }
-    onDragStart(dragged);
+    onDragStart?.(dragged);
   }
 
   return (
@@ -121,9 +165,11 @@ export function PlaygroundAlbumsPanel({
           // is used explicitly here so both the optional divider and the chip share one keyed
           // wrapper without an extra DOM element.
           <Fragment key={album.id}>
-            {index === firstProjectIndex && index > 0 && (
-              <span className="playground-album-divider" aria-hidden="true" />
-            )}
+            {index > 0 &&
+              ((index === firstBrandIndex && extraAlbums.length > 0) ||
+                index === firstProjectIndex) && (
+                <span className="playground-album-divider" aria-hidden="true" />
+              )}
             <button
               type="button"
               aria-pressed={openId === album.id}
@@ -137,24 +183,53 @@ export function PlaygroundAlbumsPanel({
       </div>
       {openAlbum && (
         <div className="playground-album-row">
-          {openAlbum.files.map((file, index) => (
+          {openFiles.map((file, index) => (
             <AlbumThumbnail
               key={file.id}
               file={file}
+              mode={mode}
               blockedReason={canAdd ? undefined : blockedReason}
-              selected={selectedIds.includes(file.id)}
-              onClick={(event) => toggleSelect(file, index, event.shiftKey)}
+              selected={mode === "board" && selectedIds.includes(file.id)}
+              onClick={(event) =>
+                mode === "clipboard" ? copy(file) : toggleSelect(file, index, event.shiftKey)
+              }
               onKeyDown={(event) => {
-                if (event.key === "Enter" && canAdd && !file.disabledReason) {
+                if (mode === "board" && event.key === "Enter" && canAdd && !file.disabledReason) {
                   event.preventDefault();
-                  onAdd([file], viewCenter());
+                  onAdd?.([file], viewCenter!());
                 }
               }}
-              onDragStart={(event) => handleDragStart(event, file, index)}
-              onDragEnd={onDragEnd}
+              onDragStart={(event) => {
+                if (mode === "clipboard") {
+                  event.preventDefault();
+                  return;
+                }
+                handleDragStart(event, file, index);
+              }}
+              onDragEnd={() => {
+                if (mode === "board") onDragEnd?.();
+              }}
             />
           ))}
         </div>
+      )}
+      {mode === "clipboard" && copyState && (
+        <p className="playground-album-copy-status" role="status">
+          {copyState.state === "copied" && "Copied — paste in Miro with ⌘V / Ctrl+V"}
+          {copyState.state === "failed" && (
+            <>
+              Couldn&apos;t copy this image.
+              <button
+                type="button"
+                className="button quiet"
+                aria-label={`Download ${copiedFile?.title ?? ""}`}
+                onClick={() => copiedFile && onDownload?.(copiedFile)}
+              >
+                Download
+              </button>
+            </>
+          )}
+        </p>
       )}
     </div>
   );
@@ -162,6 +237,7 @@ export function PlaygroundAlbumsPanel({
 
 function AlbumThumbnail({
   file,
+  mode,
   blockedReason,
   selected,
   onClick,
@@ -170,6 +246,7 @@ function AlbumThumbnail({
   onDragEnd,
 }: {
   file: AlbumFile;
+  mode: "board" | "clipboard";
   blockedReason?: string;
   selected: boolean;
   onClick: (event: MouseEvent) => void;
@@ -177,6 +254,7 @@ function AlbumThumbnail({
   onDragStart: (event: DragEvent) => void;
   onDragEnd: () => void;
 }) {
+  const isClipboard = mode === "clipboard";
   const previewable = isPreviewableImage(file.mimeType) && !file.disabledReason;
   const brandPreview = useBrandAssetPreviewUrl(
     file.id,
@@ -192,19 +270,25 @@ function AlbumThumbnail({
     file.source.kind === "design" ? file.source.channel : "internal",
     previewable && file.source.kind === "design",
   );
-  const url = file.source.kind === "brand" ? brandPreview.data : designPreview.data;
+  const url =
+    file.source.kind === "brand"
+      ? brandPreview.data
+      : file.source.kind === "design"
+        ? designPreview.data
+        : file.source.previewUrl;
   const reason = file.disabledReason ?? blockedReason;
   const reasonId = useId();
   return (
     <span className="playground-album-thumb-slot">
       <button
         type="button"
-        className={`playground-album-thumb${selected ? " is-selected" : ""}${reason ? " is-disabled" : ""}`}
+        className={`playground-album-thumb${!isClipboard && selected ? " is-selected" : ""}${reason ? " is-disabled" : ""}`}
         aria-disabled={!!reason}
-        aria-pressed={selected}
+        aria-pressed={isClipboard ? undefined : selected}
+        aria-label={isClipboard ? `Copy ${file.title}` : undefined}
         aria-describedby={reason ? reasonId : undefined}
         title={reason ? undefined : file.title}
-        draggable={!reason}
+        draggable={!isClipboard && !reason}
         onClick={(event) => {
           if (reason) return;
           onClick(event);

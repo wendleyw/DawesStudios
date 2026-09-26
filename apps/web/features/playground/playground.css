@@ -421,6 +421,30 @@
 .playground-album-thumb-slot:focus-within .playground-album-thumb-reason {
   display: block;
 }
+.playground-album-copy-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0 16px 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.playground-asset-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.playground-asset-strip > .playground-albums {
+  flex: 1;
+  min-width: 0;
+}
+.playground-asset-strip > .button {
+  flex-shrink: 0;
+  margin: 8px 16px 0 0;
+}
 @media (max-width: 700px) {
   .playground-header {
     padding: 8px 12px;

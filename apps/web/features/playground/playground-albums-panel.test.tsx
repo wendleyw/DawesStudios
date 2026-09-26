@@ -1,6 +1,19 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PlaygroundAlbumsPanel, type PlaygroundAlbumsPanelProps } from "./playground-albums-panel";
+import { PlaygroundAlbumsPanel } from "./playground-albums-panel";
+import type { Album, AlbumFile } from "./playground-albums";
+
+/** Only the board-mode fields `panel()` below ever overrides — the props union itself resists a
+ * plain `Partial<PlaygroundAlbumsPanelProps>`, since that would also allow a clipboard-mode field
+ * that leaves `mode` inconsistent with the rest of the props. */
+type BoardOverrides = Partial<{
+  canAdd: boolean;
+  blockedReason: string;
+  viewCenter: () => { x: number; y: number };
+  onAdd: (files: AlbumFile[], point: { x: number; y: number }) => void;
+  onDragStart: (files: AlbumFile[]) => void;
+  onDragEnd: () => void;
+}>;
 
 const backend = vi.hoisted(() => ({
   useBrandAssetFolders: vi.fn(),
@@ -68,7 +81,7 @@ beforeEach(() => {
   projectBackend.useProjectDetail.mockReturnValue(projectDetail());
 });
 
-function panel(overrides: Partial<PlaygroundAlbumsPanelProps> = {}) {
+function panel(overrides: BoardOverrides = {}) {
   const onAdd = vi.fn();
   const onDragStart = vi.fn();
   const onDragEnd = vi.fn();
@@ -325,5 +338,81 @@ describe("PlaygroundAlbumsPanel reasons a person can read", () => {
     fireEvent.dragStart(thumb, { dataTransfer: { effectAllowed: "", setData: vi.fn() } });
     expect(onAdd).not.toHaveBeenCalled();
     expect(onDragStart).not.toHaveBeenCalled();
+  });
+});
+
+const clipboardAlbum: Album = {
+  id: "playground",
+  group: "playground",
+  label: "Playground",
+  files: [
+    {
+      id: "pg-1",
+      title: "Moodboard",
+      mimeType: "image/png",
+      sizeBytes: null,
+      source: { kind: "playground", assetPath: "b/1/m.png", previewUrl: "https://signed/1" },
+    },
+    {
+      id: "pg-2",
+      title: "Brief.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: null,
+      source: { kind: "playground", assetPath: "b/2/b.pdf" },
+    },
+  ],
+};
+
+function renderClipboardPanel({
+  onCopy = vi.fn().mockResolvedValue(undefined),
+  onDownload = vi.fn().mockResolvedValue(undefined),
+}: {
+  onCopy?: (file: AlbumFile) => Promise<void>;
+  onDownload?: (file: AlbumFile) => Promise<void>;
+}) {
+  render(
+    <PlaygroundAlbumsPanel
+      mode="clipboard"
+      clientId="c"
+      projectId="p"
+      extraAlbums={[clipboardAlbum]}
+      onCopy={onCopy}
+      onDownload={onDownload}
+    />,
+  );
+  return { onCopy, onDownload };
+}
+
+describe("clipboard mode", () => {
+  it("copies an image on click and announces it", async () => {
+    const onCopy = vi.fn().mockResolvedValue(undefined);
+    renderClipboardPanel({ onCopy });
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    expect(onCopy).toHaveBeenCalledWith(expect.objectContaining({ id: "pg-1" }));
+    expect(await screen.findByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+  });
+
+  it("offers Download when copying fails", async () => {
+    const onCopy = vi.fn().mockRejectedValue(new Error("unsupported"));
+    const onDownload = vi.fn().mockResolvedValue(undefined);
+    renderClipboardPanel({ onCopy, onDownload });
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    expect(await screen.findByText("Couldn't copy this image.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Download Moodboard" }));
+    expect(onDownload).toHaveBeenCalledWith(expect.objectContaining({ id: "pg-1" }));
+  });
+
+  it("disables files that are not images and never makes them draggable", () => {
+    renderClipboardPanel({});
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    const pdf = screen.getByRole("button", { name: /Brief\.pdf/ });
+    expect(pdf).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Only images can be copied.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy Moodboard" })).toHaveAttribute(
+      "draggable",
+      "false",
+    );
   });
 });
