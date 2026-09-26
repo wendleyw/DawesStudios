@@ -102,6 +102,7 @@ describe("ProjectDetails version history", () => {
     id: "v2",
     projectId: "p1",
     deliverableId: "d1",
+    boardId: null,
     number: 2,
     note: "",
     status: "approved",

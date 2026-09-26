@@ -49,6 +49,17 @@ import { VersionContext } from "./version-context";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
 
+/**
+ * Whether a version belongs to a deliverable. The legacy canvas and legacy Miro mode group and
+ * pick versions by deliverable alone; a Miro-workspace round or a shared project-level version
+ * carries no deliverable and never appears in either.
+ */
+function hasDeliverable(
+  version: CanvasVersion,
+): version is CanvasVersion & { deliverableId: string } {
+  return version.deliverableId !== null;
+}
+
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -224,7 +235,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         </Link>
       </div>
     );
-  const { project, versions, designs, deliverables } = data.data;
+  const { project, versions: allVersions, designs, deliverables } = data.data;
+  const versions = allVersions.filter(hasDeliverable);
   const linked = linkedForView;
   const miroVersion = resolvedMiroVersion;
   const miroActive = !!miroVersion?.miro && !selected?.designId;
@@ -248,7 +260,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     ]),
   );
   // A client decides on the latest version of a deliverable while it waits for them, until delivery.
-  const reviewFor = (version: CanvasVersion) =>
+  const reviewFor = (version: CanvasVersion & { deliverableId: string }) =>
     profile?.role === "client" &&
     version.id === versionsByDeliverable.get(version.deliverableId)?.at(-1)?.id &&
     version.status === "pending" &&
@@ -256,10 +268,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       ? () => setAction({ kind: "review", version })
       : undefined;
   const latestWorkingByDeliverable = new Map(
-    (channel === "internal" ? versions : (working.data?.versions ?? [])).map((version) => [
-      version.deliverableId,
-      version,
-    ]),
+    (channel === "internal" ? versions : (working.data?.versions.filter(hasDeliverable) ?? [])).map(
+      (version) => [version.deliverableId, version],
+    ),
   );
   const addDesignTargets = new Map<string, CanvasVersion>();
   for (const version of versions) {

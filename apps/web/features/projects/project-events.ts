@@ -21,7 +21,7 @@ export function useProjectEvents(projectId: string) {
     );
     const tables =
       profile.role === "designer"
-        ? ["internal_comments", "design_versions", "designs"]
+        ? ["internal_comments", "design_versions", "designs", "design_boards"]
         : profile.role === "client"
           ? ["client_comments", "published_versions", "publication_reviews"]
           : [
@@ -31,6 +31,7 @@ export function useProjectEvents(projectId: string) {
               "publication_reviews",
               "design_versions",
               "designs",
+              "design_boards",
             ];
     for (const table of tables)
       channel.on(

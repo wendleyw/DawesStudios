@@ -39,3 +39,17 @@ export function versionDate(version: VersionRow): string {
 export function versionStatus(version: VersionRow, reviewStatus?: string | null): string {
   return "status" in version ? version.status : (reviewStatus ?? "pending");
 }
+
+/**
+ * The group a version's history belongs to: its deliverable, or for the Miro workspace (no
+ * deliverable) its design board, or the project itself for a shared client version.
+ */
+export function versionGroupKey(row: {
+  deliverable_id: string | null;
+  board_id?: string | null;
+  project_id: string;
+}): string {
+  if (row.deliverable_id) return row.deliverable_id;
+  if (row.board_id) return `board:${row.board_id}`;
+  return `project:${row.project_id}`;
+}

@@ -26,7 +26,9 @@ export function ProjectActionPublish({
 }) {
   const { database, mediaUrl } = useAuth();
   // Prefills from the deliverable's newest earlier client-channel publication, not this version.
-  const latestMiro = useLatestMiroLink(action.version.deliverableId, "client", { enabled: true });
+  const latestMiro = useLatestMiroLink(action.version.deliverableId ?? "", "client", {
+    enabled: true,
+  });
   const miroPrefill = latestMiro.data ? miroBoardUrl(latestMiro.data) : "";
   const { invalidate, closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({

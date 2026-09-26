@@ -23,7 +23,9 @@ export type ProjectChannel = "internal" | "client";
 export type CanvasVersion = {
   id: string;
   projectId: string;
-  deliverableId: string;
+  deliverableId: string | null;
+  /** The design board a Miro-workspace round belongs to; null elsewhere. */
+  boardId: string | null;
   number: number;
   note: string;
   status: string;
@@ -97,6 +99,7 @@ export function toCanvasVersions(
       id: version.id,
       projectId: version.project_id,
       deliverableId: version.deliverable_id,
+      boardId: "board_id" in version ? version.board_id : null,
       number: version.version_number,
       note: versionNote(version),
       status: versionStatus(version, review?.status),
@@ -391,6 +394,37 @@ export function useProjectAssignments(projectId: string) {
         assigned: assertResult(assigned).map((item) => item.designer_id),
       };
     },
+  });
+}
+
+export type DesignBoard = {
+  id: string;
+  projectId: string;
+  name: string;
+  designerId: string;
+  miro: MiroLink;
+};
+
+/** The project's design boards the viewer may see: all for the agency, their own for a designer. */
+export function useDesignBoards(projectId: string, enabled: boolean) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-detail", session?.user.id, projectId, "design-boards"],
+    enabled: !!session && enabled,
+    queryFn: async (): Promise<DesignBoard[]> =>
+      assertResult(
+        await database
+          .from("design_boards")
+          .select("id,project_id,name,designer_id,board_id,widget_id")
+          .eq("project_id", projectId)
+          .order("created_at"),
+      ).map((row) => ({
+        id: row.id,
+        projectId: row.project_id,
+        name: row.name,
+        designerId: row.designer_id,
+        miro: { boardId: row.board_id, widgetId: row.widget_id },
+      })),
   });
 }
 
@@ -775,5 +809,70 @@ export async function clearMiroLink(
     input.channel === "client"
       ? await database.rpc("clear_publication_miro_link", { p_publication_id: input.versionId })
       : await database.rpc("clear_version_miro_link", { p_version_id: input.versionId }),
+  );
+}
+
+export async function createDesignBoard(
+  database: SupabaseDatabase,
+  input: { projectId: string; name: string; url: string; designerId: string },
+) {
+  return assertResult(
+    await database.rpc("create_design_board", {
+      p_project_id: input.projectId,
+      p_name: input.name,
+      p_url: input.url,
+      p_designer_id: input.designerId,
+    }),
+  );
+}
+
+export async function updateDesignBoard(
+  database: SupabaseDatabase,
+  input: { boardId: string; name: string; url: string; designerId: string },
+) {
+  assertResult(
+    await database.rpc("update_design_board", {
+      p_board_id: input.boardId,
+      p_name: input.name,
+      p_url: input.url,
+      p_designer_id: input.designerId,
+    }),
+  );
+}
+
+/** "Send to studio": the next round of a design board. */
+export async function sendBoardRound(
+  database: SupabaseDatabase,
+  input: { boardId: string; note: string; frameUrl: string; idempotencyKey: string },
+) {
+  return assertResult(
+    await database.rpc("send_board_round", {
+      p_board_id: input.boardId,
+      p_note: input.note,
+      ...(input.frameUrl ? { p_frame_url: input.frameUrl } : {}),
+      p_idempotency_key: input.idempotencyKey,
+    }),
+  );
+}
+
+/** Shares a project-level client version, from a round or directly. */
+export async function shareMiroVersion(
+  database: SupabaseDatabase,
+  input: {
+    projectId: string;
+    url: string;
+    note: string;
+    sourceRoundId: string | null;
+    idempotencyKey: string;
+  },
+) {
+  return assertResult(
+    await database.rpc("share_miro_version", {
+      p_project_id: input.projectId,
+      p_url: input.url,
+      p_note: input.note,
+      ...(input.sourceRoundId ? { p_source_round: input.sourceRoundId } : {}),
+      p_idempotency_key: input.idempotencyKey,
+    }),
   );
 }

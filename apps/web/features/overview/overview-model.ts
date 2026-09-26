@@ -4,6 +4,7 @@ import {
   publishedVersionStatus,
   type ReviewRow,
 } from "@/features/reviews/review-data";
+import { versionGroupKey } from "@/features/shared/version-row";
 import type { Project } from "@/features/workspace/workspace-data";
 
 /** Rows per dashboard column; "See all" leads to the full list. */
@@ -116,7 +117,9 @@ export function clientOverview(input: {
 export type RawDesignerVersion = {
   id: string;
   project_id: string;
-  deliverable_id: string;
+  deliverable_id: string | null;
+  /** The design board a Miro-workspace round belongs to; null elsewhere. */
+  board_id: string | null;
   version_number: number;
   status: string;
   created_at: string;
@@ -144,9 +147,9 @@ export function designerVersions(
 ): DesignerVersion[] {
   const latest = new Map<string, RawDesignerVersion>();
   for (const version of versions) {
-    const current = latest.get(version.deliverable_id);
-    if (!current || current.version_number < version.version_number)
-      latest.set(version.deliverable_id, version);
+    const key = versionGroupKey(version);
+    const current = latest.get(key);
+    if (!current || current.version_number < version.version_number) latest.set(key, version);
   }
   return [...latest.values()].flatMap((version) => {
     const project = projects.find((item) => item.id === version.project_id);
@@ -156,8 +159,9 @@ export function designerVersions(
         id: version.id,
         projectId: project.id,
         title: project.title,
-        deliverable:
-          deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable",
+        deliverable: version.deliverable_id
+          ? (deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable")
+          : "Design board round",
         version: version.version_number,
         status: publishedVersionStatus(version.status, project.status),
         date: version.created_at,

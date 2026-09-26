@@ -5,6 +5,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult } from "@/lib/supabase";
 import {
   versionDate,
+  versionGroupKey,
   versionNote,
   versionStatus,
   type VersionRow,
@@ -33,7 +34,9 @@ export type ReviewRow = {
 type ReviewVersion = VersionRow & {
   id: string;
   project_id: string;
-  deliverable_id: string;
+  deliverable_id: string | null;
+  /** The design board a Miro-workspace round belongs to; absent on the published side. */
+  board_id?: string | null;
   version_number: number;
   publication_reviews?: {
     status: string;
@@ -118,7 +121,9 @@ export function useReviews(clientId: string) {
         ? assertResult(
             await database
               .from("design_versions")
-              .select("id,project_id,deliverable_id,version_number,status,created_at,notes")
+              .select(
+                "id,project_id,deliverable_id,board_id,version_number,status,created_at,notes",
+              )
               .in("project_id", ids),
           )
         : assertResult(
@@ -130,12 +135,11 @@ export function useReviews(clientId: string) {
               .in("project_id", ids),
           );
       const latest = new Map<string, (typeof versions)[number]>();
-      for (const version of versions)
-        if (
-          !latest.has(version.deliverable_id) ||
-          latest.get(version.deliverable_id)!.version_number < version.version_number
-        )
-          latest.set(version.deliverable_id, version);
+      for (const version of versions) {
+        const key = versionGroupKey(version);
+        if (!latest.has(key) || latest.get(key)!.version_number < version.version_number)
+          latest.set(key, version);
+      }
       // Both blocks below read the same table through the same expressions; the submitted block
       // differs only in the two values its `status = "submitted"` filter has already decided.
       const toReviewRow = (
@@ -143,12 +147,17 @@ export function useReviews(clientId: string) {
         overrides: Partial<Pick<ReviewRow, "status" | "internal">> = {},
       ): ReviewRow => {
         const project = projects.find((item) => item.id === version.project_id)!;
+        const isInternalRow = overrides.internal ?? internal;
         return {
           id: version.id,
           projectId: version.project_id,
           title: project.title,
-          deliverable:
-            deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable",
+          deliverable: version.deliverable_id
+            ? (deliverables.find((item) => item.id === version.deliverable_id)?.name ??
+              "Deliverable")
+            : isInternalRow
+              ? "Design board round"
+              : "Shared version",
           version: version.version_number,
           status: publishedVersionStatus(
             overrides.status ?? versionStatus(version, version.publication_reviews?.status),

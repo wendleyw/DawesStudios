@@ -39,7 +39,7 @@ export function useDesignerVersions(projectIds: string[] | undefined) {
         readAllRows<RawDesignerVersion>((offset) =>
           database
             .from("design_versions")
-            .select("id,project_id,deliverable_id,version_number,status,created_at")
+            .select("id,project_id,deliverable_id,board_id,version_number,status,created_at")
             .in("project_id", projectIds)
             .order("created_at")
             .order("id")

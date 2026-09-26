@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { credentials, evidenceDirectory, localAgency, localCaller, signIn } from "./test-support";
+import { versionGroupKey } from "@/features/shared/version-row";
 
 test("all ten clients and twenty-five projects render with matching records and scoped navigation", async ({
   browser,
@@ -78,17 +79,18 @@ test("all ten clients and twenty-five projects render with matching records and 
       }
       if (actor.role === "client") {
         const versions = (
-          await caller.from("published_versions").select("id,deliverable_id,version_number")
+          await caller
+            .from("published_versions")
+            .select("id,project_id,deliverable_id,version_number")
         ).data!;
         const reviews = (await caller.from("publication_reviews").select("publication_id,status"))
           .data!;
         const latest = new Map<string, (typeof versions)[number]>();
-        for (const version of versions)
-          if (
-            !latest.has(version.deliverable_id) ||
-            latest.get(version.deliverable_id)!.version_number < version.version_number
-          )
-            latest.set(version.deliverable_id, version);
+        for (const version of versions) {
+          const key = versionGroupKey(version);
+          if (!latest.has(key) || latest.get(key)!.version_number < version.version_number)
+            latest.set(key, version);
+        }
         const decided = (status: string) =>
           [...latest.values()].filter(
             (version) =>

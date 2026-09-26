@@ -38,7 +38,7 @@ export function ProjectActionMiro({
   const { database } = useAuth();
   // Prefills from the deliverable's newest earlier link on the same channel, unless this version
   // already has its own link. The hook runs unconditionally; `enabled` scopes it.
-  const latestMiro = useLatestMiroLink(action.version.deliverableId, action.channel, {
+  const latestMiro = useLatestMiroLink(action.version.deliverableId ?? "", action.channel, {
     excludeId: action.version.id,
     enabled: !action.version.miro,
   });

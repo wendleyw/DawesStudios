@@ -7,8 +7,20 @@ import type { CanvasVersion } from "./project-data";
  */
 export type ProjectView = "versions" | "miro";
 
-export function linkedVersions(versions: CanvasVersion[], deliverableId: string): CanvasVersion[] {
+/**
+ * The versions Miro mode may show: those on the viewer's channel with a Miro frame, grouped by
+ * deliverable. A Miro-workspace round or a shared project-level version carries no deliverable and
+ * never appears here — that workspace has its own page.
+ */
+export function linkedVersions(
+  versions: CanvasVersion[],
+  deliverableId: string,
+): (CanvasVersion & { deliverableId: string })[] {
   return versions
+    .filter(
+      (version): version is CanvasVersion & { deliverableId: string } =>
+        version.deliverableId !== null,
+    )
     .filter(
       (version) => !!version.miro && (!deliverableId || version.deliverableId === deliverableId),
     )
@@ -17,9 +29,9 @@ export function linkedVersions(versions: CanvasVersion[], deliverableId: string)
 
 /** The requested version when it is linked and shown; otherwise the newest linked one. */
 export function pickMiroVersion(
-  linked: CanvasVersion[],
+  linked: (CanvasVersion & { deliverableId: string })[],
   requestedId: string | null,
-): CanvasVersion | null {
+): (CanvasVersion & { deliverableId: string }) | null {
   return linked.find((version) => version.id === requestedId) ?? linked[0] ?? null;
 }
 

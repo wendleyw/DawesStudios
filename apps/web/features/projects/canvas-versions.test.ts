@@ -9,6 +9,8 @@ const internalVersion: Row<"design_versions"> = {
   id: "11111111-1111-1111-1111-111111111111",
   project_id: "project-1",
   deliverable_id: "deliverable-1",
+  board_id: null,
+  request_key: null,
   version_number: 1,
   notes: "V1 explores two square directions.",
   status: "reviewed",
@@ -73,6 +75,7 @@ describe("canvas versions and their client review", () => {
       id: internalVersion.id,
       projectId: "project-1",
       deliverableId: "deliverable-1",
+      boardId: null,
       number: 1,
       note: "V1 explores two square directions.",
       status: "reviewed",
@@ -116,6 +119,26 @@ describe("Miro links on canvas versions", () => {
       { versionId: "another", boardId: "uXjVKabc123=", widgetId: null },
     ]);
     expect(version.miro).toBeNull();
+  });
+});
+
+describe("project-level versions", () => {
+  it("maps a round's board and a shared version's missing deliverable", () => {
+    const round = {
+      id: "r1",
+      project_id: "p",
+      deliverable_id: null,
+      board_id: "b1",
+      version_number: 1,
+      notes: "First pass",
+      status: "submitted",
+      created_at: "2026-09-26T12:00:00Z",
+      created_by: "d",
+      request_key: null,
+    };
+    const [version] = toCanvasVersions([round], [], false);
+    expect(version.deliverableId).toBeNull();
+    expect(version.boardId).toBe("b1");
   });
 });
 
