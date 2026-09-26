@@ -16,6 +16,7 @@
   font-size: var(--text-base);
 }
 .overview-flight strong {
+  font-family: var(--font-display);
   margin-right: 4px;
   color: var(--ink);
   font-size: var(--text-section);

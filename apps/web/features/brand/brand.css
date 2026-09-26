@@ -798,7 +798,7 @@
   overflow-wrap: anywhere;
   margin-top: 7px;
   color: var(--muted);
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-code), monospace;
   font-size: var(--text-sm);
 }
 .brand-font-source {

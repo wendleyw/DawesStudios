@@ -115,8 +115,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-code);
 }
 * {
   box-sizing: border-box;
@@ -126,13 +126,35 @@ html {
   min-height: 100%;
   background: var(--background);
 }
+/*
+ * Type pairing tokens. `features/workspace/font.ts` sets `<html data-font>`; the default (no
+ * attribute) is the Geist pairing, which looks exactly as before these tokens existed. The font
+ * variables are declared on <body> by `next/font`, so the tokens live on <body> too.
+ *   --font-text     body copy and every control
+ *   --font-display  h1, h2 and headline figures (overview stats, credits used)
+ *   --font-data     small figures read as data: counts, balances, timecodes, zoom, file types
+ *   --font-code     literal code such as a colour value
+ * Editorial: Fraunces for display, Inter for text, JetBrains Mono for data and code.
+ */
 body {
+  --font-text: var(--font-geist-sans);
+  --font-display: var(--font-geist-sans);
+  --font-data: var(--font-geist-sans);
+  --font-code: var(--font-geist-mono);
+  --display-tracking: 0em;
   margin: 0;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+:root[data-font="editorial"] body {
+  --font-text: var(--font-inter);
+  --font-display: var(--font-fraunces);
+  --font-data: var(--font-jetbrains-mono);
+  --font-code: var(--font-jetbrains-mono);
+  --display-tracking: 0.02em;
 }
 button,
 input,
@@ -189,6 +211,10 @@ h2,
 h3 {
   text-wrap: balance;
 }
+h1,
+h2 {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
 h1 {
   font-size: var(--text-title);
 
@@ -196,7 +222,7 @@ h1 {
 
   line-height: 1.25;
 
-  letter-spacing: -0.035em;
+  letter-spacing: calc(-0.035em + var(--display-tracking));
 }
 h2 {
   font-size: var(--text-section);
@@ -204,7 +230,7 @@ h2 {
   font-weight: 600;
   line-height: 1.35;
 
-  letter-spacing: -0.02em;
+  letter-spacing: calc(-0.02em + var(--display-tracking));
 }
 h3 {
   font-size: 15px;
@@ -346,6 +372,7 @@ h3 {
 }
 .overview-stats strong {
   display: block;
+  font-family: var(--font-display);
 
   font-size: var(--text-metric);
 
@@ -704,6 +731,7 @@ img.client-mark {
 }
 .count-badge,
 .subtle-count {
+  font-family: var(--font-data);
   display: inline-flex;
   min-width: 27px;
   height: 25px;
@@ -1215,6 +1243,7 @@ img.client-mark {
   fill: none;
 }
 .canvas-zoom-level {
+  font-family: var(--font-data);
   min-width: 44px;
   color: var(--muted);
   font-size: var(--text-sm);

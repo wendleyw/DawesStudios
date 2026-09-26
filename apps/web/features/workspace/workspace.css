@@ -770,6 +770,15 @@ img.client-switcher-mark {
   .has-client-context .sidebar > nav {
     flex: 1;
   }
+  /* Studio settings and Team (the footer's only links) share a row so the footer fits a landscape
+     phone; the longer Font, Theme and Help labels keep the full width. */
+  .has-client-context:not(.sidebar-collapsed) .sidebar-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .has-client-context:not(.sidebar-collapsed) .sidebar-footer > :not(a.nav-item) {
+    grid-column: 1 / -1;
+  }
   .has-client-context .sidebar .profile-bar {
     min-height: 44px;
     margin-top: 6px;

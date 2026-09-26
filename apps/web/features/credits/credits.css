@@ -36,6 +36,7 @@
   margin-left: 12px;
 }
 .credit-consumed {
+  font-family: var(--font-display);
   font-size: var(--text-metric);
   letter-spacing: -0.04em;
 
@@ -164,6 +165,7 @@
   text-align: right;
 }
 .credit-number {
+  font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

@@ -555,6 +555,7 @@
   line-height: 1.4;
 }
 .briefing-budget-figures dd {
+  font-family: var(--font-data);
   margin-top: 3px;
   font-size: 14px;
   font-variant-numeric: tabular-nums;

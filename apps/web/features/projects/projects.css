@@ -1044,6 +1044,7 @@
   padding: 0;
 }
 .comment-pin-link:hover .comment-pin-time {
+  font-family: var(--font-data);
   color: var(--ink);
 }
 /* A timed pin's moment. Tabular figures so a column of them does not shuffle horizontally as the

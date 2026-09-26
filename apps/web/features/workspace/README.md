@@ -100,6 +100,15 @@ choice in this browser (`localStorage` key `dawes-theme`; System removes the key
 `storage` event; the head script also follows other tabs on every page. Blocked storage still applies the choice for the current page. The collapsed rail
 keeps the label for assistive technology, like the other sidebar items.
 
+## Font
+
+`font-toggle.tsx` adds **Font: Geist / Editorial** directly above the theme row for every role;
+each click alternates. `font.ts` mirrors `theme.ts`: the choice lives in this browser
+(`localStorage` key `dawes-font`; Geist removes the key), sets `<html data-font>` from an inline
+`<head>` script before paint, and follows other tabs. Editorial sets headings and headline figures
+in Fraunces, text in Inter, and data and code in JetBrains Mono through the `--font-*` tokens in
+`app/globals.css`; see [the design system](../../../../docs/architecture/design-system.md#light-and-dark-themes).
+
 ## Data access
 
 `workspace-data.ts` owns every Supabase read and write this feature's own components issue, as

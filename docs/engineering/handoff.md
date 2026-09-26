@@ -18,13 +18,13 @@ history only when a task needs earlier evidence.
 
 **Miro mode** (`4ce756b..f6db41f`, [spec](../superpowers/specs/2026-09-26-miro-mode-design.md)): the
 project canvas switches to the version's Miro board; afternoon `5303c21..97df9a3` polished the shell.
-Evening (`75f1e13..0837bf5`): board cards sit on the campaign grid (drop on a card swaps); the client
-logo opens the Overview; Files is a Brand Hub section (`/assets` redirects); Brand Hub Assets is a
-directory (nested folders, HTTPS links, Products tile, `FolderTile` shared with Files); clients add
+Evening (`75f1e13..0837bf5`): cards on the campaign grid (drop on a card swaps); client logo opens
+Overview; Files is a Brand Hub section (`/assets` redirects); Brand Hub Assets is a directory (nested folders, HTTPS links, Products tile, `FolderTile` shared with Files); clients add
 folders, images and links (`202609260004`/`0005`); one compact Brand Hub scale; the List Status sort
-steps through every status (`051bead`); the Kanban scrolls as one board (`e8dc241`). Known stale e2e:
-`client-navigation` (pre-Miro canvas) and `workspace-actions` (expects 8 SABRE nodes, overlay has 51).
-Unverified: a fresh fixture client's Overview showed "Overview unavailable" once. Earlier: [history](history/handoff-2026-09-26.md).
+steps through every status (`051bead`); one-board Kanban scroll (`e8dc241`); **Font: Geist / Editorial**
+row above Theme (`workspace/font.ts`, `--font-*` tokens). `workspace-actions` e2e is red locally by
+design (canonical 8 SABRE nodes, overlay 51); "Overview unavailable" only hits `playground-fixture`
+clients lacking `credit_accounts`. Earlier: [history](history/handoff-2026-09-26.md).
 
 ## In progress
 

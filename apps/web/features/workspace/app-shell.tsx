@@ -25,6 +25,7 @@ import { BrandMark } from "@/features/shared/brand-mark";
 import { AnimatedFavicon } from "./animated-favicon";
 import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
+import { FontToggle } from "./font-toggle";
 import { ThemeToggle } from "./theme-toggle";
 import { useClients, useProjectClient } from "./workspace-data";
 import "./workspace.css";
@@ -322,6 +323,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span>Team</span>
               </Link>
             )}
+            <FontToggle />
             <ThemeToggle />
             <button
               className="nav-item"

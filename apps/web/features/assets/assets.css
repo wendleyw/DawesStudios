@@ -44,6 +44,7 @@
   color: var(--muted);
 }
 .file-icon span {
+  font-family: var(--font-data);
   font-size: var(--text-xs);
   letter-spacing: 1px;
   text-transform: uppercase;
