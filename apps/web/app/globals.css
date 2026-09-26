@@ -104,6 +104,14 @@
 .dark-surface {
   color-scheme: dark;
 }
+/*
+ * The sidebar's colour as the page's theme resolves it. Declared on :root alone, so a .dark-surface
+ * (which re-resolves --sidebar to its dark value) still inherits the page's value: a dark surface
+ * that should match the menu, such as the Playground, fills with this.
+ */
+:root {
+  --menu-surface: var(--sidebar);
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

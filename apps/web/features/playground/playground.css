@@ -110,13 +110,15 @@
   min-height: 0;
 }
 /*
- * The Playground's canvas is black in both themes, so it never reads as the project's own canvas.
- * It is a `.dark-surface` (globals.css), so every theme token inside it (notes, cards, hints,
- * controls) resolves to its dark value and stays legible on the black.
+ * The Playground's canvas takes the sidebar menu's colour in both themes, so it never reads as the
+ * project's own canvas. It is a `.dark-surface` (globals.css), so every theme token inside it
+ * (notes, cards, hints, controls) resolves to its dark value and stays legible on it.
  */
+.playground-canvas.dark-surface {
+  --canvas-background: var(--menu-surface);
+  --canvas-grid: light-dark(#3a3d44, #3a3d44);
+}
 .playground-canvas {
-  --canvas-background: light-dark(#0f1012, #0f1012);
-  --canvas-grid: light-dark(#333438, #333438);
   color: var(--foreground);
   min-width: 0;
   flex: 1;
@@ -487,12 +489,14 @@
   color: var(--muted);
   font-size: var(--text-xs);
 }
+/* In Miro mode the strip is the Playground's own surface: the menu colour, with the dark palette. */
 .playground-asset-strip {
   display: flex;
   align-items: flex-start;
   gap: var(--space-sm);
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--menu-surface);
+  color: var(--foreground);
 }
 .playground-asset-strip > .playground-albums {
   flex: 1;

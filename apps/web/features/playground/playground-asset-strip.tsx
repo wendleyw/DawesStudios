@@ -40,7 +40,7 @@ export function PlaygroundAssetStrip({
   }
 
   return (
-    <div className="playground-asset-strip">
+    <div className="playground-asset-strip dark-surface">
       <PlaygroundAlbumsPanel
         mode="clipboard"
         clientId={clientId}
