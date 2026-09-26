@@ -4,6 +4,7 @@ import { Building2, Check, ChevronsUpDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 import type { Client } from "./workspace-data";
 
 /** Uses the shell's authorized client query; the picker never loads a separate client directory. */
@@ -37,12 +38,8 @@ export function ClientSwitcher({
   useEffect(() => {
     if (!open) return;
     input.current?.focus();
-    function dismiss(event: PointerEvent) {
-      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
   }, [open]);
+  useDismissOnOutsideClick(root, open, () => setOpen(false));
 
   const identity = (
     <>

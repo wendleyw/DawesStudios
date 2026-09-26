@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 
 const quarters = ["Jan–Mar", "Apr–Jun", "Jul–Sep", "Oct–Dec"];
 
@@ -26,13 +27,8 @@ export function BoardPeriodPicker({
   useEffect(() => {
     if (!open) return;
     panel.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
-    function dismiss(event: PointerEvent) {
-      if (event.target instanceof Node && !container.current?.contains(event.target))
-        setOpen(false);
-    }
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
   }, [open]);
+  useDismissOnOutsideClick(container, open, () => setOpen(false));
 
   function close() {
     setOpen(false);

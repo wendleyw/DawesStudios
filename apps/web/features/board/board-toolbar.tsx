@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { statusLabels } from "@/features/workspace/workspace-data";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
+import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 import { BoardViewPicker } from "./board-view-picker";
 import { boardStatuses } from "./planning-view";
 import type { BoardView } from "./board-views";
@@ -60,10 +61,9 @@ export function BoardToolbar({
     if (panel === "search") searchInput.current?.focus();
     else if (panel === "filters") campaignInput.current?.focus();
     else widgetToggle.current?.focus();
-    function dismiss(event: PointerEvent) {
-      if (event.target instanceof Node && !container.current?.contains(event.target))
-        setPanel(null);
-    }
+  }, [panel]);
+  useEffect(() => {
+    if (!panel) return;
     function escape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setPanel(null);
@@ -74,13 +74,10 @@ export function BoardToolbar({
           : widgetsButton
       ).current?.focus();
     }
-    document.addEventListener("pointerdown", dismiss);
     document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", escape);
-    };
+    return () => document.removeEventListener("keydown", escape);
   }, [panel]);
+  useDismissOnOutsideClick(container, !!panel, () => setPanel(null));
 
   function closePanel() {
     if (panel)
