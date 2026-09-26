@@ -58,6 +58,18 @@ export function projectCreditsUsed(entries: Pick<CreditEntry, "amount" | "kind">
   return debits.length ? debits.reduce((total, entry) => total - entry.amount, 0) : null;
 }
 
+const creditCountFormatter = new Intl.NumberFormat("en-US");
+
+/**
+ * A credit count worded the one way the product shows it: the grouped number (`"1,234"`) and its
+ * unit, singular only for exactly one. `credit-balance-chip.tsx`, `project-credits-chip.tsx` and the
+ * client Overview's per-project credit line all share this rule instead of each declaring its own
+ * `Intl.NumberFormat` and `count === 1 ? "credit" : "credits"` ternary.
+ */
+export function formatCredits(count: number): { amount: string; word: "credit" | "credits" } {
+  return { amount: creditCountFormatter.format(count), word: count === 1 ? "credit" : "credits" };
+}
+
 export function filterCreditEntries(
   entries: CreditEntry[],
   projects: Project[],

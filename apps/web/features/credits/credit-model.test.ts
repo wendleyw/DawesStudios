@@ -3,6 +3,7 @@ import {
   creditCsv,
   csvCell,
   filterCreditEntries,
+  formatCredits,
   projectCreditsUsed,
   type CreditEntry,
   type CreditFilters,
@@ -157,6 +158,17 @@ describe("credit CSV export", () => {
       briefings: [],
     });
     expect(csv.split("\r\n")).toHaveLength(2);
+  });
+});
+
+describe("formatCredits", () => {
+  it.each([
+    [0, "0", "credits"],
+    [1, "1", "credit"],
+    [2, "2", "credits"],
+    [1234, "1,234", "credits"],
+  ])("words %i credits as %s %s", (count, amount, word) => {
+    expect(formatCredits(count)).toEqual({ amount, word });
   });
 });
 

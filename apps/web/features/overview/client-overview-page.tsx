@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useBriefings } from "@/features/briefings/briefing-data";
 import { useCreditAccount, useCreditLedger } from "@/features/credits/credit-data";
+import { formatCredits } from "@/features/credits/credit-model";
 import { useReviews } from "@/features/reviews/review-data";
 import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass } from "@/features/shared/status-tone";
@@ -121,11 +122,12 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
         >
           {overview.moving.map((project) => {
             const credits = overview.creditsByProject.get(project.id);
+            const creditsLabel = credits ? formatCredits(credits) : null;
             return (
               <Link key={project.id} className="overview-row" href={projectHref(project.id)}>
                 <strong>{project.title}</strong>
                 <span className="overview-row-meta">
-                  {credits ? `${credits} credit${credits === 1 ? "" : "s"} · ` : ""}Due{" "}
+                  {creditsLabel ? `${creditsLabel.amount} ${creditsLabel.word} · ` : ""}Due{" "}
                   {formatDate(project.due_date, "not set")}
                 </span>
                 <span className={statusToneClass(projectStatusTones[project.status])}>

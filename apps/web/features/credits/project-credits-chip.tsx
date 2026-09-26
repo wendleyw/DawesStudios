@@ -3,10 +3,9 @@
 import { Coins } from "lucide-react";
 import type { Profile } from "@/lib/supabase";
 import { useProjectCreditUse } from "./credit-data";
+import { formatCredits } from "./credit-model";
 import "./credit-chip.css";
 import "./project-credits-chip.css";
-
-const creditCountFormatter = new Intl.NumberFormat("en-US");
 
 /**
  * The credits a project used, in the right corner of its title card, so a client knows what the
@@ -24,11 +23,11 @@ export function ProjectCreditsChip({
   const credits = useProjectCreditUse(projectId);
   if (!viewer || viewer.role === "designer") return null;
   if (credits.isPending || credits.isError || credits.data == null) return null;
-  const word = credits.data === 1 ? "credit" : "credits";
+  const { amount, word } = formatCredits(credits.data);
   return (
     <span className="credit-chip project-credits-chip" title="Credits used by this project">
       <Coins size={15} aria-hidden="true" />
-      <span className="credit-chip-amount">{creditCountFormatter.format(credits.data)}</span>{" "}
+      <span className="credit-chip-amount">{amount}</span>{" "}
       <span className="credit-chip-word">{word}</span>
       <span className="visually-hidden"> used by this project</span>
     </span>

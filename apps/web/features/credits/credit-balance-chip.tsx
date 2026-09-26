@@ -4,10 +4,9 @@ import Link from "next/link";
 import { Coins } from "lucide-react";
 import type { Profile } from "@/lib/supabase";
 import { useCreditAccount } from "./credit-data";
+import { formatCredits } from "./credit-model";
 import "./credit-chip.css";
 import "./credit-balance-chip.css";
-
-const creditCountFormatter = new Intl.NumberFormat("en-US");
 
 /**
  * Compact balance indicator in `canvas-header.tsx`'s account card, directly left of the
@@ -28,8 +27,8 @@ export function CreditBalanceChip({
   if (account.isPending || account.isError || !account.data) return null;
 
   const balance = account.data.balance;
-  const word = balance === 1 ? "credit" : "credits";
-  const label = `${creditCountFormatter.format(balance)} ${word}`;
+  const { amount, word } = formatCredits(balance);
+  const label = `${amount} ${word}`;
   const needsAttention = balance <= 0;
 
   return (
@@ -40,7 +39,7 @@ export function CreditBalanceChip({
       title={`Credit balance: ${label}`}
     >
       <Coins size={15} aria-hidden="true" />
-      <span className="credit-chip-amount">{creditCountFormatter.format(balance)}</span>
+      <span className="credit-chip-amount">{amount}</span>
       <span className="credit-balance-chip-word">{word}</span>
     </Link>
   );
