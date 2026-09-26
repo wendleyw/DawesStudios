@@ -82,7 +82,7 @@ test("the client works in Miro mode beside the project's tools", async ({ page, 
     .getByRole("button", { name: "Versions" })
     .click();
   await expect(page.locator("iframe.miro-view-frame")).toHaveCount(0);
-  await expect(page).not.toHaveURL(/view=miro/);
+  await expect(page).toHaveURL(/view=versions/);
   // Entering from a version card.
   await page.getByRole("button", { name: "View on Miro" }).first().click();
   await expect(page.locator("iframe.miro-view-frame")).toBeVisible();
@@ -127,12 +127,28 @@ test.describe("Miro mode and the deliverable filter", () => {
     page,
   }) => {
     await signIn(page, credentials.client);
+    // A project with a Miro link opens on Miro; its deliverable filter sits under More there.
     await page.goto(`/projects/${filterProjectId}`);
-    await expect(
-      page.getByRole("group", { name: "Project view" }).getByRole("button", { name: "Miro" }),
-    ).toBeVisible();
+    await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVFilterE2E/);
+    await expect(page).toHaveURL(/view=miro/);
+    await page.getByRole("button", { name: "More", exact: true }).click();
     await page.getByLabel("Filter deliverable").selectOption({ label: "Instagram Story" });
     await expect(page.getByRole("group", { name: "Project view" })).toHaveCount(0);
-    await expect(page).not.toHaveURL(/view=miro/);
+    await expect(page).not.toHaveURL(/view=/);
+  });
+
+  test("choosing Versions survives a reload", async ({ page }) => {
+    await signIn(page, credentials.client);
+    await page.goto(`/projects/${filterProjectId}`);
+    await page
+      .getByRole("group", { name: "Project view" })
+      .getByRole("button", { name: "Versions" })
+      .click();
+    await expect(page).toHaveURL(/view=versions/);
+    await page.reload();
+    await expect(page.locator("iframe.miro-view-frame")).toHaveCount(0);
+    await expect(
+      page.getByRole("group", { name: "Project view" }).getByRole("button", { name: "Versions" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

@@ -142,14 +142,20 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   if (projectView !== "miro" && assetStripOpen) setAssetStripOpen(false);
   // The URL keeps the view and the resolved version, so a reload or a shared link returns to the
   // same frame. `replace` keeps the browser history to one entry per project visit.
+  // Nothing is written until the project has loaded: before then the default Miro view is not yet
+  // resolved, and a project without a link would flash `view=miro` into its URL.
+  const loaded = !!data.data;
+  const miroAvailable = linkedForView.length > 0;
   useEffect(() => {
+    if (!loaded) return;
     const query = writeProjectView(new URLSearchParams(window.location.search), {
       view: projectView,
       versionId: resolvedMiroVersion?.id ?? null,
+      miroAvailable,
     });
     if (query === window.location.search.replace(/^\?/, "")) return;
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [projectView, resolvedMiroVersion, pathname, router]);
+  }, [loaded, miroAvailable, projectView, resolvedMiroVersion, pathname, router]);
   // Miro mode wants the width: the sidebar folds while it is shown and comes back on leaving.
   useFoldSidebarWhile(!!resolvedMiroVersion?.miro && !selected?.designId);
   function enterMiro(versionId: string | null) {

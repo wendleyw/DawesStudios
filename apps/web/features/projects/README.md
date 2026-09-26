@@ -288,7 +288,10 @@ font size so the two controls read as one aligned row.
 
 ### Miro mode
 
-Clicking **View on Miro**, or the header's **Miro** control, does not leave the project: it switches
+Miro is the project's first view: a project opens on Miro whenever the viewer's channel has a linked
+version (otherwise on Versions), and choosing **Versions** is kept as `view=versions` so a reload
+respects it; with no link the URL stays clean. Clicking **View on Miro**, or the header's **Miro**
+control, does not leave the project: it switches
 the canvas pane into Miro mode rather than opening a separate panel. `miro-mode.ts` owns the pure
 rules — `linkedVersions` filters the viewer's own channel-specific versions down to the ones carrying
 a link (so a client only ever sees client-board links and a designer only internal-board links),

@@ -67,28 +67,42 @@ describe("project view URL state", () => {
       versionId: "a1",
     });
   });
-  it("defaults to versions", () => {
+  it("opens on Miro unless Versions was chosen", () => {
+    expect(readProjectView(new URLSearchParams())).toEqual({ view: "miro", versionId: null });
     expect(readProjectView(new URLSearchParams("view=other"))).toEqual({
+      view: "miro",
+      versionId: null,
+    });
+    expect(readProjectView(new URLSearchParams("view=versions&version=a1"))).toEqual({
       view: "versions",
       versionId: null,
     });
   });
   it("writes Miro mode and keeps other parameters", () => {
     expect(
-      writeProjectView(new URLSearchParams("channel=client"), { view: "miro", versionId: "a1" }),
+      writeProjectView(new URLSearchParams("channel=client"), {
+        view: "miro",
+        versionId: "a1",
+        miroAvailable: true,
+      }),
     ).toBe("channel=client&view=miro&version=a1");
   });
-  it("removes both parameters for versions", () => {
+  it("records Versions only when Miro was available", () => {
+    const parameters = new URLSearchParams("channel=client&view=miro&version=a1");
     expect(
-      writeProjectView(new URLSearchParams("channel=client&view=miro&version=a1"), {
-        view: "versions",
-        versionId: "a1",
-      }),
+      writeProjectView(parameters, { view: "versions", versionId: "a1", miroAvailable: true }),
+    ).toBe("channel=client&view=versions");
+    expect(
+      writeProjectView(parameters, { view: "versions", versionId: null, miroAvailable: false }),
     ).toBe("channel=client");
   });
   it("omits the version when none is chosen", () => {
-    expect(writeProjectView(new URLSearchParams(), { view: "miro", versionId: null })).toBe(
-      "view=miro",
-    );
+    expect(
+      writeProjectView(new URLSearchParams(), {
+        view: "miro",
+        versionId: null,
+        miroAvailable: true,
+      }),
+    ).toBe("view=miro");
   });
 });

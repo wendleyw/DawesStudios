@@ -31,18 +31,26 @@ export function miroVersionLabel(
   return `${name} · V${version.number}`;
 }
 
+/**
+ * Miro is the project's first view: without `view=versions` the page opens on Miro, and the page
+ * falls back to Versions when nothing linked can be shown.
+ */
 export function readProjectView(parameters: URLSearchParams): {
   view: ProjectView;
   versionId: string | null;
 } {
-  return parameters.get("view") === "miro"
-    ? { view: "miro", versionId: parameters.get("version") }
-    : { view: "versions", versionId: null };
+  return parameters.get("view") === "versions"
+    ? { view: "versions", versionId: null }
+    : { view: "miro", versionId: parameters.get("version") };
 }
 
+/**
+ * Versions is recorded only when Miro could have been shown (`miroAvailable`), so a deliberate choice
+ * survives a reload while a project with no Miro link keeps a clean URL.
+ */
 export function writeProjectView(
   parameters: URLSearchParams,
-  state: { view: ProjectView; versionId: string | null },
+  state: { view: ProjectView; versionId: string | null; miroAvailable: boolean },
 ): string {
   const next = new URLSearchParams(parameters);
   next.delete("view");
@@ -50,6 +58,6 @@ export function writeProjectView(
   if (state.view === "miro") {
     next.set("view", "miro");
     if (state.versionId) next.set("version", state.versionId);
-  }
+  } else if (state.miroAvailable) next.set("view", "versions");
   return next.toString();
 }
