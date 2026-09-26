@@ -6,6 +6,7 @@ import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outsi
 import { miroBoardUrl, miroEmbedUrl, type MiroLink } from "./miro-links";
 import { miroVersionLabel } from "./miro-mode";
 import type { CanvasVersion } from "./project-data";
+import type { ReviewDecision } from "./project-action-review";
 
 export type MiroFrame = CanvasVersion & { miro: MiroLink };
 
@@ -127,5 +128,33 @@ export function MiroView({
         />
       </div>
     </section>
+  );
+}
+
+/**
+ * The client's review of the shown frame in Miro mode, under the project tool bar: Request changes
+ * or Approve opens the review dialog with that decision chosen. Shown only when the version can be
+ * reviewed (the client's latest pending publication of its deliverable).
+ */
+export function MiroReviewBar({
+  label,
+  onDecide,
+}: {
+  label: string;
+  onDecide: (decision: ReviewDecision) => void;
+}) {
+  return (
+    <div className="miro-review-bar" role="group" aria-label="Review this version">
+      <p>
+        <strong>{label}</strong>
+        <span>Ready for your review</span>
+      </p>
+      <button className="button" onClick={() => onDecide("changes_requested")}>
+        Request changes
+      </button>
+      <button className="button primary" onClick={() => onDecide("approved")}>
+        Approve
+      </button>
+    </div>
   );
 }

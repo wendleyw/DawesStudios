@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CanvasVersion } from "./project-data";
@@ -490,5 +490,15 @@ describe("Miro links", () => {
       versionId: "version-1",
       url: "https://miro.com/app/board/uXjVStudio1=/",
     });
+  });
+});
+
+describe("reviewing a publication", () => {
+  it("approves by default and preselects the decision a button started from", () => {
+    renderDialog({ kind: "review", version });
+    expect(screen.getByLabelText("Your decision")).toHaveValue("approved");
+    cleanup();
+    renderDialog({ kind: "review", version, decision: "changes_requested" });
+    expect(screen.getByLabelText("Your decision")).toHaveValue("changes_requested");
   });
 });

@@ -17,12 +17,13 @@ import { CanvasOpeningView, ProjectCanvasControls } from "./project-canvas-view"
 import { DesignViewer } from "./design-viewer";
 import {
   linkedVersions,
+  miroVersionLabel,
   pickMiroVersion,
   readProjectView,
   writeProjectView,
   type ProjectView,
 } from "./miro-mode";
-import { MiroView } from "./miro-view";
+import { MiroReviewBar, MiroView } from "./miro-view";
 import { useFoldSidebarWhile } from "@/features/workspace/app-shell";
 import {
   nodeTypes,
@@ -502,6 +503,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                   <ProjectToolBar panel={panel} onPanel={changePanel} disabled={playgroundOpen}>
                     {quickActions}
                   </ProjectToolBar>
+                  {miroActive && miroVersion && reviewFor(miroVersion) && (
+                    <MiroReviewBar
+                      label={miroVersionLabel(miroVersion, deliverables)}
+                      onDecide={(decision) =>
+                        setAction({ kind: "review", version: miroVersion, decision })
+                      }
+                    />
+                  )}
                   {miroActive && miroVersion?.miro && (
                     <MiroView
                       current={{ ...miroVersion, miro: miroVersion.miro }}

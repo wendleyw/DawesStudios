@@ -7,11 +7,12 @@ import { ProjectActionDesign } from "./project-action-design";
 import { ProjectActionPublish } from "./project-action-publish";
 import { ProjectActionMiro } from "./project-action-miro";
 import { ProjectActionSubmit } from "./project-action-submit";
-import { ProjectActionReview } from "./project-action-review";
+import { ProjectActionReview, type ReviewAction } from "./project-action-review";
 
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
-  | { kind: "design" | "publish" | "submit" | "review"; version: CanvasVersion }
+  | { kind: "design" | "publish" | "submit"; version: CanvasVersion }
+  | ReviewAction
   | { kind: "edit-design"; version: CanvasVersion; design: CanvasDesign }
   | { kind: "miro"; version: CanvasVersion; channel: ProjectChannel };
 
@@ -87,12 +88,6 @@ export function ProjectActionDialog({
         />
       );
     case "review":
-      return (
-        <ProjectActionReview
-          action={{ kind: "review", version: action.version }}
-          suspended={suspended}
-          onClose={onClose}
-        />
-      );
+      return <ProjectActionReview action={action} suspended={suspended} onClose={onClose} />;
   }
 }

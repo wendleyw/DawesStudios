@@ -9,7 +9,9 @@ import {
   useProjectActionClose,
 } from "./project-action-shell";
 
-export type ReviewAction = { kind: "review"; version: CanvasVersion };
+export type ReviewDecision = "approved" | "changes_requested";
+/** `decision` preselects the choice when the client started from an Approve/Request changes button. */
+export type ReviewAction = { kind: "review"; version: CanvasVersion; decision?: ReviewDecision };
 
 /** "Your thoughts make it better." — the client's approve/request-changes decision on a publication. */
 export function ProjectActionReview({
@@ -57,7 +59,7 @@ export function ProjectActionReview({
     >
       <label>
         Your decision
-        <select name="decision" defaultValue="approved">
+        <select name="decision" defaultValue={action.decision ?? "approved"}>
           <option value="approved">Approve this version</option>
           <option value="changes_requested">Request changes</option>
         </select>

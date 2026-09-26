@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CanvasVersion } from "./project-data";
-import { MiroBar, MiroView } from "./miro-view";
+import { MiroBar, MiroReviewBar, MiroView } from "./miro-view";
 
 const link = { boardId: "uXjVKabc123=", widgetId: "345" };
 const v3 = {
@@ -93,5 +93,18 @@ describe("MiroBar", () => {
     expect(screen.getByText("menu content")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByText("menu content"), { key: "Escape" });
     expect(screen.queryByText("menu content")).not.toBeInTheDocument();
+  });
+});
+
+describe("MiroReviewBar", () => {
+  it("asks for a decision on the shown frame", () => {
+    const onDecide = vi.fn();
+    render(<MiroReviewBar label="Key visual · V3" onDecide={onDecide} />);
+    const bar = screen.getByRole("group", { name: "Review this version" });
+    expect(bar).toHaveTextContent("Key visual · V3");
+    fireEvent.click(within(bar).getByRole("button", { name: "Request changes" }));
+    expect(onDecide).toHaveBeenLastCalledWith("changes_requested");
+    fireEvent.click(within(bar).getByRole("button", { name: "Approve" }));
+    expect(onDecide).toHaveBeenLastCalledWith("approved");
   });
 });

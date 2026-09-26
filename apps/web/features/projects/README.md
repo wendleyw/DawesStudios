@@ -301,7 +301,10 @@ deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miro
 `target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
 is the way through to the real board regardless) and a **More** menu holding the agency's channel
 switch and the deliverable filter (which changes the deliverable). Status, due date and credits are
-left to Versions. The sidebar folds while Miro mode is shown (`useFoldSidebarWhile` from
+left to Versions. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
+their latest pending publication of that deliverable, project not delivered) gets `MiroReviewBar` at
+the bottom of the board, with the tool bar raised above it; **Request changes** and **Approve** open
+the review dialog with that decision preselected (`ReviewAction.decision`). The sidebar folds while Miro mode is shown (`useFoldSidebarWhile` from
 `workspace/app-shell.tsx`) and returns to its previous state on leaving. `MiroView` renders the optional asset strip and
 `iframe.miro-view-frame`, which runs from the header to the bottom edge with the tool bar floating
 over it (on phones, where the bar sits over Miro's zoom controls, the embed stops above the bar); the
