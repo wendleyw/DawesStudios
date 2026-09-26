@@ -17,14 +17,13 @@ history only when a task needs earlier evidence.
 
 ## Done (2026-09-26)
 
-**Miro mode** ([spec](../superpowers/specs/2026-09-26-miro-mode-design.md),
-[plan](../superpowers/plans/2026-09-26-miro-mode.md), `4ce756b..f6db41f`): the project page switches
-its canvas to the version's Miro board (`?view=miro&version=`) under one compact header bar, with a
-folded sidebar and Miro's top bar cropped; the Playground button opens a copy-to-Miro asset strip.
-Afternoon (`5303c21..97df9a3`): 216 px sidebar with client logo and repeating studio mark, client
-Overview in the sidebar only, calendar days never scroll, briefings by due date, client review bar in
-Miro mode, Brand Hub colors in one row and Products (image + link) atop Assets, black Playground.
-Board cards always sit on the campaign grid (a drop on a card swaps them); the client logo opens the Overview; Files is a Brand Hub section (`/brand/files`, `/assets` redirects) with the sections beside the title — its e2e specs were edited but not run. Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
+**Miro mode** (`4ce756b..f6db41f`, [spec](../superpowers/specs/2026-09-26-miro-mode-design.md)): the
+project canvas switches to the version's Miro board; afternoon `5303c21..97df9a3` polished the shell.
+Evening (`75f1e13..0837bf5`): board cards sit on the campaign grid (drop on a card swaps); the client
+logo opens the Overview; Files is a Brand Hub section (`/assets` redirects); Brand Hub Assets is a
+directory (nested folders, HTTPS links, Products tile, `FolderTile` shared with Files); clients add
+folders, images and links (`202609260004`/`0005`); one compact Brand Hub scale. Brand/Files e2e
+green; `client-navigation` e2e still expects the pre-Miro canvas. Earlier: [history](history/handoff-2026-09-26.md).
 
 ## In progress
 
@@ -54,8 +53,8 @@ Board cards always sit on the campaign grid (a drop on a card swaps them); the c
 
 - Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
   `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
-  (last done 2026-09-26 ~02:10, pid 78562). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260003`; local
+  (last done 2026-09-26 ~17:30, pid 91871). Never start a competing server.
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260005`; local
   delivered projects show a 2026-09-25 `updated_at`); media on 55430. Do not reset or re-provision.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
