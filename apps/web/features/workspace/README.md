@@ -266,3 +266,10 @@ notifications page and compact account popover consume it. `notifications-bell.t
 on non-client topbars and accepts a callback/ref for the account popover. Shared feed styles live
 in `app/globals.css`; popover layout stays in `workspace.css`. Backend RLS scopes the latest 100
 notifications to the signed-in viewer. Opening the popover does not mark them read.
+
+Who receives a client notification is decided in `private.notify_client`
+(`supabase/migrations/202609250003_client_notification_routing.sql`): a project update reaches the
+project's requester (its briefing's `requested_by`), everyone who chose **All <client> activity**
+and, for a studio reply in the client conversation, the client people who wrote there. With no
+requester left, or with no project (credit updates), it reaches every person at the client. The
+actor and removed people never receive one.

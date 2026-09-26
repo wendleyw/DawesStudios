@@ -18,13 +18,19 @@ still waiting on their decision; a version they sent back is waiting on the stud
 `review-data.ts` owns the feature's Supabase access, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useReviews` is
 the page's single read hook, relocated verbatim from the page's inline `useQuery` during the
-small-features migration (task 15) — same tables, same column selections, same filters and
-ordering, same `refetchInterval`. The feature has no writes, so it has no accompanying
-`<feature>-data.test.ts`: the contract's unit-testing requirement is for extracted write functions
-and for reads that cannot be hooks, and this feature's one read is a proper hook.
+small-features migration (task 15) — same tables, filters, ordering and `refetchInterval`; its
+embedded review now also selects `reviewed_by,reviewed_at`. The feature has no writes, so it has no
+accompanying `<feature>-data.test.ts`: the contract's unit-testing requirement is for extracted
+write functions and for reads that cannot be hooks, and this feature's one read is a proper hook.
 
 `isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,
 rather than in `reviews-page.tsx`, so another feature can read the tab rule without importing the
 page component. `reviews-page.tsx` imports `inReviewTab` from there to filter its rows; the page
 still declares its own `versionStatusTones`, which is presentation (a `StatusTone` per status for
 the badge), not the tab rule.
+
+A decided version names who decided. The row's note column reads "Approved by <name> · <date>" or
+"Changes requested by <name> · <date>" (the release note moves to its tooltip), from
+`publication_reviews.reviewed_by`/`reviewed_at`, which `review_publication` records. Names come from
+`useClientPeople`; a reviewer who left reads "<name> (left)" to the studio and "Former member" to
+the client. Reviews decided before reviewers were recorded keep their note.

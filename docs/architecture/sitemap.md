@@ -32,9 +32,9 @@ The following paths are proposed canonical routes and may be consolidated during
 | `/clients/:clientId/credits` | Read, quote, authorized adjustments | Read, request additional credits | No | [Credits](../ref/01-agencia/08-creditos/README.md); Balance & activity / Client report. |
 | `/settings/workspace` | Agency | No | No | Settings → Studio: studio name, and the timezone every instant in the product is rendered in. |
 | `/team` | Agency | No | No | Team membership, invitations, role changes, removal and active workload. `/settings/team` redirects here. |
-| `/settings/clients` | Agency | No | No | Client list and new client creation. |
+| `/settings/clients` | Agency | No | No | Client list, new client creation, and each client's **People** (people and emails, pending invitations, invite and remove). |
 | `/settings/presets` | Agency | No | No | Versioned service estimates and timing; canonical formats/questions remain unchanged. |
-| `/settings/account` | Own account | Own account | Own account | Display name and real Auth password changes. |
+| `/settings/account` | Own account | Own account | Own account | Display name and real Auth password changes; a client person also sees one **Team** section per client (teammates, notification choice). |
 
 The three product experiences are Agency, Client, and Designer. In this single-studio implementation, the protected Agency role owns administrative commands; Designer is the restricted production role. Every administrative operation is checked by the backend, independently of navigation visibility.
 
@@ -111,7 +111,7 @@ Credits contains plan information, balance/consumption, activity search, All/Pro
 
 Additional-credit packages retain the reference choices of 25, 50, and 100 credits. A production client action creates a request or invokes an explicitly configured payment flow; it does not grant itself credits. Authorized agency allocation records an audited ledger entry. Isolated test mode can exercise simulated fulfillment without claiming a real payment. A future payment integration must document and test its own settlement contract.
 
-Settings contains Studio, Clients, Presets, and Your account. Team has its own agency-only route at `/team`. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation.
+Settings contains Studio, Clients, Presets, and Your account. Team has its own agency-only route at `/team`. Save, invite, and create actions require actual persistence and visible success/error results. Development invitation delivery may use a local mail capture service. Production readiness must separately establish actual invitation delivery and environment configuration; a toast alone is not an invitation. Removing a client's person goes through `POST /api/clients/:clientId/members/:profileId/remove`, which also blocks sign-in when it was their last client.
 
 ## Empty, error, and responsive states
 

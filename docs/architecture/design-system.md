@@ -165,6 +165,27 @@ Both dashboards end in three [`OverviewPanel`](../../apps/web/features/overview/
 
 Isolation: the client Overview renders exactly what the client itself is allowed to see, for both readers. Reviews go through the client's own **Waiting for you** rule (`inReviewTab("waiting", row, "client")`), which drops every `internal` row for every viewer — including the studio's "What `<client>` sees" reading of the same page — so no designer identity, assignment, internal note or unpublished version reaches it. A designer who opens the route by hand is redirected to that client's board before the tiles render.
 
+### Client people and attribution
+
+Settings → Clients gives each client row a **People** button in place of Invite. Its `lg` dialog
+stacks **People** (one `settings-list-row` per person: name, email, a quiet **Remove**), **Invited**
+(email and "Invitation expires <date>", read-only) and a primary **Invite person** that opens the
+existing invite dialog above it. Remove confirms in a second dialog — "Remove <name>?", "<name>
+loses access to <client>." and, for the last person, "<client> will have nobody who can sign in
+until someone is invited." A removal still blocking sign-in reads "Access removed · Account block
+pending" with **Finish removal**.
+
+Your account shows a client person one `settings-section` per client, "<client> team": the people
+as rows (the viewer marked with a "You" badge), "To add or remove someone, contact the studio." and a
+**Notifications** segmented control — **My requests** / **All <client> activity** — that wraps on a
+phone. Emails wrap anywhere (the shared `.settings-list-row p` rule).
+
+Attribution reads the same everywhere: "Requested by <name>" on the Briefings list (its own column,
+dropped below 1000 px), under the briefing's title (with the studio's small quiet **Change**) and in
+the project's details; "Approved by <name> · <date>" or "Changes requested by <name> · <date>" in
+the Reviews note column and the project's version history. Someone who left reads "<name> (left)" to
+the studio and "Former member" to the client; designers see neither.
+
 ## Board and project canvas
 
 The board and project canvases use XYFlow/React Flow. Use a shared canvas frame with a subtle dot-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.

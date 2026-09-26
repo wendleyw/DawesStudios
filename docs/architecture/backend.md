@@ -82,7 +82,7 @@ All arguments use the `p_` prefix. Functions return a UUID unless another return
 
 | Function | Arguments |
 | --- | --- |
-| `save_briefing` | `p_client_id`, `p_service_type`, `p_title=''`, `p_campaign_id=null`, `p_overview=''`, `p_goals=''`, `p_direction={}`, `p_deliverables=[]`, `p_due_date=null`, `p_estimated_credits=1`, `p_briefing_id=null`, `p_expected_updated_at=null` |
+| `save_briefing` | `p_client_id`, `p_service_type`, `p_title=''`, `p_campaign_id=null`, `p_overview=''`, `p_goals=''`, `p_direction={}`, `p_deliverables=[]`, `p_due_date=null`, `p_estimated_credits=1`, `p_briefing_id=null`, `p_expected_updated_at=null`, `p_requested_by=null` (one of the client's active people, chosen by the studio; ignored for a client person, who is always the requester of what they file; with exactly one person the studio's missing choice means that person) |
 | `save_briefing_revision` (JSON) | Same arguments as `save_briefing`; atomically returns `{id,updated_at}` for editor saves |
 | `submit_briefing` (void) | `p_briefing_id` |
 | `confirm_briefing_budget` (void) | `p_briefing_id`, `p_credits`, `p_note=''` (required when different from estimate) |
@@ -95,7 +95,11 @@ All arguments use the `p_` prefix. Functions return a UUID unless another return
 | `add_design` | `p_version_id`, `p_title`, `p_content={}`, `p_internal_asset_path=null` |
 | `submit_design_version` (void) | `p_version_id` |
 | `publish_version` | `p_version_id`, `p_release_note=''`, `p_assets={}` (map internal design UUID → sanitized publication object path), `p_idempotency_key=null` (optional caller UUID; current UI uses source-version replay) |
-| `review_publication` (void) | `p_publication_id`, `p_decision` (`approved`/`changes_requested`), `p_feedback=''` |
+| `review_publication` (void) | `p_publication_id`, `p_decision` (`approved`/`changes_requested`), `p_feedback=''`; records the deciding person in `reviewed_by` |
+| `set_briefing_requester` (void) | `p_briefing_id`, `p_requested_by`; studio only; one of the briefing's client's active people; any status |
+| `client_team` (rows of `user_id`, `display_name`, `email`) | `p_client_id`; the client's active client-role people, returned to the studio and that client's own people only |
+| `set_client_notifications` (void) | `p_client_id`, `p_all`; the caller's own choice at one of their clients |
+| `remove_client_member` (boolean) | `p_client_id`, `p_profile_id`; studio only; `true` when the account was deactivated and `/api/clients/{clientId}/members/{profileId}/remove` must block sign-in |
 | `add_delivery_file` | `p_project_id`, `p_name`, `p_storage_path`, `p_mime_type`, `p_file_size` |
 | `mark_project_delivered` (void) | `p_project_id` |
 | `post_comment` | `p_project_id`, `p_channel` (`internal`/`client`), `p_body`, `p_version_id=null`, `p_design_id=null`, `p_pin_x=null`, `p_pin_y=null`, `p_pin_t=null` (seconds into a video design; requires `p_pin_x`/`p_pin_y`), `p_idempotency_key=null` |

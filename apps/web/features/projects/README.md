@@ -27,9 +27,12 @@ scrolls its artwork/feedback body while keeping the header and viewer controls a
 
 Conversation and Project details open one floating inspector beneath the project controls.
 Close/Escape restores focus to the trigger without changing canvas position. Details retain real
-edit, assignment and resource actions. Notifications sit to the left of the signed-in profile in
-`workspace/canvas-header.tsx` and open the shared animated, nonmodal account popover on every client
-surface. Notification read actions remain explicit and recipient-scoped.
+edit, assignment and resource actions. For the studio and the client, Details also shows **Requested
+by** (the briefing's requester, read by `useBriefingRequester`) and its version history names who
+decided ("Approved by <name> · <date>"); designers see neither. Notifications sit to the left of
+the signed-in profile in `workspace/canvas-header.tsx` and open the shared animated, nonmodal
+account popover on every client surface. Notification read actions remain explicit and
+recipient-scoped.
 
 Design previews open feedback with a desktop double-click. A single click keeps canvas interaction
 available; Enter/Space, the explicit arrow action and a single touch tap also open the design.

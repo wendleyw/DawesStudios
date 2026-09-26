@@ -20,18 +20,27 @@ Route: `/team` renders `TeamPage` directly. `/settings/team` redirects to `/team
 
 ## Data access
 
-| Function              | Table/procedure                                                                                                                                                                                                                                                                     | Notes                                                                                                                                                                                                                                  |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useTeamMembers()`    | `profiles` `.select("id,display_name,role,avatar_url,removed_at")` `.in("role", ["agency","designer"]).is("removal_completed_at", null)` `.order("display_name")`, then `project_assignments` `.select("designer_id,projects!inner(status)")` `.neq("projects.status","delivered")` | One extra query for the whole list's workload, not one per row: active-project counts grouped by designer, merged onto the roster as `activeProjectCount`.                                                                             |
-| `useInvitations()`    | `invitations` `.select("*")` `.order("created_at", { ascending: false })`                                                                                                                                                                                                           |                                                                                                                                                                                                                                        |
-| `revokeInvitation()`  | `rpc("revoke_invitation", { p_invitation_id })`                                                                                                                                                                                                                                     |                                                                                                                                                                                                                                        |
-| `setTeamMemberRole()` | `rpc("set_team_member_role", { p_profile_id, p_role })`                                                                                                                                                                                                                             |                                                                                                                                                                                                                                        |
-| `removeTeamMember()`  | `POST /api/team-members/{id}/remove`, bearer token                                                                                                                                                                                                                                  | The only write here that does not take `database`: removal's second step bans the Auth account, which needs the service-role key and therefore the server route in `app/api/team-members/[id]/remove/route.ts`, not a direct RPC call. |
+| Function                             | Table/procedure                                                                                                                                                                                                                                                                     | Notes                                                                                                                                                                                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useTeamMembers()`                   | `profiles` `.select("id,display_name,role,avatar_url,removed_at")` `.in("role", ["agency","designer"]).is("removal_completed_at", null)` `.order("display_name")`, then `project_assignments` `.select("designer_id,projects!inner(status)")` `.neq("projects.status","delivered")` | One extra query for the whole list's workload, not one per row: active-project counts grouped by designer, merged onto the roster as `activeProjectCount`.                                                                             |
+| `useInvitations()`                   | `invitations` `.select("*")` `.order("created_at", { ascending: false })`                                                                                                                                                                                                           |                                                                                                                                                                                                                                        |
+| `revokeInvitation()`                 | `rpc("revoke_invitation", { p_invitation_id })`                                                                                                                                                                                                                                     |                                                                                                                                                                                                                                        |
+| `setTeamMemberRole()`                | `rpc("set_team_member_role", { p_profile_id, p_role })`                                                                                                                                                                                                                             |                                                                                                                                                                                                                                        |
+| `removeTeamMember()`                 | `POST /api/team-members/{id}/remove`, bearer token                                                                                                                                                                                                                                  | The only write here that does not take `database`: removal's second step bans the Auth account, which needs the service-role key and therefore the server route in `app/api/team-members/[id]/remove/route.ts`, not a direct RPC call. |
+| `useClientPeople(clientId)`          | `rpc("client_team", { p_client_id })`; for the studio also `profiles` `.select("id,display_name").eq("role", "client")`                                                                                                                                                             | Studio and client people only. The second read names people who have left.                                                                                                                                                             |
+| `usePendingClientRemovals(clientId)` | `client_memberships` `.select("user_id").eq("client_id", …)`, then `profiles` `.select("id,display_name").in("id", …).not("removed_at", "is", null).is("removal_completed_at", null).order("display_name")`                                                                         | Studio only.                                                                                                                                                                                                                           |
+| `useClientNotificationChoices()`     | `client_memberships` `.select("client_id,notify_all").eq("user_id", …)`                                                                                                                                                                                                             | Client people only; the membership policy already admits a person's own rows.                                                                                                                                                          |
+| `setClientNotifications()`           | `rpc("set_client_notifications", { p_client_id, p_all })`                                                                                                                                                                                                                           |                                                                                                                                                                                                                                        |
+| `removeClientMember()`               | `POST /api/clients/{clientId}/members/{profileId}/remove`, bearer token                                                                                                                                                                                                             | Like `removeTeamMember`: blocking sign-in needs the service-role key.                                                                                                                                                                  |
 
 `teamQueryKeys = ["studio-team", "invitations"]` and `useInvalidateTeam()` invalidate both. Before
 this feature existed, the equivalent array in `settings-data.ts` was `["invitations"]` only — a real
 bug, not a stylistic choice: a role change or removal never refreshed the member list itself, only
 the invitation list, and the fix landed in the same move because every call site was changing anyway.
+
+`clientPeopleQueryKeys` is a named-key record, because its writers dirty different subsets: a
+removal refreshes `client-people` (the team and the pending-removal list), a person's notification
+choice only `client-notification-choices`.
 
 ### Verifying the workload query
 
@@ -50,12 +59,38 @@ A partial removal remains visible as `Access removed · Account block pending`, 
 
 The server-route unit tests cover Auth-ban and completion-write failures, authorization, origin checks, and recovery. Database tests cover active-administrator protection, stale tokens, nullable permission predicates, notification isolation, and idempotency. The browser suite uses disposable accounts to verify the complete UI flow.
 
+## A client's people
+
+A client has one login per person. The studio manages them from Settings → Clients → **People**
+(`client-people-dialog.tsx`, opened by `features/settings/client-settings.tsx`): the client's active
+people (name and email) with **Remove**, pending invitations (email and expiry, read-only) and the
+unchanged `InvitePerson` form. Remove asks first ("<name> loses access to <client>.") and warns when
+the client would be left with nobody. `POST /api/clients/{clientId}/members/{profileId}/remove`
+mirrors the team route: `remove_client_member` runs first; when it was the person's last client the
+RPC also deactivates the account, and the route then blocks sign-in and records
+`removal_completed_at`. That membership row is kept as the record of the pending removal, so a
+failed second step stays listed as "Access removed · Account block pending" with **Finish removal**
+after a reload. Someone who still belongs to another client keeps their login and only loses this
+client (and its notifications).
+
+A client person sees one **Team** section per client on Settings → Your account
+(`features/settings/client-team-section.tsx`, a Your account block that reads this feature's data):
+the client's active people, "You" for themselves, "To add or remove
+someone, contact the studio." and their notification choice — **My requests** (the default) or
+**All <client> activity** — stored on their own membership by `set_client_notifications`.
+
+`client-people.ts` holds the words every feature uses for a recorded person: `personName` (an active
+member by name; someone who left as "<name> (left)" to the studio and "Former member" to the
+client; nobody to a designer), `requesterLabel` and `reviewDecisionLabel`. `useClientPeople` is the
+one read of a client's people for briefings, projects, reviews and settings.
+
 ## Styling boundary
 
 `team.css` declares only genuinely team-only selectors: `.member-role-select`, and `.settings-avatar`
 (this page's own avatar circle — its only other historical consumer, `team-settings.tsx`, was
 deleted when Team moved out of Settings, so it is no longer shared with anything and does not belong
-in `app/globals.css`).
+in `app/globals.css`). `.client-people` (the People dialog) is team-only too; a long email wraps
+through the shared `.settings-list-row p` rule in `app/globals.css`.
 
 Everything else the page uses that also has a real consumer in `features/settings/`
 (`.settings-sections`, `.settings-block` and its heading/header-row/header-paragraph, `.settings-form`

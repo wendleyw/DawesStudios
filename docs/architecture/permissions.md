@@ -180,3 +180,22 @@ Supabase policies, database constraints/transactions, API authorization, and sto
 Agency members manage Team at `/team`. Removing a member first sets `profiles.removed_at` in a transaction that revokes every assignment and records one audit event. Role-based database access ends immediately, including for existing JWTs; notification generation and read policies exclude removed members. Auth banning follows through the trusted server route, and only its successful completion sets `removal_completed_at`. A failed second step leaves a visible, retryable pending removal.
 
 The last-agency guard counts active members only. Role changes, removal, assignment and invitation acceptance share a transaction lock and recheck caller access after waiting. Removed profiles cannot be reactivated through those operations. Profiles and authored history are preserved. Previously issued signed file URLs remain valid until their existing expiry; this change does not claim to revoke already-delivered bytes or signed URLs.
+
+## Client people
+
+A client can have several people, each with their own login; permissions inside a client are the
+same for everyone. Only the studio adds (by invitation) and removes them. `client_team(p_client_id)`
+is the one widened read: the client's active client-role people with their sign-in emails, returned
+to the studio and that client's own people and to nobody else. Profile and membership policies do
+not widen, designers are never part of a team, and another client's people are never returned.
+Briefings (`requested_by`) and review decisions (`reviewed_by`) store a person's id; a client names
+them only through `client_team` and reads someone who left as "Former member", and designers read
+neither column.
+
+Removing someone from one client (`remove_client_member`, audited) deletes that membership and that
+client's notifications for them; a person who still belongs to another client keeps their login.
+Removing their last client sets `removed_at` like a team removal, so every role-based read ends at
+once, existing tokens included, and `/api/clients/{clientId}/members/{profileId}/remove` then blocks
+sign-in and sets `removal_completed_at`. Project notifications reach the project's requester, people
+who chose all activity and, for a studio reply, the people who wrote in that conversation; the
+actor and removed people never receive them.

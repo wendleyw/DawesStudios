@@ -79,6 +79,15 @@ This is the required repeatable acceptance dataset, not a claim that a seed curr
 | C11 | Within this single-studio installation, parent relationships cannot combine one client's campaign/briefing/project with another client's assets, deliverables, publications or pins. | Invalid cross-client parent-ID combinations against database constraints and API commands; no changed records. | Verified — [family C evidence](../verification/acceptance-family-c.md): 23 cross-tenant parent combinations attempted as the table owner and refused by a named composite FK, CHECK, or immutability trigger; 5 more through the API commands; `authenticated` holding no `INSERT` grant on 12 of the tables at all; the whole script rolled back with 0 probe rows left behind. |
 | C12 | Client-facing text/files render safely and private secrets stay off the frontend; no demo role selector supplies production authority. | Injection cases, browser bundle/config inspection and authentication review. | Verified — [family C evidence](../verification/acceptance-family-c.md): 3 injection payloads sent through the product's own comment control render escaped with `window.__familyC` undefined and 0 dialogs; no unsafe HTML sink in the source; downloads forced via `anchor.download` with a sanitised filename; 1.45 MB of served HTML and 18 JS chunks containing no service-role key, no demo password and no role selector; and `/api/invitations` refusing every non-agency, unauthenticated and foreign-origin request. |
 
+Product amendment (2026-09-25): the user asked for several people in one client. Each client person
+has their own login; the studio manages them from Settings → Clients → People, and a client person
+sees their own team on Your account. `client_team` returns a client's active client-role people to
+the studio and that client's own people only, so C02 (no cross-client reads) and C03 (no designer
+identity) keep holding: designers are never part of a team, and a client names a requester or
+reviewer only through it. Briefings name their requester, review decisions their reviewer, and
+project notifications reach the requester and anyone who chose all activity. Evidence:
+`supabase/tests/database/client_team.test.sql` and `apps/web/tests/e2e/client-team.spec.ts`.
+
 ## D. Shell, navigation, search, and board
 
 | ID | Requirement and expected result | Required evidence | Status |
