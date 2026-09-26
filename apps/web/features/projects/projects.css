@@ -587,6 +587,10 @@
     height: var(--control-height-touch);
     flex-basis: var(--control-height-touch);
   }
+  /* The mark would push the bar over the zoom pill; the sidebar drawer still carries it. */
+  .project-tool-bar-brand {
+    display: none;
+  }
 }
 .project-details {
   display: flex;
