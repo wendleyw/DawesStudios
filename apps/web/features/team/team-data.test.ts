@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import { revokeInvitation, teamQueryKeys } from "./team-data";
+import type { Session } from "@supabase/supabase-js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  removeClientMember,
+  revokeInvitation,
+  setClientNotifications,
+  teamQueryKeys,
+} from "./team-data";
 
 type Result = { data: unknown; error: { message: string; code?: string } | null };
 type Call = { method: string; args: unknown[] };
@@ -57,10 +63,60 @@ describe("team write failures", () => {
       "revokeInvitation",
       (database) => revokeInvitation(database, { invitationId: "invitation-1" }),
     ],
+    [
+      "setClientNotifications",
+      (database) => setClientNotifications(database, { clientId: "client-1", all: false }),
+    ],
   ];
 
   it.each(failures)("%s surfaces the database error message", async (_name, run) => {
     const { database } = stubDatabase({ data: null, error: { message: "permission denied" } });
     await expect(run(database)).rejects.toThrow("permission denied");
+  });
+});
+
+describe("client people writes", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("records a person's notification choice for one client", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await setClientNotifications(database, { clientId: "client-1", all: true });
+    expect(rpc).toHaveBeenCalledWith("set_client_notifications", {
+      p_client_id: "client-1",
+      p_all: true,
+    });
+  });
+
+  it("removes a client's person through the server route with the caller's token", async () => {
+    const request = vi.fn().mockResolvedValue(Response.json({ removed: true, deactivated: false }));
+    vi.stubGlobal("fetch", request);
+    await removeClientMember({ access_token: "token-1" } as Session, {
+      clientId: "client-1",
+      profileId: "person-1",
+    });
+    expect(request).toHaveBeenCalledWith("/api/clients/client-1/members/person-1/remove", {
+      method: "POST",
+      headers: { Authorization: "Bearer token-1" },
+    });
+  });
+
+  it("surfaces the route's own error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: "Only the studio can remove a client's people." },
+            { status: 403 },
+          ),
+        ),
+    );
+    await expect(
+      removeClientMember({ access_token: "token-1" } as Session, {
+        clientId: "client-1",
+        profileId: "person-1",
+      }),
+    ).rejects.toThrow("Only the studio can remove a client's people.");
   });
 });
