@@ -686,10 +686,6 @@
     gap: 4px;
     padding-block: 16px 4px;
   }
-  .brand-section-selector {
-    width: 100%;
-    flex-basis: auto;
-  }
   .brand-section-heading {
     padding-top: 22px;
     margin-bottom: 20px;

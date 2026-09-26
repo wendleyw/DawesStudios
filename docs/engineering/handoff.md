@@ -1,7 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT. Owner: **Claude Code**. Session `dawesstudios-8c` finished Miro mode after
-the repo-wide audit; no session holds the tree.
+Updated: 2026-09-26 EDT (evening). Owner: **Claude Code**; the session has ended and no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -22,8 +21,10 @@ project canvas switches to the version's Miro board; afternoon `5303c21..97df9a3
 Evening (`75f1e13..0837bf5`): board cards sit on the campaign grid (drop on a card swaps); the client
 logo opens the Overview; Files is a Brand Hub section (`/assets` redirects); Brand Hub Assets is a
 directory (nested folders, HTTPS links, Products tile, `FolderTile` shared with Files); clients add
-folders, images and links (`202609260004`/`0005`); one compact Brand Hub scale. Brand/Files e2e
-green; `client-navigation` e2e still expects the pre-Miro canvas. Earlier: [history](history/handoff-2026-09-26.md).
+folders, images and links (`202609260004`/`0005`); one compact Brand Hub scale; the List Status sort
+steps through every status (`051bead`); the Kanban scrolls as one board (`e8dc241`). Known stale e2e:
+`client-navigation` (pre-Miro canvas) and `workspace-actions` (expects 8 SABRE nodes, overlay has 51).
+Unverified: a fresh fixture client's Overview showed "Overview unavailable" once. Earlier: [history](history/handoff-2026-09-26.md).
 
 ## In progress
 
