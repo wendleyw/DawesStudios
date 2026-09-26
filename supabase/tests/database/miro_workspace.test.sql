@@ -157,5 +157,25 @@ set local role authenticated;
 select is((select count(*)::int from public.design_boards where project_id=pg_temp.k('project')),2,'The reassigned designer now sees it');
 reset role;
 
+-- The Miro frame is the round's design: rounds never carry an uploaded design record, for anyone.
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.add_design(pg_temp.k('round-a1'),'Nope')$$,
+  '22023',null,'The agency cannot add an uploaded design to a round');
+reset role;
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+-- Designer B was unassigned from the project earlier in this test, so private.can_produce fails
+-- first here (42501); a still-assigned designer would instead hit the round-designs guard (22023).
+select throws_ok($$select public.add_design(pg_temp.k('round-a1'),'Sneaky design')$$,
+  '42501',null,'Another designer cannot add an uploaded design to a round either');
+reset role;
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select throws_ok($$select public.submit_design_version(pg_temp.k('round-a1'))$$,
+  'P0001','Add a design before submitting','A round cannot be submitted through submit_design_version');
+select is((select count(*)::int from public.designs where version_id=pg_temp.k('round-a1')),0,'The round still has no design row');
+reset role;
+
 select * from finish();
 rollback;
