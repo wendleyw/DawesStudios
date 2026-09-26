@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   brandDefaults,
-  byDueDate,
+  byOpenedDate,
   briefingPayload,
   catalogWithPresets,
   decodeBriefing,
@@ -293,21 +293,14 @@ describe("the requester the studio names", () => {
   });
 });
 
-describe("byDueDate", () => {
-  it("lists the latest due date first and undated briefings last, keeping ties in order", () => {
+describe("byOpenedDate", () => {
+  it("lists the most recently opened briefing first, whatever its due date, keeping ties in order", () => {
     const list = [
-      { id: "none", due_date: null },
-      { id: "may", due_date: "2026-05-01" },
-      { id: "sep-a", due_date: "2026-09-20" },
-      { id: "sep-b", due_date: "2026-09-20" },
-      { id: "dec", due_date: "2026-12-01" },
+      { id: "may", created_at: "2026-05-01T10:00:00Z" },
+      { id: "sep-a", created_at: "2026-09-20T09:00:00Z" },
+      { id: "sep-b", created_at: "2026-09-20T09:00:00Z" },
+      { id: "today", created_at: "2026-09-26T22:08:17.415533+00:00" },
     ];
-    expect(byDueDate(list).map((item) => item.id)).toEqual([
-      "dec",
-      "sep-a",
-      "sep-b",
-      "may",
-      "none",
-    ]);
+    expect(byOpenedDate(list).map((item) => item.id)).toEqual(["today", "sep-a", "sep-b", "may"]);
   });
 });

@@ -23,12 +23,12 @@
 .briefing-list-row:focus-visible {
   outline-offset: -3px;
 }
-/* One line per briefing: title, campaign, requester, service, status, due date. */
+/* One line per briefing: title, campaign, requester, service, status, opened, due date. */
 .briefing-list-row {
   display: grid;
   grid-template-columns:
     minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)
-    136px 56px 16px;
+    136px 176px 88px 16px;
   gap: var(--space-md);
   align-items: center;
   min-height: 56px;
@@ -42,7 +42,7 @@
      column instead of leaving it empty. Scoped above the 1000px breakpoint below, which already
      hides and re-templates this row for every viewer. */
   .briefing-list.no-requester .briefing-list-row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 56px 16px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 176px 88px 16px;
   }
 }
 .briefing-list-row h2 {
@@ -58,6 +58,7 @@
 .briefing-list-campaign,
 .briefing-list-requester,
 .briefing-list-service,
+.briefing-list-opened,
 .briefing-list-date {
   overflow: hidden;
   font-size: var(--text-base);
@@ -466,8 +467,9 @@
     grid-template-columns: minmax(0, 1fr) 280px;
     gap: 28px;
   }
+  /* The opened date stays: it is the list's order. */
   .briefing-list-row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 136px 16px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 136px 176px 16px;
   }
   .briefing-list-requester,
   .briefing-list-service,
@@ -525,6 +527,10 @@
     grid-row: 1 / span 2;
     align-self: center;
     font-size: var(--text-xs);
+  }
+  .briefing-list-opened {
+    grid-row: 3;
+    font-size: var(--text-sm);
   }
   .briefing-list-row > svg {
     display: none;

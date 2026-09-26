@@ -314,6 +314,8 @@ export type DateFormatters = {
   formatDateLong: (date: string | null, emptyLabel?: string) => string;
   /** An instant, where the time of day is part of the record: `Sep 21, 2026, 11:00 PM`. */
   formatDateTime: (date: string | null, emptyLabel?: string) => string;
+  /** The same instant in a list whose rows are recent, without the year: `Sep 21, 11:00 PM`. */
+  formatDayTime: (date: string | null, emptyLabel?: string) => string;
   /** A month, for the ledger's month filter: `September 2026`. */
   formatMonth: (date: string | null, emptyLabel?: string) => string;
   /** Today, named as a day rather than as a record: `Monday, September 21`. */
@@ -350,6 +352,7 @@ export function createDateFormatters(timeZone: string): DateFormatters {
     formatDate: format({ month: "short", day: "numeric" }),
     formatDateLong: format({ month: "short", day: "numeric", year: "numeric" }),
     formatDateTime: format({ dateStyle: "medium", timeStyle: "short" }),
+    formatDayTime: format({ month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
     formatMonth: format({ month: "long", year: "numeric" }),
     formatWeekdayDate: format({ weekday: "long", month: "long", day: "numeric" }),
     formatDayKey: (date: string) => {

@@ -8,7 +8,12 @@ import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { personName, requesterLabel } from "@/features/team/client-people";
 import { useClientPeople } from "@/features/team/team-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
-import { briefingStatusLabels, briefingStatusTones, byDueDate, services } from "./briefing-model";
+import {
+  briefingStatusLabels,
+  briefingStatusTones,
+  byOpenedDate,
+  services,
+} from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
@@ -16,7 +21,7 @@ import { PageStatus } from "@/features/shared/page-status";
 export function BriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
-  const { formatDate } = useDateFormat();
+  const { formatDate, formatDayTime } = useDateFormat();
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
   const people = useClientPeople(clientId);
@@ -41,7 +46,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
         </button>
       </div>
     );
-  const visible = byDueDate(briefings.data ?? []).filter(
+  const visible = byOpenedDate(briefings.data ?? []).filter(
     (item) =>
       tab === "all" ||
       (tab === "awaiting_review"
@@ -124,7 +129,10 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
               <span className={statusToneClass(briefingStatusTones[item.status])}>
                 {briefingStatusLabels[item.status]}
               </span>
-              <span className="briefing-list-date">{formatDate(item.due_date, "No due date")}</span>
+              <span className="briefing-list-opened">Opened {formatDayTime(item.created_at)}</span>
+              <span className="briefing-list-date">
+                {item.due_date ? `Due ${formatDate(item.due_date)}` : "No due date"}
+              </span>
               <ArrowUpRight size={16} />
             </Link>
           ))}

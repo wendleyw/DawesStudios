@@ -65,6 +65,7 @@ describe("createDateFormatters", () => {
     // said so, while the comment created by the same action said the next day.
     expect(studio.formatDate("2026-09-21T02:00:00.000Z")).toBe("Sep 20");
     expect(studio.formatDateTime("2026-09-21T02:00:00.000Z")).toBe("Sep 20, 2026, 11:00 PM");
+    expect(studio.formatDayTime("2026-09-21T02:00:00.000Z")).toBe("Sep 20, 11:00 PM");
     expect(utc.formatDate("2026-09-21T02:00:00.000Z")).toBe("Sep 21");
   });
 
