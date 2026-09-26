@@ -31,6 +31,8 @@ const defaultDeliverables: FixtureDeliverable[] = [
 export async function createProductionFixture(
   agency: SupabaseClient<Database>,
   deliverables: FixtureDeliverable[] = defaultDeliverables,
+  /** Required once SABRE has two or more people; with one, `save_briefing` names that person. */
+  requestedBy?: string,
 ) {
   const client = value(await agency.from("clients").select("id").eq("slug", "sabre").single());
   const campaign = value(
@@ -57,6 +59,7 @@ export async function createProductionFixture(
       p_direction: { questions: { content: "I’ll provide the content" } },
       p_deliverables: deliverables,
       p_estimated_credits: 4,
+      ...(requestedBy ? { p_requested_by: requestedBy } : {}),
     }),
   );
   for (const result of [
