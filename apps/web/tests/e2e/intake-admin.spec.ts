@@ -661,7 +661,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       await invitedPage.getByLabel("Password", { exact: true }).fill(password);
       await invitedPage.getByLabel("Confirm password", { exact: true }).fill(password);
       await invitedPage.getByRole("button", { name: "Accept invitation" }).click();
-      await expect(invitedPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/board$`));
+      await expect(invitedPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/overview$`));
       expect(
         (await localAdmin.from("invitations").select("status").eq("id", invitation.id).single())
           .data?.status,
@@ -712,12 +712,12 @@ test.describe("Briefing intake, credits, and account administration", () => {
         recoveryPage.getByText("Your password has been updated.", { exact: true }),
       ).toBeVisible();
       await recoveryPage.getByRole("link", { name: "Back to your work" }).click();
-      await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/board$`));
+      await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/overview$`));
       await recoveryPage.getByRole("button", { name: "Sign out", exact: true }).click();
       await recoveryPage.getByLabel("Email address").fill(email);
       await recoveryPage.getByLabel("Password", { exact: true }).fill(changed);
       await recoveryPage.getByRole("button", { name: "Sign in", exact: true }).click();
-      await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/board$`));
+      await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/overview$`));
     } finally {
       await localAdmin.auth.admin.updateUserById(user!.id, { password });
       await recoveryContext.close();
