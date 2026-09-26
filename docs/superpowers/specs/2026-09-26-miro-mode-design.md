@@ -73,8 +73,8 @@ Success means all of the following hold:
   `<deliverable> · V<n>`, only linked versions, newest first) and **Open in Miro ↗** (new tab).
   Changing the selection reloads the embed on that frame.
 - The bottom tool bar stays. Details and Conversation open as the side panel and narrow the view,
-  as with the canvas. The Conversation panel keeps its current version context: it follows the
-  version chosen in Miro mode.
+  as with the canvas. Conversation is the project's conversation on the viewer's channel, the same
+  thread the canvas shows; version feedback stays on the version cards in Versions.
 
 **URL state.** `?view=miro&version=<version id>` on the project route. On load, an unknown,
 unlinked or other-channel version id falls back to the newest linked version, and a project with
