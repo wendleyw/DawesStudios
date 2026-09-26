@@ -582,6 +582,8 @@
 .board-planning-view .board-planning-head {
   border-bottom: 1px solid var(--border);
 }
+/* A busy month grows the weeks past the viewport; the calendar then scrolls as a whole, never
+   inside a day. */
 .board-calendar {
   display: flex;
   min-width: 0;
@@ -589,6 +591,8 @@
   flex: 1;
   flex-direction: column;
   margin: var(--space-lg) var(--space-page);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .board-calendar-head {
   display: flex;
@@ -613,12 +617,13 @@
   align-items: center;
   gap: 4px;
 }
+/* Weeks share the height while their projects fit; a week with more grows to show every one. */
 .board-calendar-grid {
   display: grid;
   min-height: 0;
-  flex: 1;
+  flex: 1 0 auto;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: auto repeat(var(--calendar-weeks, 5), minmax(0, 1fr));
+  grid-template-rows: min-content repeat(var(--calendar-weeks, 5), minmax(88px, auto));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -637,7 +642,6 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  overflow: hidden;
   padding: 6px;
   background: var(--surface);
 }
@@ -771,7 +775,7 @@
   }
 }
 
-/* Compact event labels keep every week in view; details remain in the tooltip and open link. */
+/* Compact event labels keep weeks short; details remain in the tooltip and open link. */
 .board-calendar-grid .board-calendar-project {
   gap: 0;
   margin-top: 3px;
@@ -786,9 +790,7 @@
   white-space: nowrap;
 }
 .board-calendar-events {
-  min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
+  min-width: 0;
 }
 .board-calendar-grid .board-calendar-campaign,
 .board-calendar-grid .status-badge {
