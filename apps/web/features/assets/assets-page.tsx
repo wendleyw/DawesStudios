@@ -39,7 +39,13 @@ function countLabel(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+/**
+ * The client's files, shown as the Brand Hub's Files section (`/clients/:id/brand/files`). The hub
+ * owns the page title and section tabs, so this renders a section: an h2 heading, its actions and
+ * the file views.
+ */
 export function AssetsPage({ clientId }: { clientId: string }) {
+  const filesHref = `/clients/${clientId}/brand/files`;
   const { database, profile } = useAuth();
   const invalidateAssets = useInvalidateAssets();
   const invalidateWorkspace = useInvalidateWorkspace();
@@ -83,9 +89,9 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   if (data.isPending || clients.isPending) return <PageStatus>Loading files…</PageStatus>;
   if (data.error || !data.data || !clients.data?.some((client) => client.id === clientId))
     return (
-      <div className="page-content">
-        <h1>Files unavailable.</h1>
-        <p>This client is unavailable or you do not have access.</p>
+      <div className="files-page">
+        <h2>Files unavailable.</h2>
+        <p className="brand-muted">This client is unavailable or you do not have access.</p>
         <button className="button" onClick={() => void data.refetch()}>
           Try again
         </button>
@@ -156,25 +162,25 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   const isEmpty = campaignId === null ? folders.length === 0 : groups.length === 0;
 
   return (
-    <div className="page-content files-page">
-      <header className="page-heading client-page-heading">
+    <section className="files-page" aria-label="Files">
+      <header className="brand-section-heading files-heading">
         <div>
           {campaignId !== null ? (
             <div className="page-title-row">
               <Link
-                href={`/clients/${clientId}/assets`}
+                href={filesHref}
                 className="icon-button"
                 aria-label="All campaigns"
                 title="All campaigns"
               >
                 <ArrowLeft size={16} />
               </Link>
-              <h1>{campaignTitle}</h1>
+              <h2>{campaignTitle}</h2>
             </div>
           ) : (
-            <h1>Files</h1>
+            <h2>Files</h2>
           )}
-          <p>
+          <p className="brand-muted">
             {campaignId !== null
               ? `${countLabel(campaignCounts.fileCount, "file")} from ${countLabel(campaignCounts.projectCount, "project")}`
               : profile?.role === "client"
@@ -208,45 +214,45 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             </div>
           )}
         </div>
-        <div className="files-toolbar client-page-tools">
-          <SearchField
-            label="Search files"
-            value={search}
-            onChange={setSearch}
-            placeholder="Find a file…"
-            iconSize={16}
-          />
-          {campaignId !== null && (
-            <>
-              <label className="visually-hidden" htmlFor="files-project">
-                Filter project
-              </label>
-              <select
-                id="files-project"
-                value={project}
-                onChange={(event) =>
-                  setProjectEdit({ campaign: campaignId, project: event.target.value })
-                }
-              >
-                <option value="">All projects</option>
-                {campaignProjects.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-          <div className="segmented-control" aria-label="File status">
-            <button className={!approved ? "active" : ""} onClick={() => setApproved(false)}>
-              All files
-            </button>
-            <button className={approved ? "active" : ""} onClick={() => setApproved(true)}>
-              Approved
-            </button>
-          </div>
-        </div>
       </header>
+      <div className="files-toolbar">
+        <SearchField
+          label="Search files"
+          value={search}
+          onChange={setSearch}
+          placeholder="Find a file…"
+          iconSize={16}
+        />
+        {campaignId !== null && (
+          <>
+            <label className="visually-hidden" htmlFor="files-project">
+              Filter project
+            </label>
+            <select
+              id="files-project"
+              value={project}
+              onChange={(event) =>
+                setProjectEdit({ campaign: campaignId, project: event.target.value })
+              }
+            >
+              <option value="">All projects</option>
+              {campaignProjects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        <div className="segmented-control" aria-label="File status">
+          <button className={!approved ? "active" : ""} onClick={() => setApproved(false)}>
+            All files
+          </button>
+          <button className={approved ? "active" : ""} onClick={() => setApproved(true)}>
+            Approved
+          </button>
+        </div>
+      </div>
       {canDeliver && (
         <div className="delivery-callout">
           <div>
@@ -280,7 +286,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
           {folders.map((folder) => (
             <Link
               key={folder.id}
-              href={`/clients/${clientId}/assets?campaign=${folder.id}`}
+              href={`${filesHref}?campaign=${folder.id}`}
               className="folder-card"
             >
               <div className="folder-cover">
@@ -363,6 +369,6 @@ export function AssetsPage({ clientId }: { clientId: string }) {
         </div>
         {deliver.error && <FormError>{deliver.error.message}</FormError>}
       </Modal>
-    </div>
+    </section>
   );
 }

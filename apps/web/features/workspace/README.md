@@ -24,8 +24,8 @@ credits — see [`features/overview/README.md`](../overview/README.md) for its n
 `app-shell.tsx` resolves the active client from `/clients/:id/*` or through `useProjectClient`
 for `/projects/:id`. Client destinations appear once, as visible text links at the top, with an
 underline on the active section. `client-navigation.tsx` owns their shared routing and role rules:
-Overview, Board, Briefings, Reviews, Files, Brand Hub and Credits, with Overview and Credits hidden
-for designers, so a designer's five destinations start on Board. Projects keep Board active. No
+Overview, Board, Briefings, Reviews, Brand Hub and Credits, with Overview and Credits hidden
+for designers, so a designer's four destinations start on Board. Files is a Brand Hub section. Projects keep Board active. No
 client destinations remain in the sidebar on any route. A client signed into exactly one workspace
 lands on its Overview after sign-in (`home-page.tsx`'s single-workspace redirect); the sidebar's own
 single-workspace link (`client-switcher.tsx`) opens the same Overview for clients and the studio,
@@ -40,7 +40,7 @@ compact credit balance chip (`features/credits/credit-balance-chip.tsx`) sits di
 bell, linking to the client's Credits page; it renders nothing for a designer viewer, since credits
 stay out of that role's view everywhere else. Only the board supplies the quarter control.
 Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
-Reviews, Files, Brand Hub and Credits receive the same header from the shell, positioned sticky
+Reviews, Brand Hub and Credits receive the same header from the shell, positioned sticky
 inside the main scrolling region. Their white title/action cards and contextual tools sit below it
 on the plain page background (the dot grid belongs to the canvases), using the full available
 width with 16 px desktop and 12 px mobile gutters.

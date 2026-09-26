@@ -69,11 +69,11 @@ test("files open as campaign folders and each campaign groups its files by proje
   test.setTimeout(120_000);
   const clientId = await sabreId();
   const { folders, projects } = await expectedFolders(credentials.agency, clientId, true);
-  const base = `/clients/${clientId}/assets`;
+  const base = `/clients/${clientId}/brand/files`;
   await signIn(page, credentials.agency);
   await page.goto(base);
 
-  await expect(page.getByRole("heading", { level: 1, name: "Files", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Files", exact: true })).toBeVisible();
   // Projects live inside their campaign, so the folder view has no project filter.
   await expect(page.getByLabel("Filter project", { exact: true })).toHaveCount(0);
   const cards = page.locator(".folder-card");
@@ -92,7 +92,7 @@ test("files open as campaign folders and each campaign groups its files by proje
   const [busiestId, busiest] = [...folders].sort((a, b) => b[1].files - a[1].files)[0];
   await page.locator(`.folder-card[href="${base}?campaign=${busiestId}"]`).click();
   await expect(page).toHaveURL(`${base}?campaign=${busiestId}`);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(busiest.title);
+  await expect(page.locator(".files-heading h2")).toHaveText(busiest.title);
   await expect(page.locator(".client-page-heading p")).toHaveText(
     `${plural(busiest.files, "file")} from ${plural(busiest.projects.size, "project")}`,
   );
@@ -113,7 +113,7 @@ test("files open as campaign folders and each campaign groups its files by proje
   await page.goBack();
   await expect(cards).toHaveCount(folders.size);
   await page.goForward();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(busiest.title);
+  await expect(page.locator(".files-heading h2")).toHaveText(busiest.title);
   await page.getByRole("link", { name: "All campaigns", exact: true }).click();
   await expect(page).toHaveURL(base);
   await expect(cards).toHaveCount(folders.size);
@@ -138,7 +138,7 @@ test("files open as campaign folders and each campaign groups its files by proje
 
   // A project's own Files link opens its campaign already filtered to that project.
   await page.goto(`${base}?project=${onlyProject}`);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(busiest.title);
+  await expect(page.locator(".files-heading h2")).toHaveText(busiest.title);
   await expect(filter).toHaveValue(onlyProject);
   await expect(page.locator(".file-group")).toHaveCount(1);
   await expect(page.locator(`.file-group h2 a[href="/projects/${onlyProject}"]`)).toBeVisible();
@@ -154,7 +154,7 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
   test.setTimeout(90_000);
   const clientId = await sabreId();
   const { folders } = await expectedFolders(credentials.client, clientId, false);
-  const base = `/clients/${clientId}/assets`;
+  const base = `/clients/${clientId}/brand/files`;
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, credentials.client);
   await page.goto(base);
@@ -174,7 +174,7 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
   await last.scrollIntoViewIfNeeded();
   await last.click();
   await expect(page).toHaveURL(/\?campaign=/);
-  const title = page.getByRole("heading", { level: 1 });
+  const title = page.locator(".files-heading h2");
   await expect(title).toBeInViewport();
   await expect
     .poll(() => page.locator(".main-content").evaluate((element) => element.scrollTop))

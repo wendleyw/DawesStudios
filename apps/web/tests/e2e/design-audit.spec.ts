@@ -93,7 +93,7 @@ test("representative task surfaces pass responsive layout and accessibility chec
         ["briefings", clientBase + "/briefings"],
         ["new-briefing", clientBase + "/briefings/new"],
         ["reviews", clientBase + "/reviews"],
-        ["assets", clientBase + "/assets"],
+        ["assets", clientBase + "/brand/files"],
         ["credits", clientBase + "/credits"],
       ]) {
         await page.goto(route);

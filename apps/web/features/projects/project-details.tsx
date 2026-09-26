@@ -189,7 +189,7 @@ export function ProjectDetails({
         </Link>
         <Link
           className="button quiet"
-          href={`/clients/${project.client_id}/assets?project=${project.id}`}
+          href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
         >
           Files
           <ArrowUpRight size={14} />

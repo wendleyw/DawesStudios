@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { AssetsPage } from "@/features/assets/assets-page";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBrandSections } from "./brand-data";
 import { brandNavigation, isBrandSection, type EditableSectionId } from "./brand-model";
@@ -34,7 +35,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
     );
   const title = brandNavigation.find((item) => item.id === section)!.label;
   const content = sections.data?.find((item) => item.section === section)?.content;
-  const editable = section !== "assets";
+  const editable = section !== "assets" && section !== "files";
   const agency = profile?.role === "agency";
   const contentOf = (id: string) => sections.data?.find((item) => item.section === id)?.content;
   return (
@@ -45,7 +46,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
           <p>Identity, resources, and guidance for consistent work.</p>
         </div>
         {/*
-        The eight sections read as one row rather than hiding inside a select: where you are and what
+        The nine sections read as one row rather than hiding inside a select: where you are and what
         else there is are the same glance. They are links because they are routes — a section opens
         in a new tab or gets its own address, which a select could never offer. The row scrolls
         sideways instead of wrapping, so the order stays the order of the groups.
@@ -66,16 +67,21 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
           ))}
         </nav>
       </header>
-      <div className="brand-section-heading">
-        <h2>{title}</h2>
-        {agency && editable && (
-          <button className="button quiet" onClick={() => setEditing(section)}>
-            <Pencil size={14} />
-            Edit {title.toLowerCase()}
-          </button>
-        )}
-      </div>
-      {section === "assets" ? (
+      {/* Files renders its own heading, with its upload actions and campaign back link. */}
+      {section !== "files" && (
+        <div className="brand-section-heading">
+          <h2>{title}</h2>
+          {agency && editable && (
+            <button className="button quiet" onClick={() => setEditing(section)}>
+              <Pencil size={14} />
+              Edit {title.toLowerCase()}
+            </button>
+          )}
+        </div>
+      )}
+      {section === "files" ? (
+        <AssetsPage key={clientId} clientId={clientId} />
+      ) : section === "assets" ? (
         <>
           <BrandProducts
             key={`${clientId}-products`}

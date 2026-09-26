@@ -190,7 +190,6 @@ test("client links stay visible at the top across pages without duplicating side
     for (const [label, path] of [
       ["Briefings", "briefings"],
       ["Reviews", "reviews"],
-      ["Files", "assets"],
       ["Brand Hub", "brand/overview"],
       ["Credits", "credits"],
     ]) {

@@ -34,7 +34,6 @@ for (const role of ["agency", "client"] as const) {
         ["Overview", "overview"],
         ["Briefings", "briefings"],
         ["Reviews", "reviews"],
-        ["Files", "assets"],
         ["Brand Hub", "brand/overview"],
         ["Credits", "credits"],
       ]) {

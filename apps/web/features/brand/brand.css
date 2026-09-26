@@ -5,7 +5,7 @@
   align-items: flex-start;
 }
 /*
- * One row, in the order of the groups, scrolling sideways rather than wrapping. Ten sections fit
+ * One row, in the order of the groups, scrolling sideways rather than wrapping. Nine sections fit
  * across a desktop; below that the row keeps its order and moves under the finger instead of
  * reflowing into a block that pushes the section itself off the screen.
  */

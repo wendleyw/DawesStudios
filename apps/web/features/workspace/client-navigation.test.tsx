@@ -15,11 +15,11 @@ const labels = () =>
 describe("ClientNavigation", () => {
   it("leaves Overview to the sidebar for clients and the studio", () => {
     render(<ClientNavigation client={client} role="client" />);
-    expect(labels()).toEqual(["Board", "Briefings", "Reviews", "Files", "Brand Hub", "Credits"]);
+    expect(labels()).toEqual(["Board", "Briefings", "Reviews", "Brand Hub", "Credits"]);
   });
 
-  it("keeps designers on their five destinations", () => {
+  it("keeps designers on their four destinations", () => {
     render(<ClientNavigation client={client} role="designer" />);
-    expect(labels()).toEqual(["Board", "Briefings", "Reviews", "Files", "Brand Hub"]);
+    expect(labels()).toEqual(["Board", "Briefings", "Reviews", "Brand Hub"]);
   });
 });

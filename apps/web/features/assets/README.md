@@ -7,7 +7,7 @@ folder view omits since a folder spans every project in its campaign. Actual fil
 folders, or a campaign's files grouped by project — remain below. The content uses the full
 available width with the same desktop/mobile gutters as other client sections.
 
-The files page at `/clients/:clientId/assets` lists working files, shared designs and delivery
+The Brand Hub's Files section at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query) lists working files, shared designs and delivery
 files across a client's projects, grouped into campaign folders rather than one flat grid (a client
 the size of SABRE's demo overlay runs to 167 files across 50 projects in 11 campaigns). The default
 view (no `campaign` param) shows one folder card per campaign with at least one matching file,

@@ -1,7 +1,8 @@
 # Brand workspace
 
-The Brand Hub lives at `/clients/:clientId/brand/:section`. Its eight sections are Overview, Logos,
-Colors, Typography, Visual style, Assets, Messaging and Brand context. Products has no tab of its
+The Brand Hub lives at `/clients/:clientId/brand/:section`. Its nine sections are Overview, Logos,
+Colors, Typography, Visual style, Assets, Files, Messaging and Brand context. Files renders the
+client's project files (`features/assets/assets-page.tsx`) under its own heading and actions. Products has no tab of its
 own: it leads the Assets section (`brand-products.tsx`), and old `/brand/products` links redirect to
 Assets. They share the
 floating client navigation/account card, a white title card and the plain page background. The section

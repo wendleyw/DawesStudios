@@ -5,14 +5,16 @@ import { usePathname } from "next/navigation";
 import type { Profile } from "@/lib/supabase";
 import type { Client } from "./workspace-data";
 
-/** The client's sections. Its Overview lives in the sidebar instead (`app-shell.tsx`). */
+/**
+ * The client's sections. Its Overview lives in the sidebar instead (`app-shell.tsx`), and Files is a
+ * Brand Hub section.
+ */
 export function ClientNavigation({ client, role }: { client: Client; role: Profile["role"] }) {
   const pathname = usePathname();
   const destinations = [
     { path: "board", label: "Board" },
     { path: "briefings", label: "Briefings" },
     { path: "reviews", label: "Reviews" },
-    { path: "assets", label: "Files" },
     { path: "brand/overview", label: "Brand Hub" },
     ...(role !== "designer" ? [{ path: "credits", label: "Credits" }] : []),
   ];

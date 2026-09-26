@@ -169,7 +169,7 @@ test("production, private feedback, immutable client revisions, approval and rea
       .fill("Approved. Ready for delivery.");
     await client.getByRole("button", { name: "Send review", exact: true }).click();
     await expect(client.locator(".project-heading .status-badge")).toHaveText("Approved");
-    await studio.goto(`/clients/${fixture.clientId}/assets?project=${fixture.projectId}`);
+    await studio.goto(`/clients/${fixture.clientId}/brand/files?project=${fixture.projectId}`);
     await studio.getByRole("button", { name: "Delivery file", exact: true }).click();
     await studio.getByLabel("File name", { exact: true }).fill("Approved campaign final");
     await studio.getByLabel("File", { exact: true }).setInputFiles(preview);
@@ -184,7 +184,7 @@ test("production, private feedback, immutable client revisions, approval and rea
       .getByRole("button", { name: "Complete delivery", exact: true })
       .click();
     await expect(studio.getByRole("dialog")).toHaveCount(0);
-    await client.goto(`/clients/${fixture.clientId}/assets?project=${fixture.projectId}`);
+    await client.goto(`/clients/${fixture.clientId}/brand/files?project=${fixture.projectId}`);
     const downloadPromise = client.waitForEvent("download");
     await client.getByRole("button", { name: "Download Approved campaign final.png" }).click();
     const download = await downloadPromise;

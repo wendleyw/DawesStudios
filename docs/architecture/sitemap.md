@@ -25,9 +25,9 @@ The following paths are proposed canonical routes and may be consolidated during
 | `/clients/:clientId/briefings/:briefingId` | Read/review/accept | Read own client scope | Assigned accepted direction; no budget | Draft, submitted, quoted, insufficient balance, accepted result. |
 | `/clients/:clientId/briefings/:briefingId/edit` | Authorized drafts | Own authorized drafts | No | Resume a persisted draft; validate every step. |
 | `/projects/:projectId` | Full project | Sanitized project and publications | Assigned production | [Project canvas and inspector](../ref/01-agencia/03-projeto/README.md), with project/role Playground layer. |
-| `/clients/:clientId/assets` | All project files | Published files | Assigned project files | Files, as the navigation, heading and error state all name it ([reference](../ref/01-agencia/05-assets/README.md)); All/Approved, upload, detail/download. |
+| `/clients/:clientId/brand/files` | All project files | Published files | Assigned project files | Files, a Brand Hub section rather than a top-level destination; the old `/clients/:clientId/assets` redirects here with its query (`?project=`, `?campaign=`) ([reference](../ref/01-agencia/05-assets/README.md)); All/Approved, upload, detail/download. |
 | `/clients/:clientId/reviews` | Agency and client review management | Own published reviews | No separate page | [Reviews](../ref/01-agencia/06-reviews/README.md); Waiting for review/Approved. Designers submit inside the assigned project. |
-| `/clients/:clientId/brand/:section` | Read/edit | Read | Read when assigned to client work | Ten Brand Hub sections listed below. |
+| `/clients/:clientId/brand/:section` | Read/edit | Read | Read when assigned to client work | Nine Brand Hub sections, Files among them. |
 | `/clients/:clientId/brand/drafts/:draftId` | Own draft | Own draft | Own draft | Personal template editor; persistent and isolated from projects, billing, and other owners. |
 | `/clients/:clientId/credits` | Read, quote, authorized adjustments | Read, request additional credits | No | [Credits](../ref/01-agencia/08-creditos/README.md); Balance & activity / Client report. |
 | `/settings/workspace` | Agency | No | No | Settings → Studio: studio name, and the timezone every instant in the product is rendered in. |

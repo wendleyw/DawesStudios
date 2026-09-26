@@ -15,12 +15,16 @@ export const brandNavigation = [
   { id: "typography", label: "Typography", group: "Identity" },
   { id: "visual-style", label: "Visual style", group: "Identity" },
   { id: "assets", label: "Assets", group: "Resources" },
+  { id: "files", label: "Files", group: "Resources" },
   { id: "messaging", label: "Messaging", group: "Guidance" },
   { id: "ai", label: "Brand context", group: "Guidance" },
 ] as const;
 type BrandSectionId = (typeof brandNavigation)[number]["id"];
-/** Products has no tab of its own: it is edited and shown at the top of Assets. */
-export type EditableSectionId = Exclude<BrandSectionId, "assets"> | "products";
+/**
+ * Products has no tab of its own: it is edited and shown at the top of Assets. Assets and Files
+ * hold uploads rather than editable content.
+ */
+export type EditableSectionId = Exclude<BrandSectionId, "assets" | "files"> | "products";
 type ColorSwatch = { name: string; hex: string };
 /** `imageAssetId` points at one of the client's raster brand assets; `link` is an HTTPS page. */
 export type BrandProduct = {

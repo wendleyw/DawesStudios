@@ -184,7 +184,7 @@ function routesFor(
     ["briefing", `${client}/briefings/${ids.briefingId}`],
     ["briefing-new", `${client}/briefings/new`],
     ["reviews", `${client}/reviews`],
-    ["files", `${client}/assets`],
+    ["files", `${client}/brand/files`],
     ["credits", `${client}/credits`],
     ...brandSections.map((section) => [`brand-${section}`, `${client}/brand/${section}`]),
   ];
