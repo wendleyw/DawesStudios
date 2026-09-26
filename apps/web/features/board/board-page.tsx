@@ -21,7 +21,7 @@ import {
 } from "@/features/workspace/workspace-data";
 import { statusToneClass } from "@/features/shared/status-tone";
 
-import { FRAME_HEAD, FRAME_PAD, orderCampaigns, snapCardPosition } from "./board-layout";
+import { FRAME_HEAD, FRAME_PAD, dropCard, orderCampaigns } from "./board-layout";
 import {
   LIST_SORT_COLUMNS,
   LIST_SORT_OPTIONS,
@@ -119,6 +119,10 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const listSortSelectId = useId();
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  // The card under the pointer and the grid cell it left, so a drop onto another card can swap them.
+  const [dragging, setDragging] = useState<{ id: string; origin: { x: number; y: number } } | null>(
+    null,
+  );
 
   // The floating header wraps differently at every width and with every client name, so the
   // space the views reserve beneath it is measured rather than guessed: its bottom edge plus the
@@ -288,6 +292,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
     selectedCampaignId: campaign || undefined,
     hasSearch: Boolean(search),
     positions,
+    dragging: dragging?.id ?? null,
     clearFilters,
     clientId,
     setCreatingCampaign,
@@ -317,13 +322,24 @@ function ClientBoard({ clientId }: { clientId: string }) {
     });
   }
 
-  /** Snaps a dropped card to the nearest free cell among its frame's other cards and slot. */
-  function settleCard(dropped: Node): { x: number; y: number } {
+  /** Settles a dropped card on its frame's grid, swapping with a card it lands on, and saves it. */
+  function settleCard(dropped: Node) {
+    const origin = dragging?.id === dropped.id ? dragging.origin : dropped.position;
+    setDragging(null);
     const frame = nodes.find((node) => node.id === dropped.parentId);
-    const taken = nodes
-      .filter((node) => node.parentId === dropped.parentId && node.id !== dropped.id)
-      .map((node) => node.position);
-    return snapCardPosition(dropped.position, taken, frame?.width ?? 0);
+    const siblings = nodes.filter((node) => node.parentId === dropped.parentId);
+    const moves = dropCard({
+      id: dropped.id,
+      drop: dropped.position,
+      origin,
+      frameWidth: frame?.width ?? 0,
+      cards: Object.fromEntries(
+        siblings.filter((node) => node.type === "project").map((node) => [node.id, node.position]),
+      ),
+      slot: siblings.find((node) => node.type === "briefingSlot")?.position ?? null,
+    });
+    setPositions((current) => ({ ...current, ...moves }));
+    for (const [id, position] of Object.entries(moves)) moveProject.mutate({ id, position });
   }
 
   // Campaign frames determine the opening bounds; fitting before they arrive uses an empty stack.
@@ -434,11 +450,10 @@ function ClientBoard({ clientId }: { clientId: string }) {
               nodeTypes={boardNodeTypes}
               proOptions={{ hideAttribution: true }}
               onNodesChange={changeNodes}
-              onNodeDragStop={(_event, node) => {
-                const position = settleCard(node);
-                setPositions((current) => ({ ...current, [node.id]: position }));
-                moveProject.mutate({ id: node.id, position });
-              }}
+              onNodeDragStart={(_event, node) =>
+                setDragging({ id: node.id, origin: node.position })
+              }
+              onNodeDragStop={(_event, node) => settleCard(node)}
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.1}
               maxZoom={1.5}

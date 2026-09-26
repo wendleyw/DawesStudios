@@ -76,50 +76,121 @@ export function slotPosition(index: number): { x: number; y: number } {
   return { x: FRAME_PAD + index * (CARD_W + CARD_GAP), y: FRAME_HEAD + FRAME_PAD };
 }
 
+type Point = { x: number; y: number };
+type Cell = { column: number; row: number };
+
 const COLUMN_PITCH = CARD_W + CARD_GAP;
 const ROW_PITCH = CARD_H + CARD_GAP;
+const cellKey = ({ column, row }: Cell) => `${column}:${row}`;
 
-function cellOf(position: { x: number; y: number }) {
+/** How many card columns a frame of this width holds; `extent: "parent"` keeps cards inside. */
+export function gridColumns(frameWidth: number): number {
+  return Math.max(1, Math.floor((frameWidth - FRAME_PAD * 2 + CARD_GAP) / COLUMN_PITCH));
+}
+
+function cellOf(position: Point, columns = Infinity): Cell {
   return {
-    column: Math.max(0, Math.round((position.x - FRAME_PAD) / COLUMN_PITCH)),
+    column: Math.min(columns - 1, Math.max(0, Math.round((position.x - FRAME_PAD) / COLUMN_PITCH))),
     row: Math.max(0, Math.round((position.y - FRAME_HEAD - FRAME_PAD) / ROW_PITCH)),
   };
 }
 
-function cellPosition(column: number, row: number) {
+function cellPosition({ column, row }: Cell): Point {
   return { x: FRAME_PAD + column * COLUMN_PITCH, y: FRAME_HEAD + FRAME_PAD + row * ROW_PITCH };
 }
 
 /**
- * Where a dropped card settles: the free grid cell nearest to where it was let go, so every card
- * keeps the same CARD_GAP from its neighbours instead of resting wherever the pointer stopped.
- * `taken` holds the other cards and the briefing slot in the same frame; `frameWidth` bounds the
- * columns, because `extent: "parent"` keeps a card inside its frame. One extra row below the
- * deepest occupied one is always available, so a full grid still has a place to drop into.
+ * The free cell nearest to a point. One row below the deepest occupied one is always open, so a
+ * full grid still has somewhere to put a card.
  */
-export function snapCardPosition(
-  drop: { x: number; y: number },
-  taken: { x: number; y: number }[],
-  frameWidth: number,
-): { x: number; y: number } {
-  const columns = Math.max(1, Math.floor((frameWidth - FRAME_PAD * 2 + CARD_GAP) / COLUMN_PITCH));
-  const occupied = new Set(taken.map(cellOf).map(({ column, row }) => `${column}:${row}`));
-  const deepest = taken.map(cellOf).reduce((low, cell) => Math.max(low, cell.row), 0);
-  const wanted = cellOf(drop);
-  const rows = Math.max(deepest, wanted.row) + 1;
-  let best: { x: number; y: number } | null = null;
+function nearestFreeCell(target: Point, occupied: Set<string>, columns: number): Cell {
+  const deepest = [...occupied].reduce((low, key) => Math.max(low, Number(key.split(":")[1])), 0);
+  const rows = Math.max(deepest, cellOf(target).row) + 1;
+  let best: Cell = { column: 0, row: rows };
   let bestDistance = Infinity;
   for (let row = 0; row <= rows; row++)
     for (let column = 0; column < columns; column++) {
-      if (occupied.has(`${column}:${row}`)) continue;
-      const candidate = cellPosition(column, row);
-      const distance = Math.hypot(candidate.x - drop.x, candidate.y - drop.y);
+      if (occupied.has(cellKey({ column, row }))) continue;
+      const candidate = cellPosition({ column, row });
+      const distance = Math.hypot(candidate.x - target.x, candidate.y - target.y);
       if (distance < bestDistance) {
-        best = candidate;
+        best = { column, row };
         bestDistance = distance;
       }
     }
-  return best ?? cellPosition(0, rows);
+  return best;
+}
+
+export type FrameArrangement = {
+  /** Where each project card sits, relative to its frame. */
+  cards: Record<string, Point>;
+  /** The briefing placeholder's slot, when the frame carries one. */
+  slot: Point | null;
+};
+
+/**
+ * Puts every card of a frame on its grid: one card width plus CARD_GAP per column, one card height
+ * plus CARD_GAP per row. A stored position (or unsaved drag) settles in the nearest free cell, so
+ * positions saved before the board snapped still line up; a card without one keeps its auto slot.
+ * The card being dragged is left exactly where the pointer holds it and reserves no cell.
+ */
+export function arrangeFrame(
+  projects: Project[],
+  input: {
+    width: number;
+    briefingSlot: boolean;
+    overrides?: Record<string, Point>;
+    dragging?: string | null;
+  },
+): FrameArrangement {
+  const columns = gridColumns(input.width);
+  const occupied = new Set<string>();
+  const place = (target: Point) => {
+    const free = occupied.has(cellKey(cellOf(target, columns)))
+      ? nearestFreeCell(target, occupied, columns)
+      : cellOf(target, columns);
+    occupied.add(cellKey(free));
+    return cellPosition(free);
+  };
+  const slot = input.briefingSlot ? place(slotPosition(projects.length)) : null;
+  const cards: Record<string, Point> = {};
+  const stored = (project: Project) => input.overrides?.[project.id] ?? project.board_position;
+  for (const project of projects) {
+    if (project.id === input.dragging) cards[project.id] = stored(project);
+    else if (hasStoredPosition(stored(project))) cards[project.id] = place(stored(project));
+  }
+  projects.forEach((project, index) => {
+    if (!cards[project.id]) cards[project.id] = place(slotPosition(index));
+  });
+  return { cards, slot };
+}
+
+/**
+ * Where cards end up when one is dropped: on the cell under the drop point. Dropping on another
+ * card swaps the two, so a row can be reordered one move at a time; dropping on the briefing
+ * placeholder takes the nearest free cell instead. Returns every card that moves.
+ */
+export function dropCard(input: {
+  id: string;
+  drop: Point;
+  /** The dragged card's cell before the drag started. */
+  origin: Point;
+  frameWidth: number;
+  /** The frame's other cards, already on their cells. */
+  cards: Record<string, Point>;
+  slot: Point | null;
+}): Record<string, Point> {
+  const columns = gridColumns(input.frameWidth);
+  const target = cellOf(input.drop, columns);
+  const others = Object.entries(input.cards).filter(([id]) => id !== input.id);
+  const occupant = others.find(([, position]) => cellKey(cellOf(position)) === cellKey(target));
+  if (occupant) return { [input.id]: cellPosition(target), [occupant[0]]: input.origin };
+  if (!input.slot || cellKey(cellOf(input.slot)) !== cellKey(target))
+    return { [input.id]: cellPosition(target) };
+  const occupied = new Set(
+    [input.slot, ...others.map(([, position]) => position)].map((p) => cellKey(cellOf(p))),
+  );
+  return { [input.id]: cellPosition(nearestFreeCell(input.drop, occupied, columns)) };
 }
 
 /** A stored {x:0,y:0} keeps its existing meaning: no override, use the auto slot. */
@@ -158,6 +229,8 @@ type StackFrame = {
   projects?: Project[];
   /** Rendered after the cards so the agency and client can start a briefing in context. */
   briefingSlot?: boolean;
+  /** Every card's cell and the briefing slot's, for campaign frames. */
+  arrangement?: FrameArrangement;
 };
 
 type StackInput = {
@@ -177,16 +250,11 @@ type StackInput = {
   selectedCampaignId?: string;
   /** Unsaved drag positions, which must size the frame exactly like persisted ones. */
   overrides?: Record<string, { x: number; y: number }>;
+  /** The card under the pointer, which follows it freely until it is dropped. */
+  dragging?: string | null;
   /** Present when the studio placed the Competitor ads widget on this board. */
   competitorWidget?: { count: number };
 };
-
-function storedTops(projects: Project[], overrides?: Record<string, { x: number; y: number }>) {
-  return projects
-    .map((project) => overrides?.[project.id] ?? project.board_position)
-    .filter(hasStoredPosition)
-    .map((position) => position.y);
-}
 
 /**
  * Lays the frames out top to bottom in a single column. Returns plain data so the geometry can be
@@ -210,7 +278,6 @@ export function buildStack(input: StackInput): StackFrame[] {
 
   // A frame is as wide as its own row, floored at MIN_ROW_CARDS. Sizing every frame to the busiest
   // campaign instead would leave a one-project campaign sitting in a frame several cards wide.
-  const slot = input.canCreate ? 1 : 0;
   const rowWidth = (cards: number) => campaignColumnWidth(Math.max(MIN_ROW_CARDS, cards));
   const frames: StackFrame[] = [];
   let cursor = 0;
@@ -227,29 +294,46 @@ export function buildStack(input: StackInput): StackFrame[] {
       height: competitorWidgetHeight(input.competitorWidget.count),
     });
 
-  for (const campaign of ordered) {
-    const projects = grouped.get(campaign.id) ?? [];
+  const campaignFrame = (
+    id: string,
+    campaign: BoardCampaign,
+    projects: Project[],
+    briefingSlot: boolean,
+  ) => {
+    const width = rowWidth(projects.length + (briefingSlot ? 1 : 0));
+    const arrangement = arrangeFrame(projects, {
+      width,
+      briefingSlot,
+      overrides: input.overrides,
+      dragging: input.dragging,
+    });
     push({
-      id: `campaign:${campaign.id}`,
+      id,
       kind: "campaign",
-      width: rowWidth(projects.length + slot),
-      height: campaignFrameHeight(storedTops(projects, input.overrides)),
+      width,
+      height: campaignFrameHeight(Object.values(arrangement.cards).map((card) => card.y)),
       campaign,
       projects,
-      briefingSlot: input.canCreate,
+      briefingSlot,
+      arrangement,
     });
-  }
+  };
+
+  for (const campaign of ordered)
+    campaignFrame(
+      `campaign:${campaign.id}`,
+      campaign,
+      grouped.get(campaign.id) ?? [],
+      input.canCreate,
+    );
 
   if (ungrouped.length)
-    push({
-      id: "campaign:none",
-      kind: "campaign",
-      width: rowWidth(ungrouped.length),
-      height: campaignFrameHeight(storedTops(ungrouped, input.overrides)),
-      campaign: { id: "none", title: "Studio projects", start_date: null, end_date: null },
-      projects: ungrouped,
-      briefingSlot: false,
-    });
+    campaignFrame(
+      "campaign:none",
+      { id: "none", title: "Studio projects", start_date: null, end_date: null },
+      ungrouped,
+      false,
+    );
 
   // A board with campaigns but no projects yet must still show them and the way to add more; only
   // a board with nothing to render at all falls back to the notice.

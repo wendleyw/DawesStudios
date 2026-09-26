@@ -1,14 +1,7 @@
 import { useMemo } from "react";
 import type { Node } from "@xyflow/react";
 import type { Project } from "@/features/workspace/workspace-data";
-import {
-  CARD_H,
-  buildStack,
-  cardWidth,
-  hasStoredPosition,
-  slotPosition,
-  type BoardCampaign,
-} from "./board-layout";
+import { CARD_H, buildStack, cardWidth, slotPosition, type BoardCampaign } from "./board-layout";
 import { sharedTitlePrefix } from "./timeline-model";
 import { artworkFor, type ProjectArtworkMap } from "./project-thumbnail";
 
@@ -57,6 +50,8 @@ export function useBoardCanvasNodes(input: {
   /** Whether a search term is what is filtering, as opposed to only a campaign or status. */
   hasSearch: boolean;
   positions: Record<string, { x: number; y: number }>;
+  /** The card being dragged, which follows the pointer instead of its grid cell. */
+  dragging?: string | null;
   clearFilters: () => void;
   clientId: string;
   setCreatingCampaign: (creating: boolean) => void;
@@ -75,6 +70,7 @@ export function useBoardCanvasNodes(input: {
     selectedCampaignId,
     hasSearch,
     positions,
+    dragging,
     clearFilters,
     clientId,
     setCreatingCampaign,
@@ -97,6 +93,7 @@ export function useBoardCanvasNodes(input: {
       filtered,
       selectedCampaignId,
       overrides: positions,
+      dragging,
       competitorWidget: competitorWidget ? { count: competitorWidget.count } : undefined,
     });
     const built: Node[] = [];
@@ -151,13 +148,12 @@ export function useBoardCanvasNodes(input: {
         });
         const width = cardWidth();
         (frame.projects ?? []).forEach((project, index) => {
-          const stored = positions[project.id] ?? project.board_position;
           built.push({
             id: project.id,
             type: "project",
             parentId: frame.id,
             extent: "parent",
-            position: hasStoredPosition(stored) ? stored : slotPosition(index),
+            position: frame.arrangement?.cards[project.id] ?? slotPosition(index),
             data: {
               project,
               titlePrefix,
@@ -180,7 +176,7 @@ export function useBoardCanvasNodes(input: {
             type: "briefingSlot",
             parentId: frame.id,
             extent: "parent",
-            position: slotPosition(frame.projects?.length ?? 0),
+            position: frame.arrangement?.slot ?? slotPosition(frame.projects?.length ?? 0),
             draggable: false,
             selectable: false,
             className: "nopan",
@@ -204,6 +200,7 @@ export function useBoardCanvasNodes(input: {
     selectedCampaignId,
     hasSearch,
     positions,
+    dragging,
     clearFilters,
     clientId,
     setCreatingCampaign,

@@ -14,7 +14,8 @@ import {
   hasStoredPosition,
   orderCampaigns,
   slotPosition,
-  snapCardPosition,
+  arrangeFrame,
+  dropCard,
   type BoardCampaign,
   campaignColumnWidth,
   competitorWidgetHeight,
@@ -109,33 +110,81 @@ describe("frame geometry", () => {
     });
   });
 
-  it("snaps a dropped card to the nearest free slot so the gap stays even", () => {
+  it("puts cards saved off the grid back on it, keeping the gap even", () => {
     const width = campaignColumnWidth(3);
-    // Let go slightly off the second slot: it settles exactly on it.
-    expect(
-      snapCardPosition({ x: slotPosition(1).x + 37, y: 95 }, [slotPosition(0)], width),
-    ).toEqual(slotPosition(1));
-    // Dropped onto a neighbour, it takes the closest cell that is still free.
-    expect(
-      snapCardPosition(
-        { x: slotPosition(1).x - 10, y: slotPosition(1).y },
-        [slotPosition(0), slotPosition(1)],
-        width,
-      ),
-    ).toEqual(slotPosition(2));
-    // Dragged low, it lands one row down with the same gap between rows.
-    expect(snapCardPosition({ x: 30, y: 420 }, [slotPosition(0)], width)).toEqual({
-      x: FRAME_PAD,
-      y: FRAME_HEAD + FRAME_PAD + CARD_H + CARD_GAP,
-    });
+    const { cards, slot } = arrangeFrame(
+      [
+        project("p1", "c1", { board_position: { x: 0, y: 73.6 } }),
+        project("p2", "c1", { board_position: { x: 310.7, y: 72 } }),
+      ],
+      { width, briefingSlot: true },
+    );
+    expect(cards).toEqual({ p1: slotPosition(0), p2: slotPosition(1) });
+    expect(slot).toEqual(slotPosition(2));
   });
 
-  it("opens a new row when every slot in the frame is taken", () => {
-    const width = campaignColumnWidth(2);
-    expect(snapCardPosition(slotPosition(0), [slotPosition(0), slotPosition(1)], width)).toEqual({
-      x: FRAME_PAD,
-      y: FRAME_HEAD + FRAME_PAD + CARD_H + CARD_GAP,
+  it("never stacks two cards in one cell", () => {
+    const { cards } = arrangeFrame(
+      [project("p1", "c1", { board_position: { x: 330, y: 80 } }), project("p2", "c1")],
+      { width: campaignColumnWidth(3), briefingSlot: false },
+    );
+    // p1 was saved on p2's auto slot, so p2 takes the nearest free cell.
+    expect(cards.p1).toEqual(slotPosition(1));
+    expect(cards.p2).toEqual(slotPosition(0));
+  });
+
+  it("lets the dragged card follow the pointer until it is dropped", () => {
+    const { cards } = arrangeFrame([project("p1", "c1")], {
+      width: campaignColumnWidth(3),
+      briefingSlot: false,
+      overrides: { p1: { x: 137, y: 95 } },
+      dragging: "p1",
     });
+    expect(cards.p1).toEqual({ x: 137, y: 95 });
+  });
+
+  it("settles a drop on the cell beneath it", () => {
+    expect(
+      dropCard({
+        id: "p1",
+        drop: { x: slotPosition(1).x + 37, y: 95 },
+        origin: slotPosition(0),
+        frameWidth: campaignColumnWidth(3),
+        cards: { p1: slotPosition(0) },
+        slot: null,
+      }),
+    ).toEqual({ p1: slotPosition(1) });
+  });
+
+  it("swaps two cards when one is dropped on the other", () => {
+    expect(
+      dropCard({
+        id: "p1",
+        drop: { x: slotPosition(1).x - 30, y: 60 },
+        origin: slotPosition(0),
+        frameWidth: campaignColumnWidth(3),
+        cards: { p1: slotPosition(0), p2: slotPosition(1) },
+        slot: slotPosition(2),
+      }),
+    ).toEqual({ p1: slotPosition(1), p2: slotPosition(0) });
+  });
+
+  it("moves a card dropped on the briefing slot to the nearest free cell instead", () => {
+    const row2 = {
+      x: FRAME_PAD + 2 * (CARD_W + CARD_GAP),
+      y: FRAME_HEAD + FRAME_PAD + CARD_H + CARD_GAP,
+    };
+    expect(
+      dropCard({
+        id: "p1",
+        drop: slotPosition(2),
+        origin: slotPosition(0),
+        frameWidth: campaignColumnWidth(3),
+        cards: { p1: slotPosition(0), p2: slotPosition(1) },
+        slot: slotPosition(2),
+      }),
+      // Its own old cell is equally free, but the cell below is nearer to where it was let go.
+    ).toEqual({ p1: row2 });
   });
 
   it("treats the stored default as no override", () => {
