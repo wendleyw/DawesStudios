@@ -258,5 +258,173 @@ select ok(has_function_privilege('authenticated',
 select ok(not has_function_privilege('authenticated','private.is_active_client_person(uuid,uuid)','execute'),
   'The membership helper stays inside the database');
 
+-- ---------------------------------------------------------------------------------------------
+-- Notification routing (private.notify_client) and removal (remove_client_member).
+-- Blair belongs to SABRE and Acme. The routed project is the SABRE person's; the orphan project has
+-- no briefing; Blair asked for the third.
+-- ---------------------------------------------------------------------------------------------
+insert into client_team_context values
+  ('both',md5('client-team:both')::uuid),
+  ('routed-briefing',md5('client-team:routed-briefing')::uuid),
+  ('routed-project',md5('client-team:routed-project')::uuid),
+  ('orphan-project',md5('client-team:orphan-project')::uuid),
+  ('gone-briefing',md5('client-team:gone-briefing')::uuid),
+  ('gone-project',md5('client-team:gone-project')::uuid);
+insert into auth.users(id,email,raw_user_meta_data)
+  values(pg_temp.context('both'),'both@client-team.test','{"display_name":"Blair Both"}');
+insert into public.client_memberships(client_id,user_id) values
+  (pg_temp.context('sabre'),pg_temp.context('both')),
+  (pg_temp.context('acme'),pg_temp.context('both'));
+insert into public.briefings(id,client_id,service_type,title,created_by,requested_by) values
+  (pg_temp.context('routed-briefing'),pg_temp.context('sabre'),'social','Client team: routed',
+    pg_temp.context('sabre-person'),pg_temp.context('sabre-person')),
+  (pg_temp.context('gone-briefing'),pg_temp.context('sabre'),'social','Client team: requester leaves',
+    pg_temp.context('both'),pg_temp.context('both'));
+insert into public.projects(id,client_id,briefing_id,title,service_type) values
+  (pg_temp.context('routed-project'),pg_temp.context('sabre'),pg_temp.context('routed-briefing'),
+    'Client team: routed project','social'),
+  (pg_temp.context('orphan-project'),pg_temp.context('sabre'),null,
+    'Client team: project without a briefing','social'),
+  (pg_temp.context('gone-project'),pg_temp.context('sabre'),pg_temp.context('gone-briefing'),
+    'Client team: requester left','social');
+-- Notifications written inside this transaction only: now() is the transaction's start time.
+create function pg_temp.notified(p_key text,p_title text) returns integer language sql as $$
+  select count(*)::int from public.notifications
+  where user_id=pg_temp.context(p_key) and title=p_title and created_at>=now()
+$$;
+-- A SABRE update about one project, as the current JWT subject. Called with the role reset: the
+-- function is private to the database.
+create function pg_temp.notify(p_project text,p_title text) returns void language sql as $$
+  select private.notify_client(pg_temp.context('sabre'),pg_temp.context(p_project),p_title,'')
+$$;
+
+-- 1. A project update reaches its requester, not the rest of the team.
+select pg_temp.act_as('agency');
+select pg_temp.notify('routed-project','Client team: requester only');
+select is(pg_temp.notified('sabre-person','Client team: requester only'),1,'A project update reaches its requester');
+select is(pg_temp.notified('teammate','Client team: requester only'),0,'A teammate who did not ask is not notified');
+
+-- 2. Someone who switched on all activity hears about every project.
+select pg_temp.act_as('teammate');
+set local role authenticated;
+select lives_ok($$select public.set_client_notifications(pg_temp.context('sabre'),true)$$,
+  'Tess switches on all SABRE activity');
+reset role;
+select pg_temp.act_as('agency');
+select pg_temp.notify('routed-project','Client team: all activity');
+select is(pg_temp.notified('teammate','Client team: all activity'),1,'All activity reaches every project');
+select is(pg_temp.notified('quiet','Client team: all activity'),0,'My requests does not');
+
+-- 3. A studio reply in the client conversation also reaches the client people who wrote there.
+select pg_temp.act_as('quiet');
+set local role authenticated;
+select lives_ok($$select public.post_comment(pg_temp.context('routed-project'),'client','A question from Quinn.')$$,
+  'Quinn writes in the project''s client conversation');
+select pg_temp.act_as('both');
+select lives_ok($$select public.post_comment(pg_temp.context('routed-project'),'client','A note from Blair.')$$,
+  'Blair writes there too');
+select pg_temp.act_as('agency');
+select lives_ok($$select public.post_comment(pg_temp.context('routed-project'),'client','The studio answers.')$$,
+  'The studio replies');
+reset role;
+select is(pg_temp.notified('quiet','New message from Studio'),1,'A studio reply reaches a person who wrote in the conversation');
+select is(pg_temp.notified('sabre-person','New message from Studio'),1,'It reaches the requester');
+select is(pg_temp.notified('leaving','New message from Studio'),0,'It does not reach a teammate who never wrote there');
+
+-- 4. A project with no briefing reaches every person; removed people and designers never.
+select pg_temp.act_as('agency');
+select pg_temp.notify('orphan-project','Client team: no briefing');
+select is(
+  (select sum(pg_temp.notified(k,'Client team: no briefing'))::int
+    from unnest(array['sabre-person','teammate','quiet','leaving','both']) k),
+  5,'A project with no requester reaches every person');
+select is(pg_temp.notified('former','Client team: no briefing'),0,'A removed person is never notified');
+select is(pg_temp.notified('designer','Client team: no briefing'),0,'A designer is never notified as a client person');
+
+-- 5. Removing Blair, who also belongs to Acme, removes only the SABRE membership.
+insert into public.notifications(user_id,client_id,title)
+  values(pg_temp.context('both'),pg_temp.context('acme'),'Client team: Acme note');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select is(public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('both')),false,
+  'Removing someone who belongs to another client removes only this membership');
+reset role;
+select is((select count(*)::int from public.client_memberships where user_id=pg_temp.context('both')),1,
+  'Blair keeps Acme');
+select ok((select removed_at is null from public.profiles where id=pg_temp.context('both')),
+  'Blair keeps their login');
+select is(pg_temp.notified('both','Client team: no briefing'),0,'Their SABRE notifications are deleted');
+select is(pg_temp.notified('both','Client team: Acme note'),1,'Their Acme notifications stay');
+
+-- 6. The requester has left: every person is notified, and someone who wrote before leaving no
+-- longer hears the studio's replies.
+select pg_temp.act_as('agency');
+select pg_temp.notify('gone-project','Client team: requester left');
+select is(
+  (select sum(pg_temp.notified(k,'Client team: requester left'))::int
+    from unnest(array['sabre-person','teammate','quiet','leaving']) k),
+  4,'When the requester has left, every person is notified');
+select is(pg_temp.notified('both','Client team: requester left'),0,'The former requester is not');
+set local role authenticated;
+select lives_ok($$select public.post_comment(pg_temp.context('routed-project'),'client','Another answer.')$$,
+  'The studio replies again');
+reset role;
+select is(pg_temp.notified('both','New message from Studio'),0,
+  'Someone who wrote before leaving the client is not notified');
+
+-- 7. A client-wide update (no project) reaches every person.
+select pg_temp.act_as('agency');
+select private.notify_client(pg_temp.context('sabre'),null,'Client team: client-wide','');
+select is(
+  (select sum(pg_temp.notified(k,'Client team: client-wide'))::int
+    from unnest(array['sabre-person','teammate','quiet','leaving']) k),
+  4,'A client-wide update reaches every person');
+
+-- 8. The person who acted is never notified.
+select pg_temp.act_as('sabre-person');
+select pg_temp.notify('routed-project','Client team: own action');
+select is(pg_temp.notified('sabre-person','Client team: own action'),0,'The actor is never notified');
+select is(pg_temp.notified('teammate','Client team: own action'),1,'Others still are, as their choice says');
+
+-- 9. remove_client_member: the studio only, a client person only, a member only.
+select pg_temp.act_as('sabre-person');
+set local role authenticated;
+select throws_ok($$select public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('leaving'))$$,
+  '42501',null,'A client person cannot remove anyone');
+select pg_temp.act_as('designer');
+select throws_ok($$select public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('leaving'))$$,
+  '42501',null,'A designer cannot remove anyone');
+select pg_temp.act_as('agency');
+select throws_ok($$select public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('designer'))$$,
+  'P0001','Target is not a client person','A studio or designer account is not removed through a client');
+select throws_ok($$select public.remove_client_member(pg_temp.context('acme'),pg_temp.context('leaving'))$$,
+  'P0001','This person is not a member of this client','A person is removed only from a client they belong to');
+
+-- 10. Riley's last client: the account is deactivated and waits for the route to block sign-in.
+select is(public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('leaving')),true,
+  'Removing someone''s last client deactivates their account');
+select is((select count(*)::int from public.client_team(pg_temp.context('sabre'))
+    where user_id=pg_temp.context('leaving')),0,'They leave the team at once');
+select is(public.remove_client_member(pg_temp.context('sabre'),pg_temp.context('leaving')),true,
+  'A retry still asks the route to finish blocking sign-in');
+reset role;
+select ok((select removed_at is not null from public.profiles where id=pg_temp.context('leaving')),
+  'The account is marked removed');
+select is((select count(*)::int from public.notifications where user_id=pg_temp.context('leaving')),0,
+  'Their notifications are deleted');
+select is((select count(*)::int from public.client_memberships
+    where client_id=pg_temp.context('sabre') and user_id=pg_temp.context('leaving')),1,
+  'The membership stays as the record of the pending removal');
+select is((select count(*)::int from private.audit_events
+    where event='client_member.removed' and entity_id=pg_temp.context('leaving')),1,
+  'A retry writes no second audit event');
+select pg_temp.act_as('leaving');
+set local role authenticated;
+select is(private.is_client_member(pg_temp.context('sabre')),false,
+  'A removed person''s existing token loses client access');
+reset role;
+select ok(not has_function_privilege('anon','public.remove_client_member(uuid,uuid)','execute'),
+  'Anonymous callers cannot remove anyone');
+
 select * from finish();
 rollback;

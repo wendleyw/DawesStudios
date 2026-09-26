@@ -1944,6 +1944,10 @@ export type Database = {
         Args: { p_attachment_id: string }
         Returns: string
       }
+      remove_client_member: {
+        Args: { p_client_id: string; p_profile_id: string }
+        Returns: boolean
+      }
       remove_team_member: { Args: { p_profile_id: string }; Returns: undefined }
       request_credits: {
         Args: {
