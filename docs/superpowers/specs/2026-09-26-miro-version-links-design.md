@@ -99,9 +99,10 @@ Boundaries follow `docs/architecture/data-access.md` and `apps/web/features/shar
   (`https://miro.com/app/live-embed/<boardId>/?moveToWidget=<widgetId>`) and the open-in-Miro URL
   from stored identifiers, plus a client-side pre-check mirroring the database rule. The iframe
   never receives a pasted URL.
-- `features/projects/project-data.ts`: `usePublicationMiroLink()` and `useVersionMiroLink()` read
-  hooks; `setPublicationMiroLink`, `clearPublicationMiroLink`, `setVersionMiroLink` and
-  `clearVersionMiroLink` write functions.
+- `features/projects/project-data.ts`: the project detail read attaches each version's link on the
+  viewer's channel (`CanvasVersion.miro`); `useLatestMiroLink()` reads the prefill; `setMiroLink`
+  and `clearMiroLink` call the channel's RPC; `publishVersion` returns the publication id so the
+  dialog can link it.
 - `features/projects/miro-board-panel.tsx`: the full-screen panel. It receives `boardId`,
   `widgetId` and a title, and does not know which channel it shows. The header holds
   **Back to project**, the version label and **Open in Miro ↗** (new tab), which stays visible
