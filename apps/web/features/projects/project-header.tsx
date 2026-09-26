@@ -144,7 +144,6 @@ export function ProjectHeader({
             <>
               <ProjectCreditsChip projectId={project.id} viewer={viewer} />
               {viewer?.role === "agency" && channelControl}
-              {deliverableFilter}
             </>
           }
         />

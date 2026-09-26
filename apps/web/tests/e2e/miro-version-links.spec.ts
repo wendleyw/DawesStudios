@@ -127,11 +127,16 @@ test.describe("Miro mode and the deliverable filter", () => {
     page,
   }) => {
     await signIn(page, credentials.client);
-    // A project with a Miro link opens on Miro; its deliverable filter sits under More there.
+    // A project with a Miro link opens on Miro, which has no deliverable filter; Versions has it.
     await page.goto(`/projects/${filterProjectId}`);
     await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVFilterE2E/);
     await expect(page).toHaveURL(/view=miro/);
     await page.getByRole("button", { name: "More", exact: true }).click();
+    await expect(page.getByLabel("Filter deliverable")).toHaveCount(0);
+    await page
+      .getByRole("group", { name: "Project view" })
+      .getByRole("button", { name: "Versions" })
+      .click();
     await page.getByLabel("Filter deliverable").selectOption({ label: "Instagram Story" });
     await expect(page.getByRole("group", { name: "Project view" })).toHaveCount(0);
     await expect(page).not.toHaveURL(/view=/);

@@ -307,8 +307,8 @@ title / Deliverable`, a **Miro version** toggle (`V1`, `V2`, … — the linked 
 deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miroBoardUrl`,
 `target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
 is the way through to the real board regardless) and a **More** menu holding the credits the project
-used (`ProjectCreditsChip`), the agency's channel switch and the deliverable filter (which changes
-the deliverable). The shown version's status (`versionStatusLabel`) sits beside the version toggle, followed by the
+used (`ProjectCreditsChip`) and the agency's channel switch. The deliverable filter stays in
+Versions only: Miro mode shows one deliverable's board, so it offers no deliverable choice. The shown version's status (`versionStatusLabel`) sits beside the version toggle, followed by the
 project's due date (`Due Sep 24` or `No due date`); the project status is left to Versions. When the
 work area is under 1000 px wide (`@container board`), the title keeps the first row beside the back
 arrow and the rest of the bar wraps below it. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
