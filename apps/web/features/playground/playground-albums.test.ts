@@ -4,7 +4,10 @@ import type { BrandAsset, BrandAssetFolder } from "@/features/brand/brand-data";
 import type { CanvasDesign, CanvasVersion, TableRow } from "@/features/projects/project-data";
 import {
   buildBrandAlbums,
+  buildPlaygroundAlbum,
   buildProjectAlbums,
+  clipboardDisabledReason,
+  CLIPBOARD_ONLY_IMAGES,
   computeDisabledReason,
   copyAlbumFilesToBoard,
   type AlbumFile,
@@ -15,6 +18,7 @@ import {
   PLAYGROUND_ALBUM_DRAG_TYPE,
 } from "./playground-albums";
 import { PLAYGROUND_MAX_FILE_BYTES } from "./playground-types";
+import type { PlaygroundItem } from "./playground-types";
 
 describe("isPreviewableImage", () => {
   it("accepts the three raster types these albums ever preview", () => {
@@ -336,5 +340,69 @@ describe("copyAlbumFilesToBoard", () => {
     );
     expect(downloadDesign).toHaveBeenCalledWith("project-1/a.png", "internal");
     expect(downloadBrand).not.toHaveBeenCalled();
+  });
+});
+
+describe("buildPlaygroundAlbum", () => {
+  const item = (
+    id: string,
+    kind: PlaygroundItem["kind"],
+    asset: string | null,
+    mime: string | null,
+  ) =>
+    ({
+      id,
+      board_id: "b",
+      kind,
+      title: `Item ${id}`,
+      body: "",
+      asset_path: asset,
+      mime_type: mime,
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 200,
+      revision: 1,
+      url: asset ? `https://signed/${id}` : undefined,
+    }) as PlaygroundItem;
+
+  it("lists the board's images newest first", () => {
+    const album = buildPlaygroundAlbum([
+      item("1", "image", "b/1/a.png", "image/png"),
+      item("2", "note", null, null),
+      item("3", "file", "b/3/a.pdf", "application/pdf"),
+      item("4", "image", "b/4/a.jpg", "image/jpeg"),
+    ]);
+    expect(album?.label).toBe("Playground");
+    expect(album?.group).toBe("playground");
+    expect(album?.files.map((file) => file.id)).toEqual(["4", "1"]);
+    expect(album?.files[0].source).toEqual({
+      kind: "playground",
+      assetPath: "b/4/a.jpg",
+      previewUrl: "https://signed/4",
+    });
+  });
+
+  it("is null without images", () => {
+    expect(buildPlaygroundAlbum([item("2", "note", null, null)])).toBeNull();
+  });
+});
+
+describe("clipboardDisabledReason", () => {
+  const file = (mimeType: string) =>
+    ({
+      id: "f",
+      title: "F",
+      mimeType,
+      sizeBytes: null,
+      source: { kind: "brand", storagePath: "p" },
+    }) as const;
+  it("allows PNG, JPEG and WebP", () => {
+    for (const mime of ["image/png", "image/jpeg", "image/webp"])
+      expect(clipboardDisabledReason({ ...file(mime) })).toBeUndefined();
+  });
+  it("refuses everything else", () => {
+    for (const mime of ["application/pdf", "image/svg+xml", "video/mp4", "image/gif"])
+      expect(clipboardDisabledReason({ ...file(mime) })).toBe(CLIPBOARD_ONLY_IMAGES);
   });
 });

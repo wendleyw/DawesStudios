@@ -16,7 +16,11 @@ import type {
 } from "@/features/projects/project-data";
 import { mapWithConcurrency } from "@/features/shared/concurrency";
 import { uploadSizeMessage, type UploadMime } from "@/features/shared/upload-rules";
-import { PLAYGROUND_FILE_MIMES, PLAYGROUND_MAX_FILE_BYTES } from "./playground-types";
+import {
+  PLAYGROUND_FILE_MIMES,
+  PLAYGROUND_MAX_FILE_BYTES,
+  type PlaygroundItem,
+} from "./playground-types";
 
 /** The custom `dataTransfer` type an in-app album drag carries, distinguishing it from a native OS
  * file drop in the canvas's shared `onDragOver`/`onDrop` handlers (`playground-board.tsx`). */
@@ -24,7 +28,8 @@ export const PLAYGROUND_ALBUM_DRAG_TYPE = "application/x-playground-album-file";
 
 export type AlbumFileSource =
   | { kind: "brand"; storagePath: string }
-  | { kind: "design"; channel: ProjectChannel; assetPath: string };
+  | { kind: "design"; channel: ProjectChannel; assetPath: string }
+  | { kind: "playground"; assetPath: string; previewUrl?: string };
 
 export type AlbumFile = {
   id: string;
@@ -40,7 +45,7 @@ export type AlbumFile = {
 
 export type Album = {
   id: string;
-  group: "brand" | "project";
+  group: "brand" | "project" | "playground";
   label: string;
   files: AlbumFile[];
 };
@@ -180,6 +185,33 @@ export function buildProjectAlbums(
   return albums;
 }
 
+/** The viewer's own Playground images, newest first, for the Miro asset strip. */
+export function buildPlaygroundAlbum(items: PlaygroundItem[]): Album | null {
+  const files = items
+    .filter(
+      (item): item is PlaygroundItem & { asset_path: string; mime_type: string } =>
+        item.kind === "image" && !!item.asset_path && !!item.mime_type,
+    )
+    .reverse()
+    .map((item): AlbumFile => ({
+      id: item.id,
+      title: item.title,
+      mimeType: item.mime_type,
+      sizeBytes: null,
+      source: { kind: "playground", assetPath: item.asset_path, previewUrl: item.url },
+    }));
+  return files.length
+    ? { id: "playground", group: "playground", label: "Playground", files }
+    : null;
+}
+
+export const CLIPBOARD_ONLY_IMAGES = "Only images can be copied.";
+
+/** Why a file cannot be copied to the clipboard, or `undefined` when it can. */
+export function clipboardDisabledReason(file: AlbumFile): string | undefined {
+  return isPreviewableImage(file.mimeType) ? undefined : CLIPBOARD_ONLY_IMAGES;
+}
+
 export type CopyDependencies = {
   downloadBrand: (storagePath: string) => Promise<Blob>;
   downloadDesign: (assetPath: string, channel: ProjectChannel) => Promise<Blob>;
@@ -209,6 +241,8 @@ export async function copyAlbumFilesToBoard(
     const id = crypto.randomUUID();
     onStatus({ id, file, point, state: "loading" });
     try {
+      if (file.source.kind === "playground")
+        throw new Error("A Playground file is already on the board.");
       const path = file.source.kind === "brand" ? file.source.storagePath : file.source.assetPath;
       const blob =
         file.source.kind === "brand"
