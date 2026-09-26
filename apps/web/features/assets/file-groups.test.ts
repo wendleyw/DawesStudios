@@ -118,17 +118,6 @@ describe("buildCampaignFolders", () => {
     expect(c2).toMatchObject({ fileCount: 1, projectCount: 1 });
   });
 
-  it("covers a folder with its newest file that has a signed preview, skipping newer ones without one", () => {
-    // f2 (09-22) is newer than f3 (09-21) but has no preview, so f3 wins the cover.
-    const c1 = folders.find((folder) => folder.id === "c1");
-    expect(c1?.cover?.id).toBe("f3");
-  });
-
-  it("falls back to no cover when nothing in the folder has a signed preview", () => {
-    const c2 = folders.find((folder) => folder.id === "c2");
-    expect(c2?.cover).toBeNull();
-  });
-
   it("omits a campaign with no matching file", () => {
     // p3/c2 only appears through f4; a campaign search-filtered to nothing must not render a folder.
     expect(buildCampaignFolders([], projects)).toEqual([]);

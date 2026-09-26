@@ -28,6 +28,8 @@ with changed as(update public.brand_assets set name='Renamed' where id=md5('fold
 select is((select count(*)::int from changed),0,'Client cannot edit an asset after uploading it');
 with removed as(delete from public.brand_assets where id=md5('folder-test:client-asset')::uuid returning id)
 select is((select count(*)::int from removed),0,'Client cannot delete assets');
+select lives_ok($$insert into public.brand_assets(client_id,name,category,link_url,folder_id) values(md5('dawes:client-org-1')::uuid,'Client link','Link','https://example.com/client',md5('folder-test:client')::uuid)$$,'Client adds a link');
+select throws_ok($$insert into public.brand_assets(client_id,name,category,link_url,storage_path,mime_type) values(md5('dawes:client-org-1')::uuid,'Mixed','Link','https://example.com/x',md5('dawes:client-org-1')::uuid::text || '/' || md5('mixed')::uuid::text || '.png','image/png')$$,'42501',null,'A link carries no file');
 with changed as(update public.brand_asset_folders set name='Unauthorized' where id=md5('folder-test:one')::uuid returning id)
 select is((select count(*)::int from changed),0,'Client cannot rename folders');
 with removed as(delete from public.brand_asset_folders where id=md5('folder-test:one')::uuid returning id)
@@ -51,6 +53,25 @@ select set_config('request.jwt.claim.sub',md5('dawes:client-1')::uuid::text,true
 set local role authenticated;
 select is((select count(*)::int from public.brand_asset_folders where id=md5('folder-test:one')::uuid),0,'Removed client cannot browse folders');
 
+select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
+set local role authenticated;
+select lives_ok($$insert into public.brand_asset_folders(id,client_id,name,parent_id) values(md5('folder-test:child')::uuid,md5('dawes:client-org-1')::uuid,'Nested',md5('folder-test:one')::uuid)$$,'Agency nests a folder');
+select lives_ok($$insert into public.brand_asset_folders(client_id,name,parent_id) values(md5('dawes:client-org-1')::uuid,'Nested',md5('folder-test:client')::uuid)$$,'Sibling names are unique per parent, not per client');
+select throws_ok($$insert into public.brand_asset_folders(client_id,name,parent_id) values(md5('dawes:client-org-1')::uuid,'NESTED',md5('folder-test:one')::uuid)$$,'23505',null,'Sibling names stay unique');
+select throws_ok($$insert into public.brand_asset_folders(client_id,name,parent_id) values(md5('dawes:client-org-2')::uuid,'Cross',md5('folder-test:one')::uuid)$$,'23503',null,'A folder cannot nest under another client''s folder');
+select ok(not has_column_privilege('authenticated','public.brand_asset_folders','parent_id','UPDATE'),'Folders cannot be moved, so no cycle can form');
+select lives_ok($$insert into public.brand_asset_folders(id,client_id,name,parent_id) values
+  (md5('depth:2')::uuid,md5('dawes:client-org-1')::uuid,'D2',md5('folder-test:child')::uuid),
+  (md5('depth:3')::uuid,md5('dawes:client-org-1')::uuid,'D3',md5('depth:2')::uuid),
+  (md5('depth:4')::uuid,md5('dawes:client-org-1')::uuid,'D4',md5('depth:3')::uuid),
+  (md5('depth:5')::uuid,md5('dawes:client-org-1')::uuid,'D5',md5('depth:4')::uuid)$$,'Folders nest up to six levels');
+select throws_ok($$insert into public.brand_asset_folders(client_id,name,parent_id) values(md5('dawes:client-org-1')::uuid,'D7',md5('depth:5')::uuid)$$,'23514',null,'A seventh level is refused');
+select lives_ok($$insert into public.brand_assets(id,client_id,name,category,link_url,folder_id) values(md5('folder-test:link')::uuid,md5('dawes:client-org-1')::uuid,'Brand portal','Link','https://example.com/portal',md5('folder-test:child')::uuid)$$,'Agency adds a link asset');
+select throws_ok($$insert into public.brand_assets(client_id,name,category,link_url) values(md5('dawes:client-org-1')::uuid,'Bad link','Link','javascript:alert(1)')$$,'23514',null,'Only HTTPS links are stored');
+select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
+select lives_ok($$delete from public.brand_asset_folders where id=md5('folder-test:child')::uuid$$,'Agency deletes a nested folder');
+select is((select parent_id from public.brand_asset_folders where id=md5('depth:2')::uuid),md5('folder-test:one')::uuid,'Its subfolders move up to its parent');
+select is((select folder_id from public.brand_assets where id=md5('folder-test:link')::uuid),md5('folder-test:one')::uuid,'Its assets move up to its parent');
 select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
 select lives_ok($$delete from public.brand_asset_folders where id=md5('folder-test:one')::uuid$$,'Agency can delete a nonempty folder');
 select is((select count(*)::int from public.brand_assets where id=md5('folder-test:asset')::uuid),1,'Deleting the folder preserves the asset');

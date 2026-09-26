@@ -413,3 +413,65 @@ export function validateBrandFile(
   if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   return brandFileTypes[file.type];
 }
+
+/**
+ * The Assets directory. Folders nest (up to six levels, enforced by the database); these pure
+ * helpers turn the flat folder list into paths, children and indented choices.
+ */
+type FolderNode = { id: string; name: string; parent_id: string | null };
+
+/** The chain from the top level down to `id`, or empty for the top level or an unknown id. */
+export function folderPath<T extends FolderNode>(folders: T[], id: string | null): T[] {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  const path: T[] = [];
+  let current = id ? byId.get(id) : undefined;
+  while (current && path.length < 10) {
+    path.unshift(current);
+    current = current.parent_id ? byId.get(current.parent_id) : undefined;
+  }
+  return path;
+}
+
+/** Folders directly inside `parentId` (`null` for the top level), by name. */
+export function childFolders<T extends FolderNode>(folders: T[], parentId: string | null): T[] {
+  return folders
+    .filter((folder) => (folder.parent_id ?? null) === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name, "en-US"));
+}
+
+/** Every folder as an indented choice, parents before their children, for folder selects. */
+export function folderOptions(folders: FolderNode[]): { id: string; label: string }[] {
+  const options: { id: string; label: string }[] = [];
+  const visit = (parentId: string | null, depth: number) => {
+    for (const folder of childFolders(folders, parentId)) {
+      options.push({ id: folder.id, label: `${" ".repeat(depth)}${folder.name}` });
+      if (depth < 10) visit(folder.id, depth + 1);
+    }
+  };
+  visit(null, 0);
+  return options;
+}
+
+/** How many assets a folder holds, including everything in its subfolders. */
+export function folderAssetCount(
+  folders: FolderNode[],
+  assets: { folder_id: string | null }[],
+  id: string,
+): number {
+  const inside = new Set([id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const folder of folders)
+      if (folder.parent_id && inside.has(folder.parent_id) && !inside.has(folder.id)) {
+        inside.add(folder.id);
+        grew = true;
+      }
+  }
+  return assets.filter((asset) => asset.folder_id && inside.has(asset.folder_id)).length;
+}
+
+/** A link asset carries an address instead of a stored file. */
+export function isLinkAsset(asset: { link_url?: string | null }): boolean {
+  return !!asset.link_url;
+}

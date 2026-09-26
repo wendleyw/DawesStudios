@@ -47,27 +47,39 @@ one. Specifications and usage guidance sit behind **Details** on each card.
 
 ## Assets and folders
 
-`brand-assets.tsx` owns the asset collection, search/category filters, folder navigation and details.
-Folders are one level deep and belong to one client. All assets, Products and Unfiled remain available;
-existing assets start in Unfiled. Folder buttons show counts for the complete collection, while the
-active folder heading reports the search/category result count.
+`brand-assets.tsx` is a directory. Folders nest up to six levels and belong to one client; the top
+level lists the **Products** tile and the top-level folders as shared `FolderTile`s
+(`features/shared/folder-tile.tsx`), then the files and links filed at the top level. Opening a
+folder shows its subfolders, then its own files and links, under a path (Assets › Campaigns ›
+Summer) whose earlier steps lead back up; the path is hidden at the top level, where the section
+title already says Assets. A folder tile counts everything inside it, subfolders included. A search
+or category filter looks through every folder at once and lists the matches as search results.
+The tree helpers (`folderPath`, `childFolders`, `folderOptions`, `folderAssetCount`) are pure
+functions in `brand-model.ts`.
+
+A link is an asset with an HTTPS address instead of a file (`brand-link-dialog.tsx`, category
+Link): its card shows the address's host and its detail dialog offers **Open link** in place of
+**Download file**. Addresses must be complete HTTPS URLs (`safeHttpsUrl` and a database check).
 
 The agency can create or rename folders, choose a destination when uploading, and move an asset
-from its detail dialog. Deleting a folder requires confirmation and moves its assets to Unfiled;
-no asset record or Storage object is deleted. `brand-folder-dialog.tsx` owns form validation and a
-stable creation ID, including recovery after a committed response is lost. A renamed folder retains
-its ID. `brand-asset-folder-picker.tsx` handles per-asset moves. A client may also create folders
-and add images (PNG, JPEG or WebP; **Add image**), but cannot rename or delete folders or move,
-edit or delete assets. Assigned designers browse folders and download files only.
+from its detail dialog. Deleting a folder requires confirmation and moves its subfolders and assets
+up to its parent; no asset record or Storage object is deleted. `brand-folder-dialog.tsx` owns form
+validation and a stable creation ID, including recovery after a committed response is lost. A
+renamed folder retains its ID; folders cannot be moved. `brand-asset-folder-picker.tsx` handles
+per-asset moves with the indented folder tree. A client may also create folders (at any level) and
+add images (PNG, JPEG or WebP; **Add image**) and links, but cannot rename or delete folders or
+move, edit or delete assets. Assigned designers browse folders and download files only.
 
 Migration `202609230009_brand_asset_folders.sql` adds `brand_asset_folders` and nullable
 `brand_assets.folder_id`. RLS enforces client-scoped reads and agency writes;
 `202609260004_client_brand_uploads.sql` adds client-member folder inserts, raster-only asset inserts
 and Storage uploads, and a client delete limited to its own unreferenced upload (the cleanup after a
-failed save). Names are trimmed,
-1–80 characters and unique case-insensitively per client. A composite foreign key prevents assigning
-an asset to another client's folder. Folder client/ID columns cannot be updated by authenticated
-users. Folder deletion nulls only `folder_id`; file paths and asset ownership stay unchanged.
+failed save). `202609260005_brand_asset_directories.sql` adds `parent_id` (set on creation only, so
+no cycle can form; a composite foreign key keeps it inside the client; a trigger caps the depth at
+six), moves a deleted folder's contents to its parent, and adds `brand_assets.link_url`. Names are
+trimmed, 1–80 characters and unique case-insensitively among siblings. A composite foreign key
+prevents assigning an asset to another client's folder. Folder client/ID/parent columns cannot be
+updated by authenticated users.
 
 The private `brand-assets` bucket keeps opaque `<client UUID>/<random UUID>.<extension>` paths.
 PNG, JPEG, WebP, SVG and PDF are accepted up to 50 MiB. Raster previews use short-lived caller-scoped

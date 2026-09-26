@@ -10,6 +10,7 @@ import {
   type BrandAsset,
   type BrandAssetFolder,
 } from "./brand-data";
+import { folderOptions } from "./brand-model";
 
 export function BrandAssetFolderPicker({
   asset,
@@ -53,10 +54,10 @@ export function BrandAssetFolderPicker({
           }}
           disabled={move.isPending}
         >
-          <option value="">Unfiled</option>
-          {folders.map((folder) => (
+          <option value="">Assets (top level)</option>
+          {folderOptions(folders).map((folder) => (
             <option key={folder.id} value={folder.id}>
-              {folder.name}
+              {folder.label}
             </option>
           ))}
         </select>

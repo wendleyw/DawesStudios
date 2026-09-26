@@ -99,7 +99,7 @@ All nine sections use the selected client context. Agency edits are persisted an
 | `typography` | Typography | Primary font, hierarchy and examples; custom sample text; font source link; agency edit. |
 | `visual-style` | Visual Style | Four reference examples, photography Use/Avoid rules and direction; detail dialogs; agency edit. |
 | `products` | Product Library | Product cards and per-product Assets, Specs, Rules tabs; multiple products including the three reference examples. |
-| `assets` | Brand Assets | Search/category filters; All assets, Unfiled and named folders; agency create/rename/delete folder, choose upload destination and move asset; authorized preview/download/copy reference. Folder deletion retains files. |
+| `assets` | Brand Assets | A directory: nested folders as tiles with a path back up, the Products tile, files and HTTPS links; search/category filters across every folder; agency create/rename/delete folder, choose upload destination and move asset; client create folder and add images and links; authorized preview/download/open link/copy reference. Folder deletion moves contents to the parent. |
 | `messaging` | Copy & Messaging | Voice/tone, headlines, taglines, CTAs, product descriptions, claims, approved/forbidden terminology, avoid rules; copy reusable blocks; agency edit. |
 | `ai` | AI Brand Instructions | Brand context with Use/Never rules; agency edit; generate/copy text and manual-copy fallback. This is a context document, not an implied external AI service. |
 

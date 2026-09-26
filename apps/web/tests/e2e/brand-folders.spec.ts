@@ -12,6 +12,8 @@ test("brand folders persist, organize real files, and preserve files when delete
   const fixture = await createPlaygroundFixture();
   const base = `/clients/${fixture.clientId}/brand`;
   const contexts = [];
+  const path = page.getByRole("navigation", { name: "Folder path" });
+  const folderTile = (name: string) => page.getByRole("button", { name: new RegExp(`^${name}`) });
   try {
     await signIn(page, credentials.agency);
     await page.goto(`${base}/templates`);
@@ -41,17 +43,16 @@ test("brand folders persist, organize real files, and preserve files when delete
         await page.getByRole("button", { name: "Save folder", exact: true }).click();
       }
       await expect(page.getByRole("dialog", { name: "New folder", exact: true })).toHaveCount(0);
-      await expect(
-        page
-          .getByRole("navigation", { name: "Asset folders" })
-          .getByRole("button", { name: new RegExp(name) }),
-      ).toHaveAttribute("aria-pressed", "true");
+      // A new folder opens, the way a file browser enters a folder it just made.
+      await expect(path.locator('[aria-current="page"]')).toHaveText(name);
+      await path.getByRole("button", { name: "Assets", exact: true }).click();
     }
     await page.getByRole("button", { name: "New folder", exact: true }).click();
     await page.getByLabel("Folder name").fill("photography");
     await page.getByRole("button", { name: "Save folder", exact: true }).click();
-    await expect(page.getByText("A folder with this name already exists.")).toBeVisible();
+    await expect(page.getByText("A folder with this name already exists here.")).toBeVisible();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await folderTile("Campaign launch").click();
     await page.getByRole("button", { name: "Add asset", exact: true }).click();
     const upload = page.getByRole("dialog", { name: "Add a brand asset" });
     await expect(
@@ -78,19 +79,19 @@ test("brand folders persist, organize real files, and preserve files when delete
     await page.keyboard.press("Escape");
     await expect(page.locator(".brand-asset-card")).toHaveCount(0);
     await page.reload();
-    const folderNav = page.getByRole("navigation", { name: "Asset folders" });
-    await folderNav.getByRole("button", { name: "Photography 1", exact: true }).click();
+    await expect(folderTile("Photography")).toContainText("1 asset");
+    await folderTile("Photography").click();
     await expect(page.locator(".brand-asset-card")).toHaveCount(1);
+    // A search looks through every folder, then clearing it returns to the open folder.
     await page.getByLabel("Search brand assets").fill("missing");
     await expect(page.locator(".brand-asset-card")).toHaveCount(0);
     await page.getByLabel("Search brand assets").fill("campaign");
     await expect(page.locator(".brand-asset-card")).toHaveCount(1);
+    await page.getByLabel("Search brand assets").fill("");
     await page.getByRole("button", { name: "Rename folder", exact: true }).click();
     await page.getByLabel("Folder name").fill("Approved photography");
     await page.getByRole("button", { name: "Save folder", exact: true }).click();
-    await expect(
-      folderNav.getByRole("button", { name: "Approved photography 1", exact: true }),
-    ).toBeVisible();
+    await expect(path.locator('[aria-current="page"]')).toHaveText("Approved photography");
     for (const role of ["client", "designer"] as const) {
       const context = await browser.newContext();
       contexts.push(context);
@@ -98,15 +99,12 @@ test("brand folders persist, organize real files, and preserve files when delete
       // The fixture's own client user: the shared demo login never joins a fixture client.
       await signIn(viewer, role === "client" ? fixture.client.email : credentials[role]);
       await viewer.goto(`${base}/assets`);
-      await viewer
-        .getByRole("navigation", { name: "Asset folders" })
-        .getByRole("button", { name: "Approved photography 1", exact: true })
-        .click();
+      await viewer.getByRole("button", { name: /^Approved photography/ }).click();
       await expect(viewer.locator(".brand-asset-card")).toHaveCount(1);
       // A client may add folders and images to its own Brand Hub; neither role organizes them.
-      await expect(viewer.getByRole("button", { name: /^(New folder|Add image)$/ })).toHaveCount(
-        role === "client" ? 2 : 0,
-      );
+      await expect(
+        viewer.getByRole("button", { name: /^(New folder|Add image|Add link)$/ }),
+      ).toHaveCount(role === "client" ? 3 : 0);
       await expect(
         viewer.getByRole("button", { name: /^(Add asset|Rename folder|Delete folder)$/ }),
       ).toHaveCount(0);
@@ -124,7 +122,7 @@ test("brand folders persist, organize real files, and preserve files when delete
       [844, 390],
     ]) {
       await page.setViewportSize({ width, height });
-      await expect(page.locator(".brand-folder-list")).toBeVisible();
+      await expect(path).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(
@@ -146,10 +144,9 @@ test("brand folders persist, organize real files, and preserve files when delete
       .getByRole("dialog", { name: "Delete folder" })
       .getByRole("button", { name: "Delete folder", exact: true })
       .click();
-    await expect(folderNav.getByRole("button", { name: "Unfiled 1", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // Its asset moves up to the top level, where the path is no longer shown.
+    await expect(path).toHaveCount(0);
+    await expect(page.locator(".brand-asset-card")).toHaveCount(1);
     await page.locator(".brand-asset-card").click();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download file", exact: true }).click();

@@ -13,7 +13,7 @@ import {
   removeBrandAssetFile,
   uploadBrandAssetFile,
 } from "./brand-data";
-import { validateBrandFile, validationMessage } from "./brand-model";
+import { folderOptions, validateBrandFile, validationMessage } from "./brand-model";
 import { FormError } from "@/features/shared/form-error";
 import {
   brandUploadMimes,
@@ -177,10 +177,10 @@ export function AssetUpload({
         <label>
           Folder
           <select name="folder" defaultValue={folderId ?? ""} disabled={upload.isPending}>
-            <option value="">Unfiled</option>
-            {folders.map((folder) => (
+            <option value="">Assets (top level)</option>
+            {folderOptions(folders).map((folder) => (
               <option key={folder.id} value={folder.id}>
-                {folder.name}
+                {folder.label}
               </option>
             ))}
           </select>

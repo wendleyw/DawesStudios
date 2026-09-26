@@ -293,7 +293,7 @@
 .brand-products-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -303,8 +303,8 @@
 }
 .brand-products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: 14px;
 }
 .brand-product-card {
   display: flex;
@@ -316,7 +316,7 @@
   background: var(--surface);
 }
 .brand-product-card .brand-asset-preview {
-  height: 160px;
+  height: 120px;
 }
 .brand-product-body {
   display: flex;
@@ -428,13 +428,11 @@
   min-height: 40px;
   border-color: var(--border);
 }
-.brand-resource-toolbar > .button.primary {
-  margin-left: auto;
-}
+
 .brand-assets-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: 14px;
 }
 .brand-asset-card {
   min-width: 0;
@@ -449,21 +447,26 @@
   border-color: var(--border-strong);
 }
 .brand-asset-card > div:last-child {
-  padding: 20px;
+  padding: 12px 14px 14px;
 }
 .brand-asset-card h3 {
-  margin-top: 7px;
+  margin-top: 4px;
+  font-size: var(--text-base);
   overflow-wrap: anywhere;
 }
 .brand-asset-card p {
-  margin-top: 8px;
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
   color: var(--muted);
-  font-size: var(--text-base);
-  line-height: 1.7;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .brand-asset-preview {
   display: flex;
-  height: 200px;
+  height: 120px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -645,9 +648,6 @@
   box-shadow: 0 4px 24px rgb(0 0 0 / 6%);
 }
 @media (max-width: 1100px) {
-  .brand-assets-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .brand-draft-layout {
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 24px;
@@ -777,14 +777,11 @@
     flex: 1;
     width: auto;
   }
-  .brand-resource-toolbar > .button.primary {
+  .brand-resource-actions {
     margin-left: 0;
   }
   .brand-assets-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .brand-asset-preview {
-    height: 220px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .brand-save-status {
     font-size: var(--text-xs);
@@ -833,61 +830,67 @@
   padding: 3px 5px;
 }
 
-.brand-folder-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 20px 0 16px;
-}
-.brand-folder-list button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.brand-folder-list button.active {
-  color: var(--ink);
-  border-color: var(--ink);
-  background: var(--surface-subtle);
-}
-.brand-folder-list button span {
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.brand-folder-list button :is(svg, small) {
-  flex-shrink: 0;
-}
-.brand-folder-list small {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.brand-folder-heading,
-.brand-folder-heading > div {
+/* The Assets directory: a path back up, then folders, then this level's files and links. */
+.brand-directory-heading,
+.brand-directory-heading > div {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
-.brand-folder-heading {
-  margin-bottom: 16px;
+.brand-directory-heading {
   min-height: 32px;
+  margin-bottom: 14px;
 }
-.brand-folder-heading p {
+.brand-directory-path {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   font-size: var(--text-base);
+}
+.brand-directory-step {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+.brand-directory-path svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.brand-directory-path button {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+}
+.brand-directory-path button:hover {
+  background: var(--surface-subtle);
+  color: var(--foreground);
+}
+.brand-directory-path [aria-current="page"] {
+  padding: 2px 4px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
-.brand-folder-heading p span {
-  margin-left: 12px;
+.brand-directory-path small {
+  margin-left: 8px;
   color: var(--muted);
   font-size: var(--text-sm);
-  white-space: nowrap;
+}
+.brand-folder-tiles {
+  margin-bottom: 20px;
+}
+.brand-resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 .brand-asset-folder-picker {
   display: flex;

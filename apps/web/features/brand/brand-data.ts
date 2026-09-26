@@ -205,6 +205,35 @@ export async function insertBrandAsset(
   );
 }
 
+/** A link asset: a name and an HTTPS address, filed like any other asset. */
+export async function insertBrandLink(
+  database: SupabaseDatabase,
+  input: {
+    id: string;
+    clientId: string;
+    name: string;
+    description: string;
+    url: string;
+    folderId: string | null;
+  },
+) {
+  assertResult(
+    await database
+      .from("brand_assets")
+      .insert({
+        id: input.id,
+        client_id: input.clientId,
+        name: input.name,
+        category: "Link",
+        description: input.description,
+        link_url: input.url,
+        folder_id: input.folderId,
+      })
+      .select("id")
+      .single(),
+  );
+}
+
 export async function removeBrandAssetFile(database: SupabaseDatabase, input: { path: string }) {
   assertResult(await database.storage.from("brand-assets").remove([input.path]));
 }
@@ -293,12 +322,17 @@ export async function findBrandAssetFolder(
 
 export async function createBrandAssetFolder(
   database: SupabaseDatabase,
-  input: { id: string; clientId: string; name: string },
+  input: { id: string; clientId: string; name: string; parentId?: string | null },
 ) {
   return assertResult(
     await database
       .from("brand_asset_folders")
-      .insert({ id: input.id, client_id: input.clientId, name: input.name })
+      .insert({
+        id: input.id,
+        client_id: input.clientId,
+        name: input.name,
+        parent_id: input.parentId ?? null,
+      })
       .select("id")
       .single(),
   );

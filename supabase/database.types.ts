@@ -51,18 +51,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          parent_id: string | null
         }
         Insert: {
           client_id: string
           created_at?: string
           id?: string
           name: string
+          parent_id?: string | null
         }
         Update: {
           client_id?: string
           created_at?: string
           id?: string
           name?: string
+          parent_id?: string | null
         }
         Relationships: [
           {
@@ -71,6 +74,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_asset_folders_parent_fkey"
+            columns: ["parent_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "brand_asset_folders"
+            referencedColumns: ["id", "client_id"]
           },
         ]
       }
@@ -82,6 +92,7 @@ export type Database = {
           description: string
           folder_id: string | null
           id: string
+          link_url: string | null
           mime_type: string | null
           name: string
           storage_path: string | null
@@ -94,6 +105,7 @@ export type Database = {
           description?: string
           folder_id?: string | null
           id?: string
+          link_url?: string | null
           mime_type?: string | null
           name: string
           storage_path?: string | null
@@ -106,6 +118,7 @@ export type Database = {
           description?: string
           folder_id?: string | null
           id?: string
+          link_url?: string | null
           mime_type?: string | null
           name?: string
           storage_path?: string | null

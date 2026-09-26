@@ -137,10 +137,7 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
     // Products has no tab of its own any more: old links land on Assets, where it is a folder entry.
     await page.goto(base + "/products");
     await expect(page).toHaveURL(base + "/assets");
-    await page
-      .getByRole("navigation", { name: "Asset folders" })
-      .getByRole("button", { name: /^Products \d+$/ })
-      .click();
+    await page.getByRole("button", { name: /^Products\s*\d+ products?$/ }).click();
     await page.getByRole("button", { name: "Edit products", exact: true }).click();
     for (let index = 0; index < 3; index++) {
       await page.getByRole("button", { name: "Add product", exact: true }).click();

@@ -1062,6 +1062,56 @@ img.client-mark {
   align-items: center;
   gap: 10px;
 }
+/* Folder tiles: the one directory look shared by Files campaigns and Brand Hub Assets. */
+.folder-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 12px;
+}
+.folder-tile {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--foreground);
+  text-align: left;
+}
+.folder-tile:hover,
+.folder-tile:focus-visible {
+  border-color: var(--border-strong);
+}
+.folder-tile-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+.folder-tile-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.folder-tile-text strong {
+  overflow: hidden;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-tile-text > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 .search-field {
   display: flex;
 

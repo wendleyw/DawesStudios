@@ -19,7 +19,7 @@
 }
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
 
   gap: var(--space-lg);
 }
@@ -40,7 +40,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 155px;
+  min-height: 112px;
   color: var(--muted);
 }
 .file-icon span {
@@ -51,7 +51,7 @@
 .file-icon img {
   display: block;
   width: 100%;
-  height: 155px;
+  height: 112px;
   object-fit: cover;
 }
 /* Cards in a row share a height; the footer sits on the card's bottom edge whatever the title wraps
@@ -61,7 +61,7 @@
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  padding: var(--space-lg);
+  padding: 14px;
 }
 .file-information h2 {
   font-size: 15px;
@@ -101,58 +101,6 @@
   color: var(--muted);
 }
 
-/* Folder view: one card per campaign with a matching file, following .file-grid's own columns. */
-.folder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
-
-  gap: var(--space-lg);
-}
-.folder-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  min-width: 0;
-  overflow: hidden;
-  transition: border-color 140ms ease;
-}
-.folder-card:hover,
-.folder-card:focus-visible {
-  border-color: var(--muted);
-}
-.folder-cover {
-  background: var(--surface-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 155px;
-  color: var(--muted);
-}
-.folder-cover img {
-  display: block;
-  width: 100%;
-  height: 155px;
-  object-fit: cover;
-}
-.folder-information {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-lg);
-}
-.folder-information h2 {
-  font-size: 15px;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.folder-information span {
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
 .delivery-callout {
   display: flex;
   align-items: center;
@@ -184,8 +132,7 @@
     align-items: flex-start;
     flex-direction: column;
   }
-  .file-grid,
-  .folder-grid {
-    grid-template-columns: 1fr;
+  .file-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

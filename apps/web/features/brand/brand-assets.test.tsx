@@ -24,9 +24,18 @@ vi.mock("./brand-data", async (importOriginal) => ({
   moveBrandAsset: fixture.move,
 }));
 vi.mock("@/features/shared/modal", () => ({
-  Modal: ({ title, children }: { title: string; children: ReactNode }) => (
+  Modal: ({
+    title,
+    children,
+    footer,
+  }: {
+    title: string;
+    children: ReactNode;
+    footer?: ReactNode;
+  }) => (
     <div role="dialog" aria-label={title}>
       {children}
+      {footer}
     </div>
   ),
 }));
@@ -35,8 +44,14 @@ beforeEach(() => {
   fixture.role = "agency";
   fixture.move.mockReset().mockResolvedValue(undefined);
   fixture.folders = [
-    { id: "logos", client_id: "client", name: "Logos", created_at: "2026-09-23" },
-    { id: "campaign", client_id: "client", name: "Campaign", created_at: "2026-09-23" },
+    { id: "logos", client_id: "client", name: "Logos", created_at: "2026-09-23", parent_id: null },
+    {
+      id: "campaign",
+      client_id: "client",
+      name: "Campaign",
+      created_at: "2026-09-23",
+      parent_id: null,
+    },
   ];
   fixture.assets = [
     {
@@ -50,6 +65,7 @@ beforeEach(() => {
       tags: [],
       storage_path: null,
       mime_type: null,
+      link_url: null,
     },
   ];
 });
@@ -65,20 +81,20 @@ function mountAssets(props: Partial<Parameters<typeof BrandAssets>[0]> = {}) {
   return () => view.rerender(tree());
 }
 
+const folderTile = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) });
+
 describe("Brand asset folder changes", () => {
-  it("returns to All assets when a remotely removed folder disappears", async () => {
+  it("returns to the top level when a remotely removed folder disappears", async () => {
     const user = userEvent.setup();
     const rerender = mountAssets();
-    await user.click(screen.getByRole("button", { name: "Logos 1" }));
+    await user.click(folderTile("Logos"));
 
     fixture.folders = fixture.folders.filter((folder) => folder.id !== "logos");
     fixture.assets = fixture.assets.map((asset) => ({ ...asset, folder_id: null }));
     rerender();
 
-    expect(screen.getByRole("button", { name: "All assets 1" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.queryByRole("navigation", { name: "Folder path" })).not.toBeInTheDocument();
+    expect(folderTile("Campaign")).toBeVisible();
     expect(screen.getByRole("button", { name: /Approved mark/ })).toBeVisible();
     expect(screen.queryByText("No matching assets.")).not.toBeInTheDocument();
   });
@@ -86,6 +102,7 @@ describe("Brand asset folder changes", () => {
   it("reflects remote moves without replacing a user's explicitly chosen destination", async () => {
     const user = userEvent.setup();
     const rerender = mountAssets();
+    await user.click(folderTile("Logos"));
     await user.click(screen.getByRole("button", { name: /Approved mark/ }));
     const dialog = within(screen.getByRole("dialog", { name: "Approved mark" }));
     const picker = dialog.getByRole("combobox", { name: "Folder" });
@@ -105,6 +122,7 @@ describe("Brand asset folder changes", () => {
   it("does not submit a removed destination", async () => {
     const user = userEvent.setup();
     const rerender = mountAssets();
+    await user.click(folderTile("Logos"));
     await user.click(screen.getByRole("button", { name: /Approved mark/ }));
     const picker = screen.getByRole("combobox", { name: "Folder" });
     await user.selectOptions(picker, "campaign");
@@ -136,7 +154,8 @@ describe("Brand asset roles and Products", () => {
     mountAssets();
     expect(screen.getByRole("button", { name: "New folder" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Add image" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Logos 1" }));
+    expect(screen.getByRole("button", { name: "Add link" })).toBeVisible();
+    await user.click(folderTile("Logos"));
     expect(screen.queryByRole("button", { name: "Rename folder" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete folder" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Approved mark/ }));
@@ -147,14 +166,17 @@ describe("Brand asset roles and Products", () => {
     fixture.role = "designer";
     mountAssets();
     expect(screen.queryByRole("button", { name: "New folder" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Add (asset|image)/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Add (asset|image|link)/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows Products only when its folder entry is chosen", async () => {
+  it("shows Products only when its folder is opened", async () => {
     const user = userEvent.setup();
+    fixture.assets = fixture.assets.map((asset) => ({ ...asset, folder_id: null }));
     mountAssets({ products: { items: [product] } });
     expect(screen.queryByText("Everyday Alarm")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Products 1" }));
+    await user.click(folderTile("Products"));
     expect(screen.getByRole("heading", { name: "Everyday Alarm" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Approved mark/ })).not.toBeInTheDocument();
   });
@@ -167,6 +189,63 @@ describe("Brand asset roles and Products", () => {
 
   it("keeps an empty Products entry for the agency, who adds the first product", () => {
     mountAssets({ products: undefined, onEditProducts: () => undefined });
-    expect(screen.getByRole("button", { name: "Products 0" })).toBeVisible();
+    expect(folderTile("Products")).toHaveTextContent("0 products");
+  });
+});
+
+describe("Brand asset directory", () => {
+  it("opens nested folders and walks back up the path", async () => {
+    fixture.folders.push({
+      id: "primary",
+      client_id: "client",
+      name: "Primary",
+      created_at: "2026-09-23",
+      parent_id: "logos",
+    });
+    fixture.assets = fixture.assets.map((asset) => ({ ...asset, folder_id: "primary" }));
+    const user = userEvent.setup();
+    mountAssets();
+    // A folder counts what its subfolders hold.
+    expect(folderTile("Logos")).toHaveTextContent("1 asset");
+    expect(screen.queryByRole("button", { name: /^Primary/ })).not.toBeInTheDocument();
+    await user.click(folderTile("Logos"));
+    await user.click(folderTile("Primary"));
+    expect(screen.getByRole("button", { name: /Approved mark/ })).toBeVisible();
+    const path = screen.getByRole("navigation", { name: "Folder path" });
+    expect(within(path).getByText("Primary")).toHaveAttribute("aria-current", "page");
+    await user.click(within(path).getByRole("button", { name: "Logos" }));
+    expect(folderTile("Primary")).toBeVisible();
+    await user.click(within(path).getByRole("button", { name: "Assets" }));
+    expect(folderTile("Logos")).toBeVisible();
+    expect(screen.queryByRole("navigation", { name: "Folder path" })).not.toBeInTheDocument();
+  });
+
+  it("searches every folder at once", async () => {
+    const user = userEvent.setup();
+    mountAssets();
+    expect(screen.queryByRole("button", { name: /Approved mark/ })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Search brand assets"), "approved");
+    expect(screen.getByRole("button", { name: /Approved mark/ })).toBeVisible();
+    expect(screen.getByText("Search results")).toBeVisible();
+  });
+
+  it("opens a link asset instead of downloading it", async () => {
+    fixture.assets.push({
+      ...fixture.assets[0],
+      id: "portal",
+      name: "Brand portal",
+      category: "Link",
+      folder_id: null,
+      link_url: "https://example.com/portal",
+    });
+    const user = userEvent.setup();
+    mountAssets();
+    await user.click(screen.getByRole("button", { name: /Brand portal/ }));
+    const dialog = within(screen.getByRole("dialog", { name: "Brand portal" }));
+    expect(dialog.getByRole("link", { name: "Open link" })).toHaveAttribute(
+      "href",
+      "https://example.com/portal",
+    );
+    expect(dialog.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
   });
 });

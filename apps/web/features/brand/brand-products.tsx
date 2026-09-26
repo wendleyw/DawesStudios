@@ -7,7 +7,7 @@ import { AssetPreview } from "./brand-assets";
 import { readProducts, safeHttpsUrl } from "./brand-model";
 
 /**
- * The client's products, at the top of Assets: each card shows the product's image (one of the
+ * The client's products, opened from the Products tile in Assets: each card shows the product's image (one of the
  * client's brand assets), name, description and link, with specifications and usage guidance one
  * click away. Hidden for readers while there are no products; the agency always sees it to add one.
  */
@@ -30,7 +30,10 @@ export function BrandProducts({
   return (
     <section className="brand-products" aria-labelledby="brand-products-title">
       <div className="brand-products-heading">
-        <h3 id="brand-products-title">Products</h3>
+        {/* The folder path above already names Products; the heading stays for the region's name. */}
+        <h3 id="brand-products-title" className="visually-hidden">
+          Products
+        </h3>
         {onEdit && (
           <button className="button quiet" onClick={onEdit}>
             <Pencil size={14} />

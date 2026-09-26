@@ -22,6 +22,13 @@ The CSS-only `.section-tabs` primitive is consumed by `brand/brand-page`, `brief
 
 ## Components
 
+### Folder tile
+
+`FolderTile` (`folder-tile.tsx`) is one folder in a directory view: an icon, the folder's name and
+a count, laid out by the `.folder-tiles` grid in `globals.css`. A `href` opens a route; `onOpen`
+opens an in-page directory. Consumers: `assets/assets-page` (campaign folders) and
+`brand/brand-assets` (the Assets directory and its Products entry).
+
 ### Brand mark
 
 `BrandMark` (`brand-mark.tsx`) is the studio's animated mark: `public/brand/logo-mark.webm` plays,

@@ -64,8 +64,6 @@ export type CampaignFolder<F extends GroupableFile> = {
   projectCount: number;
   /** The folder's own most recent file date, used to order folders (not shown to the viewer). */
   newestDate: string;
-  /** The newest file that has a signed preview, or null when none does (render a folder icon). */
-  cover: F | null;
 };
 
 /**
@@ -96,7 +94,6 @@ export function buildCampaignFolders<F extends GroupableFile, P extends Groupabl
       fileCount,
       projectCount,
       newestDate: sorted[0]?.date ?? "",
-      cover: sorted.find((file) => file.previewUrl) ?? null,
     };
   });
   const campaigns = folders

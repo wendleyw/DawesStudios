@@ -14,15 +14,21 @@ import {
   type BrandAssetFolder,
 } from "./brand-data";
 
+/** Creates a folder inside `parentId` (the top level when null), or renames or deletes `folder`. */
 export function BrandFolderDialog({
   clientId,
   folder,
+  parentId = null,
+  parentName = "Assets",
   deleting = false,
   onClose,
   onSaved,
 }: {
   clientId: string;
   folder?: BrandAssetFolder;
+  parentId?: string | null;
+  /** Where a deleted folder's contents go, or where a new folder is created. */
+  parentName?: string;
   deleting?: boolean;
   onClose: () => void;
   onSaved: (id: string | null) => void;
@@ -47,7 +53,8 @@ export function BrandFolderDialog({
         const existing = await findBrandAssetFolder(database, { id, clientId });
         if (existing && existing.name !== trimmed)
           await renameBrandAssetFolder(database, { id, clientId, name: trimmed });
-        else if (!existing) await createBrandAssetFolder(database, { id, clientId, name: trimmed });
+        else if (!existing)
+          await createBrandAssetFolder(database, { id, clientId, name: trimmed, parentId });
       }
       return id;
     },
@@ -89,9 +96,13 @@ export function BrandFolderDialog({
         }}
       >
         {deleting ? (
-          <p>Delete “{folder?.name}”? Its assets will move to Unfiled. No files will be deleted.</p>
+          <p>
+            Delete “{folder?.name}”? Its folders and assets move to {parentName}. No files will be
+            deleted.
+          </p>
         ) : (
           <label>
+            {!folder && <span className="form-help">In {parentName}</span>}
             Folder name
             <input
               value={name}
@@ -105,8 +116,10 @@ export function BrandFolderDialog({
         )}
         {error && (
           <FormError>
-            {error.message.includes("brand_asset_folders_client_name")
-              ? "A folder with this name already exists."
+            {/brand_asset_folders_(client|sibling)_name|duplicate key/.test(error.message)
+              ? deleting
+                ? `${parentName} already has a folder with the same name as one inside this folder. Rename it first.`
+                : "A folder with this name already exists here."
               : error.message}
           </FormError>
         )}

@@ -76,11 +76,11 @@ test("files open as campaign folders and each campaign groups its files by proje
   await expect(page.getByRole("heading", { level: 2, name: "Files", exact: true })).toBeVisible();
   // Projects live inside their campaign, so the folder view has no project filter.
   await expect(page.getByLabel("Filter project", { exact: true })).toHaveCount(0);
-  const cards = page.locator(".folder-card");
+  const cards = page.locator(".folder-tile");
   await expect(cards).toHaveCount(folders.size);
   for (const [id, folder] of folders) {
-    const card = page.locator(`.folder-card[href="${base}?campaign=${id}"]`);
-    await expect(card.getByRole("heading", { level: 2 })).toHaveText(folder.title);
+    const card = page.locator(`.folder-tile[href="${base}?campaign=${id}"]`);
+    await expect(card.locator("strong")).toHaveText(folder.title);
     await expect(card).toContainText(
       `${plural(folder.files, "file")} · ${plural(folder.projects.size, "project")}`,
     );
@@ -90,7 +90,7 @@ test("files open as campaign folders and each campaign groups its files by proje
 
   // Open the busiest campaign: its files, grouped under each project's own heading.
   const [busiestId, busiest] = [...folders].sort((a, b) => b[1].files - a[1].files)[0];
-  await page.locator(`.folder-card[href="${base}?campaign=${busiestId}"]`).click();
+  await page.locator(`.folder-tile[href="${base}?campaign=${busiestId}"]`).click();
   await expect(page).toHaveURL(`${base}?campaign=${busiestId}`);
   await expect(page.locator(".files-heading h2")).toHaveText(busiest.title);
   await expect(page.locator(".files-heading p")).toHaveText(
@@ -129,7 +129,7 @@ test("files open as campaign folders and each campaign groups its files by proje
     .maybeSingle();
   if (sample.data) {
     await page.getByRole("textbox", { name: "Search files", exact: true }).fill(sample.data.title);
-    await expect(page.locator(`.folder-card[href="${base}?campaign=${busiestId}"]`)).toBeVisible();
+    await expect(page.locator(`.folder-tile[href="${base}?campaign=${busiestId}"]`)).toBeVisible();
     await page.getByRole("textbox", { name: "Search files", exact: true }).fill("no such file");
     await expect(page.getByRole("heading", { name: "No matching files." })).toBeVisible();
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
@@ -158,10 +158,10 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, credentials.client);
   await page.goto(base);
-  const cards = page.locator(".folder-card");
+  const cards = page.locator(".folder-tile");
   await expect(cards).toHaveCount(folders.size);
   for (const [id, folder] of folders)
-    await expect(page.locator(`.folder-card[href="${base}?campaign=${id}"]`)).toContainText(
+    await expect(page.locator(`.folder-tile[href="${base}?campaign=${id}"]`)).toContainText(
       `${plural(folder.files, "file")} · ${plural(folder.projects.size, "project")}`,
     );
   // Clients have no uploads, so no working-file or delivery actions.

@@ -22,6 +22,7 @@ function asset(id: string, name: string, category: string, mime: string): BrandA
     tags: [],
     storage_path: `client/${id}`,
     mime_type: mime,
+    link_url: null,
   };
 }
 

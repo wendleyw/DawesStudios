@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Check, FileText, Folder, Plus } from "lucide-react";
+import { ArrowLeft, Check, FileText, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -33,6 +33,7 @@ import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { FolderTile } from "@/features/shared/folder-tile";
 
 /** "1 file"/"1 project" stay singular; everything else takes the plural. */
 function countLabel(count: number, noun: string): string {
@@ -282,30 +283,14 @@ export function AssetsPage({ clientId }: { clientId: string }) {
           )}
         </div>
       ) : campaignId === null ? (
-        <div className="folder-grid">
+        <div className="folder-tiles">
           {folders.map((folder) => (
-            <Link
+            <FolderTile
               key={folder.id}
               href={`${filesHref}?campaign=${folder.id}`}
-              className="folder-card"
-            >
-              <div className="folder-cover">
-                {folder.cover?.previewUrl ? (
-                  // Keep expiring, caller-scoped signed URLs out of Next.js's image optimization cache.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={folder.cover.previewUrl} alt="" loading="lazy" />
-                ) : (
-                  <Folder size={28} aria-hidden="true" />
-                )}
-              </div>
-              <div className="folder-information">
-                <h2>{folder.title}</h2>
-                <span>
-                  {countLabel(folder.fileCount, "file")} ·{" "}
-                  {countLabel(folder.projectCount, "project")}
-                </span>
-              </div>
-            </Link>
+              name={folder.title}
+              meta={`${countLabel(folder.fileCount, "file")} · ${countLabel(folder.projectCount, "project")}`}
+            />
           ))}
         </div>
       ) : (
