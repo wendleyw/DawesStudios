@@ -37,6 +37,14 @@
   color: var(--muted);
   text-decoration: none;
 }
+@media (min-width: 1001px) {
+  /* Designers never see who asked for a briefing (they never receive requested_by); drop the
+     column instead of leaving it empty. Scoped above the 1000px breakpoint below, which already
+     hides and re-templates this row for every viewer. */
+  .briefing-list.no-requester .briefing-list-row {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 56px 16px;
+  }
+}
 .briefing-list-row h2 {
   margin: 0;
   overflow: hidden;

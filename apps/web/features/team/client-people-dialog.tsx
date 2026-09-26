@@ -69,9 +69,17 @@ export function ClientPeopleDialog({
     setRemoving(target);
   };
   // A pending row already lost project access; only the sign-in block is left to finish, so the
-  // confirmation reads that instead of "loses access" and skips the last-person warning below.
+  // confirmation reads that instead of "loses access" and skips the last-person warning below. A
+  // first attempt can end access but fail to block sign-in (502), which leaves the same row pending
+  // too, even though `removing` froze `pending: false` when the confirmation opened: while it stays
+  // open, also read the live pending list so the wording catches up after that retry-triggering
+  // failure.
+  const removingPending =
+    !!removing &&
+    (removing.pending ||
+      (pendingRemovals.data?.some((person) => person.id === removing.id) ?? false));
   const removalDescription = removing
-    ? removing.pending
+    ? removingPending
       ? `${removing.name} no longer has access to ${clientName}. This finishes blocking their sign-in.`
       : `${removing.name} loses access to ${clientName}.`
     : undefined;
@@ -199,7 +207,7 @@ export function ClientPeopleDialog({
           if (!remove.isPending) setRemoving(null);
         }}
       >
-        {removing && !removing.pending && team.length === 1 && (
+        {removing && !removingPending && team.length === 1 && (
           <p className="settings-note">
             {clientName} will have nobody who can sign in until someone is invited.
           </p>

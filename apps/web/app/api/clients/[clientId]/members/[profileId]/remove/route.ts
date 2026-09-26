@@ -25,7 +25,7 @@ export async function POST(
   // matching the media service, and keep the request origin for a direct `next dev`/`next start`.
   const origin = process.env.APP_ORIGIN ?? new URL(request.url).origin;
   if (request.headers.get("origin") && request.headers.get("origin") !== origin)
-    return Response.json({ error: "This request must come from your workspace." }, { status: 403 });
+    return Response.json({ error: "This request must come from the studio." }, { status: 403 });
   const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return Response.json({ error: "Sign in before removing someone." }, { status: 401 });
   const url = process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,7 +33,7 @@ export async function POST(
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !publicKey || !serviceKey)
     return Response.json(
-      { error: "Removal is not configured. Contact the workspace administrator." },
+      { error: "Removal is not configured. Ask the studio administrator to set it up." },
       { status: 503 },
     );
   const caller = createClient<Database>(url, publicKey, {

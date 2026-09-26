@@ -193,9 +193,11 @@ them only through `client_team` and reads someone who left as "Former member", a
 neither column.
 
 Removing someone from one client (`remove_client_member`, audited) deletes that membership and that
-client's notifications for them; a person who still belongs to another client keeps their login.
-Removing their last client sets `removed_at` like a team removal, so every role-based read ends at
-once, existing tokens included, and `/api/clients/{clientId}/members/{profileId}/remove` then blocks
-sign-in and sets `removal_completed_at`. Project notifications reach the project's requester, people
-who chose all activity and, for a studio reply, the people who wrote in that conversation; the
-actor and removed people never receive them.
+client's notifications for them when they still belong to another client, so they keep their login
+and only lose this one. Removing their last client instead deactivates the account: it sets
+`removed_at` like a team removal, so every role-based read ends at once, existing tokens included,
+and deletes every notification, but it keeps that membership row as the record of the pending
+removal for `/api/clients/{clientId}/members/{profileId}/remove`'s **Finish removal** step, which
+then blocks sign-in and sets `removal_completed_at`. Project notifications reach the project's
+requester, people who chose all activity and, for a studio reply, the people who wrote in that
+conversation; the actor and removed people never receive them.

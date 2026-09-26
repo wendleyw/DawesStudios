@@ -183,6 +183,28 @@ describe("ClientPeopleDialog", () => {
     expect(within(confirm).getByRole("button", { name: "Remove" })).toBeEnabled();
   });
 
+  it("switches to the pending sentence once the first attempt already ended access (502)", async () => {
+    state.remove.mockImplementation(async () => {
+      // Mirrors the server route: remove_client_member already ran (access ended, the account
+      // deactivated) before the sign-in block failed, so a refetch now lists this person as pending.
+      state.pending = [{ id: "ben", display_name: "Ben Cole" }];
+      throw new Error(
+        "Access to this client was removed, but the account could not be blocked from signing in. Try again.",
+      );
+    });
+    const user = userEvent.setup();
+    const dialog = renderDialog();
+    await user.click(dialog.getByRole("button", { name: "Remove Ben Cole" }));
+    const confirm = screen.getByRole("dialog", { name: "Remove Ben Cole?" });
+    expect(confirm).toHaveTextContent("Ben Cole loses access to SABRE.");
+    await user.click(within(confirm).getByRole("button", { name: "Remove" }));
+    await within(confirm).findByRole("alert");
+    expect(confirm).toHaveTextContent(
+      "Ben Cole no longer has access to SABRE. This finishes blocking their sign-in.",
+    );
+    expect(confirm).not.toHaveTextContent("Ben Cole loses access to SABRE.");
+  });
+
   it("lists a removal still waiting for its sign-in block, with Finish removal", async () => {
     state.pending = [{ id: "cy", display_name: "Cy Gone" }];
     const user = userEvent.setup();

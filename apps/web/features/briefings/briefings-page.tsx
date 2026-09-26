@@ -98,7 +98,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
           </p>
         </div>
       ) : (
-        <div className="briefing-list">
+        <div className={`briefing-list${profile?.role === "designer" ? " no-requester" : ""}`}>
           {visible.map((item) => (
             <Link
               key={item.id}
@@ -110,9 +110,11 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
                 {campaigns.data?.find((campaign) => campaign.id === item.campaign_id)?.title ??
                   "Campaign not chosen"}
               </span>
-              <span className="briefing-list-requester">
-                {requesterLabel(personName(item.requested_by, people.data, profile?.role))}
-              </span>
+              {profile?.role !== "designer" && (
+                <span className="briefing-list-requester">
+                  {requesterLabel(personName(item.requested_by, people.data, profile?.role))}
+                </span>
+              )}
               <span className="briefing-list-service">
                 {services.find((service) => service.id === item.service_type)?.name ??
                   item.service_type}{" "}

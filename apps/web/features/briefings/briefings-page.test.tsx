@@ -83,4 +83,12 @@ describe("BriefingsPage requester column", () => {
     expect(screen.getByText("Autumn launch")).toBeInTheDocument();
     expect(screen.queryByText(/Requested by/)).not.toBeInTheDocument();
   });
+
+  it("gives a designer's rows no requester cell, not merely an empty one", () => {
+    state.role = "designer";
+    const { container } = render(<BriefingsPage clientId="c1" />);
+    expect(container.querySelectorAll(".briefing-list-row").length).toBe(2);
+    expect(container.querySelector(".briefing-list-requester")).toBeNull();
+    expect(container.querySelector(".briefing-list.no-requester")).not.toBeNull();
+  });
 });
