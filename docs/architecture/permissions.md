@@ -40,6 +40,8 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Upload design/create version | Scoped | No | Assigned work |
 | Submit design/version to agency | Scoped internal workflow | No | Assigned work |
 | Publish immutable client version | Agency only | No | No |
+| Read a version's Miro frame link | Both boards, scoped | Client board, published versions only | Internal board, assigned work only |
+| Set/change/remove a Miro frame link | Agency only | No | No |
 | Read published version | Scoped | Own client | Assigned work if needed for production, without client messages |
 | Client-channel project/design comments | Read/write as Studio | Read/write own client | No |
 | Internal-channel project/design comments | Read/write | Never | Read/write assigned work |
@@ -76,6 +78,10 @@ Playground is a role collaboration space, separate from production and publicati
 The private `playground-assets` bucket uses `<board UUID>/<item UUID>/<safe filename>`. Role/scope checks protect reads and signing; unclaimed staging also requires uploader ownership. The backend independently validates supported MIME, file size, matching item/path and revisions. Storage cannot overwrite an existing attachment or delete a live attached file. Tombstoned files remain eligible for scoped cleanup; caller-owned unclaimed uploads become eligible after 24 hours. A retry cannot replace newer content or switch an item's attachment. Existing signed URLs remain subject to the expiry limitation below.
 
 The selected board view belongs to one viewer and client. `board_preferences` RLS requires `user_id = auth.uid()` and current client access for reads/writes. `save_board_view` accepts no owner parameter and validates its five identifiers in PostgreSQL. View changes affect presentation only and grant no additional project access. Legacy widget preferences remain private and preserved for compatibility.
+
+## Miro frame links
+
+A version can point at a frame on a Miro board. The client board and the internal board are two tables under two read rules: `publication_miro_links` follows `private.can_client_channel` (agency and the client's people) and `design_version_miro_links` follows `private.can_produce` (agency and assigned designers). A client never receives an internal board and a designer never receives a client board. Only the agency writes, through RPCs that call `private.assert_agency()` and store only the parsed board and frame ids. A new client link prefills only from an earlier publication and an internal link only from an earlier internal version, so the two never cross in the dialog. The product does not control what a Miro board contains: the agency must keep designer identity, internal notes and unpublished work off the client board. See [backend contracts](backend.md).
 
 ## Comments and pins
 
