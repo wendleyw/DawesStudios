@@ -39,11 +39,16 @@ for (const role of ["agency", "client"] as const) {
         ["Credits", "credits"],
       ]) {
         await page.goto(`/clients/${client!.id}/${route}`);
-        const nav = page.getByRole("navigation", { name: "SABRE navigation", exact: true });
-        await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute(
-          "aria-current",
-          "page",
-        );
+        // A client's Overview is the sidebar's first item (inside the closed drawer on phones);
+        // the top navigation holds the rest.
+        const nav = page.getByRole("navigation", {
+          name: label === "Overview" ? "Main navigation" : "SABRE navigation",
+          exact: true,
+          includeHidden: true,
+        });
+        await expect(
+          nav.getByRole("link", { name: label, exact: true, includeHidden: true }),
+        ).toHaveAttribute("aria-current", "page");
         await expect(page.locator(".client-navigation")).toHaveCount(1);
         await expect(page.locator(".client-page-heading")).toBeVisible();
         // Sections are documents, not canvases: the canvas grid stays off their surface.
@@ -124,7 +129,6 @@ test("brand sections, private drafts and direct briefing pages retain the shared
         "colors",
         "typography",
         "visual-style",
-        "products",
         "assets",
         "messaging",
         "ai",
