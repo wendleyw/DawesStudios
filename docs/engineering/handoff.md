@@ -22,9 +22,8 @@ history only when a task needs earlier evidence.
 its canvas to the version's Miro board (**Versions | Miro** in the header or **View on Miro** on a card,
 `?view=miro&version=`); the tool bar and side panels stay; the Playground button opens an asset strip
 whose images copy as PNG for pasting into Miro (drag into the embed does not work — user-tested).
-The full-screen Miro panel is gone. Follow-up: the frame selector and **Open in Miro** moved into the
-header beside **Versions | Miro**, and the embed now runs to the bottom edge under the floating tool
-bar (phones keep the bar below the embed). [Verification](../verification/miro-mode-2026-09-26.md).
+The full-screen Miro panel is gone. Then (`ad2065b`) the selector and **Open in Miro** moved into
+the header; the embed runs under the floating tool bar (phones keep it below). [Verification](../verification/miro-mode-2026-09-26.md).
 Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress
