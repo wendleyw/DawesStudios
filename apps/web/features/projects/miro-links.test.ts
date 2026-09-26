@@ -39,13 +39,13 @@ describe("parseMiroBoardUrl", () => {
 describe("Miro URLs built from stored ids", () => {
   it("embeds a frame", () => {
     expect(miroEmbedUrl({ boardId: "uXjVKabc123=", widgetId: "345" })).toBe(
-      "https://miro.com/app/live-embed/uXjVKabc123%3D/?moveToWidget=345",
+      "https://miro.com/app/live-embed/uXjVKabc123%3D/?autoplay=true&moveToWidget=345",
     );
   });
 
   it("embeds a whole board", () => {
     expect(miroEmbedUrl({ boardId: "uXjVKabc123=", widgetId: null })).toBe(
-      "https://miro.com/app/live-embed/uXjVKabc123%3D/",
+      "https://miro.com/app/live-embed/uXjVKabc123%3D/?autoplay=true",
     );
   });
 

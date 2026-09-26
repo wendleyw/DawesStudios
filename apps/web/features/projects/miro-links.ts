@@ -24,7 +24,12 @@ export function parseMiroBoardUrl(url: string): MiroLink | null {
 
 function build(path: "live-embed" | "board", link: MiroLink) {
   const base = `https://miro.com/app/${path}/${encodeURIComponent(link.boardId)}/`;
-  return link.widgetId ? `${base}?moveToWidget=${link.widgetId}` : base;
+  // Without autoplay the live embed shows a "See the board" preview that needs an extra click.
+  const query = [
+    ...(path === "live-embed" ? ["autoplay=true"] : []),
+    ...(link.widgetId ? [`moveToWidget=${link.widgetId}`] : []),
+  ];
+  return query.length ? `${base}?${query.join("&")}` : base;
 }
 
 export const miroEmbedUrl = (link: MiroLink) => build("live-embed", link);

@@ -31,7 +31,7 @@ describe("MiroBoardPanel", () => {
     render(<MiroBoardPanel link={link} title="Key visual · V3" onClose={() => {}} />);
     expect(screen.getByTitle("Miro board for Key visual · V3")).toHaveAttribute(
       "src",
-      "https://miro.com/app/live-embed/uXjVKabc123%3D/?moveToWidget=345",
+      "https://miro.com/app/live-embed/uXjVKabc123%3D/?autoplay=true&moveToWidget=345",
     );
     expect(screen.getByRole("link", { name: /Open in Miro/ })).toHaveAttribute(
       "href",
