@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creative Canvas — Brianna Dawes Studios",
+  title: "Brianna Dawes Studios",
   description: "Your projects, feedback, and brand. One considered space to move things forward.",
   icons: {
     icon: "/brand/favicon.png",

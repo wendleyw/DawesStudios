@@ -175,6 +175,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!loading && !session)
       router.replace(`/login?returnTo=${encodeURIComponent(pathname + window.location.search)}`);
   }, [session, loading, router, pathname]);
+  const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
+  const activeClient = clients.data?.find((client) => client.id === activeClientId);
+  const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
+  // The tab names the studio and, inside a client workspace, the client: "Studio - Client".
+  const tabTitle = activeClient ? `${studioName} - ${activeClient.name}` : studioName;
+  // Next.js re-applies the root metadata title on in-app navigation, so the shell puts its own back
+  // whenever the head's <title> changes.
+  useEffect(() => {
+    const apply = () => {
+      if (document.title !== tabTitle) document.title = tabTitle;
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [tabTitle]);
   // The shell's wait and the first route's wait are the same navigation, so they render the same
   // component in the same layout rather than two descriptions of one wait in two frames.
   // `centered-state` stays for the pre-shell routes and for the app-level failure below.
@@ -194,8 +210,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </main>
     );
-  const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
-  const activeClient = clients.data?.find((client) => client.id === activeClientId);
   // Inside a client workspace the sidebar's first item is that client's Overview (the top navigation
   // has none); elsewhere it is the viewer's home. Designers have no client Overview.
   const clientOverview =
@@ -208,7 +222,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : profile.role === "designer"
         ? "My work"
         : "Home";
-  const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
 
   return (
     <SidebarFold.Provider value={foldSidebar}>
