@@ -838,6 +838,48 @@ export type Database = {
           },
         ]
       }
+      design_version_miro_links: {
+        Row: {
+          board_id: string
+          project_id: string
+          updated_at: string
+          updated_by: string
+          version_id: string
+          widget_id: string | null
+        }
+        Insert: {
+          board_id: string
+          project_id: string
+          updated_at?: string
+          updated_by: string
+          version_id: string
+          widget_id?: string | null
+        }
+        Update: {
+          board_id?: string
+          project_id?: string
+          updated_at?: string
+          updated_by?: string
+          version_id?: string
+          widget_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_version_miro_links_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_version_miro_links_version_id_project_id_fkey"
+            columns: ["version_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "design_versions"
+            referencedColumns: ["id", "project_id"]
+          },
+        ]
+      }
       design_versions: {
         Row: {
           created_at: string
@@ -1418,6 +1460,48 @@ export type Database = {
           },
         ]
       }
+      publication_miro_links: {
+        Row: {
+          board_id: string
+          project_id: string
+          publication_id: string
+          updated_at: string
+          updated_by: string
+          widget_id: string | null
+        }
+        Insert: {
+          board_id: string
+          project_id: string
+          publication_id: string
+          updated_at?: string
+          updated_by: string
+          widget_id?: string | null
+        }
+        Update: {
+          board_id?: string
+          project_id?: string
+          publication_id?: string
+          updated_at?: string
+          updated_by?: string
+          widget_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_miro_links_publication_id_project_id_fkey"
+            columns: ["publication_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "published_versions"
+            referencedColumns: ["id", "project_id"]
+          },
+          {
+            foreignKeyName: "publication_miro_links_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       publication_reviews: {
         Row: {
           feedback: string
@@ -1771,6 +1855,14 @@ export type Database = {
         Args: { p_designer_id: string; p_project_id: string }
         Returns: undefined
       }
+      clear_publication_miro_link: {
+        Args: { p_publication_id: string }
+        Returns: undefined
+      }
+      clear_version_miro_link: {
+        Args: { p_version_id: string }
+        Returns: undefined
+      }
       client_team: {
         Args: { p_client_id: string }
         Returns: {
@@ -2044,11 +2136,19 @@ export type Database = {
         Args: { p_all: boolean; p_client_id: string }
         Returns: undefined
       }
+      set_publication_miro_link: {
+        Args: { p_publication_id: string; p_url: string }
+        Returns: undefined
+      }
       set_team_member_role: {
         Args: {
           p_profile_id: string
           p_role: Database["public"]["Enums"]["app_role"]
         }
+        Returns: undefined
+      }
+      set_version_miro_link: {
+        Args: { p_url: string; p_version_id: string }
         Returns: undefined
       }
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
