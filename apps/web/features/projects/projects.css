@@ -29,9 +29,30 @@
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-.project-header.project-subheader {
+/* Miro mode's deliverable bar: the name centred between the version toggle and "Open in Miro", in
+   the same equal-sided grid as the title row above it. */
+.project-header.miro-title-bar {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  align-items: center;
+  gap: 14px;
   padding-block: 8px;
   text-align: center;
+}
+.miro-title-bar > .segmented-control {
+  justify-self: start;
+}
+.miro-title-bar > .segmented-control button {
+  min-height: 26px;
+  padding: 3px 10px;
+  font-size: var(--text-xs);
+}
+.miro-title-bar > .button {
+  justify-self: end;
+  min-height: 34px;
+  padding: 5px 10px;
+  border-color: var(--border);
+  font-size: var(--text-xs);
 }
 /* Equal flexible sides keep the title centred between the back arrow and the credits chip. */
 .project-title-row {
@@ -54,10 +75,9 @@
   min-width: 0;
   text-align: center;
 }
-/* In Miro mode the deliverable's name gets its own, smaller bar under the title's, in the title's
-   style (sized in the rule after this one). */
+/* Miro mode's deliverable name takes the title's style, smaller (sized in the rule after this one). */
 .project-heading h1,
-.project-subheader > h2 {
+.miro-title-bar > h2 {
   min-width: 0;
   margin: 0;
   font-size: 28px;
@@ -68,7 +88,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.project-subheader > h2 {
+.miro-title-bar > h2 {
   font-size: 18px;
 }
 .project-heading > div {
@@ -1239,14 +1259,14 @@
     gap: 8px;
   }
   .project-heading h1,
-  .project-subheader > h2 {
+  .miro-title-bar > h2 {
     font-size: 20px;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
-  .project-subheader > h2 {
+  .miro-title-bar > h2 {
     font-size: 16px;
   }
   .project-title-row {
@@ -1427,36 +1447,6 @@
   .project-workspace:has(> .project-inspector) .miro-view {
     right: 0;
   }
-}
-/* The version toggle and "Open in Miro" sit in the header beside the view switch, so the embed runs
-   from the header to the page's bottom edge and the tool bar floats over it like it floats over the
-   canvas. */
-.miro-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-}
-.miro-controls > * {
-  pointer-events: auto;
-  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
-}
-.miro-controls > .segmented-control {
-  max-width: 100%;
-  overflow-x: auto;
-}
-.miro-controls > .segmented-control button {
-  padding: 7px 10px;
-  font-size: var(--text-xs);
-}
-/* Same height and edge as the toggle beside it. */
-.miro-controls > .button {
-  flex-shrink: 0;
-  min-height: 38px;
-  border-color: var(--border);
-  padding: 7px 10px;
-  font-size: var(--text-xs);
 }
 /* On phones the tool bar moves to the right edge, over Miro's own zoom controls; the embed stops
    above it instead. */

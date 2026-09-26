@@ -31,8 +31,7 @@ export function ProjectHeader({
   view,
   miroAvailable,
   onView,
-  miroControls,
-  subtitle,
+  miroBar,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -48,10 +47,8 @@ export function ProjectHeader({
   view: ProjectView;
   miroAvailable: boolean;
   onView: (view: ProjectView) => void;
-  /** Miro mode's version toggle and "Open in Miro", shown beside the view switch. */
-  miroControls?: ReactNode;
-  /** A second bar under the title's: in Miro mode, the deliverable whose board is shown. */
-  subtitle?: string;
+  /** Miro mode's deliverable bar, under the project title's. */
+  miroBar?: ReactNode;
 }) {
   const { formatDate } = useDateFormat();
   return (
@@ -79,11 +76,7 @@ export function ProjectHeader({
           <ProjectCreditsChip projectId={project.id} viewer={viewer} />
         </div>
       </div>
-      {subtitle && (
-        <div className="project-header project-subheader">
-          <h2 title={subtitle}>{subtitle}</h2>
-        </div>
-      )}
+      {miroBar}
       {!reviewing && (
         <div className="project-toolbar">
           {!reviewing && (
@@ -129,7 +122,6 @@ export function ProjectHeader({
               ))}
             </div>
           )}
-          {miroControls}
           <div className="project-header-actions">
             <label className="visually-hidden" htmlFor="deliverable-filter">
               Filter deliverable

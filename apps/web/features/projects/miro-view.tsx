@@ -9,15 +9,17 @@ import type { CanvasVersion } from "./project-data";
 type MiroFrame = CanvasVersion & { miro: MiroLink };
 
 /**
- * Miro mode's header controls, beside the Versions | Miro switch: a toggle between the shown
- * deliverable's linked versions (the deliverable filter changes the deliverable), and "Open in
- * Miro" for when the embed cannot sign in.
+ * Miro mode's second header bar, under the project title's: the shown deliverable's name between a
+ * toggle of its linked versions (the deliverable filter changes the deliverable) and "Open in Miro"
+ * for when the embed cannot sign in.
  */
-export function MiroControls({
+export function MiroTitleBar({
+  name,
   linked,
   current,
   onSelect,
 }: {
+  name: string;
   linked: CanvasVersion[];
   current: MiroFrame;
   onSelect: (versionId: string) => void;
@@ -26,7 +28,7 @@ export function MiroControls({
     .filter((version) => version.deliverableId === current.deliverableId)
     .sort((a, b) => a.number - b.number);
   return (
-    <div className="miro-controls">
+    <div className="project-header miro-title-bar">
       <div className="segmented-control" role="group" aria-label="Miro version">
         {versions.map((version) => (
           <button
@@ -41,6 +43,7 @@ export function MiroControls({
           </button>
         ))}
       </div>
+      <h2 title={name}>{name}</h2>
       <a
         className="button"
         href={miroBoardUrl(current.miro)}

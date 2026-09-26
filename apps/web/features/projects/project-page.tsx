@@ -22,7 +22,7 @@ import {
   writeProjectView,
   type ProjectView,
 } from "./miro-mode";
-import { MiroControls, MiroView } from "./miro-view";
+import { MiroTitleBar, MiroView } from "./miro-view";
 import {
   nodeTypes,
   type DeliverableNode,
@@ -421,19 +421,18 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
-        miroControls={
+        miroBar={
           miroActive && miroVersion?.miro ? (
-            <MiroControls
+            <MiroTitleBar
+              name={
+                deliverables.find((entry) => entry.id === miroVersion.deliverableId)?.name ??
+                "Version"
+              }
               linked={linked}
               current={{ ...miroVersion, miro: miroVersion.miro }}
               onSelect={(id) => setMiroVersionId(id)}
             />
           ) : undefined
-        }
-        subtitle={
-          miroActive
-            ? deliverables.find((entry) => entry.id === miroVersion?.deliverableId)?.name
-            : undefined
         }
       />
       <div className="project-workspace">

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CanvasVersion } from "./project-data";
-import { MiroControls, MiroView } from "./miro-view";
+import { MiroTitleBar, MiroView } from "./miro-view";
 
 const link = { boardId: "uXjVKabc123=", widgetId: "345" };
 const v3 = {
@@ -35,9 +35,10 @@ describe("MiroView", () => {
   });
 });
 
-describe("MiroControls", () => {
-  it("offers the current frame in Miro", () => {
-    render(<MiroControls linked={[v3, v2]} current={v3} onSelect={() => {}} />);
+describe("MiroTitleBar", () => {
+  it("names the deliverable and offers the current frame in Miro", () => {
+    render(<MiroTitleBar name="Key visual" linked={[v3, v2]} current={v3} onSelect={() => {}} />);
+    expect(screen.getByRole("heading", { level: 2, name: "Key visual" })).toBeInTheDocument();
     const open = screen.getByRole("link", { name: /Open in Miro/ });
     expect(open).toHaveAttribute(
       "href",
@@ -50,7 +51,9 @@ describe("MiroControls", () => {
   it("toggles between the shown deliverable's linked versions, oldest first", () => {
     const onSelect = vi.fn();
     const other = { ...v2, id: "o1", deliverableId: "other", number: 1 } as CanvasVersion;
-    render(<MiroControls linked={[v3, v2, other]} current={v3} onSelect={onSelect} />);
+    render(
+      <MiroTitleBar name="Key visual" linked={[v3, v2, other]} current={v3} onSelect={onSelect} />,
+    );
     const group = screen.getByRole("group", { name: "Miro version" });
     expect(
       within(group)
