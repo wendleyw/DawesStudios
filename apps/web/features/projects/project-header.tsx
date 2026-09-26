@@ -50,7 +50,7 @@ export function ProjectHeader({
   onView: (view: ProjectView) => void;
   /** Miro mode's version toggle and "Open in Miro", shown beside the view switch. */
   miroControls?: ReactNode;
-  /** A line under the title: in Miro mode, the deliverable whose board is shown. */
+  /** A second bar under the title's: in Miro mode, the deliverable whose board is shown. */
   subtitle?: string;
 }) {
   const { formatDate } = useDateFormat();
@@ -68,10 +68,7 @@ export function ProjectHeader({
             <ArrowLeft size={17} />
           </Link>
           <div className="project-heading">
-            <hgroup>
-              <h1 title={project.title}>{project.title}</h1>
-              {subtitle && <p>{subtitle}</p>}
-            </hgroup>
+            <h1 title={project.title}>{project.title}</h1>
             <div>
               <span className={statusToneClass(projectStatusTones[project.status])}>
                 {statusLabels[project.status]}
@@ -82,6 +79,11 @@ export function ProjectHeader({
           <ProjectCreditsChip projectId={project.id} viewer={viewer} />
         </div>
       </div>
+      {subtitle && (
+        <div className="project-header project-subheader">
+          <h2 title={subtitle}>{subtitle}</h2>
+        </div>
+      )}
       {!reviewing && (
         <div className="project-toolbar">
           {!reviewing && (

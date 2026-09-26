@@ -23,7 +23,7 @@ its canvas to the version's Miro board (**Versions | Miro** in the header or **V
 `?view=miro&version=`); the tool bar and side panels stay; the Playground button opens an asset strip
 whose images copy as PNG for pasting into Miro (drag into the embed does not work — user-tested).
 The full-screen Miro panel is gone. Later: a version toggle and **Open in Miro** sit in the header, the
-deliverable name under the title; the embed runs under the floating tool bar (phones: below). [Verification](../verification/miro-mode-2026-09-26.md).
+deliverable name in its own bar; the embed runs under the floating tool bar (phones: below). [Verification](../verification/miro-mode-2026-09-26.md).
 Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress
