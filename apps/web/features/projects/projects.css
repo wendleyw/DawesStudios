@@ -54,16 +54,9 @@
   min-width: 0;
   margin: 0;
 }
+/* In Miro mode the deliverable's name reads as a second line of the title, in the same style. */
+.project-heading h1,
 .project-heading hgroup > p {
-  margin: 2px 0 0;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.project-heading h1 {
   min-width: 0;
   margin: 0;
   font-size: 28px;
@@ -1241,7 +1234,8 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  .project-heading h1 {
+  .project-heading h1,
+  .project-heading hgroup > p {
     font-size: 20px;
     white-space: normal;
     display: -webkit-box;

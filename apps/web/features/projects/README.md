@@ -303,7 +303,7 @@ to sign in behind third-party-cookie restrictions, so this link is the way throu
 over it (on phones, where the bar sits over Miro's zoom controls, the embed stops above the bar); the
 iframe is rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with
 `autoplay=true`, never from the pasted URL again; `key={current.id}` reloads the frame when the
-toggle changes the version, and the deliverable's name shows under the project title. The header's **Project view** segmented control (Versions/Miro,
+toggle changes the version, and the deliverable's name shows under the project title in the title's own style. The header's **Project view** segmented control (Versions/Miro,
 `project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one
 linked version under the current deliverable filter — and is the other entry point beside a
 version card's **View on Miro**; clicking the option already pressed is a no-op, never a jump back
