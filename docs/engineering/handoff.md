@@ -19,11 +19,11 @@ history only when a task needs earlier evidence.
 
 **Miro mode** ([spec](../superpowers/specs/2026-09-26-miro-mode-design.md),
 [plan](../superpowers/plans/2026-09-26-miro-mode.md), `4ce756b..f6db41f`): the project page switches
-its canvas to the version's Miro board (**Versions | Miro** in the header or **View on Miro** on a card,
-`?view=miro&version=`); the tool bar and side panels stay; the Playground button opens an asset strip
-whose images copy as PNG for pasting into Miro (drag into the embed does not work — user-tested).
-The full-screen Miro panel is gone. Later: one compact header bar (title / deliverable, versions, More
-menu), folded sidebar, Miro's top bar cropped; being tested by the user.
+its canvas to the version's Miro board (`?view=miro&version=`) under one compact header bar, with a
+folded sidebar and Miro's top bar cropped; the Playground button opens a copy-to-Miro asset strip.
+Afternoon (`5303c21..97df9a3`): 216 px sidebar with client logo and repeating studio mark, client
+Overview in the sidebar only, calendar days never scroll, briefings by due date, client review bar in
+Miro mode, Brand Hub colors in one row and Products (image + link) atop Assets, black Playground.
 Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress
