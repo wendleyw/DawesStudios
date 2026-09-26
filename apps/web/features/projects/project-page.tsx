@@ -31,7 +31,7 @@ import {
   type VersionNode,
   type AddVersionNode,
 } from "./project-nodes";
-import { ProjectActionDialog, type ProjectAction } from "./project-action-dialog";
+import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { BulkDropDialog } from "./bulk-drop-dialog";
 import {
   useProjectDetail,
@@ -658,11 +658,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         )}
       </div>
       <ProjectActionDialog
-        key={
-          action
-            ? `${action.kind}:${"version" in action ? action.version.id : action.deliverableId}`
-            : "closed"
-        }
+        key={projectActionKey(action)}
         action={action}
         projectId={projectId}
         suspended={playgroundOrigin === "upload"}
