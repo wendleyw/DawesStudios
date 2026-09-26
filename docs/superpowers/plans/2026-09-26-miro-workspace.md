@@ -32,6 +32,9 @@ React 19, TanStack Query, Vitest + Testing Library, Playwright.
   `authenticated`.
 - Never reset the local database. The SABRE overlay (10 clients, 68 projects, 50 SABRE) must
   survive. Apply migrations with `supabase migration up --local`, run from the repo root.
+- **Never run `supabase migration down` or `supabase db reset`.** On this CLI, `migration down`
+  replays every migration from scratch and wipes the local database. That happened once during
+  this plan. To correct an applied migration, write a **new** migration that fixes it forward.
 - Canonical seed counts stay 10 clients / 25 projects. No seed data is added.
 - A designer never sees another designer (name, id, assignment, board, round or comment). A client
   never sees internal data.
@@ -357,6 +360,10 @@ $$;
 revoke all on function private.can_see_board(uuid), private.can_see_version(uuid),
   private.is_agency_profile(uuid), private.can_read_internal_comment(uuid, uuid)
   from public, anon, authenticated;
+-- RLS policies evaluate as the caller, so the three helpers used in policies must be executable by
+-- signed-in users, as private.can_produce is. is_agency_profile is only called from inside them.
+grant execute on function private.can_see_board(uuid), private.can_see_version(uuid),
+  private.can_read_internal_comment(uuid, uuid) to authenticated;
 
 alter table public.design_boards enable row level security;
 create policy design_boards_read on public.design_boards for select to authenticated
@@ -524,9 +531,10 @@ per-deliverable version has `v_board_ref is null`, so they still get `42501`.
 Run from the repo root:
 `supabase migration up --local && supabase test db`
 Expected: every file passes, including `miro_workspace.test.sql` and `miro_version_links.test.sql`.
-If a designer-privacy assertion fails, fix the migration by writing a **new** migration file.
-Never edit an applied one. Until this task is committed, you may instead run
-`supabase migration down --local` and re-apply.
+If an assertion fails after the migration is applied, fix it forward with a **new** migration
+file (for example `202609260006a_…` is not valid; use the next timestamp,
+`202609260008_miro_workspace_boards_fix.sql`). Never edit an applied migration, and never run
+`supabase migration down` or `supabase db reset`.
 
 - [ ] **Step 5: Regenerate types and run the web gate**
 
