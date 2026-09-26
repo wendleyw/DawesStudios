@@ -9,10 +9,13 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { CampaignDialog } from "@/features/campaigns/campaign-dialog";
 import { useInvalidateNotifications } from "@/features/workspace/workspace-data";
 import { briefingQueryKeys, saveBriefingRevision, submitBriefing } from "./briefing-data";
+import type { ClientPerson } from "@/features/team/client-people";
 import {
   briefingPayload,
   estimateLabel,
   initialDraft,
+  initialRequester,
+  requesterErrors,
   serviceEstimate,
   validateBriefing,
   type Briefing,
@@ -47,6 +50,7 @@ export function BriefingEditor({
   defaults,
   serviceCatalog,
   dialog,
+  people,
 }: {
   clientId: string;
   clientName: string;
@@ -55,6 +59,11 @@ export function BriefingEditor({
   defaults: BriefingDirection;
   serviceCatalog: ServiceDefinition[];
   dialog?: BriefingDialogOptions;
+  /**
+   * The client's people, for the studio's Requested by picker. A client person never gets it: they
+   * are always the requester of what they file, and `save_briefing` ignores any other choice.
+   */
+  people?: ClientPerson[];
 }) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
@@ -74,18 +83,32 @@ export function BriefingEditor({
   const validation = useRef<HTMLDivElement>(null);
   const fileWrites = useIsMutating({ mutationKey: ["briefing-file", savedId] });
   const service = serviceCatalog.find((item) => item.id === draft.serviceId);
-  const update = (patch: Partial<BriefingDraft>) => {
-    setDraft((current) => ({ ...current, ...patch }));
+  const [requestedBy, setRequestedBy] = useState(() =>
+    people ? initialRequester(briefing?.requested_by, people) : "",
+  );
+  /** Any edit clears an obsolete validation summary and the saved notice. */
+  const touch = () => {
     if (errors.length) setErrors([]);
     setSaved(false);
     setDirty(true);
+  };
+  const update = (patch: Partial<BriefingDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    touch();
+  };
+  const chooseRequester = (id: string) => {
+    setRequestedBy(id);
+    touch();
   };
   const updateDirection = (patch: Partial<BriefingDirection>) =>
     update({ direction: { ...draft.direction, ...patch } });
   const save = useMutation({
     mutationFn: async (submit: boolean) => {
       if (!draft.serviceId) throw new Error("Choose a service before saving your draft.");
-      const validation = submit ? validateBriefing(draft) : [];
+      const validation = [
+        ...requesterErrors(requestedBy, people),
+        ...(submit ? validateBriefing(draft) : []),
+      ];
       if (validation.length) {
         setErrors(validation);
         throw new Error("Review the highlighted briefing requirements.");
@@ -96,6 +119,7 @@ export function BriefingEditor({
           { ...draft, direction: { ...draft.direction, preset_revision: service?.revision } },
           savedId,
           serviceEstimate(service),
+          requestedBy,
         ),
         expectedRevision,
       });
@@ -172,7 +196,7 @@ export function BriefingEditor({
     });
   }
   function review() {
-    const validation = validateBriefing(draft);
+    const validation = [...requesterErrors(requestedBy, people), ...validateBriefing(draft)];
     setErrors(validation);
     if (!validation.length) {
       setStep(2);
@@ -275,6 +299,11 @@ export function BriefingEditor({
           savedId={savedId}
           onSaveDraft={() => save.mutate(false)}
           saving={busy}
+          requester={
+            people
+              ? { people, value: requestedBy, clientName, onChange: chooseRequester }
+              : undefined
+          }
         />
       ) : (
         <div className="briefing-review">

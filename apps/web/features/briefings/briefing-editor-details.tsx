@@ -14,6 +14,7 @@ import {
 } from "./briefing-model";
 import { BriefingDeliverableEditor } from "./briefing-deliverable-editor";
 import { BriefingAttachments } from "./briefing-attachments";
+import type { ClientPerson } from "@/features/team/client-people";
 
 /**
  * The "Details" step (step 1) of the briefing editor: campaign selection, deliverables, the
@@ -37,6 +38,7 @@ export function BriefingEditorDetails({
   savedId,
   onSaveDraft,
   saving,
+  requester,
 }: {
   service: ServiceDefinition | undefined;
   draft: BriefingDraft;
@@ -52,6 +54,13 @@ export function BriefingEditorDetails({
   savedId: string | null;
   onSaveDraft: () => void;
   saving: boolean;
+  /** The studio's Requested by picker; absent for a client person. */
+  requester?: {
+    people: ClientPerson[];
+    value: string;
+    clientName: string;
+    onChange: (id: string) => void;
+  };
 }) {
   return (
     <div className="briefing-form">
@@ -78,6 +87,28 @@ export function BriefingEditorDetails({
               placeholder="Give this idea a name"
             />
           </label>
+          {requester &&
+            (requester.people.length ? (
+              <label>
+                Requested by
+                <select
+                  value={requester.value}
+                  onChange={(event) => requester.onChange(event.target.value)}
+                >
+                  <option value="">Choose a person</option>
+                  {requester.people.map((person) => (
+                    <option key={person.user_id} value={person.user_id}>
+                      {person.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="briefing-note">
+                Nobody at {requester.clientName} has an account yet, so this briefing has no
+                requester.
+              </p>
+            ))}
           <div className="briefing-campaign-field">
             <label>
               Campaign

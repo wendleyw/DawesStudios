@@ -67,6 +67,8 @@ export type Briefing = {
   estimated_credits?: number;
   confirmed_credits?: number | null;
   budget_note?: string | null;
+  /** The client person who asked for the work; absent from a designer's assigned-briefing read. */
+  requested_by?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -331,6 +333,7 @@ export function briefingPayload(
   draft: BriefingDraft,
   briefingId: string | null,
   estimatedCredits?: number,
+  requestedBy?: string,
 ): Database["public"]["Functions"]["save_briefing"]["Args"] {
   return {
     p_client_id: clientId,
@@ -352,5 +355,31 @@ export function briefingPayload(
     p_estimated_credits:
       estimatedCredits ?? serviceEstimate(services.find((item) => item.id === draft.serviceId)),
     ...(briefingId ? { p_briefing_id: briefingId } : {}),
+    ...(requestedBy ? { p_requested_by: requestedBy } : {}),
   };
+}
+
+/**
+ * The person the studio's Requested by picker opens on: the briefing's own requester while they are
+ * still one of the client's people, otherwise the client's only person, otherwise nobody yet.
+ * `save_briefing` applies the same one-person rule, so a former requester is never resent.
+ */
+export function initialRequester(
+  requestedBy: string | null | undefined,
+  people: { user_id: string }[],
+): string {
+  if (requestedBy && people.some((person) => person.user_id === requestedBy)) return requestedBy;
+  return people.length === 1 ? people[0].user_id : "";
+}
+
+/**
+ * The studio must name one of the client's people whenever the client has any; `save_briefing`
+ * refuses a missing or foreign choice whatever the interface sends. A client person is never asked.
+ */
+export function requesterErrors(
+  requestedBy: string,
+  people: { user_id: string }[] | undefined,
+): string[] {
+  if (!people?.length || people.some((person) => person.user_id === requestedBy)) return [];
+  return ["Choose who requested this briefing."];
 }

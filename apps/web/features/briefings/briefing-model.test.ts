@@ -6,8 +6,10 @@ import {
   decodeBriefing,
   formats,
   initialDraft,
+  initialRequester,
   newDeliverable,
   nextVariation,
+  requesterErrors,
   serviceEstimate,
   services,
   validateBriefing,
@@ -254,5 +256,38 @@ describe("variation numbering", () => {
   it("numbers each format independently", () => {
     const reel = newDeliverable("reel", nextVariation([], "reel"));
     expect(nextVariation([reel], "gif")).toBe(1);
+  });
+});
+
+describe("the requester the studio names", () => {
+  const people = [{ user_id: "ana" }, { user_id: "ben" }];
+
+  it("opens on the briefing's own requester while they are still at the client", () => {
+    expect(initialRequester("ben", people)).toBe("ben");
+  });
+
+  it("opens on the only person, and on nobody while the choice is open", () => {
+    expect(initialRequester(null, [{ user_id: "ana" }])).toBe("ana");
+    expect(initialRequester(undefined, people)).toBe("");
+  });
+
+  it("never reopens on someone who has left", () => {
+    expect(initialRequester("zed", people)).toBe("");
+    expect(initialRequester("zed", [{ user_id: "ana" }])).toBe("ana");
+  });
+
+  it("requires a choice among the client's people, and none when there are none", () => {
+    expect(requesterErrors("", people)).toEqual(["Choose who requested this briefing."]);
+    expect(requesterErrors("zed", people)).toEqual(["Choose who requested this briefing."]);
+    expect(requesterErrors("ana", people)).toEqual([]);
+    expect(requesterErrors("", [])).toEqual([]);
+    expect(requesterErrors("", undefined)).toEqual([]);
+  });
+
+  it("sends the requester only when one is chosen", () => {
+    const draft = initialDraft(undefined, {});
+    expect(briefingPayload("client", draft, null, 3, "ana").p_requested_by).toBe("ana");
+    expect(briefingPayload("client", draft, null, 3, "")).not.toHaveProperty("p_requested_by");
+    expect(briefingPayload("client", draft, null)).not.toHaveProperty("p_requested_by");
   });
 });

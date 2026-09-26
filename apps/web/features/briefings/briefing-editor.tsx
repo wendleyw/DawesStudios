@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useClientPeople } from "@/features/team/team-data";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBriefingBrand, useBriefings, useCampaigns, useServicePresets } from "./briefing-data";
 import { brandDefaults, catalogWithPresets } from "./briefing-model";
@@ -12,9 +13,10 @@ import { StudioManagedNotice } from "@/features/shared/studio-managed-notice";
 
 /**
  * Resolves every prerequisite the editor needs — the client, an existing draft (when editing), the
- * campaign list, brand defaults and the service catalog with any preset overrides — and gates on a
- * designer session or an already-submitted briefing before handing off to `BriefingEditor` (in
- * `briefing-editor-form.tsx`), which owns the actual multi-step form.
+ * campaign list, brand defaults, the service catalog with any preset overrides and, for the studio,
+ * the client's people for Requested by — and gates on a designer session or an already-submitted
+ * briefing before handing off to `BriefingEditor` (in `briefing-editor-form.tsx`), which owns the
+ * actual multi-step form.
  */
 export function BriefingEditorPage({
   clientId,
@@ -31,13 +33,18 @@ export function BriefingEditorPage({
   const campaigns = useCampaigns(clientId);
   const brand = useBriefingBrand(clientId);
   const presets = useServicePresets();
+  const people = useClientPeople(clientId);
+  // Only the studio names a requester; a client person is always the requester of what they file.
+  const studio = profile?.role === "agency";
   if (profile?.role === "designer") return <StudioManagedNotice area="Briefings" />;
   if (
+    !profile ||
     clients.isPending ||
     campaigns.isPending ||
     brand.isPending ||
     presets.isPending ||
-    (briefingId && briefings.isPending)
+    (briefingId && briefings.isPending) ||
+    (studio && people.isPending)
   )
     return <PageStatus>Loading your briefing…</PageStatus>;
   const client = clients.data?.find((item) => item.id === clientId);
@@ -48,6 +55,7 @@ export function BriefingEditorPage({
     brand.error ||
     presets.error ||
     briefings.error ||
+    (studio && people.error) ||
     (briefingId && !briefing)
   )
     return (
@@ -62,6 +70,7 @@ export function BriefingEditorPage({
             void brand.refetch();
             void presets.refetch();
             void briefings.refetch();
+            void people.refetch();
           }}
         >
           Try again
@@ -91,6 +100,7 @@ export function BriefingEditorPage({
       defaults={brandDefaults(brand.data ?? [])}
       serviceCatalog={catalogWithPresets(presets.data ?? [])}
       dialog={dialog}
+      people={studio ? people.data?.team : undefined}
     />
   );
 }
