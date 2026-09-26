@@ -161,7 +161,6 @@ const brandSections = [
   "logos",
   "ai",
   "colors",
-  "products",
   "typography",
   "messaging",
   "visual-style",

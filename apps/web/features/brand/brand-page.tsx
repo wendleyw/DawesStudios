@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBrandSections } from "./brand-data";
-import { brandNavigation, isBrandSection } from "./brand-model";
+import { brandNavigation, isBrandSection, type EditableSectionId } from "./brand-model";
+import { BrandProducts } from "./brand-products";
 import { BrandAssets } from "./brand-assets";
 import { BrandSectionContent } from "./brand-sections";
 import { SectionEditor } from "./section-editor";
@@ -17,7 +18,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const { profile } = useAuth();
   const clients = useClients();
   const sections = useBrandSections(clientId);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<EditableSectionId | null>(null);
   const client = clients.data?.find((item) => item.id === clientId);
   if (clients.isPending || sections.isPending)
     return <PageStatus>Loading the Brand Hub…</PageStatus>;
@@ -34,6 +35,8 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const title = brandNavigation.find((item) => item.id === section)!.label;
   const content = sections.data?.find((item) => item.section === section)?.content;
   const editable = section !== "assets";
+  const agency = profile?.role === "agency";
+  const contentOf = (id: string) => sections.data?.find((item) => item.section === id)?.content;
   return (
     <div className="page-content brand-page">
       <header className="page-heading client-page-heading">
@@ -42,7 +45,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
           <p>Identity, resources, and guidance for consistent work.</p>
         </div>
         {/*
-        The nine sections read as one row rather than hiding inside a select: where you are and what
+        The eight sections read as one row rather than hiding inside a select: where you are and what
         else there is are the same glance. They are links because they are routes — a section opens
         in a new tab or gets its own address, which a select could never offer. The row scrolls
         sideways instead of wrapping, so the order stays the order of the groups.
@@ -65,15 +68,23 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
       </header>
       <div className="brand-section-heading">
         <h2>{title}</h2>
-        {profile?.role === "agency" && editable && (
-          <button className="button quiet" onClick={() => setEditing(true)}>
+        {agency && editable && (
+          <button className="button quiet" onClick={() => setEditing(section)}>
             <Pencil size={14} />
             Edit {title.toLowerCase()}
           </button>
         )}
       </div>
       {section === "assets" ? (
-        <BrandAssets key={clientId} clientId={clientId} />
+        <>
+          <BrandProducts
+            key={`${clientId}-products`}
+            clientId={clientId}
+            content={contentOf("products")}
+            onEdit={agency ? () => setEditing("products") : undefined}
+          />
+          <BrandAssets key={clientId} clientId={clientId} />
+        </>
       ) : (
         <BrandSectionContent
           key={`${clientId}-${section}`}
@@ -84,14 +95,14 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
           sections={sections.data ?? []}
         />
       )}
-      {editing && editable && (
+      {editing && (
         <SectionEditor
-          key={`${clientId}-${section}`}
+          key={`${clientId}-${editing}`}
           clientId={clientId}
-          section={section}
-          title={title}
-          content={content}
-          onClose={() => setEditing(false)}
+          section={editing}
+          title={editing === "products" ? "Products" : title}
+          content={contentOf(editing)}
+          onClose={() => setEditing(null)}
         />
       )}
     </div>

@@ -7,11 +7,12 @@ import type { Json } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { briefingQueryKeys } from "@/features/briefings/briefing-data";
-import { brandQueryKeys, saveBrandSection } from "./brand-data";
+import { brandQueryKeys, saveBrandSection, useBrandAssets } from "./brand-data";
 import {
   fieldsForSection,
   parseSectionInput,
   readPalette,
+  emptyProduct,
   readProducts,
   sectionFields,
   validationMessage,
@@ -38,6 +39,15 @@ export function SectionEditor({
   const [fields, setFields] = useState(() => fieldsForSection(section, content));
   const [palette, setPalette] = useState(() => readPalette(content));
   const [products, setProducts] = useState(() => readProducts(content));
+  // A product's image is one of the client's previewable brand assets.
+  const assets = useBrandAssets(clientId, section === "products");
+  const images = (assets.data ?? []).filter(
+    (asset) =>
+      !!asset.storage_path &&
+      ["image/png", "image/jpeg", "image/webp"].includes(asset.mime_type ?? ""),
+  );
+  const setProduct = (index: number, change: Partial<typeof emptyProduct>) =>
+    setProducts(products.map((item, i) => (i === index ? { ...item, ...change } : item)));
   const save = useMutation({
     mutationFn: async () => {
       const validated = parseSectionInput(section, fields, palette, products);
@@ -193,16 +203,43 @@ export function SectionEditor({
                         value={product[key]}
                         required={key === "name"}
                         maxLength={key === "name" ? 300 : 6000}
-                        onChange={(event) =>
-                          setProducts(
-                            products.map((item, i) =>
-                              i === index ? { ...item, [key]: event.target.value } : item,
-                            ),
-                          )
-                        }
+                        onChange={(event) => setProduct(index, { [key]: event.target.value })}
                       />
                     </label>
                   ))}
+                  <label>
+                    Image
+                    <select
+                      value={product.imageAssetId}
+                      disabled={assets.isPending}
+                      onChange={(event) => setProduct(index, { imageAssetId: event.target.value })}
+                    >
+                      <option value="">No image</option>
+                      {product.imageAssetId &&
+                        !images.some((asset) => asset.id === product.imageAssetId) && (
+                          <option value={product.imageAssetId}>
+                            {assets.isPending ? "Loading images…" : "Unavailable image"}
+                          </option>
+                        )}
+                      {images.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small>Upload the image in Assets first (PNG, JPG or WebP).</small>
+                  </label>
+                  <label>
+                    Link
+                    <input
+                      type="text"
+                      inputMode="url"
+                      value={product.link}
+                      maxLength={2048}
+                      placeholder="https://…"
+                      onChange={(event) => setProduct(index, { link: event.target.value })}
+                    />
+                  </label>
                   <button
                     type="button"
                     className="button quiet"
@@ -218,9 +255,7 @@ export function SectionEditor({
               type="button"
               className="button"
               disabled={products.length >= 50}
-              onClick={() =>
-                setProducts([...products, { name: "", description: "", specs: "", rules: "" }])
-              }
+              onClick={() => setProducts([...products, emptyProduct])}
             >
               <Plus size={15} />
               Add product

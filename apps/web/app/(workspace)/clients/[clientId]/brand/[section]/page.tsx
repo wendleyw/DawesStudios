@@ -6,6 +6,8 @@ export default async function ClientBrandSection({
   params: Promise<{ clientId: string; section: string }>;
 }) {
   const { clientId, section } = await params;
-  if (section === "templates") redirect(`/clients/${clientId}/brand/assets`);
+  // Templates was removed and Products now lives at the top of Assets; old links land there.
+  if (section === "templates" || section === "products")
+    redirect(`/clients/${clientId}/brand/assets`);
   return <BrandPage clientId={clientId} section={section} />;
 }

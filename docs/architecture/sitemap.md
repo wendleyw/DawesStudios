@@ -89,7 +89,7 @@ Named dialogs/actions: Add design, New version with notes, Send to agency, Publi
 
 ## Brand Hub navigation
 
-All nine sections use the selected client context. Agency edits are persisted and audited; Client and assigned Designer receive read-only canonical brand data. Copy actions remain available to authorized readers. Templates has been retired; its route redirects to Assets.
+All eight sections use the selected client context. Agency edits are persisted and audited; Client and assigned Designer receive read-only canonical brand data. Copy actions remain available to authorized readers. Templates has been retired and Products moved to the top of Assets; both routes redirect to Assets.
 
 | Section slug | Name | Required surfaces/actions |
 |---|---|---|

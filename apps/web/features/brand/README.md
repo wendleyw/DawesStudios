@@ -1,7 +1,9 @@
 # Brand workspace
 
-The Brand Hub lives at `/clients/:clientId/brand/:section`. Its nine sections are Overview, Logos,
-Colors, Typography, Visual style, Products, Assets, Messaging and Brand context. They share the
+The Brand Hub lives at `/clients/:clientId/brand/:section`. Its eight sections are Overview, Logos,
+Colors, Typography, Visual style, Assets, Messaging and Brand context. Products has no tab of its
+own: it leads the Assets section (`brand-products.tsx`), and old `/brand/products` links redirect to
+Assets. They share the
 floating client navigation/account card, a white title card and the plain page background. The section
 links retain their bounded horizontal scrolling on narrow screens; client navigation wraps above.
 Notifications open beside the signed-in profile, using the shared account popover.
@@ -24,10 +26,21 @@ expose named fields, palette rows, product fields and line-separated guidance ra
 Agency members edit canonical content; clients and assigned designers read it through Supabase
 policies. Successful edits also invalidate the briefing feature's brand-default query.
 
-Colors copy as HEX, RGB, CSS variables or Tailwind values. Typography supports sample text and HTTPS
+Colors show as one row of swatches (a long palette scrolls sideways) and copy as HEX, RGB, CSS
+variables or Tailwind values. Typography supports sample text and HTTPS
 font-source links. Visual style records Use/Avoid rules; messaging records reusable copy and approved
 terminology. Brand context combines explicit direction with an allowlist of the client's identity;
 it is reusable guidance, not an AI service. The shared CopyButton provides a manual fallback.
+
+## Products
+
+Each product has a name, description, specifications, usage guidance, an optional image and an
+optional link. The image is one of the client's previewable brand assets (PNG, JPEG or WebP),
+stored by its id (`imageAssetId`) and chosen in the editor, so it is uploaded once in Assets and
+previewed through the same signed URL as any asset. The link must be a complete HTTPS address
+(`safeHttpsUrl`) and opens in a new tab. Products saved before images and links read with both
+empty. Readers see the Products strip only when products exist; the agency always sees it to add
+one. Specifications and usage guidance sit behind **Details** on each card.
 
 ## Assets and folders
 

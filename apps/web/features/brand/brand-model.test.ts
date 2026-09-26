@@ -7,8 +7,9 @@ import {
   parseDraftInput,
   parseSectionInput,
   readPalette,
+  readProducts,
   readTemplateContent,
-  safeFontSource,
+  safeHttpsUrl,
   validateBrandFile,
 } from "./brand-model";
 
@@ -63,7 +64,7 @@ describe("shared brand editing", () => {
     );
   });
   it("accepts optional HTTPS font references and rejects executable or credentialed URLs", () => {
-    expect(safeFontSource("https://fonts.google.com/specimen/Inter")).toBe(
+    expect(safeHttpsUrl("https://fonts.google.com/specimen/Inter")).toBe(
       "https://fonts.google.com/specimen/Inter",
     );
     for (const url of [
@@ -71,7 +72,7 @@ describe("shared brand editing", () => {
       "http://example.com/font",
       "https://user:pass@example.com/font",
     ]) {
-      expect(safeFontSource(url)).toBeNull();
+      expect(safeHttpsUrl(url)).toBeNull();
       expect(() =>
         parseSectionInput("typography", {
           heading: "Inter",
@@ -209,5 +210,52 @@ describe("brand resource handling", () => {
     expect(result).toContain("Never:\n\n- Invent claims");
     expect(result).toContain("Terminology:\n\n- Studio");
     expect(result).toContain("Be specific");
+  });
+});
+
+describe("products", () => {
+  const product = {
+    name: "Everyday Alarm",
+    description: "",
+    specs: "",
+    rules: "",
+    imageAssetId: "",
+    link: "",
+  };
+
+  // Seeded ids are not RFC-versioned UUIDs, so any 8-4-4-4-12 id must be accepted.
+  it("keeps an image asset and an HTTPS link", () => {
+    const content = parseSectionInput(
+      "products",
+      {},
+      [],
+      [
+        {
+          ...product,
+          imageAssetId: "e4401a17-cbe2-1d70-400d-d40f9e6b8632",
+          link: "https://sabre.example/alarm",
+        },
+      ],
+    );
+    expect(readProducts(content)).toEqual([
+      {
+        ...product,
+        imageAssetId: "e4401a17-cbe2-1d70-400d-d40f9e6b8632",
+        link: "https://sabre.example/alarm",
+      },
+    ]);
+  });
+
+  it("refuses a link that is not HTTPS and an image that is not an asset id", () => {
+    expect(() =>
+      parseSectionInput("products", {}, [], [{ ...product, link: "javascript:alert(1)" }]),
+    ).toThrow("Use a complete HTTPS product link.");
+    expect(() =>
+      parseSectionInput("products", {}, [], [{ ...product, imageAssetId: "../other" }]),
+    ).toThrow("Choose the product image again.");
+  });
+
+  it("reads products saved before images and links existed", () => {
+    expect(readProducts({ items: [{ name: "Old" }] })).toEqual([{ ...product, name: "Old" }]);
   });
 });

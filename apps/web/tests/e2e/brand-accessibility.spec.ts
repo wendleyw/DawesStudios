@@ -60,7 +60,6 @@ test("brand sections remain accessible across desktop, tablet, and narrow mobile
     "colors",
     "typography",
     "visual-style",
-    "products",
     "assets",
     "messaging",
     "ai",

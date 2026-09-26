@@ -103,7 +103,6 @@ export const sectionLabels: Record<string, string> = {
   colors: "Colors",
   typography: "Typography",
   "visual-style": "Visual style",
-  products: "Products",
   assets: "Assets",
   templates: "Templates",
   messaging: "Messaging",

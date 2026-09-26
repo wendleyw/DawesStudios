@@ -9,10 +9,9 @@ import {
   makeBrandContext,
   matchesBrandSearch,
   readPalette,
-  readProducts,
   readScale,
   safeFontFamily,
-  safeFontSource,
+  safeHttpsUrl,
   textList,
   textValue,
   type ColorCopyFormat,
@@ -23,7 +22,7 @@ import { useBrandAssets, type BrandSection } from "./brand-data";
 import { CopyButton } from "@/features/shared/copy-button";
 
 /** Sections whose reference link is filtered, and so need to know whether it resolves to anything. */
-const sectionsLinkingFilteredAssets = new Set(["logos", "visual-style", "products"]);
+const sectionsLinkingFilteredAssets = new Set(["logos", "visual-style"]);
 
 function GuidanceList({
   title,
@@ -211,10 +210,10 @@ export function BrandSectionContent({
               >
                 {sample || "Your words here."}
               </p>
-              {safeFontSource(textValue(content, `${key}Source`)) && (
+              {safeHttpsUrl(textValue(content, `${key}Source`)) && (
                 <a
                   className="button quiet brand-font-source"
-                  href={safeFontSource(textValue(content, `${key}Source`))!}
+                  href={safeHttpsUrl(textValue(content, `${key}Source`))!}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -258,42 +257,6 @@ export function BrandSectionContent({
             Explore reference files
             <ArrowUpRight size={15} />
           </Link>
-        )}
-      </div>
-    );
-  if (section === "products")
-    return (
-      <div className="brand-content-stack">
-        {readProducts(content).map((product, i) => (
-          <section className="brand-panel brand-product" key={i}>
-            <span className="eyebrow">Product {String(i + 1).padStart(2, "0")}</span>
-            <h3>{product.name}</h3>
-            <p>{product.description}</p>
-            <div className="brand-two-columns">
-              <div>
-                <h4>Specifications</h4>
-                <p>{product.specs || "No specifications added."}</p>
-              </div>
-              <div>
-                <h4>Usage guidance</h4>
-                <p>{product.rules || "No usage guidance added."}</p>
-              </div>
-            </div>
-            {hasAssets("", product.name) && (
-              <Link
-                className="button quiet"
-                href={`/clients/${clientId}/brand/assets?search=${encodeURIComponent(product.name)}`}
-              >
-                View product assets
-                <ArrowUpRight size={15} />
-              </Link>
-            )}
-          </section>
-        ))}
-        {!readProducts(content).length && (
-          <div className="empty-state">
-            <p>No products have been added yet.</p>
-          </div>
         )}
       </div>
     );

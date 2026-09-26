@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
-import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
+import { credentials, localAgency, localCaller, signIn } from "./test-support";
 import { cleanupIntakeFixture, createIntakeFixture } from "./intake-fixture";
 
 test.use({ reducedMotion: "reduce" });
@@ -134,7 +134,9 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
     await expect(context).toHaveValue(/Never:[\s\S]*Invent unsupported claims/);
     await expect(context).toHaveValue(/Terminology:[\s\S]*Creative team/);
     await page.keyboard.press("Escape");
+    // Products has no tab of its own any more: old links land on Assets, where products lead.
     await page.goto(base + "/products");
+    await expect(page).toHaveURL(base + "/assets");
     await page.getByRole("button", { name: "Edit products", exact: true }).click();
     for (let index = 0; index < 3; index++) {
       await page.getByRole("button", { name: "Add product", exact: true }).click();
@@ -151,31 +153,26 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
         .nth(index)
         .fill("Rule " + (index + 1));
     }
+    // A product link must be a complete HTTPS address; anything else is refused before saving.
+    const link = page.getByLabel("Link", { exact: true }).nth(0);
+    await link.fill("javascript:alert(1)");
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
+    await expect(page.getByRole("dialog")).toContainText("Use a complete HTTPS product link.");
+    await link.fill("https://example.com/product-1");
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    // Only "Product 1" gets a matching brand asset, so its reference link should render with the
-    // correctly-encoded filtered search, while "Product 2" and "Product 3" — with nothing to link
-    // to — should render no link at all. That proves both halves of the filtered-link behaviour
-    // fixed by defect G-1 (54645f1): a real match still resolves, and an empty result is omitted.
-    const matchingAsset = await localAdmin.from("brand_assets").insert({
-      client_id: fixture.clientId,
-      name: "Product 1 field kit",
-      category: "Reference",
-    });
-    expect(matchingAsset.error).toBeNull();
-    await page.reload();
-    const productWithMatch = page.locator(".brand-product").nth(0);
-    await expect(productWithMatch).toContainText("Product 1");
-    await expect(productWithMatch).toContainText("Specification 1");
-    await expect(productWithMatch.getByRole("link")).toHaveAttribute(
+    const products = page.getByRole("region", { name: "Products", exact: true }).locator("article");
+    await expect(products).toHaveCount(3);
+    await expect(products.nth(0)).toContainText("Product 1");
+    await expect(products.nth(0).getByRole("link", { name: "Open link" })).toHaveAttribute(
       "href",
-      base + "/assets?search=Product%201",
+      "https://example.com/product-1",
     );
+    await products.nth(0).getByText("Details", { exact: true }).click();
+    await expect(products.nth(0)).toContainText("Specification 1");
     for (let index = 1; index < 3; index++) {
-      const product = page.locator(".brand-product").nth(index);
-      await expect(product).toContainText("Product " + (index + 1));
-      await expect(product).toContainText("Specification " + (index + 1));
-      await expect(product.getByRole("link")).toHaveCount(0);
+      await expect(products.nth(index)).toContainText("Product " + (index + 1));
+      await expect(products.nth(index).getByRole("link")).toHaveCount(0);
     }
     const client = await localCaller(fixture.email);
     try {
@@ -200,7 +197,6 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
         "colors",
         "typography",
         "visual-style",
-        "products",
         "assets",
         "messaging",
         "ai",

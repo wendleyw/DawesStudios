@@ -166,7 +166,7 @@ The [catalog](../ref/00-guia/CATALOGO-DE-SERVICOS.json) contains 20 `types` and 
 Use a consistent shell and shared detail/editor primitives. Distinct data capabilities below do not require separate bespoke component trees or a fixed number of modal screenshots.
 
 Current product amendment (2026-09-23): the user retired Templates navigation/gallery/creation and
-added Assets folders. The current Brand Hub has nine sections. Existing templates and owner-private
+added Assets folders. The current Brand Hub has eight sections; Products leads Assets. Existing templates and owner-private
 direct draft URLs are preserved; G09 gallery-creation evidence below describes the earlier
 product and is not a requirement to restore that retired UI. G10 still governs retained private drafts. Folder organization and the updated
 nine-section UI are covered by the [current verification](../verification/client-polish-and-brand-folders-2026-09-23.md):

@@ -14,15 +14,31 @@ export const brandNavigation = [
   { id: "colors", label: "Colors", group: "Identity" },
   { id: "typography", label: "Typography", group: "Identity" },
   { id: "visual-style", label: "Visual style", group: "Identity" },
-  { id: "products", label: "Products", group: "Resources" },
   { id: "assets", label: "Assets", group: "Resources" },
   { id: "messaging", label: "Messaging", group: "Guidance" },
   { id: "ai", label: "Brand context", group: "Guidance" },
 ] as const;
 type BrandSectionId = (typeof brandNavigation)[number]["id"];
-export type EditableSectionId = Exclude<BrandSectionId, "assets">;
+/** Products has no tab of its own: it is edited and shown at the top of Assets. */
+export type EditableSectionId = Exclude<BrandSectionId, "assets"> | "products";
 type ColorSwatch = { name: string; hex: string };
-type BrandProduct = { name: string; description: string; specs: string; rules: string };
+/** `imageAssetId` points at one of the client's raster brand assets; `link` is an HTTPS page. */
+export type BrandProduct = {
+  name: string;
+  description: string;
+  specs: string;
+  rules: string;
+  imageAssetId: string;
+  link: string;
+};
+export const emptyProduct: BrandProduct = {
+  name: "",
+  description: "",
+  specs: "",
+  rules: "",
+  imageAssetId: "",
+  link: "",
+};
 type SectionField = {
   key: string;
   label: string;
@@ -85,11 +101,13 @@ export const sectionFields: Record<EditableSectionId, SectionField[]> = {
 
 const shortText = z.string().trim().max(300);
 const longText = z.string().trim().max(6000);
-const fontSource = z
-  .string()
-  .trim()
-  .max(2048)
-  .refine((value) => !value || !!safeFontSource(value), "Use a complete HTTPS font source URL.");
+const httpsUrl = (message: string) =>
+  z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => !value || !!safeHttpsUrl(value), message);
+const fontSource = httpsUrl("Use a complete HTTPS font source URL.");
 const lines = z.array(shortText.min(1)).max(30);
 const hexColor = z
   .string()
@@ -142,6 +160,8 @@ const sectionSchemas = {
           description: longText,
           specs: longText,
           rules: longText,
+          imageAssetId: z.union([z.literal(""), z.guid("Choose the product image again.")]),
+          link: httpsUrl("Use a complete HTTPS product link."),
         }),
       )
       .max(50),
@@ -194,6 +214,8 @@ export function readProducts(content: Json | undefined): BrandProduct[] {
           description: textValue(item, "description"),
           specs: textValue(item, "specs"),
           rules: textValue(item, "rules"),
+          imageAssetId: textValue(item, "imageAssetId"),
+          link: textValue(item, "link"),
         }))
     : [];
 }
@@ -270,7 +292,7 @@ export function formatBrandColor(color: ColorSwatch, format: ColorCopyFormat): s
   if (format === "tailwind") return `bg-[${hex}] text-[${hex}] border-[${hex}]`;
   return hex;
 }
-export function safeFontSource(value: string): string | null {
+export function safeHttpsUrl(value: string): string | null {
   try {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password ? url.href : null;
