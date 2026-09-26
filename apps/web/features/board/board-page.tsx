@@ -21,7 +21,7 @@ import {
 } from "@/features/workspace/workspace-data";
 import { statusToneClass } from "@/features/shared/status-tone";
 
-import { FRAME_HEAD, FRAME_PAD, orderCampaigns } from "./board-layout";
+import { FRAME_HEAD, FRAME_PAD, orderCampaigns, snapCardPosition } from "./board-layout";
 import {
   LIST_SORT_COLUMNS,
   LIST_SORT_OPTIONS,
@@ -317,6 +317,15 @@ function ClientBoard({ clientId }: { clientId: string }) {
     });
   }
 
+  /** Snaps a dropped card to the nearest free cell among its frame's other cards and slot. */
+  function settleCard(dropped: Node): { x: number; y: number } {
+    const frame = nodes.find((node) => node.id === dropped.parentId);
+    const taken = nodes
+      .filter((node) => node.parentId === dropped.parentId && node.id !== dropped.id)
+      .map((node) => node.position);
+    return snapCardPosition(dropped.position, taken, frame?.width ?? 0);
+  }
+
   // Campaign frames determine the opening bounds; fitting before they arrive uses an empty stack.
   if (clients.isPending || projects.isPending || campaigns.isPending)
     return <PageStatus>Loading the board…</PageStatus>;
@@ -425,9 +434,11 @@ function ClientBoard({ clientId }: { clientId: string }) {
               nodeTypes={boardNodeTypes}
               proOptions={{ hideAttribution: true }}
               onNodesChange={changeNodes}
-              onNodeDragStop={(_event, node) =>
-                moveProject.mutate({ id: node.id, position: node.position })
-              }
+              onNodeDragStop={(_event, node) => {
+                const position = settleCard(node);
+                setPositions((current) => ({ ...current, [node.id]: position }));
+                moveProject.mutate({ id: node.id, position });
+              }}
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               minZoom={0.1}
               maxZoom={1.5}

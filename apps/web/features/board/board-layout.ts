@@ -76,6 +76,52 @@ export function slotPosition(index: number): { x: number; y: number } {
   return { x: FRAME_PAD + index * (CARD_W + CARD_GAP), y: FRAME_HEAD + FRAME_PAD };
 }
 
+const COLUMN_PITCH = CARD_W + CARD_GAP;
+const ROW_PITCH = CARD_H + CARD_GAP;
+
+function cellOf(position: { x: number; y: number }) {
+  return {
+    column: Math.max(0, Math.round((position.x - FRAME_PAD) / COLUMN_PITCH)),
+    row: Math.max(0, Math.round((position.y - FRAME_HEAD - FRAME_PAD) / ROW_PITCH)),
+  };
+}
+
+function cellPosition(column: number, row: number) {
+  return { x: FRAME_PAD + column * COLUMN_PITCH, y: FRAME_HEAD + FRAME_PAD + row * ROW_PITCH };
+}
+
+/**
+ * Where a dropped card settles: the free grid cell nearest to where it was let go, so every card
+ * keeps the same CARD_GAP from its neighbours instead of resting wherever the pointer stopped.
+ * `taken` holds the other cards and the briefing slot in the same frame; `frameWidth` bounds the
+ * columns, because `extent: "parent"` keeps a card inside its frame. One extra row below the
+ * deepest occupied one is always available, so a full grid still has a place to drop into.
+ */
+export function snapCardPosition(
+  drop: { x: number; y: number },
+  taken: { x: number; y: number }[],
+  frameWidth: number,
+): { x: number; y: number } {
+  const columns = Math.max(1, Math.floor((frameWidth - FRAME_PAD * 2 + CARD_GAP) / COLUMN_PITCH));
+  const occupied = new Set(taken.map(cellOf).map(({ column, row }) => `${column}:${row}`));
+  const deepest = taken.map(cellOf).reduce((low, cell) => Math.max(low, cell.row), 0);
+  const wanted = cellOf(drop);
+  const rows = Math.max(deepest, wanted.row) + 1;
+  let best: { x: number; y: number } | null = null;
+  let bestDistance = Infinity;
+  for (let row = 0; row <= rows; row++)
+    for (let column = 0; column < columns; column++) {
+      if (occupied.has(`${column}:${row}`)) continue;
+      const candidate = cellPosition(column, row);
+      const distance = Math.hypot(candidate.x - drop.x, candidate.y - drop.y);
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+  return best ?? cellPosition(0, rows);
+}
+
 /** A stored {x:0,y:0} keeps its existing meaning: no override, use the auto slot. */
 export function hasStoredPosition(position: { x: number; y: number }): boolean {
   return Boolean(position.x || position.y);

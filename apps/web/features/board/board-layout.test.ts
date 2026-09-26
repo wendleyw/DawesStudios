@@ -14,6 +14,7 @@ import {
   hasStoredPosition,
   orderCampaigns,
   slotPosition,
+  snapCardPosition,
   type BoardCampaign,
   campaignColumnWidth,
   competitorWidgetHeight,
@@ -105,6 +106,35 @@ describe("frame geometry", () => {
     expect(slotPosition(3)).toEqual({
       x: FRAME_PAD + 3 * (CARD_W + CARD_GAP),
       y: FRAME_HEAD + FRAME_PAD,
+    });
+  });
+
+  it("snaps a dropped card to the nearest free slot so the gap stays even", () => {
+    const width = campaignColumnWidth(3);
+    // Let go slightly off the second slot: it settles exactly on it.
+    expect(
+      snapCardPosition({ x: slotPosition(1).x + 37, y: 95 }, [slotPosition(0)], width),
+    ).toEqual(slotPosition(1));
+    // Dropped onto a neighbour, it takes the closest cell that is still free.
+    expect(
+      snapCardPosition(
+        { x: slotPosition(1).x - 10, y: slotPosition(1).y },
+        [slotPosition(0), slotPosition(1)],
+        width,
+      ),
+    ).toEqual(slotPosition(2));
+    // Dragged low, it lands one row down with the same gap between rows.
+    expect(snapCardPosition({ x: 30, y: 420 }, [slotPosition(0)], width)).toEqual({
+      x: FRAME_PAD,
+      y: FRAME_HEAD + FRAME_PAD + CARD_H + CARD_GAP,
+    });
+  });
+
+  it("opens a new row when every slot in the frame is taken", () => {
+    const width = campaignColumnWidth(2);
+    expect(snapCardPosition(slotPosition(0), [slotPosition(0), slotPosition(1)], width)).toEqual({
+      x: FRAME_PAD,
+      y: FRAME_HEAD + FRAME_PAD + CARD_H + CARD_GAP,
     });
   });
 
