@@ -851,6 +851,64 @@ export type Database = {
           },
         ]
       }
+      design_boards: {
+        Row: {
+          board_id: string
+          created_at: string
+          created_by: string
+          designer_id: string
+          id: string
+          name: string
+          project_id: string
+          updated_at: string
+          widget_id: string | null
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          created_by: string
+          designer_id: string
+          id?: string
+          name: string
+          project_id: string
+          updated_at?: string
+          widget_id?: string | null
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          created_by?: string
+          designer_id?: string
+          id?: string
+          name?: string
+          project_id?: string
+          updated_at?: string
+          widget_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_boards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_boards_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_boards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_version_miro_links: {
         Row: {
           board_id: string
@@ -895,36 +953,49 @@ export type Database = {
       }
       design_versions: {
         Row: {
+          board_id: string | null
           created_at: string
           created_by: string
-          deliverable_id: string
+          deliverable_id: string | null
           id: string
           notes: string
           project_id: string
+          request_key: string | null
           status: string
           version_number: number
         }
         Insert: {
+          board_id?: string | null
           created_at?: string
           created_by: string
-          deliverable_id: string
+          deliverable_id?: string | null
           id?: string
           notes?: string
           project_id: string
+          request_key?: string | null
           status?: string
           version_number: number
         }
         Update: {
+          board_id?: string | null
           created_at?: string
           created_by?: string
-          deliverable_id?: string
+          deliverable_id?: string | null
           id?: string
           notes?: string
           project_id?: string
+          request_key?: string | null
           status?: string
           version_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "design_versions_board_fk"
+            columns: ["board_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "design_boards"
+            referencedColumns: ["id", "project_id"]
+          },
           {
             foreignKeyName: "design_versions_created_by_fkey"
             columns: ["created_by"]
@@ -1897,6 +1968,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_design_board: {
+        Args: {
+          p_designer_id: string
+          p_name: string
+          p_project_id: string
+          p_url: string
+        }
+        Returns: string
+      }
       create_design_version: {
         Args: {
           p_copy_version_id?: string
@@ -2141,6 +2221,15 @@ export type Database = {
         }
         Returns: number
       }
+      send_board_round: {
+        Args: {
+          p_board_id: string
+          p_frame_url?: string
+          p_idempotency_key?: string
+          p_note?: string
+        }
+        Returns: string
+      }
       set_briefing_requester: {
         Args: { p_briefing_id: string; p_requested_by: string }
         Returns: undefined
@@ -2167,6 +2256,15 @@ export type Database = {
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
       submit_design_version: {
         Args: { p_version_id: string }
+        Returns: undefined
+      }
+      update_design_board: {
+        Args: {
+          p_board_id: string
+          p_designer_id: string
+          p_name: string
+          p_url: string
+        }
         Returns: undefined
       }
       update_workspace_settings: {
