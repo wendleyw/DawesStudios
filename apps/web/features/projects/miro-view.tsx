@@ -4,6 +4,7 @@ import { ArrowUpRight, MoreHorizontal } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 import { miroBoardUrl, miroEmbedUrl, type MiroLink } from "./miro-links";
+import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import { miroVersionLabel } from "./miro-mode";
 import type { CanvasVersion } from "./project-data";
 import type { ReviewDecision } from "./project-action-review";
@@ -12,9 +13,11 @@ export type MiroFrame = CanvasVersion & { miro: MiroLink };
 
 /**
  * Miro mode's header, folded into one bar so the board gets the height: back, the project and
- * deliverable names, a toggle of the deliverable's linked versions, the Versions | Miro switch,
- * "Open in Miro" (for when the embed cannot sign in) and a "More" menu holding the rarely used
- * channel switch and deliverable filter (the filter changes the deliverable).
+ * deliverable names, a toggle of the deliverable's linked versions with the shown version's status,
+ * the Versions | Miro switch,
+ * "Open in Miro" (for when the embed cannot sign in) and a "More" menu holding the credits the
+ * project used, the rarely used channel switch and the deliverable filter (which changes the
+ * deliverable).
  */
 export function MiroBar({
   back,
@@ -63,6 +66,7 @@ export function MiroBar({
           </button>
         ))}
       </div>
+      <span className="miro-bar-status">{versionStatusLabel(current.status)}</span>
       <div className="miro-bar-actions">
         {viewControl}
         <a

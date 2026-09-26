@@ -69,6 +69,15 @@
   padding: 3px 10px;
   font-size: var(--text-xs);
 }
+.miro-bar-status {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.miro-bar-popover > .project-credits-chip {
+  align-self: flex-start;
+}
 .miro-bar-actions {
   display: flex;
   align-items: center;

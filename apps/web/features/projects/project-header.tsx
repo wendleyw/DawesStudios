@@ -141,6 +141,7 @@ export function ProjectHeader({
           viewControl={viewControl}
           menu={
             <>
+              <ProjectCreditsChip projectId={project.id} viewer={viewer} />
               {viewer?.role === "agency" && channelControl}
               {deliverableFilter}
             </>

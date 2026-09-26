@@ -9,6 +9,7 @@ const v3 = {
   deliverableId: "d",
   number: 3,
   date: "2026-09-20",
+  status: "pending",
   miro: link,
 } as CanvasVersion & { miro: typeof link };
 const v2 = {
@@ -16,6 +17,7 @@ const v2 = {
   deliverableId: "d",
   number: 2,
   date: "2026-09-10",
+  status: "approved",
   miro: { ...link, widgetId: "222" },
 } as CanvasVersion;
 const deliverables = [{ id: "d", name: "Key visual" }];
@@ -56,6 +58,8 @@ describe("MiroBar", () => {
     renderBar();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Campaign/Key visual");
     expect(screen.getByText("view switch")).toBeInTheDocument();
+    // The shown version's status sits beside the version toggle.
+    expect(screen.getByText("In review")).toBeInTheDocument();
     const open = screen.getByRole("link", { name: /Open in Miro/ });
     expect(open).toHaveAttribute(
       "href",
