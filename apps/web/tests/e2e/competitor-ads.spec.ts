@@ -49,6 +49,16 @@ test("the agency places the widget and follows a competitor; a designer reads it
   await removeFixtures(clientId);
   if (widgetWasPlaced)
     await localAdmin.from("client_board_widgets").delete().eq("client_id", clientId);
+  // SABRE can carry a real, studio-added competitor outside this fixture's own rows (never deleted
+  // or changed here); read it so the widget's initial state assertion stays accurate either way.
+  const preexisting = await localAdmin
+    .from("competitors")
+    .select("name")
+    .eq("client_id", clientId)
+    .not("name", "like", "Acceptance competitor%")
+    .order("name", { ascending: true });
+  if (preexisting.error) throw preexisting.error;
+  const preexistingNames = preexisting.data.map((row) => row.name);
   try {
     // The agency places the widget and adds a competitor.
     await signIn(page, credentials.agency);
@@ -59,7 +69,12 @@ test("the agency places the widget and follows a competitor; a designer reads it
       .getByRole("button", { name: "Add to board" })
       .click();
     const widget = page.getByRole("region", { name: "Competitor ads" });
-    await expect(widget).toContainText("Add the competitors you want to follow.");
+    if (preexistingNames.length === 0) {
+      await expect(widget).toContainText("Add the competitors you want to follow.");
+    } else {
+      for (const preexistingName of preexistingNames)
+        await expect(widget).toContainText(preexistingName);
+    }
     await widget.getByRole("button", { name: "Add competitor" }).click();
     const form = page.getByRole("dialog", { name: "Add competitor" });
     await form.getByLabel("Name", { exact: true }).fill(name);

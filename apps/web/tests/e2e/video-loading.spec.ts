@@ -129,7 +129,9 @@ test("video preview loading budget and viewer seeking", async ({ page }, testInf
     // A fixed observation window is part of this performance probe, not an action-readiness wait.
     await page.waitForTimeout(2_000);
     await Promise.all(pending);
-    const previews = await page.locator("video").evaluateAll((elements) => ({
+    // Scoped to the project canvas: the sidebar's animated brand mark (`video.brand-mark`) is
+    // chrome, not a design preview, and must never be counted alongside these.
+    const previews = await page.locator(".project-canvas video").evaluateAll((elements) => ({
       videoElements: elements.length,
       metadataPreloads: elements.filter(
         (element) => (element as HTMLVideoElement).preload === "metadata",
@@ -283,6 +285,10 @@ test("video preview loading budget and viewer seeking", async ({ page }, testInf
       });
       const movieRequests = network.mediaRequests;
       await page.goto(`/clients/${client.id}/board`);
+      // A first-time viewer's board now opens as a list (`board-page.tsx`, 2026-09-24); this
+      // assertion is about the canvas view's card thumbnails, so select that view explicitly.
+      const canvasView = page.getByRole("button", { name: "Canvas view" });
+      if ((await canvasView.getAttribute("aria-pressed")) !== "true") await canvasView.click();
       await expect(page.locator(".board-card-media")).toHaveText("Video");
       await expect(page.locator(".board-card-version")).toHaveText("V4");
       await expect(page.locator(".board-card-media img, .board-card-media video")).toHaveCount(0);

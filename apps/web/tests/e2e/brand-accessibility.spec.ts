@@ -103,7 +103,10 @@ test("mobile navigation and shared dialogs contain keyboard focus and restore th
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await page.getByRole("link", { name: "Search", exact: false }).click();
+  // Global Search was removed on 2026-09-24; "Overview" is the agency's own main-navigation link
+  // and exercises the same following-a-link-closes-the-drawer behavior. Scoped to the drawer
+  // itself, since the client workspace behind it reuses the same "Overview" name.
+  await navigation.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(page.locator(".sidebar")).not.toBeVisible();
   expect(
     await page.locator(".workspace").evaluate((element) => (element as HTMLElement).inert),
