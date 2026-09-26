@@ -188,17 +188,17 @@ describe("Playground fullscreen layer", () => {
     render(<PlaygroundBoard clientId="client" projectId="project" onClose={onClose} />);
     const board = screen.getByRole("dialog", { name: "Playground" });
     expect(board).toHaveAttribute("data-phase", "entering");
-    finishAnimation(board, "playground-layer-enter");
+    finishAnimation(board, "fullscreen-layer-enter");
     expect(board).toHaveAttribute("data-phase", "active");
 
     await user.click(screen.getByRole("button", { name: "Back to project" }));
     expect(board).toHaveAttribute("data-phase", "exiting");
     expect(board).toHaveAttribute("inert");
     expect(onClose).not.toHaveBeenCalled();
-    finishAnimation(screen.getByRole("heading", { name: "Playground" }), "playground-layer-exit");
+    finishAnimation(screen.getByRole("heading", { name: "Playground" }), "fullscreen-layer-exit");
     expect(onClose).not.toHaveBeenCalled();
-    finishAnimation(board, "playground-layer-exit");
-    finishAnimation(board, "playground-layer-exit");
+    finishAnimation(board, "fullscreen-layer-exit");
+    finishAnimation(board, "fullscreen-layer-exit");
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

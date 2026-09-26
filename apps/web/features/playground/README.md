@@ -20,9 +20,9 @@ that round trip. This feature owns fullscreen framing, animation, state, validat
 data access.
 
 `playground-board.tsx` composes three colocated hooks for its cross-cutting concerns:
-`use-playground-close-lifecycle.ts` (the dialog's open/close animation phase, focus and
-body-scroll lock/restore), `use-playground-navigation-guard.ts` (the unsaved/busy same-tab
-navigation guard covering Escape, the close button, same-tab link clicks and the browser's
+the shared `useFullscreenLayer` (`features/shared/use-fullscreen-layer.ts`, the dialog's open/close
+animation phase, focus and body-scroll lock/restore), `use-playground-navigation-guard.ts` (the
+unsaved/busy same-tab navigation guard covering Escape, the close button, same-tab link clicks and the browser's
 reload/close prompt, all routed through one `requestClose` gate) and `use-playground-drop.ts`
 (the canvas drop target, file-picker input and the bounded 3-transfer upload queue). Item drafts,
 persistence, selection and the remove/download flows stay in `playground-board.tsx` itself, since

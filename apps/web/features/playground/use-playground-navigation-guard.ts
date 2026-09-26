@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type RefObject } from "react";
-import type { PlaygroundClosePhase } from "./use-playground-close-lifecycle";
+import type { FullscreenLayerPhase } from "@/features/shared/use-fullscreen-layer";
 
 /**
  * Guards unsaved Playground work against same-tab navigation away from it: a full page
@@ -21,7 +21,7 @@ export function usePlaygroundNavigationGuard({
 }: {
   busy: boolean;
   unsavedCount: number;
-  phase: PlaygroundClosePhase;
+  phase: FullscreenLayerPhase;
   beginExit: () => void;
   locks: RefObject<Set<string>>;
   layer: RefObject<HTMLDialogElement | null>;

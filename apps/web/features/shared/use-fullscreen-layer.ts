@@ -2,21 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState, type AnimationEvent } from "react";
 
-export type PlaygroundClosePhase = "entering" | "active" | "exiting";
+export type FullscreenLayerPhase = "entering" | "active" | "exiting";
 
 /**
- * The Playground dialog's open/close lifecycle: the native top-layer dialog is shown and body
- * scroll is locked on mount, the heading takes focus, and both are restored to the opener on
- * unmount. `phase` drives the entering/active/exiting CSS slide animation and the `inert`
- * attribute; `animationend` is authoritative and a short timer completes the transition when CSS
- * is unavailable or reduced motion cancels the animation before its event fires.
+ * A full-screen native dialog's open/close lifecycle, shared by Playground and the project's Miro
+ * panel: the native top-layer dialog is shown and body scroll is locked on mount, the heading
+ * takes focus, and both are restored to the opener on unmount. `phase` drives the
+ * entering/active/exiting CSS slide animation and the `inert` attribute; `animationend` is
+ * authoritative and a short timer completes the transition when CSS is unavailable or reduced
+ * motion cancels the animation before its event fires.
  */
-export function usePlaygroundCloseLifecycle({ onClose }: { onClose: () => void }) {
+export function useFullscreenLayer({ onClose }: { onClose: () => void }) {
   const layer = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const closeCompleted = useRef(false);
   const restoreFocusAfterExit = useRef(false);
-  const [phase, setPhase] = useState<PlaygroundClosePhase>("entering");
+  const [phase, setPhase] = useState<FullscreenLayerPhase>("entering");
 
   const completeClose = useCallback(() => {
     if (closeCompleted.current) return;
@@ -71,8 +72,8 @@ export function usePlaygroundCloseLifecycle({ onClose }: { onClose: () => void }
 
   function handleAnimationEnd(event: AnimationEvent<HTMLDialogElement>) {
     if (event.target !== event.currentTarget) return;
-    if (phase === "exiting" && event.animationName === "playground-layer-exit") completeClose();
-    if (phase === "entering" && event.animationName === "playground-layer-enter")
+    if (phase === "exiting" && event.animationName === "fullscreen-layer-exit") completeClose();
+    if (phase === "entering" && event.animationName === "fullscreen-layer-enter")
       setPhase("active");
   }
 

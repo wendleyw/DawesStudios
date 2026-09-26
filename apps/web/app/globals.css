@@ -1166,6 +1166,57 @@ img.client-mark {
   }
 }
 
+/* A full-screen native dialog that rises from the bottom edge (Playground, the project's Miro
+   panel). `features/shared/use-fullscreen-layer.ts` drives `data-phase`. */
+.fullscreen-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--foreground);
+  overflow: hidden;
+}
+.fullscreen-layer::backdrop {
+  background: transparent;
+}
+.fullscreen-layer[data-phase="entering"] {
+  animation: fullscreen-layer-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.fullscreen-layer[data-phase="exiting"] {
+  animation: fullscreen-layer-exit 180ms ease-in both;
+  pointer-events: none;
+}
+@keyframes fullscreen-layer-enter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fullscreen-layer-exit {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-layer[data-phase] {
+    animation: none;
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

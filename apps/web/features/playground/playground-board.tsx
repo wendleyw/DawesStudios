@@ -32,7 +32,7 @@ import {
 } from "./playground-model";
 import { PlaygroundNode, type PlaygroundCanvasNode } from "./playground-node";
 import { PlaygroundViewport } from "./playground-viewport";
-import { usePlaygroundCloseLifecycle } from "./use-playground-close-lifecycle";
+import { useFullscreenLayer } from "@/features/shared/use-fullscreen-layer";
 import { usePlaygroundNavigationGuard } from "./use-playground-navigation-guard";
 import { usePlaygroundDrop } from "./use-playground-drop";
 import { downloadBrandAssetFile } from "@/features/brand/brand-data";
@@ -87,7 +87,7 @@ export function PlaygroundBoard({
   const unsaved = items.filter((draft) => draft.status !== "saved");
   const boardId = query.data?.boardId;
 
-  const { layer, heading, phase, beginExit, handleAnimationEnd } = usePlaygroundCloseLifecycle({
+  const { layer, heading, phase, beginExit, handleAnimationEnd } = useFullscreenLayer({
     onClose,
   });
   const { closeRequested, setCloseRequested, navigationBlocked, requestClose } =
@@ -413,7 +413,7 @@ export function PlaygroundBoard({
   return (
     <dialog
       ref={layer}
-      className="playground-board"
+      className="fullscreen-layer playground-board"
       data-phase={phase}
       inert={phase === "exiting"}
       aria-labelledby={titleId}
