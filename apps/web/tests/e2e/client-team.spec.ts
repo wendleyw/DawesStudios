@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, test as base, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { createTeamFixture, type TeamFixture } from "./team-fixture";
@@ -25,6 +25,21 @@ function value<T>(result: { data: T; error: { message: string } | null }): NonNu
 /** Whether the page fits its viewport without a horizontal scroll. */
 function fitsWidth(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+}
+
+/**
+ * Whether an open dialog itself fits its viewport: `document.documentElement.scrollWidth` ignores
+ * a `<dialog>` (it paints in the top layer, outside document flow), so this measures the dialog
+ * element's own overflow and its bounding box against the viewport width instead.
+ */
+async function dialogFitsWidth(dialog: Locator) {
+  const noInternalOverflow = await dialog.evaluate(
+    (element) => element.scrollWidth <= element.clientWidth,
+  );
+  if (!noInternalOverflow) return false;
+  const box = await dialog.boundingBox();
+  const viewportWidth = await dialog.page().evaluate(() => window.innerWidth);
+  return box !== null && box.x >= 0 && box.x + box.width <= viewportWidth;
 }
 
 test("two people at one client act separately, and the product attributes and notifies each", async ({
@@ -235,7 +250,7 @@ test("two people at one client act separately, and the product attributes and no
     await expect(people.getByText(teammate.email, { exact: true })).toBeVisible();
     expect((await new AxeBuilder({ page: studioPage }).analyze()).violations).toEqual([]);
     await studioPage.setViewportSize({ width: 390, height: 844 });
-    await expect.poll(() => fitsWidth(studioPage)).toBe(true);
+    await expect.poll(() => dialogFitsWidth(people)).toBe(true);
     await studioPage.setViewportSize({ width: 1600, height: 1000 });
     await people.getByRole("button", { name: `Remove ${teammate.name}`, exact: true }).click();
     const confirm = studioPage.getByRole("dialog", {
