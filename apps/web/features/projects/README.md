@@ -282,17 +282,32 @@ shortcut (`canManageMiro: profile?.role === "agency"` in `project-page.tsx`), `a
 agency alone in both channels, sized like every other `.icon-button` (`--control-height`). Whenever
 the current channel's version carries a link, every role that can open the project additionally sees
 a plain **View on Miro** action next to it, matching `.version-comments`'s own height, padding and
-font size so the two controls read as one aligned row. Opening it mounts `MiroBoardPanel`, the
-shared full-screen layer (see [the shared full-screen layer](../shared/README.md#full-screen-layer)
-for the lifecycle `use-fullscreen-layer.ts` also drives for Playground): a header with **Back to
-project**, the truncating `deliverable · V<number>` title, and **Open in Miro**, then an
-`iframe.miro-board-frame` rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl`, never from
-the pasted URL again.
-**Open in Miro** (`miroBoardUrl`, `target="_blank"`) stays visible because the embed can fail to
-sign in behind third-party-cookie restrictions and the viewer still needs a way through to the real
-board. The panel needs no fallback beyond that link: `frame-src https://miro.com` is the one
-Content-Security-Policy exception this feature requires (`apps/web/next.config.ts`), and the panel
-is not rendered at all unless a link exists for the viewer's channel.
+font size so the two controls read as one aligned row.
+
+### Miro mode
+
+Clicking **View on Miro**, or the header's **Miro** control, does not leave the project: it switches
+the canvas pane into Miro mode rather than opening a separate panel. `miro-mode.ts` owns the pure
+rules — `linkedVersions` filters the viewer's own channel-specific versions down to the ones carrying
+a link (so a client only ever sees client-board links and a designer only internal-board links),
+`pickMiroVersion` resolves the requested version if it is still linked or otherwise the newest linked
+one, and `readProjectView`/`writeProjectView` keep `view=miro` and `version=<id>` in the URL so a
+reload or a shared link returns to the same frame. `project-page.tsx` mounts `MiroView`
+(`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`visibility:
+hidden`, `aria-hidden`) rather than unmounting, so switching back to **Versions** is instant. `MiroView`
+renders a selector labelled "Miro frame" (one option per linked version, `miroVersionLabel`), **Open
+in Miro** (`miroBoardUrl`, `target="_blank"` — the embed can fail to sign in behind third-party-cookie
+restrictions, so this link is the way through to the real board regardless), and
+`iframe.miro-view-frame` rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with
+`autoplay=true`, never from the pasted URL again; `key={current.id}` reloads the frame when the
+selector changes the version. The header's **Project view** segmented control (Versions/Miro,
+`project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one linked
+version — and is the other entry point beside a version card's **View on Miro**. While in Miro mode,
+the Playground's icon button no longer opens the full Playground; it toggles
+`PlaygroundAssetStrip` (`../playground/README.md#miro-mode-clipboard`) above the frame instead, whose
+**Open full Playground** button switches to the full board. `frame-src https://miro.com` is the one
+Content-Security-Policy exception this feature requires (`apps/web/next.config.ts`); Miro mode is
+never reachable at all unless a link exists for the viewer's channel.
 
 ## Deviation from the data-access contract: reads that are not hooks
 
@@ -328,14 +343,17 @@ the shared failures table.
 version/design comment isolation, draft restoration, client-only reads and five viewport sizes.
 The mutation scenario uses a disposable isolated client; the populated SABRE scenario is read-only.
 
-`npx playwright test tests/e2e/miro-version-links.spec.ts` verifies the client/internal Miro link
-tables by role on the seeded SABRE landing page: a client opens only the client-channel board and
-never the internal one, an assigned designer sees only the internal board, and the agency manages
-the link and can switch to the client channel to open that board too. It sets both links through
-the `set_publication_miro_link` / `set_version_miro_link` RPCs before the run and clears them in
-`afterAll` through the matching `clear_*` RPCs, so the seeded project is unchanged afterward; the
-embed itself is never loaded, only the iframe's rebuilt `src` and each role's gating. See
-[the verification record](../../../../docs/verification/miro-version-links-2026-09-26.md).
+`npx playwright test tests/e2e/miro-version-links.spec.ts` verifies Miro mode by role on the seeded
+SABRE landing page: a client enters from the header and from a version card, keeps the project's
+other tools (Conversation, the Playground asset strip and its clipboard copy) usable beside the
+frame, keeps Miro mode across a reload, and never sees the internal board; an assigned designer sees
+only the internal board; a stale `version` in the URL falls back to the newest linked one. It sets
+both links through the `set_publication_miro_link` / `set_version_miro_link` RPCs before the run and
+clears them in `afterAll` through the matching `clear_*` RPCs, so the seeded project is unchanged
+afterward; the embed itself is never loaded, only the iframe's rebuilt `src` and each role's gating.
+See [the verification record](../../../../docs/verification/miro-mode-2026-09-26.md) (and the
+superseded [pre-Miro-mode record](../../../../docs/verification/miro-version-links-2026-09-26.md)
+for the panel this replaced).
 
 Video loading and playback-state regressions can be run from `apps/web` with:
 

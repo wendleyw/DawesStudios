@@ -42,38 +42,61 @@ test.afterAll(async () => {
   await agency.rpc("clear_version_miro_link", { p_version_id: versionId });
 });
 
-test("the client opens the client board and never the internal one", async ({ page }) => {
+test("the client works in Miro mode beside the project's tools", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await signIn(page, credentials.client);
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole("button", { name: "View on Miro" }).first().click();
-  const frame = page.locator("iframe.miro-board-frame");
-  await expect(frame).toHaveAttribute("src", /live-embed\/uXjVClientE2E%3D\/\?moveToWidget=111/);
-  await expect(page.getByRole("link", { name: /Open in Miro/ })).toHaveAttribute(
-    "target",
-    "_blank",
+  // Entering from the header shows the newest linked version with autoplay.
+  await page
+    .getByRole("group", { name: "Project view" })
+    .getByRole("button", { name: "Miro" })
+    .click();
+  const frame = page.locator("iframe.miro-view-frame");
+  await expect(frame).toHaveAttribute(
+    "src",
+    /live-embed\/uXjVClientE2E%3D\/\?autoplay=true&moveToWidget=111/,
   );
+  await expect(page).toHaveURL(/view=miro/);
   await expect(page.locator('iframe[src*="uXjVStudioE2E"]')).toHaveCount(0);
-  await page.getByRole("button", { name: /Back to project/ }).click();
-  await expect(frame).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Miro link for version/ })).toHaveCount(0);
+  // The project's tools stay: Conversation opens beside Miro.
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await expect(page.locator(".project-inspector").first()).toBeVisible();
+  await expect(frame).toBeVisible();
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  // The Playground opens as the asset strip.
+  await page.getByRole("button", { name: "Playground" }).click();
+  await expect(page.getByRole("button", { name: "Open full Playground" })).toBeVisible();
+  // Spike finding: the seeded client's Brand Hub has no folders, so every asset lands in one
+  // "Unfiled" album; its first (alphabetically) file is a PNG, which the clipboard mode can copy.
+  await page.getByRole("button", { name: "Unfiled" }).click();
+  await page
+    .getByRole("button", { name: "Copy Campus Connections - Campaign photography" })
+    .click();
+  await expect(page.getByRole("status")).toHaveText("Copied — paste in Miro with ⌘V / Ctrl+V");
+  // A reload keeps Miro mode.
+  await page.reload();
+  await expect(page.locator("iframe.miro-view-frame")).toBeVisible();
+  // Back to Versions: the canvas returns.
+  await page
+    .getByRole("group", { name: "Project view" })
+    .getByRole("button", { name: "Versions" })
+    .click();
+  await expect(page.locator("iframe.miro-view-frame")).toHaveCount(0);
+  await expect(page).not.toHaveURL(/view=miro/);
+  // Entering from a version card.
+  await page.getByRole("button", { name: "View on Miro" }).first().click();
+  await expect(page.locator("iframe.miro-view-frame")).toBeVisible();
 });
 
-test("the assigned designer opens only the internal board", async ({ page }) => {
+test("the assigned designer sees only the internal board", async ({ page }) => {
   await signIn(page, credentials.designer);
-  await page.goto(`/projects/${projectId}`);
-  await page.getByRole("button", { name: "View on Miro" }).first().click();
-  await expect(page.locator("iframe.miro-board-frame")).toHaveAttribute("src", /uXjVStudioE2E/);
+  await page.goto(`/projects/${projectId}?view=miro`);
+  await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVStudioE2E/);
   await expect(page.locator('iframe[src*="uXjVClientE2E"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Miro link for version/ })).toHaveCount(0);
 });
 
-test("the agency manages the link on each channel", async ({ page }) => {
-  await signIn(page, credentials.agency);
-  await page.goto(`/projects/${projectId}`);
-  await expect(
-    page.getByRole("button", { name: /Change Miro link for version/ }).first(),
-  ).toBeVisible();
-  await page.goto(`/projects/${projectId}?channel=client`);
-  await page.getByRole("button", { name: "View on Miro" }).first().click();
-  await expect(page.locator("iframe.miro-board-frame")).toHaveAttribute("src", /uXjVClientE2E/);
+test("a stale version in the URL falls back to the newest linked one", async ({ page }) => {
+  await signIn(page, credentials.client);
+  await page.goto(`/projects/${projectId}?view=miro&version=00000000-0000-0000-0000-000000000000`);
+  await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVClientE2E/);
 });
