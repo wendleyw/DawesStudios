@@ -57,6 +57,15 @@ describe("usesWorkspace", () => {
         boards: [],
       }),
     ).toBe(true);
+    expect(
+      usesWorkspace("client", {
+        versions: [
+          v({ id: "legacy", number: 1, deliverableId: "d" }),
+          v({ id: "boardRound", number: 2, boardId: "b1" }),
+        ],
+        boards: [],
+      }),
+    ).toBe(false);
   });
 });
 

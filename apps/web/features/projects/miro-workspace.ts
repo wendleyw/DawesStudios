@@ -17,9 +17,7 @@ export function usesWorkspace(
 ): boolean {
   const legacy = input.versions.some((version) => version.deliverableId !== null);
   const workspace =
-    channel === "internal"
-      ? input.boards.length > 0
-      : input.versions.some((version) => version.deliverableId === null);
+    channel === "internal" ? input.boards.length > 0 : sharedVersions(input.versions).length > 0;
   return workspace || !legacy;
 }
 
