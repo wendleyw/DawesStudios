@@ -45,6 +45,8 @@ function review(overrides: Partial<ReviewRow> = {}): ReviewRow {
     date: "2026-09-20T00:00:00Z",
     note: null,
     internal: false,
+    reviewedBy: null,
+    reviewedAt: null,
     ...overrides,
   };
 }

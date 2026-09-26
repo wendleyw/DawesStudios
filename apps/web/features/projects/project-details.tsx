@@ -8,7 +8,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { useBriefingRequester } from "@/features/briefings/briefing-data";
 import { CopyButton } from "@/features/shared/copy-button";
 import { Modal } from "@/features/shared/modal";
-import { personName } from "@/features/team/client-people";
+import { personName, reviewDecisionLabel } from "@/features/team/client-people";
 import { useClientPeople } from "@/features/team/team-data";
 import { useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
 import {
@@ -47,6 +47,14 @@ export function ProjectDetails({
   const people = useClientPeople(project.client_id);
   const requester = useBriefingRequester(project.briefing_id);
   const requesterName = personName(requester.data, people.data, profile?.role);
+  const decisionLine = (version: CanvasVersion) =>
+    version.reviewedBy && version.reviewedAt
+      ? reviewDecisionLabel(
+          version.status,
+          personName(version.reviewedBy, people.data, profile?.role),
+          formatDate(version.reviewedAt),
+        )
+      : null;
   const save = useMutation({
     mutationFn: async (form: FormData) => {
       const start = String(form.get("start")) || null;
@@ -199,7 +207,8 @@ export function ProjectDetails({
                     {version.number}
                   </strong>
                   <span>
-                    {formatDate(version.date)} · {versionStatusLabel(version.status)}
+                    {decisionLine(version) ??
+                      `${formatDate(version.date)} · ${versionStatusLabel(version.status)}`}
                   </span>
                   {version.note && <p>{version.note}</p>}
                 </li>

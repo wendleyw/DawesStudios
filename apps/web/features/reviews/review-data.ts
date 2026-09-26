@@ -20,6 +20,9 @@ export type ReviewRow = {
   date: string;
   note: string | null;
   internal: boolean;
+  /** Who made the client's decision and when; null until decided, and on reviews decided before reviewers were recorded. */
+  reviewedBy: string | null;
+  reviewedAt: string | null;
 };
 
 /**
@@ -32,7 +35,11 @@ type ReviewVersion = VersionRow & {
   project_id: string;
   deliverable_id: string;
   version_number: number;
-  publication_reviews?: { status: string } | null;
+  publication_reviews?: {
+    status: string;
+    reviewed_by?: string | null;
+    reviewed_at?: string | null;
+  } | null;
 };
 
 /**
@@ -118,7 +125,7 @@ export function useReviews(clientId: string) {
             await database
               .from("published_versions")
               .select(
-                "*,publication_reviews!publication_reviews_publication_id_fkey(status,feedback)",
+                "*,publication_reviews!publication_reviews_publication_id_fkey(status,feedback,reviewed_by,reviewed_at)",
               )
               .in("project_id", ids),
           );
@@ -150,6 +157,8 @@ export function useReviews(clientId: string) {
           date: versionDate(version),
           note: versionNote(version),
           internal: overrides.internal ?? internal,
+          reviewedBy: version.publication_reviews?.reviewed_by ?? null,
+          reviewedAt: version.publication_reviews?.reviewed_at ?? null,
         };
       };
       const rows = [...latest.values()].map((version) => toReviewRow(version));

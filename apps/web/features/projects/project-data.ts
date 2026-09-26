@@ -28,6 +28,9 @@ export type CanvasVersion = {
   status: string;
   date: string;
   feedback?: string;
+  /** The client person who decided on a published version, and when; absent on the internal channel. */
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
 };
 export type CanvasDesign = {
   id: string;
@@ -52,10 +55,10 @@ export type CanvasComment = {
 
 /** A canvas version row, from whichever of the two channel tables the canvas was read from. */
 type CanvasVersionRow = TableRow<"design_versions"> | TableRow<"published_versions">;
-/** The three columns of a publication review the canvas reads. */
+/** The columns of a publication review the canvas reads. */
 type CanvasReviewRow = Pick<
   TableRow<"publication_reviews">,
-  "publication_id" | "status" | "feedback"
+  "publication_id" | "status" | "feedback" | "reviewed_by" | "reviewed_at"
 >;
 
 /**
@@ -92,6 +95,8 @@ export function toCanvasVersions(
       status: versionStatus(version, review?.status),
       date: versionDate(version),
       feedback: review?.feedback,
+      reviewedBy: review?.reviewed_by,
+      reviewedAt: review?.reviewed_at,
     };
   });
 }

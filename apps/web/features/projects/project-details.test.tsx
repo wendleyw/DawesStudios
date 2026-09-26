@@ -96,3 +96,45 @@ describe("ProjectDetails requester", () => {
     expect(screen.queryByText("Requested by")).not.toBeInTheDocument();
   });
 });
+
+describe("ProjectDetails version history", () => {
+  const version = (overrides: Partial<CanvasVersion>): CanvasVersion => ({
+    id: "v2",
+    projectId: "p1",
+    deliverableId: "d1",
+    number: 2,
+    note: "",
+    status: "approved",
+    date: "2026-09-20T00:00:00Z",
+    ...overrides,
+  });
+
+  it("names who decided on a version and when", () => {
+    renderDetails([version({ reviewedBy: "ana", reviewedAt: "2026-09-24T10:00:00Z" })]);
+    expect(screen.getByText("Approved by Ana Lima · Sep 24")).toBeInTheDocument();
+  });
+
+  it("keeps today's wording for a decision recorded before reviewers were", () => {
+    renderDetails([
+      version({
+        status: "changes_requested",
+        date: "2026-09-18T00:00:00Z",
+        reviewedBy: null,
+        reviewedAt: "2026-09-19T00:00:00Z",
+      }),
+    ]);
+    expect(screen.getByText("Sep 18 · Changes requested")).toBeInTheDocument();
+  });
+
+  it("tells the client a former member decided", () => {
+    state.role = "client";
+    renderDetails([
+      version({
+        status: "changes_requested",
+        reviewedBy: "ben",
+        reviewedAt: "2026-09-23T10:00:00Z",
+      }),
+    ]);
+    expect(screen.getByText("Changes requested by Former member · Sep 23")).toBeInTheDocument();
+  });
+});

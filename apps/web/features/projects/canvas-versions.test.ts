@@ -25,14 +25,17 @@ const publishedVersion: Row<"published_versions"> = {
   published_at: "2026-09-21T11:00:00.000Z",
 };
 
-const review = (publicationId: string): Row<"publication_reviews"> => ({
+const review = (
+  publicationId: string,
+  reviewedBy: string | null = null,
+): Row<"publication_reviews"> => ({
   id: "review-1",
   project_id: "project-1",
   publication_id: publicationId,
   status: "changes_requested",
   feedback: "Please give the headline more breathing room.",
   reviewed_at: "2026-09-21T12:00:00.000Z",
-  reviewed_by: null,
+  reviewed_by: reviewedBy,
 });
 
 describe("canvas versions and their client review", () => {
@@ -76,5 +79,25 @@ describe("canvas versions and their client review", () => {
       date: "2026-09-21T10:00:00.000Z",
       feedback: undefined,
     });
+  });
+
+  it("carries who decided on a client-channel version, and when", () => {
+    const [version] = toCanvasVersions(
+      [publishedVersion],
+      [review(publishedVersion.id, "ana")],
+      true,
+    );
+    expect(version.reviewedBy).toBe("ana");
+    expect(version.reviewedAt).toBe("2026-09-21T12:00:00.000Z");
+  });
+
+  it("never gives an internal version a reviewer, even on an id collision", () => {
+    const [version] = toCanvasVersions(
+      [internalVersion],
+      [review(internalVersion.id, "ana")],
+      false,
+    );
+    expect(version.reviewedBy).toBeUndefined();
+    expect(version.reviewedAt).toBeUndefined();
   });
 });

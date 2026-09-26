@@ -8,6 +8,8 @@ import { useClients, useDateFormat, versionStatusLabel } from "@/features/worksp
 import "./reviews.css";
 import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass, type StatusTone } from "@/features/shared/status-tone";
+import { personName, reviewDecisionLabel } from "@/features/team/client-people";
+import { useClientPeople } from "@/features/team/team-data";
 import { inReviewTab, useReviews } from "./review-data";
 
 /** Badge tone for a version status: waiting on a person reads as attention, approved as complete. */
@@ -24,6 +26,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
   const { formatDate } = useDateFormat();
   const [filter, setFilter] = useState("waiting");
   const data = useReviews(clientId);
+  const people = useClientPeople(clientId);
   if (data.isPending || clients.isPending) return <PageStatus>Loading reviews…</PageStatus>;
   if (data.error || !clients.data?.some((client) => client.id === clientId))
     return (
@@ -76,26 +79,38 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
       </header>
       {visible.length ? (
         <div className="review-list">
-          {visible.map((row) => (
-            <Link
-              key={row.id}
-              href={`/projects/${row.projectId}?channel=${row.internal ? "internal" : "client"}`}
-              className="review-card"
-            >
-              <h2>{row.title}</h2>
-              <span className="review-row-deliverable">
-                {row.deliverable} · V{row.version}
-              </span>
-              <span className="review-row-note" title={row.note ?? undefined}>
-                {row.note}
-              </span>
-              <span className={statusToneClass(versionStatusTones[row.status])}>
-                {versionStatusLabel(row.status)}
-              </span>
-              <span className="review-date">{formatDate(row.date)}</span>
-              <ArrowUpRight size={16} />
-            </Link>
-          ))}
+          {visible.map((row) => {
+            // A decided version names who decided in the note column; its release note moves to
+            // the tooltip. Older reviews without a recorded reviewer keep the note.
+            const decision =
+              row.reviewedBy && row.reviewedAt
+                ? reviewDecisionLabel(
+                    row.status,
+                    personName(row.reviewedBy, people.data, profile?.role),
+                    formatDate(row.reviewedAt),
+                  )
+                : null;
+            return (
+              <Link
+                key={row.id}
+                href={`/projects/${row.projectId}?channel=${row.internal ? "internal" : "client"}`}
+                className="review-card"
+              >
+                <h2>{row.title}</h2>
+                <span className="review-row-deliverable">
+                  {row.deliverable} · V{row.version}
+                </span>
+                <span className="review-row-note" title={row.note ?? undefined}>
+                  {decision ?? row.note}
+                </span>
+                <span className={statusToneClass(versionStatusTones[row.status])}>
+                  {versionStatusLabel(row.status)}
+                </span>
+                <span className="review-date">{formatDate(row.date)}</span>
+                <ArrowUpRight size={16} />
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <div className="empty-state">
