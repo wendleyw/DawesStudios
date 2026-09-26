@@ -70,7 +70,9 @@ export function buildContentSecurityPolicy(env: NodeJS.ProcessEnv = process.env)
     ["connect-src", ["'self'", supabaseOrigin, supabaseWs, mediaOrigin]],
     ["font-src", ["'self'", "data:"]],
     ["worker-src", ["'self'", "blob:"]],
-    ["frame-src", ["'none'"]],
+    // Only Miro's live embed may be framed: the project's Miro panel builds its source from
+    // stored board and frame ids. Everything else stays unframeable.
+    ["frame-src", ["https://miro.com"]],
     ["frame-ancestors", ["'none'"]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],

@@ -25,7 +25,7 @@ describe("buildContentSecurityPolicy", () => {
     );
     expect(csp).toContain("font-src 'self' data:");
     expect(csp).toContain("worker-src 'self' blob:");
-    expect(csp).toContain("frame-src 'none'");
+    expect(csp).toContain("frame-src https://miro.com");
     expect(csp).toContain(
       "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
     );
