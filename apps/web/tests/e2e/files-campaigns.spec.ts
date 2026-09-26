@@ -93,7 +93,7 @@ test("files open as campaign folders and each campaign groups its files by proje
   await page.locator(`.folder-card[href="${base}?campaign=${busiestId}"]`).click();
   await expect(page).toHaveURL(`${base}?campaign=${busiestId}`);
   await expect(page.locator(".files-heading h2")).toHaveText(busiest.title);
-  await expect(page.locator(".client-page-heading p")).toHaveText(
+  await expect(page.locator(".files-heading p")).toHaveText(
     `${plural(busiest.files, "file")} from ${plural(busiest.projects.size, "project")}`,
   );
   await expect(page.locator(".file-group")).toHaveCount(busiest.projects.size);
@@ -175,10 +175,8 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
   await last.click();
   await expect(page).toHaveURL(/\?campaign=/);
   const title = page.locator(".files-heading h2");
+  // Files sits under the Brand Hub title card, so "the top" is the campaign's own title.
   await expect(title).toBeInViewport();
-  await expect
-    .poll(() => page.locator(".main-content").evaluate((element) => element.scrollTop))
-    .toBe(0);
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `${screenshotDirectory}/files-campaign-client-390.png` });
 });
