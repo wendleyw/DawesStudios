@@ -25,6 +25,8 @@ Date: 2026-09-26. Owner: Claude (Task 7). Runtime: existing Next.js dev server a
 | `npx playwright test tests/e2e/miro-version-links.spec.ts tests/e2e/content-security-policy.spec.ts --output ../../outputs/playwright-miro` (from `apps/web`) | 4/4 passed |
 | Cleanup read via `docker exec supabase_db_dawes-studios psql` on `publication_miro_links` / `design_version_miro_links` for the SABRE landing page | 0 rows in each table after the run — `afterAll` removed both links |
 | `npm run check` (repo root, before commit) | see commit log; run once, results below |
+| One-off Playwright capture of the open `MiroBoardPanel` as the client, against the same running `:3003` server (not committed as a spec file) | pass; screenshots below |
+| Cleanup read via `docker exec supabase_db_dawes-studios psql` on `publication_miro_links` for the SABRE landing page after the fix-wave capture | 0 rows — the temporary link was removed |
 
 ## Manual embed check (Step 3)
 
@@ -51,6 +53,10 @@ cites them:
 - `publish-dialog-1440-light.png`, `publish-dialog-390-light.png` — the **Miro frame (optional)**
   field under the client note, prefilled from the deliverable's existing client-channel link; at
   390 px the dialog, field and buttons stay within the viewport with no overflow or clipped text.
+- `miro-panel-1440-light.png`, `miro-panel-1440-dark.png`, `miro-panel-390-light.png`,
+  `miro-panel-390-dark.png` (2026-09-26, fix wave) — the open `MiroBoardPanel` as the client, on a
+  temporary client-channel link set on the same SABRE landing page and cleared afterwards. See the
+  "Open panel" entry below for what these confirm.
 
 Observations:
 
@@ -64,27 +70,28 @@ Observations:
   auto-fits (70% zoom) and the dialog's field/buttons stay inside the 390 px frame.
 - **Dark theme:** both the version card and the publish dialog re-theme correctly (background,
   border, muted/foreground text) with no unstyled or low-contrast element.
-- **The open Miro panel (`MiroBoardPanel`) itself could not be verified visually in this session.**
-  The panel opened and its header/iframe elements were present with the right classes and `src`,
-  but the panel's `<dialog class="fullscreen-layer miro-board-panel">` rendered as a small
-  (~460×211 px) box instead of covering the viewport. Root cause traced (via
-  `getComputedStyle`/`getBoundingClientRect`, an inline-style override that restored full-screen
-  sizing immediately, and a fetch of the served CSS chunks) to the running dev server's CSS bundle:
-  the served stylesheet is missing the `.fullscreen-layer` rule entirely, while `app/globals.css`
-  on disk has it (lines ~1170-1218) and every other class used by this feature (`.version-card`,
-  `.version-miro-open`, `.miro-board-header`, `.miro-board-frame`, …) *is* present in the served
-  bundle. This matches the known Turbopack disk-cache issue already recorded in
-  `docs/engineering/handoff.md` ("Turbopack's disk cache has missed `globals.css` edits before").
-  This is an environment/staleness issue in the long-running dev server, not a defect in
-  `miro-board-panel.tsx` or `projects.css`, and `PlaygroundBoard`'s own `fullscreen-layer` dialog
-  reproduces the identical undersized box on the same server, which is further evidence this
-  predates this task and is server-cache-scoped rather than Miro-panel-specific. No product file
-  was changed to chase this; panel screenshots were taken but are not committed or cited above
-  because they would misrepresent the shipped behavior. **Next action:** clear
-  `apps/web/.next/dev/cache` and restart the dev server on the same port, then re-capture the panel
-  at 1440/390, light/dark, before trusting a full-screen visual check of it.
+- **Open panel (2026-09-26, fix wave):** the dev server was restarted with a fresh CSS cache and
+  now serves `.fullscreen-layer` (confirmed by fetching the served chunk directly — `position:
+  fixed; inset: 0; width: 100vw; height: 100dvh` are all present). Re-captured as the client at
+  1440 px and 390 px, light and dark (`miro-panel-1440-light.png`, `miro-panel-1440-dark.png`,
+  `miro-panel-390-light.png`, `miro-panel-390-dark.png`): the panel now fills the full viewport in
+  every capture, with **Back to project**, the truncating `deliverable · V<number>` title (shown
+  truncated to `Desk…` at 390 px) and **Open in Miro** all on one row that does not overflow or
+  wrap at 390 px. Focus lands on the heading on open (asserted, not just observed); pressing Escape
+  with focus outside the iframe (on the heading) closes the panel and returns focus to the **View
+  on Miro** button that opened it (asserted via `toBeFocused()`). The embed itself renders blank in
+  this environment (no real Miro session/board), which matches the expectation that a sign-in or
+  error page from Miro's own iframe is out of scope here; the frame, header and both header actions
+  are what this check covers. Opening the Playground once afterward confirmed it is still full
+  screen too, ruling out a regression shared with `MiroBoardPanel` through `use-fullscreen-layer.ts`.
+  The earlier undersized-panel finding (Turbopack serving a stale `globals.css` missing
+  `.fullscreen-layer`) is resolved by the cache refresh and no longer applies.
 
 ## Owned paths touched
 
 `apps/web/tests/e2e/miro-version-links.spec.ts`, `apps/web/features/projects/README.md`, this file,
 `docs/engineering/handoffs/2026-09-26-miro-task-7.md`, and the screenshots listed above.
+
+Fix-wave update (2026-09-26): `apps/web/features/projects/project-action-dialog.tsx`,
+`apps/web/features/projects/project-action-dialog.test.tsx`, this file, the four `miro-panel-*.png`
+screenshots, and `docs/engineering/handoffs/2026-09-26-miro-final-fixes.md`.

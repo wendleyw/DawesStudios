@@ -464,6 +464,20 @@ describe("Miro links", () => {
     });
   });
 
+  it("titles the miro dialog by whether the version already has a link", () => {
+    renderDialog({ kind: "miro", version, channel: "internal" });
+    expect(screen.getByRole("heading", { name: "Add a Miro link." })).toBeInTheDocument();
+  });
+
+  it("titles the miro dialog as a change when the version already has a link", () => {
+    renderDialog({
+      kind: "miro",
+      version: { ...publishedVersion, miro: { boardId: "uXjVKabc123=", widgetId: null } },
+      channel: "client",
+    });
+    expect(screen.getByRole("heading", { name: "Change the Miro link." })).toBeInTheDocument();
+  });
+
   it("sets an internal link on the internal channel", async () => {
     const { onClose } = renderDialog({ kind: "miro", version, channel: "internal" });
     fireEvent.change(screen.getByLabelText(/Miro frame/), {

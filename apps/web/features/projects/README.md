@@ -248,27 +248,32 @@ either table — `set_publication_miro_link` / `set_version_miro_link` / `clear_
 validate the pasted URL server-side; `miro-links.ts`'s `parseMiroBoardUrl` only lets the dialog
 refuse an obviously bad link before it is sent. A designer or client never sees the write path.
 
-The publish dialog ("Share with client." / "Share update.") carries an optional **Miro frame**
-field alongside the client note. `useLatestMiroLink` prefills it from the newest earlier client-
-channel link on the same deliverable (not the version being published), so republishing the same
-deliverable keeps its board without retyping the URL; the field remains editable and blank clears
-it. The separate **Add a Miro link.** dialog (`kind: "miro"` in `project-action-dialog.tsx`) sets or
-clears a single version's link on whichever channel opened it, prefilling from that version's own
-existing link, or otherwise the deliverable's newest link on that channel.
+The card's **Share with client** / **Share update** button (`project-nodes.tsx`) opens the publish
+dialog, titled **Share with the client.**, which carries an optional **Miro frame** field alongside
+the client note. `useLatestMiroLink` prefills it from the newest earlier client-channel link on the
+same deliverable (not the version being published), so republishing the same deliverable keeps its
+board without retyping the URL. The field is genuinely optional: leaving it blank when publishing
+leaves any existing client-channel link on the published version untouched, because
+`project-action-dialog.tsx`'s `mutationFn` only calls `setMiroLink` when the field is non-empty.
+Removing a link is not possible from the publish dialog; it only happens through the separate
+version dialog below, by saving that dialog's field empty. That dialog (`kind: "miro"` in
+`project-action-dialog.tsx`, titled **Add a Miro link.** or **Change the Miro link.** depending on
+whether the version already has one) sets or clears a single version's link on whichever channel
+opened it, prefilling from that version's own existing link, or otherwise the deliverable's newest
+link on that channel; saving it empty clears the link (`clearMiroLink`).
 
-On the version card, an agency or assigned-designer session that can produce also sees a
-`Link2` icon button beside the card's comment shortcut, `aria-label` "Add/Change Miro link for
-version N" depending on whether a link already exists; only the agency actually has `canManageMiro`
-true today, so the button currently renders for the agency alone in both channels, at the icon-
-button's usual 24 px size against the row's 36 px height, matching `.version-comments`'s own
-padding and font size, so both rows read as one aligned list of small tools. Whenever the current
-channel's version carries a link, every role additionally sees a plain **View on Miro** action next
-to it (no icon button for a client or an unassigned designer, matching the read-only RPCs they can
-call). Opening it mounts `MiroBoardPanel`, the shared full-screen layer (see
-[the shared canvas primitives](../shared/README.md#canvas-background-and-controls) for the lifecycle
-`use-fullscreen-layer.ts` also drives for Playground): a header with **Back to project**, the
-truncating `deliverable · V<number>` title, and **Open in Miro**, then an `iframe.miro-board-frame`
-rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl`, never from the pasted URL again.
+On the version card, only an agency session sees the `Link2` icon button beside the card's comment
+shortcut (`canManageMiro: profile?.role === "agency"` in `project-page.tsx`), `aria-label`
+"Add/Change Miro link for version N" depending on whether a link already exists; it renders for the
+agency alone in both channels, sized like every other `.icon-button` (`--control-height`). Whenever
+the current channel's version carries a link, every role that can open the project additionally sees
+a plain **View on Miro** action next to it, matching `.version-comments`'s own height, padding and
+font size so the two controls read as one aligned row. Opening it mounts `MiroBoardPanel`, the
+shared full-screen layer (see [the shared full-screen layer](../shared/README.md#full-screen-layer)
+for the lifecycle `use-fullscreen-layer.ts` also drives for Playground): a header with **Back to
+project**, the truncating `deliverable · V<number>` title, and **Open in Miro**, then an
+`iframe.miro-board-frame` rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl`, never from
+the pasted URL again.
 **Open in Miro** (`miroBoardUrl`, `target="_blank"`) stays visible because the embed can fail to
 sign in behind third-party-cookie restrictions and the viewer still needs a way through to the real
 board. The panel needs no fallback beyond that link: `frame-src https://miro.com` is the one

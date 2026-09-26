@@ -56,10 +56,13 @@ const titles = {
   publish: "Share with the client.",
   submit: "Ready for the studio?",
   review: "Your thoughts make it better.",
-  // Not "Link a Miro frame." — the Modal's close button aria-label prefixes the title with
-  // "Close ", and that exact phrase collides with the field's own `/Miro frame/` query in tests.
-  miro: "Add a Miro link.",
-};
+} as const;
+// Not "Link a Miro frame." — the Modal's close button aria-label prefixes the title with
+// "Close ", and that exact phrase collides with the field's own `/Miro frame/` query in tests.
+// Same reason for "Change the Miro link.": neither variant says "frame".
+function miroTitle(hasLink: boolean) {
+  return hasLink ? "Change the Miro link." : "Add a Miro link.";
+}
 
 export function ProjectActionDialog({
   action,
@@ -370,7 +373,13 @@ export function ProjectActionDialog({
         open={!!action && !suspended}
         initialFocusRef={returningFromPlayground ? playgroundTrigger : undefined}
         onClose={() => void close()}
-        title={action ? titles[action.kind] : "Project action"}
+        title={
+          action
+            ? action.kind === "miro"
+              ? miroTitle(!!action.version.miro)
+              : titles[action.kind]
+            : "Project action"
+        }
         closeDisabled={closing || (mutation.isPending && !uploading)}
       >
         {action && (
