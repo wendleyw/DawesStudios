@@ -1,11 +1,61 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+type MockInvitation = {
+  id: string;
+  email: string;
+  role: string;
+  client_id: string;
+  status: string;
+  expires_at: string;
+  created_at: string;
+};
+
+const defaultInvitations: MockInvitation[] = [
+  {
+    id: "i1",
+    email: "new@sabre.test",
+    role: "client",
+    client_id: "sabre",
+    status: "pending",
+    expires_at: "2999-01-02T00:00:00Z",
+    created_at: "2026-09-24T00:00:00Z",
+  },
+  {
+    id: "i2",
+    email: "late@sabre.test",
+    role: "client",
+    client_id: "sabre",
+    status: "pending",
+    expires_at: "2026-01-01T00:00:00Z",
+    created_at: "2025-12-25T00:00:00Z",
+  },
+  {
+    id: "i3",
+    email: "other@acme.test",
+    role: "client",
+    client_id: "acme",
+    status: "pending",
+    expires_at: "2999-01-02T00:00:00Z",
+    created_at: "2026-09-24T00:00:00Z",
+  },
+  {
+    id: "i4",
+    email: "done@sabre.test",
+    role: "client",
+    client_id: "sabre",
+    status: "accepted",
+    expires_at: "2999-01-02T00:00:00Z",
+    created_at: "2026-09-20T00:00:00Z",
+  },
+];
 
 const state = vi.hoisted(() => ({
   team: [] as { user_id: string; display_name: string; email: string }[],
   pending: [] as { id: string; display_name: string }[],
+  invitations: [] as MockInvitation[],
   peoplePending: false,
   peopleError: null as Error | null,
   invitationsPending: false,
@@ -27,65 +77,37 @@ vi.mock("./team-page", () => ({
     <button onClick={onSent}>Send the {clientId} invitation</button>
   ),
 }));
-vi.mock("./team-data", () => ({
-  clientPeopleQueryKeys: { people: "client-people", notifications: "client-notification-choices" },
-  useClientPeople: () => ({
-    data: { team: state.team, names: {} },
-    isPending: state.peoplePending,
-    error: state.peopleError,
-    refetch: state.peopleRefetch,
-  }),
-  usePendingClientRemovals: () => ({
-    data: state.pending,
-    isPending: state.peoplePending,
-    error: state.peopleError,
-    refetch: state.pendingRemovalsRefetch,
-  }),
-  useInvitations: () => ({
-    data: [
-      {
-        id: "i1",
-        email: "new@sabre.test",
-        role: "client",
-        client_id: "sabre",
-        status: "pending",
-        expires_at: "2999-01-02T00:00:00Z",
-        created_at: "2026-09-24T00:00:00Z",
-      },
-      {
-        id: "i2",
-        email: "late@sabre.test",
-        role: "client",
-        client_id: "sabre",
-        status: "pending",
-        expires_at: "2026-01-01T00:00:00Z",
-        created_at: "2025-12-25T00:00:00Z",
-      },
-      {
-        id: "i3",
-        email: "other@acme.test",
-        role: "client",
-        client_id: "acme",
-        status: "pending",
-        expires_at: "2999-01-02T00:00:00Z",
-        created_at: "2026-09-24T00:00:00Z",
-      },
-      {
-        id: "i4",
-        email: "done@sabre.test",
-        role: "client",
-        client_id: "sabre",
-        status: "accepted",
-        expires_at: "2999-01-02T00:00:00Z",
-        created_at: "2026-09-20T00:00:00Z",
-      },
-    ],
-    isPending: state.invitationsPending,
-    error: state.invitationsError,
-    refetch: state.invitationsRefetch,
-  }),
-  removeClientMember: state.remove,
-}));
+vi.mock("./team-data", async (importOriginal) => {
+  // `isInvitationPending` is real (not stubbed): it is the pure rule this suite's fake-timer test
+  // exercises, and the dialog imports it from this same module.
+  const actual = await importOriginal<typeof import("./team-data")>();
+  return {
+    ...actual,
+    clientPeopleQueryKeys: {
+      people: "client-people",
+      notifications: "client-notification-choices",
+    },
+    useClientPeople: () => ({
+      data: { team: state.team, names: {} },
+      isPending: state.peoplePending,
+      error: state.peopleError,
+      refetch: state.peopleRefetch,
+    }),
+    usePendingClientRemovals: () => ({
+      data: state.pending,
+      isPending: state.peoplePending,
+      error: state.peopleError,
+      refetch: state.pendingRemovalsRefetch,
+    }),
+    useInvitations: () => ({
+      data: state.invitations,
+      isPending: state.invitationsPending,
+      error: state.invitationsError,
+      refetch: state.invitationsRefetch,
+    }),
+    removeClientMember: state.remove,
+  };
+});
 
 // jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
 Object.defineProperties(HTMLDialogElement.prototype, {
@@ -121,6 +143,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.team = [ana, ben];
   state.pending = [];
+  state.invitations = [...defaultInvitations];
   state.peoplePending = false;
   state.peopleError = null;
   state.invitationsPending = false;
@@ -285,5 +308,37 @@ describe("ClientPeopleDialog", () => {
     expect(dialog.getByRole("alert")).toHaveTextContent("Invitations could not be loaded.");
     await user.click(dialog.getByRole("button", { name: "Try again" }));
     expect(state.invitationsRefetch).toHaveBeenCalled();
+  });
+});
+
+describe("ClientPeopleDialog invitation expiry", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("drops an invitation from Invited once it expires, without needing a reopen", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2026-09-26T12:00:00.000Z");
+    vi.setSystemTime(start);
+    state.invitations = [
+      {
+        id: "soon-1",
+        email: "soon@sabre.test",
+        role: "client",
+        client_id: "sabre",
+        status: "pending",
+        expires_at: new Date(start.getTime() + 30_000).toISOString(),
+        created_at: start.toISOString(),
+      },
+    ];
+    const dialog = renderDialog();
+    expect(dialog.getByText("soon@sabre.test")).toBeInTheDocument();
+    // The invitation expires 30 s in; advancing 61 s crosses both that expiry and the dialog's
+    // own 60 s clock refresh, so this fails on the frozen `useState(() => Date.now())` clock the
+    // dialog used before this fix and passes once it reads a live one instead.
+    await act(async () => {
+      vi.advanceTimersByTime(61_000);
+    });
+    expect(dialog.queryByText("soon@sabre.test")).not.toBeInTheDocument();
   });
 });

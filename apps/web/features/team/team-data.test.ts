@@ -1,6 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Invitation } from "@/features/settings/settings-model";
 import {
+  isInvitationPending,
   removeClientMember,
   revokeInvitation,
   setClientNotifications,
@@ -39,6 +41,50 @@ function stubDatabase(result: Result) {
 }
 
 const ok: Result = { data: [], error: null };
+
+function invitation(overrides: Partial<Invitation> = {}): Invitation {
+  return {
+    id: "invitation-1",
+    email: "person@sabre.test",
+    role: "client",
+    client_id: "sabre",
+    status: "pending",
+    expires_at: "2026-09-26T12:00:30.000Z",
+    created_at: "2026-09-26T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("isInvitationPending", () => {
+  const now = new Date("2026-09-26T12:00:00.000Z").getTime();
+
+  it("is pending while its expiry is still ahead of now", () => {
+    expect(isInvitationPending(invitation({ expires_at: "2026-09-26T12:00:30.000Z" }), now)).toBe(
+      true,
+    );
+  });
+
+  it("stops being pending once its expiry is behind now", () => {
+    expect(isInvitationPending(invitation({ expires_at: "2026-09-26T11:59:30.000Z" }), now)).toBe(
+      false,
+    );
+  });
+
+  it("is never pending once accepted or revoked, however far off its expiry is", () => {
+    expect(
+      isInvitationPending(
+        invitation({ status: "accepted", expires_at: "2999-01-01T00:00:00.000Z" }),
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isInvitationPending(
+        invitation({ status: "revoked", expires_at: "2999-01-01T00:00:00.000Z" }),
+        now,
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("teamQueryKeys", () => {
   it("includes the member list's own key, not only invitations", () => {

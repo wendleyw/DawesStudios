@@ -52,6 +52,16 @@ export function useInvitations() {
   });
 }
 
+/**
+ * Whether a pending invitation is still open, on one shared clock: not yet accepted or revoked,
+ * and its expiry has not passed as of `now`. The Team page and the client People dialog both
+ * decide "pending" this one way — paired with `useNow` (`./use-now.ts`) for a live `now` — so an
+ * invitation that expires while either is open drops out on its own instead of only after a reopen.
+ */
+export function isInvitationPending(invitation: Invitation, now: number): boolean {
+  return invitation.status === "pending" && new Date(invitation.expires_at).getTime() > now;
+}
+
 export const teamQueryKeys = ["studio-team", "invitations"] as const;
 
 export function useInvalidateTeam() {

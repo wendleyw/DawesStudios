@@ -10,12 +10,14 @@ import { Modal } from "@/features/shared/modal";
 import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
   clientPeopleQueryKeys,
+  isInvitationPending,
   removeClientMember,
   useClientPeople,
   useInvitations,
   usePendingClientRemovals,
 } from "./team-data";
 import { InvitePerson } from "./team-page";
+import { useNow } from "./use-now";
 import "./team.css";
 
 type Removal = { id: string; name: string; pending: boolean };
@@ -41,8 +43,9 @@ export function ClientPeopleDialog({
   const people = useClientPeople(clientId);
   const pendingRemovals = usePendingClientRemovals(clientId);
   const invitations = useInvitations();
-  // Read once: an invitation that expires while the dialog is open keeps its row until reopened.
-  const [now] = useState(() => Date.now());
+  // A live clock, not a frozen `Date.now()`: an invitation that expires while the dialog is open
+  // (or after an idle tab) drops out of Invited on its own instead of only after a reopen.
+  const now = useNow(60_000);
   const [inviting, setInviting] = useState(false);
   const [notice, setNotice] = useState("");
   const [removing, setRemoving] = useState<Removal | null>(null);
@@ -58,10 +61,7 @@ export function ClientPeopleDialog({
   const team = people.data?.team ?? [];
   const invited = (invitations.data ?? []).filter(
     (item) =>
-      item.role === "client" &&
-      item.client_id === clientId &&
-      item.status === "pending" &&
-      new Date(item.expires_at).getTime() > now,
+      item.role === "client" && item.client_id === clientId && isInvitationPending(item, now),
   );
   const askToRemove = (target: Removal) => {
     remove.reset();

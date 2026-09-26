@@ -42,6 +42,17 @@ the invitation list, and the fix landed in the same move because every call site
 removal refreshes `client-people` (the team and the pending-removal list), a person's notification
 choice only `client-notification-choices`.
 
+An invitation's "pending" state is one pure rule, `isInvitationPending(invitation, now)` in this
+file, rather than each caller comparing `expires_at` to its own clock. `team-page.tsx`'s invitation
+list and `client-people-dialog.tsx`'s Invited section both call it, paired with `useNow(60_000)`
+(`use-now.ts`: a small live clock, refreshed on an interval — not a Supabase read, so it lives
+beside these two consumers rather than in this data-access file) so an invitation that expires while
+either is open drops out on its own instead of only after a reopen. Before this fix, the People
+dialog froze `Date.now()` once at mount (`useState(() => Date.now())`) and never rechecked it, so an
+invitation that expired while the dialog stayed open (or the tab sat idle) kept its row under
+**Invited** until the dialog was reopened; the Team page already refreshed its own clock every 60 s,
+which is why both now share `useNow` instead of each keeping a separate rule.
+
 ### Verifying the workload query
 
 `project_assignments?select=designer_id,projects!inner(status)&projects.status=neq.delivered` was

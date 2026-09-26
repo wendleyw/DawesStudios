@@ -3,12 +3,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { useClients } from "@/features/workspace/workspace-data";
 import { invitationRequestSchema } from "@/features/settings/settings-model";
 import {
+  isInvitationPending,
   removeTeamMember,
   revokeInvitation,
   setTeamMemberRole,
@@ -16,6 +17,7 @@ import {
   useInvitations,
   useTeamMembers,
 } from "./team-data";
+import { useNow } from "./use-now";
 import { SettingsSuccess } from "@/features/settings/settings-success";
 import { FormError } from "@/features/shared/form-error";
 import { PageStatus } from "@/features/shared/page-status";
@@ -28,11 +30,7 @@ export function TeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const now = useNow(60_000);
   const members = useTeamMembers();
   const invitations = useInvitations();
   const revoke = useMutation({
@@ -188,8 +186,7 @@ export function TeamPage() {
           ) : invitations.data?.length ? (
             <div className="settings-list">
               {invitations.data.map((item) => {
-                const expired =
-                  item.status === "pending" && new Date(item.expires_at).getTime() < now;
+                const expired = item.status === "pending" && !isInvitationPending(item, now);
                 return (
                   <div className="settings-list-row" key={item.id}>
                     <div>
