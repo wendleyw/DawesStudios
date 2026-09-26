@@ -127,6 +127,8 @@ test("two people at one client act separately, and the product attributes and no
     const designers = value(
       await localAdmin.from("profiles").select("display_name").eq("role", "designer"),
     );
+    // Without at least one designer, the loop below would pass vacuously and prove nothing.
+    expect(designers.length).toBeGreaterThan(0);
     for (const designer of designers)
       await expect(teammateTeam).not.toContainText(designer.display_name);
     const everything = teammateTeam.getByRole("button", {
@@ -268,13 +270,39 @@ test("two people at one client act separately, and the product attributes and no
       requesterPage.getByText("Requested by Former member", { exact: true }),
     ).toBeVisible();
   } finally {
-    const filed = await localAdmin
-      .from("briefings")
-      .delete()
-      .eq("client_id", sabre.id)
-      .eq("title", onBehalfTitle);
-    if (filed.error) throw filed.error;
-    if (projectId) await cleanupTestProject(projectId);
-    for (const context of contexts) await context.close();
+    // Every step below owns its own failure: one throwing (a dropped connection, a slow delivery
+    // container) must never skip the rest, so the shared fixture and the browser contexts are
+    // never left behind for it. The first error is still surfaced, once everything has run.
+    const errors: unknown[] = [];
+    const step = async (action: () => Promise<void>) => {
+      try {
+        await action();
+      } catch (error) {
+        errors.push(error);
+      }
+    };
+    await step(async () => {
+      const filed = await localAdmin
+        .from("briefings")
+        .delete()
+        .eq("client_id", sabre.id)
+        .eq("title", onBehalfTitle);
+      if (filed.error) throw filed.error;
+    });
+    await step(async () => {
+      if (projectId) await cleanupTestProject(projectId);
+    });
+    await step(async () => {
+      // Defensive: the teammate's own account teardown (`team.cleanup()`) cascades this row away
+      // in the common case, but this still restores the flag explicitly if that ever fails first.
+      const restored = await localAdmin
+        .from("client_memberships")
+        .update({ notify_all: false })
+        .eq("client_id", sabre.id)
+        .eq("user_id", teammate.id);
+      if (restored.error) throw restored.error;
+    });
+    for (const context of contexts) await step(() => context.close());
+    if (errors.length) throw errors[0];
   }
 });
