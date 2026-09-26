@@ -69,11 +69,17 @@
   padding: 3px 10px;
   font-size: var(--text-xs);
 }
-.miro-bar-status {
+.miro-bar-status,
+.miro-bar-due {
   flex-shrink: 0;
   color: var(--muted);
   font-size: var(--text-sm);
   white-space: nowrap;
+}
+/* The due date follows the version status, split by a hairline like the title's segments. */
+.miro-bar-due {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
 }
 .miro-bar-popover > .project-credits-chip {
   align-self: flex-start;
@@ -112,13 +118,17 @@
   padding: 6px 28px 6px 10px;
   font-size: var(--text-xs);
 }
-@media (max-width: 639px) {
+/* When the work area is too narrow for one row, the title keeps the first row beside the back
+   arrow and the version, status, due date and actions wrap below it. */
+@container board (max-width: 1000px) {
   .project-header.miro-bar {
     flex-wrap: wrap;
   }
   .miro-bar-title {
-    flex: 1;
+    flex: 1 1 calc(100% - 60px);
   }
+}
+@media (max-width: 639px) {
   .miro-bar-actions {
     width: 100%;
     justify-content: flex-end;

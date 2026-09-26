@@ -308,8 +308,10 @@ deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miro
 `target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
 is the way through to the real board regardless) and a **More** menu holding the credits the project
 used (`ProjectCreditsChip`), the agency's channel switch and the deliverable filter (which changes
-the deliverable). The shown version's status (`versionStatusLabel`) sits beside the version toggle. The project status and due date are left to
-Versions. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
+the deliverable). The shown version's status (`versionStatusLabel`) sits beside the version toggle, followed by the
+project's due date (`Due Sep 24` or `No due date`); the project status is left to Versions. When the
+work area is under 1000 px wide (`@container board`), the title keeps the first row beside the back
+arrow and the rest of the bar wraps below it. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
 their latest pending publication of that deliverable, project not delivered) gets `MiroReviewBar` at
 the bottom of the board, with the tool bar raised above it; **Request changes** and **Approve** open
 the review dialog with that decision preselected (`ReviewAction.decision`). The sidebar folds while Miro mode is shown (`useFoldSidebarWhile` from

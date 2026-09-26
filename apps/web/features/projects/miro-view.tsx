@@ -23,6 +23,7 @@ export function MiroBar({
   back,
   title,
   name,
+  due,
   linked,
   current,
   onSelect,
@@ -32,6 +33,8 @@ export function MiroBar({
   back: ReactNode;
   title: string;
   name: string;
+  /** The project's due date, already formatted ("Nov 29" or "No due date"). */
+  due: string;
   linked: CanvasVersion[];
   current: MiroFrame;
   onSelect: (versionId: string) => void;
@@ -67,6 +70,7 @@ export function MiroBar({
         ))}
       </div>
       <span className="miro-bar-status">{versionStatusLabel(current.status)}</span>
+      <span className="miro-bar-due">{due}</span>
       <div className="miro-bar-actions">
         {viewControl}
         <a

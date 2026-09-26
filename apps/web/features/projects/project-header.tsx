@@ -137,6 +137,7 @@ export function ProjectHeader({
         <MiroBar
           back={back}
           title={project.title}
+          due={project.due_date ? `Due ${formatDate(project.due_date)}` : "No due date"}
           {...miro}
           viewControl={viewControl}
           menu={

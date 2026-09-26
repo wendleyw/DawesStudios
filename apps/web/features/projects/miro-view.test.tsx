@@ -44,6 +44,7 @@ describe("MiroBar", () => {
         back={<button>Back</button>}
         title="Campaign"
         name="Key visual"
+        due="Due Nov 29"
         linked={linked}
         current={v3}
         onSelect={onSelect}
@@ -60,6 +61,7 @@ describe("MiroBar", () => {
     expect(screen.getByText("view switch")).toBeInTheDocument();
     // The shown version's status sits beside the version toggle.
     expect(screen.getByText("In review")).toBeInTheDocument();
+    expect(screen.getByText("Due Nov 29")).toBeInTheDocument();
     const open = screen.getByRole("link", { name: /Open in Miro/ });
     expect(open).toHaveAttribute(
       "href",
