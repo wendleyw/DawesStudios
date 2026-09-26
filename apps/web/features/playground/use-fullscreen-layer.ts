@@ -5,12 +5,11 @@ import { useCallback, useEffect, useRef, useState, type AnimationEvent } from "r
 export type FullscreenLayerPhase = "entering" | "active" | "exiting";
 
 /**
- * A full-screen native dialog's open/close lifecycle, shared by Playground and the project's Miro
- * panel: the native top-layer dialog is shown and body scroll is locked on mount, the heading
- * takes focus, and both are restored to the opener on unmount. `phase` drives the
- * entering/active/exiting CSS slide animation and the `inert` attribute; `animationend` is
- * authoritative and a short timer completes the transition when CSS is unavailable or reduced
- * motion cancels the animation before its event fires.
+ * The Playground dialog's open/close lifecycle: the native top-layer dialog is shown and body
+ * scroll is locked on mount, the heading takes focus, and both are restored to the opener on
+ * unmount. `phase` drives the entering/active/exiting CSS slide animation and the `inert`
+ * attribute; `animationend` is authoritative and a short timer completes the transition when CSS
+ * is unavailable or reduced motion cancels the animation before its event fires.
  */
 export function useFullscreenLayer({ onClose }: { onClose: () => void }) {
   const layer = useRef<HTMLDialogElement>(null);
