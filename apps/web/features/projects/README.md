@@ -256,7 +256,7 @@ RLS: `publication_miro_links` (keyed by `publication_id`) for the client channel
 `design_version_miro_links` (keyed by `version_id`) for the internal one. Reading one channel's
 table for the other channel's versions never happens; `readMiroLinks` in `project-data.ts` takes
 the channel as an explicit argument rather than inferring it, so the client board and the internal
-board stay apart even though both render through the same `MiroBoardPanel`. Only the agency writes
+board stay apart even though both render through the same `MiroView` in Miro mode. Only the agency writes
 either table — `set_publication_miro_link` / `set_version_miro_link` / `clear_publication_miro_link`
 / `clear_version_miro_link` (Supabase RPCs, called from `setMiroLink` / `clearMiroLink`) parse and
 validate the pasted URL server-side; `miro-links.ts`'s `parseMiroBoardUrl` only lets the dialog

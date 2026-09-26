@@ -33,3 +33,12 @@
 - Focus-order check was informal (ad-hoc script), not asserted in the spec; see the verification
   record's caveat.
 - Ownership released; no active writer or process left running by this task.
+
+## Fix round 1 (2026-09-26, docs only)
+- Added a "Spike findings" section to `docs/verification/miro-mode-2026-09-26.md`, restating the
+  five findings from `docs/superpowers/specs/2026-09-26-miro-mode-design.md` (lines ~15-23) as
+  evidence from the 2026-09-26 spike.
+- `apps/web/features/projects/README.md:259` — replaced "both render through the same
+  `MiroBoardPanel`" with "both render through the same `MiroView` in Miro mode"; grepped the file
+  for other `MiroBoardPanel`/`miro-board` references — none remained.
+- `npx prettier --check` on both files — pass. Committed only these two files.
