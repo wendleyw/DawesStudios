@@ -80,14 +80,18 @@ a **Download \<title\>** fallback button that calls `onDownload(file)`. `extraAl
 and project albums, with the existing divider now also drawn before the first Brand Hub album
 whenever at least one extra album is present.
 
-`PlaygroundAssetStrip({ clientId, projectId, onOpenPlayground })` is the Miro-mode header strip: it
-reads `usePlayground` for the viewer's own images (`buildPlaygroundAlbum`, newest first) and renders
-`PlaygroundAlbumsPanel` in clipboard mode alongside an **Open full Playground** button. Copying
-downloads the source file with the viewer's own session — `downloadBrandAssetFile`,
-`downloadDesignAssetFile`, or a signed `getPlaygroundDownload` URL for a Playground-owned image —
-and hands it to `copyImageToClipboard` (`album-clipboard.ts`), which converts it to PNG and writes it
-with the Clipboard API inside the same click's user activation. Download falls back to `saveBlob`
-with `fileNameFor`'s stored-extension name. Task 5 mounts this strip on the project's Miro view.
+### Miro mode strip
+
+`PlaygroundAssetStrip({ clientId, projectId, onOpenPlayground })` is docked inside the project's
+Miro view: it reads `usePlayground` for the viewer's own images (`buildPlaygroundAlbum`, newest
+first) and renders `PlaygroundAlbumsPanel` in clipboard mode alongside an **Open full Playground**
+button. Copying downloads the source file with the viewer's own session —
+`downloadBrandAssetFile`, `downloadDesignAssetFile`, or a signed `getPlaygroundDownload` URL for a
+Playground-owned image — and hands it to `copyImageToClipboard` (`album-clipboard.ts`), which
+converts it to PNG and writes it with the Clipboard API inside the same click's user activation.
+Download falls back to `saveBlob` with `fileNameFor`'s stored-extension name; a download that fails
+too announces "Couldn't download this file." in the same polite status region. `project-page.tsx`
+mounts this strip above the Miro embed, toggled by the project's own Playground icon button.
 
 ## Compact header
 

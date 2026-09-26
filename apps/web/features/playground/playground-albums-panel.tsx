@@ -4,6 +4,7 @@ import { FileText, ImageIcon } from "lucide-react";
 import {
   Fragment,
   useId,
+  useRef,
   useState,
   type DragEvent,
   type KeyboardEvent,
@@ -85,6 +86,11 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
     fileId: string;
     state: "copying" | "copied" | "failed";
   } | null>(null);
+  const [downloadFailed, setDownloadFailed] = useState(false);
+  // Only the latest click's file may ever update `copyState`: an earlier click's copy can still be
+  // in flight (a slow download, a slow clipboard write) when a later click starts a new one, and
+  // its eventual result must never overwrite what the later click already announced.
+  const latestCopyRequest = useRef<string | null>(null);
 
   const albums: Album[] = [
     ...extraAlbums,
@@ -111,6 +117,7 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
     setSelectedIds([]);
     setLastIndex(null);
     setCopyState(null);
+    setDownloadFailed(false);
     setOpenId((current) => (current === id ? null : id));
   }
 
@@ -130,12 +137,23 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
 
   async function copy(file: AlbumFile) {
     if (!onCopy) return;
+    latestCopyRequest.current = file.id;
+    setDownloadFailed(false);
     setCopyState({ fileId: file.id, state: "copying" });
     try {
       await onCopy(file);
-      setCopyState({ fileId: file.id, state: "copied" });
+      if (latestCopyRequest.current === file.id) setCopyState({ fileId: file.id, state: "copied" });
     } catch {
-      setCopyState({ fileId: file.id, state: "failed" });
+      if (latestCopyRequest.current === file.id) setCopyState({ fileId: file.id, state: "failed" });
+    }
+  }
+
+  async function download(file: AlbumFile) {
+    if (!onDownload) return;
+    try {
+      await onDownload(file);
+    } catch {
+      setDownloadFailed(true);
     }
   }
 
@@ -216,19 +234,22 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
       {mode === "clipboard" && copyState && (
         <p className="playground-album-copy-status" role="status">
           {copyState.state === "copied" && "Copied — paste in Miro with ⌘V / Ctrl+V"}
-          {copyState.state === "failed" && (
-            <>
-              Couldn&apos;t copy this image.
-              <button
-                type="button"
-                className="button quiet"
-                aria-label={`Download ${copiedFile?.title ?? ""}`}
-                onClick={() => copiedFile && onDownload?.(copiedFile)}
-              >
-                Download
-              </button>
-            </>
-          )}
+          {copyState.state === "failed" &&
+            (downloadFailed ? (
+              "Couldn't download this file."
+            ) : (
+              <>
+                Couldn&apos;t copy this image.
+                <button
+                  type="button"
+                  className="button quiet"
+                  aria-label={`Download ${copiedFile?.title ?? ""}`}
+                  onClick={() => copiedFile && download(copiedFile)}
+                >
+                  Download
+                </button>
+              </>
+            ))}
         </p>
       )}
     </div>

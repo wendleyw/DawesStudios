@@ -52,4 +52,12 @@ describe("ProjectHeader", () => {
     fireEvent.click(within(group).getByRole("button", { name: "Miro" }));
     expect(onView).toHaveBeenCalledWith("miro");
   });
+
+  it("clicking the already-pressed option does nothing", () => {
+    const onView = vi.fn();
+    render(<ProjectHeader {...base} view="versions" miroAvailable onView={onView} />);
+    const group = screen.getByRole("group", { name: "Project view" });
+    fireEvent.click(within(group).getByRole("button", { name: "Versions" }));
+    expect(onView).not.toHaveBeenCalled();
+  });
 });

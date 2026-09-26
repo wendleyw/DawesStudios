@@ -404,6 +404,70 @@ describe("clipboard mode", () => {
     expect(onDownload).toHaveBeenCalledWith(expect.objectContaining({ id: "pg-1" }));
   });
 
+  it("announces a polite failure when Download itself fails", async () => {
+    const onCopy = vi.fn().mockRejectedValue(new Error("unsupported"));
+    const onDownload = vi.fn().mockRejectedValue(new Error("network"));
+    renderClipboardPanel({ onCopy, onDownload });
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    await screen.findByText("Couldn't copy this image.");
+    fireEvent.click(screen.getByRole("button", { name: "Download Moodboard" }));
+    expect(await screen.findByText("Couldn't download this file.")).toBeInTheDocument();
+  });
+
+  it("ignores a stale copy result once a later click on another file has already announced its own", async () => {
+    const twoImageAlbum: Album = {
+      id: "playground",
+      group: "playground",
+      label: "Playground",
+      files: [
+        {
+          id: "pg-1",
+          title: "Moodboard",
+          mimeType: "image/png",
+          sizeBytes: null,
+          source: { kind: "playground", assetPath: "b/1/m.png", previewUrl: "https://signed/1" },
+        },
+        {
+          id: "pg-2",
+          title: "Sketch",
+          mimeType: "image/png",
+          sizeBytes: null,
+          source: { kind: "playground", assetPath: "b/2/s.png", previewUrl: "https://signed/2" },
+        },
+      ],
+    };
+    let rejectFirst: ((error: Error) => void) | undefined;
+    const onCopy = vi.fn().mockImplementation((file: AlbumFile) =>
+      file.id === "pg-1"
+        ? new Promise<void>((_resolve, reject) => {
+            rejectFirst = reject;
+          })
+        : Promise.resolve(undefined),
+    );
+    render(
+      <PlaygroundAlbumsPanel
+        mode="clipboard"
+        clientId="c"
+        projectId="p"
+        extraAlbums={[twoImageAlbum]}
+        onCopy={onCopy}
+        onDownload={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Sketch" }));
+    expect(await screen.findByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+    // Moodboard's earlier, slower click now fails; that stale result must not override the
+    // status Sketch's later, already-resolved click announced.
+    rejectFirst?.(new Error("slow failure"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(screen.getByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't copy this image.")).not.toBeInTheDocument();
+  });
+
   it("disables files that are not images and never makes them draggable", () => {
     renderClipboardPanel({});
     fireEvent.click(screen.getByRole("button", { name: /Playground/ }));

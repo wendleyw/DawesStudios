@@ -120,16 +120,33 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     () => readProjectView(parameters).versionId,
   );
   const [assetStripOpen, setAssetStripOpen] = useState(false);
-  // The URL keeps the view, so a reload or a shared link returns to it. `replace` keeps the
-  // browser history to one entry per project visit.
+  // Computed above the early returns below (data may still be pending) so the header, the URL and
+  // the reconcile effect all agree on the one version Miro mode actually resolves to — never the
+  // raw requested id, which a filter, a channel switch, or a stale link can leave unresolved.
+  const linkedForView = data.data ? linkedVersions(data.data.versions, format) : [];
+  const resolvedMiroVersion =
+    projectView === "miro" ? pickMiroVersion(linkedForView, miroVersionId) : null;
+  // Miro mode never leaves the header, the state and the URL disagreeing: once the deliverable
+  // filter, a channel switch, or an unresolved requested version leaves nothing linked to show,
+  // this falls back to Versions instead of holding a phantom Miro state. Adjusted directly during
+  // render (React's documented pattern for resetting state derived from other state) rather than
+  // in an effect: setting `projectView` here immediately re-renders this component with the new
+  // state before anything commits, so the URL effect below never sees the phantom state.
+  if (projectView === "miro" && data.data && !resolvedMiroVersion) setProjectView("versions");
+  // The asset strip belongs to Miro mode only; leaving it by any path (the header control, the
+  // reconcile above, or a channel switch) closes the strip too. Safe unguarded here: once false,
+  // repeat calls with the same value are no-ops that React skips re-rendering for.
+  if (projectView !== "miro" && assetStripOpen) setAssetStripOpen(false);
+  // The URL keeps the view and the resolved version, so a reload or a shared link returns to the
+  // same frame. `replace` keeps the browser history to one entry per project visit.
   useEffect(() => {
     const query = writeProjectView(new URLSearchParams(window.location.search), {
       view: projectView,
-      versionId: miroVersionId,
+      versionId: resolvedMiroVersion?.id ?? null,
     });
     if (query === window.location.search.replace(/^\?/, "")) return;
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [projectView, miroVersionId, pathname, router]);
+  }, [projectView, resolvedMiroVersion, pathname, router]);
   function enterMiro(versionId: string | null) {
     setSelected(null);
     setMiroVersionId(versionId);
@@ -197,8 +214,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       </div>
     );
   const { project, versions, designs, deliverables } = data.data;
-  const linked = linkedVersions(versions, format);
-  const miroVersion = projectView === "miro" ? pickMiroVersion(linked, miroVersionId) : null;
+  const linked = linkedForView;
+  const miroVersion = resolvedMiroVersion;
   const miroActive = !!miroVersion?.miro && !selected?.designId;
   const chosenVersion = versions.find((version) => version.id === selected?.versionId);
   const chosenDeliverable = deliverables.find(
@@ -402,7 +419,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         reviewing={!!selected?.designId}
         chromeRef={setChrome}
         view={miroActive ? "miro" : "versions"}
-        miroAvailable={linkedVersions(versions, "").length > 0}
+        miroAvailable={linked.length > 0}
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
       />
       <div className="project-workspace">
@@ -430,9 +447,12 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             <>
               <div className="project-body">
                 <div
-                  className={`project-canvas${dragOver ? " is-dragging-over" : ""}`}
+                  className={`project-canvas${dragOver && !miroActive ? " is-dragging-over" : ""}`}
                   ref={setPane}
                   onDragOver={(event) => {
+                    // The Miro embed handles its own drag and drop (paste only reaches it); the
+                    // canvas's own file-drop affordances stay out of its way entirely.
+                    if (miroActive) return;
                     // Every drag over the canvas is held here, so nothing dropped on it (a file,
                     // a link) ever makes the browser leave the page; only files are taken.
                     event.preventDefault();
@@ -445,12 +465,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                     }
                   }}
                   onDragLeave={(event) => {
+                    if (miroActive) return;
                     if (
                       !event.currentTarget.contains(event.relatedTarget as globalThis.Node | null)
                     )
                       setDragOver(false);
                   }}
                   onDrop={(event) => {
+                    if (miroActive) return;
                     event.preventDefault();
                     setDragOver(false);
                     if (!event.dataTransfer.types.includes("Files")) return;
@@ -514,7 +536,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                       topInset={chromeHeight}
                     />
                   </ReactFlow>
-                  {dragOver && canProduce && (
+                  {!miroActive && dragOver && canProduce && (
                     <div className="canvas-drop-overlay">
                       <span>
                         {dragCount === 1
@@ -523,7 +545,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                       </span>
                     </div>
                   )}
-                  {switchHint && (
+                  {!miroActive && switchHint && (
                     <div className="canvas-drop-hint" role="status">
                       Switch to Working files to add designs
                     </div>
@@ -600,7 +622,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         onOpenPlayground={() => setPlaygroundOrigin("upload")}
         onClose={() => setAction(null)}
       />
-      {bulkDropFiles && (
+      {!miroActive && bulkDropFiles && (
         <BulkDropDialog
           projectId={projectId}
           deliverables={deliverables}

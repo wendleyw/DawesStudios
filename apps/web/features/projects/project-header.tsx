@@ -109,7 +109,9 @@ export function ProjectHeader({
                   className={view === option ? "active" : ""}
                   aria-pressed={view === option}
                   disabled={playgroundOpen}
-                  onClick={() => onView(option)}
+                  onClick={() => {
+                    if (option !== view) onView(option);
+                  }}
                 >
                   {option === "versions" ? "Versions" : "Miro"}
                 </button>

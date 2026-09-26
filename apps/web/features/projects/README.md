@@ -301,11 +301,18 @@ restrictions, so this link is the way through to the real board regardless), and
 `iframe.miro-view-frame` rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with
 `autoplay=true`, never from the pasted URL again; `key={current.id}` reloads the frame when the
 selector changes the version. The header's **Project view** segmented control (Versions/Miro,
-`project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one linked
-version — and is the other entry point beside a version card's **View on Miro**. While in Miro mode,
-the Playground's icon button no longer opens the full Playground; it toggles
-`PlaygroundAssetStrip` (`../playground/README.md#miro-mode-clipboard`) above the frame instead, whose
-**Open full Playground** button switches to the full board. `frame-src https://miro.com` is the one
+`project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one
+linked version under the current deliverable filter — and is the other entry point beside a
+version card's **View on Miro**; clicking the option already pressed is a no-op, never a jump back
+to the newest linked version. A reconcile effect in `project-page.tsx` keeps Miro mode from holding
+a phantom state: whenever the deliverable filter, a channel switch, or an unresolved requested
+version leaves nothing linked to show, it falls back to Versions, and the URL always records the
+version actually resolved and shown, never the raw requested id. Details/Conversation narrow the
+Miro view exactly as they narrow the canvas (`projects.css`, mirroring the tool bar's own footprint
+math). While in Miro mode, the Playground's icon button no longer opens the full Playground; it
+toggles `PlaygroundAssetStrip` (see [the Miro mode strip](../playground/README.md#miro-mode-strip))
+above the frame instead, whose **Open full Playground** button switches to the full board; leaving
+Miro mode by any path also closes this strip. `frame-src https://miro.com` is the one
 Content-Security-Policy exception this feature requires (`apps/web/next.config.ts`); Miro mode is
 never reachable at all unless a link exists for the viewer's channel.
 

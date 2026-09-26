@@ -1403,6 +1403,18 @@
   padding-bottom: calc(var(--control-height) + 40px);
   background: var(--canvas-background);
 }
+/* Details/Conversation narrow the Miro view exactly as they narrow the canvas: the embed's right
+   edge stops where the inspector's own footprint (its 16px right inset plus its width) begins,
+   instead of the panel merely floating over hidden board content. Same panel-width term as the
+   tool bar's own footprint math above. */
+.project-workspace:has(> .project-inspector) .miro-view {
+  right: calc(min(380px, calc(100% - 32px)) + 32px);
+}
+@container board (max-width: 799px) {
+  .project-workspace:has(> .project-inspector) .miro-view {
+    right: 0;
+  }
+}
 .miro-view-bar {
   display: flex;
   align-items: center;

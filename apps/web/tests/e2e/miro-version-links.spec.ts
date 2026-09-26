@@ -100,3 +100,39 @@ test("a stale version in the URL falls back to the newest linked one", async ({ 
   await page.goto(`/projects/${projectId}?view=miro&version=00000000-0000-0000-0000-000000000000`);
   await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVClientE2E/);
 });
+
+test.describe("Miro mode and the deliverable filter", () => {
+  // "Instagram Ads" (two deliverables) with a link only on "Instagram Feed"'s latest publication,
+  // so filtering to "Instagram Story" leaves nothing linked for the client channel. Never the
+  // "Personal Alarm Product Story" project — its own link row is the user's, left untouched.
+  const filterProjectId = "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19";
+  const linkedPublicationId = "8c37ef7f-c2de-4b7d-b14c-17e6d3b07479";
+  const filterBoard = "https://miro.com/app/board/uXjVFilterE2E=/";
+
+  test.beforeAll(async () => {
+    const agency = await localAgency();
+    const result = await agency.rpc("set_publication_miro_link", {
+      p_publication_id: linkedPublicationId,
+      p_url: filterBoard,
+    });
+    if (result.error) throw new Error(result.error.message);
+  });
+
+  test.afterAll(async () => {
+    const agency = await localAgency();
+    await agency.rpc("clear_publication_miro_link", { p_publication_id: linkedPublicationId });
+  });
+
+  test("filtering to a deliverable with no link leaves Miro mode out of reach", async ({
+    page,
+  }) => {
+    await signIn(page, credentials.client);
+    await page.goto(`/projects/${filterProjectId}`);
+    await expect(
+      page.getByRole("group", { name: "Project view" }).getByRole("button", { name: "Miro" }),
+    ).toBeVisible();
+    await page.getByLabel("Filter deliverable").selectOption({ label: "Instagram Story" });
+    await expect(page.getByRole("group", { name: "Project view" })).toHaveCount(0);
+    await expect(page).not.toHaveURL(/view=miro/);
+  });
+});
