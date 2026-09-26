@@ -19,6 +19,8 @@ bottom of the canvas. While a side panel is open the bar re-centres in the space
 pill and the panel; on canvases narrower than 800 px it hides until the panel closes. The open
 panel's button is selected. On phones it moves to the bottom right with touch-sized buttons, clear of
 the zoom pill. It is not shown while reviewing a design; the viewer keeps its own Playground button.
+The Playground (or, in Miro mode, its asset strip) and the side panels do not stack: opening the
+Playground closes an open panel, and opening a panel closes the asset strip.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.
 The header's measured height keeps the first deliverable, Fit View and secondary panels
 clear of the floating controls. Playground independently fills the entire viewport above the app. Opening preserves a readable width-based zoom; Fit View includes

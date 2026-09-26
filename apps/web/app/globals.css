@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-:root {
+/* `.dark-surface` re-declares every token on its own element, where it resolves dark (see below). */
+:root,
+.dark-surface {
   color-scheme: light dark;
 
   --background: light-dark(#f7f8fa, #131416);
@@ -92,6 +94,14 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
+}
+/*
+ * A surface that is dark in both themes (the Playground canvas). Theme tokens resolve their
+ * light-dark() values on the element that declares them, so the scope re-declares them (above) and
+ * then fixes its own scheme to dark; everything inside reads the dark palette.
+ */
+.dark-surface {
   color-scheme: dark;
 }
 @theme inline {

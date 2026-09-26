@@ -85,6 +85,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     }
     panelTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setAssetStripOpen(false);
     setPanel(next);
   }
   const [selected, setSelected] = useState<{ designId?: string; versionId: string } | null>(null);
@@ -387,9 +388,12 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         aria-label="Playground"
         disabled={playgroundOpen}
         aria-expanded={miroActive ? assetStripOpen : playgroundOpen}
-        onClick={() =>
-          miroActive ? setAssetStripOpen((open) => !open) : setPlaygroundOrigin("project")
-        }
+        onClick={() => {
+          // The Playground replaces whichever side panel was open; it does not stack beside it.
+          setPanel(null);
+          if (miroActive) setAssetStripOpen((open) => !open);
+          else setPlaygroundOrigin("project");
+        }}
       >
         <Lightbulb size={18} />
       </button>

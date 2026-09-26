@@ -125,7 +125,11 @@ function sides(value: string): [string, string] {
 
 const tokens = new Map(
   declarations(read("app/globals.css"))
-    .filter(({ selector, property }) => selector === ":root" && property.startsWith("--"))
+    // The token block's selector list also names `.dark-surface`, which re-declares the same tokens.
+    .filter(
+      ({ selector, property }) =>
+        selector.split(",").some((part) => part.trim() === ":root") && property.startsWith("--"),
+    )
     .map(({ property, value }) => [property, value] as const),
 );
 const token = (name: string) => sides(tokens.get(name) ?? "");

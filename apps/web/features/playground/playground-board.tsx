@@ -631,7 +631,7 @@ export function PlaygroundBoard({
         <div className="playground-workspace">
           <div
             ref={canvas}
-            className={`playground-canvas${dragOver ? " is-dragging-over" : ""}`}
+            className={`playground-canvas dark-surface${dragOver ? " is-dragging-over" : ""}`}
             onDragOver={(event) => {
               if (
                 event.dataTransfer.types.includes("Files") ||
