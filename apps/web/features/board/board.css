@@ -487,16 +487,29 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 26%, transparent);
 }
 
-/* The stage list scrolls under its own pinned heading rather than pushing it out of the frame. */
+/*
+ * The Kanban scrolls as one long board rather than column by column: every column grows with its
+ * projects, one scroll anywhere moves down through all of them, and each stage heading stays
+ * pinned at the top while its cards pass beneath it. A grid row makes every column as tall as the
+ * busiest one (and at least the view), so each heading stays pinned to the end of the board.
+ */
 .board-planning-view .kanban-board {
+  --kanban-pad: 16px;
+  display: grid;
   min-height: 0;
-  align-items: stretch;
+  grid-auto-columns: minmax(200px, 1fr);
+  grid-auto-flow: column;
+  padding: var(--kanban-pad);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 .board-planning-view .kanban-column {
-  min-height: 0;
-  overflow: hidden auto;
-  overscroll-behavior-y: contain;
-  scrollbar-width: thin;
+  min-width: 0;
+}
+/* Sticky offsets count from inside the board's padding; pull the heading up to its very top. */
+.board-planning-view .kanban-heading {
+  top: calc(-1 * var(--kanban-pad));
 }
 .board-planning-view .kanban-column > * {
   flex: 0 0 auto;
@@ -804,6 +817,9 @@
   .kanban-column {
     min-width: 0;
   }
+  .board-planning-view .kanban-board {
+    grid-auto-columns: minmax(0, 1fr);
+  }
 }
 
 /* Tools overlay the canvas; structured views reserve a gutter for their content. */
@@ -982,7 +998,7 @@
     padding: 4px 10px;
   }
   .board-planning-view .kanban-board {
-    padding: 8px;
+    --kanban-pad: 8px;
   }
   .kanban-heading {
     min-height: 44px;
