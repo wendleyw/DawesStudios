@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Creative Canvas — Brianna Dawes Studios",
   description: "Your projects, feedback, and brand. One considered space to move things forward.",
   icons: {
-    icon: "/brand/logo.webp",
+    icon: "/brand/favicon.png",
   },
 };
 

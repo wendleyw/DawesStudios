@@ -210,6 +210,13 @@ sidebar no longer uses `.brand-logo`, which moved to `auth.css` with its one rem
 
 ## Sidebar brand lockup
 
+The browser tab repeats the mark. `layout.tsx` points the favicon at `public/brand/favicon.png` (the
+white symbol on a rounded tile of the menu colour), and `animated-favicon.tsx`, mounted by the app
+shell, draws each frame of `logo-mark.webm` onto a 64 px canvas and sets it as the icon while the
+animation plays, resting ten seconds between runs like the sidebar. It pauses in a hidden tab, never
+runs with reduced motion, and restores the static icon when it unmounts. Browsers that ignore a
+changing icon (Safari) keep the static one.
+
 The top of the sidebar shows the animated studio mark beside the wordmark. `shared/brand-mark.tsx`
 plays `public/brand/logo-mark.webm` when the shell mounts (muted, inline), rests on the finished mark
 for ten seconds and plays again; with reduced motion, or if the video cannot play, it shows the still

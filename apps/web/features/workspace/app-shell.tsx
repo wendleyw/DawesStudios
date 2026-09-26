@@ -22,6 +22,7 @@ import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { BrandMark } from "@/features/shared/brand-mark";
+import { AnimatedFavicon } from "./animated-favicon";
 import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
 import { ThemeToggle } from "./theme-toggle";
@@ -214,6 +215,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div
         className={`application ${activeClient ? "has-client-context" : ""} ${canvasRoute ? "board-workspace" : ""} ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}
       >
+        <AnimatedFavicon />
         <nav aria-label="Accessibility">
           <a className="skip-link" href="#main-content">
             Skip to content
