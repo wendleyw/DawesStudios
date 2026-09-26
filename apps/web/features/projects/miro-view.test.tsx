@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CanvasVersion } from "./project-data";
-import { MiroView } from "./miro-view";
+import { MiroControls, MiroView } from "./miro-view";
 
 const link = { boardId: "uXjVKabc123=", widgetId: "345" };
 const v3 = {
@@ -21,13 +21,29 @@ const v2 = {
 const deliverables = [{ id: "d", name: "Key visual" }];
 
 describe("MiroView", () => {
-  it("embeds the current frame with autoplay and offers it in Miro", () => {
-    render(
-      <MiroView linked={[v3, v2]} current={v3} deliverables={deliverables} onSelect={() => {}} />,
-    );
+  it("embeds the current frame with autoplay", () => {
+    render(<MiroView current={v3} deliverables={deliverables} />);
     expect(screen.getByTitle("Miro board for Key visual · V3")).toHaveAttribute(
       "src",
       "https://miro.com/app/live-embed/uXjVKabc123%3D/?autoplay=true&moveToWidget=345",
+    );
+  });
+
+  it("renders the asset strip when given", () => {
+    render(<MiroView current={v3} deliverables={deliverables} strip={<p>strip</p>} />);
+    expect(screen.getByText("strip")).toBeInTheDocument();
+  });
+});
+
+describe("MiroControls", () => {
+  it("offers the current frame in Miro", () => {
+    render(
+      <MiroControls
+        linked={[v3, v2]}
+        current={v3}
+        deliverables={deliverables}
+        onSelect={() => {}}
+      />,
     );
     const open = screen.getByRole("link", { name: /Open in Miro/ });
     expect(open).toHaveAttribute(
@@ -41,7 +57,12 @@ describe("MiroView", () => {
   it("lists only the linked versions and reports a change", () => {
     const onSelect = vi.fn();
     render(
-      <MiroView linked={[v3, v2]} current={v3} deliverables={deliverables} onSelect={onSelect} />,
+      <MiroControls
+        linked={[v3, v2]}
+        current={v3}
+        deliverables={deliverables}
+        onSelect={onSelect}
+      />,
     );
     const select = screen.getByLabelText("Miro frame");
     expect(Array.from((select as HTMLSelectElement).options).map((o) => o.textContent)).toEqual([
@@ -50,18 +71,5 @@ describe("MiroView", () => {
     ]);
     fireEvent.change(select, { target: { value: "v2" } });
     expect(onSelect).toHaveBeenCalledWith("v2");
-  });
-
-  it("renders the asset strip when given", () => {
-    render(
-      <MiroView
-        linked={[v3]}
-        current={v3}
-        deliverables={deliverables}
-        onSelect={() => {}}
-        strip={<p>strip</p>}
-      />,
-    );
-    expect(screen.getByText("strip")).toBeInTheDocument();
   });
 });

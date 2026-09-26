@@ -22,7 +22,7 @@ import {
   writeProjectView,
   type ProjectView,
 } from "./miro-mode";
-import { MiroView } from "./miro-view";
+import { MiroControls, MiroView } from "./miro-view";
 import {
   nodeTypes,
   type DeliverableNode,
@@ -421,6 +421,16 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
+        miroControls={
+          miroActive && miroVersion?.miro ? (
+            <MiroControls
+              linked={linked}
+              current={{ ...miroVersion, miro: miroVersion.miro }}
+              deliverables={deliverables}
+              onSelect={(id) => setMiroVersionId(id)}
+            />
+          ) : undefined
+        }
       />
       <div className="project-workspace">
         <div className="project-workspace-content" inert={playgroundOpen}>
@@ -489,10 +499,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                   </ProjectToolBar>
                   {miroActive && miroVersion?.miro && (
                     <MiroView
-                      linked={linked}
                       current={{ ...miroVersion, miro: miroVersion.miro }}
                       deliverables={deliverables}
-                      onSelect={(id) => setMiroVersionId(id)}
                       strip={
                         assetStripOpen ? (
                           <PlaygroundAssetStrip

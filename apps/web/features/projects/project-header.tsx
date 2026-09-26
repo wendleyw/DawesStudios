@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import type { Profile } from "@/lib/supabase";
 import { CanvasHeader } from "@/features/workspace/canvas-header";
 import {
@@ -31,6 +31,7 @@ export function ProjectHeader({
   view,
   miroAvailable,
   onView,
+  miroControls,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -46,6 +47,8 @@ export function ProjectHeader({
   view: ProjectView;
   miroAvailable: boolean;
   onView: (view: ProjectView) => void;
+  /** Miro mode's frame selector and "Open in Miro", shown beside the view switch. */
+  miroControls?: ReactNode;
 }) {
   const { formatDate } = useDateFormat();
   return (
@@ -118,6 +121,7 @@ export function ProjectHeader({
               ))}
             </div>
           )}
+          {miroControls}
           <div className="project-header-actions">
             <label className="visually-hidden" htmlFor="deliverable-filter">
               Filter deliverable

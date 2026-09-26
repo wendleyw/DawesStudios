@@ -1400,7 +1400,6 @@
   display: flex;
   flex-direction: column;
   padding-top: var(--project-chrome-height);
-  padding-bottom: calc(var(--control-height) + 40px);
   background: var(--canvas-background);
 }
 /* Details/Conversation narrow the Miro view exactly as they narrow the canvas: the embed's right
@@ -1415,16 +1414,39 @@
     right: 0;
   }
 }
-.miro-view-bar {
+/* The frame selector and "Open in Miro" sit in the header beside the view switch, in the same pill
+   as the deliverable filter, so the embed runs from the header to the page's bottom edge and the
+   tool bar floats over it like it floats over the canvas. */
+.miro-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-  padding: 8px 16px;
-}
-.miro-view-bar select {
+  gap: 6px;
   min-width: 0;
-  max-width: 320px;
+  max-width: 100%;
+  padding: 5px;
+  pointer-events: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
+}
+.miro-controls > select {
+  min-width: 0;
+  width: 200px;
+  padding: 6px 28px 6px 10px;
+  font-size: var(--text-xs);
+}
+.miro-controls > .button {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: var(--text-xs);
+}
+/* On phones the tool bar moves to the right edge, over Miro's own zoom controls; the embed stops
+   above it instead. */
+@media (max-width: 639px) {
+  .miro-view {
+    padding-bottom: calc(var(--control-height) + 36px);
+  }
 }
 .miro-view-frame {
   flex: 1;
