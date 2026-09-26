@@ -30,6 +30,8 @@ product except to work inside Miro itself.
 - Feedback lives in the product, per round (internal) and per client version (client), not in
   Miro comments.
 - The Versions/Miro switch remains for the agency only. Designers and clients see Miro only.
+- Designer privacy mirrors client privacy: **a designer never sees another designer**. That covers
+  their boards, rounds, feedback, identity and assignment.
 
 ## Concepts and flow
 
@@ -63,6 +65,17 @@ the client, opens a pending review (Approve / Request changes) and moves the pro
   "Nothing shared yet. Share a round or add a version." in Shared with client.
 - The Versions/Miro switch, for projects that still have uploaded-design versions.
 
+### Designer privacy
+
+A designer receives only their own boards, their own rounds, and the internal feedback written by
+themselves or by the studio. They never receive another designer's name, identifier, assignment,
+board, round or comment, whether through the interface, a query, realtime or a notification.
+
+Existing enforcement: `project_assignments` and `profiles` are already readable only by the agency
+or by the person themselves. The gap is `internal_comments`, readable today by every producer on
+the project, including another designer's comments and their `author_id`. This design closes it
+(see Row-level security).
+
 ### Client
 
 - Shared with client only: client versions, **Approve / Request changes**, the version's Feedback.
@@ -95,7 +108,10 @@ One migration. Existing per-deliverable versions and their data are untouched.
   Writes go only through RPCs.
 - `design_versions` rounds (rows with `board_id`): the read policy narrows from `can_produce` to
   the agency, or to the designer of that board. Per-deliverable rows keep `can_produce`.
-- `internal_comments` on a round follow the round's visibility.
+- `internal_comments`: the agency reads all. A designer reads only comments on rounds of their own
+  boards and, elsewhere (project Conversation, per-deliverable versions), only comments written by
+  themselves or by an agency member. Another designer's comments and `author_id` never reach them.
+  Studio-to-designer notifications stay per recipient.
 - `design_version_miro_links` on a round follow the round's visibility.
 - Client-side tables keep `can_client_channel`. A project-level client version exposes no board,
   round or designer data.
@@ -147,13 +163,15 @@ One migration. Existing per-deliverable versions and their data are untouched.
 
 - pgTAP covers each RPC's permissions (agency, the board's designer, another designer, the
   client), atomicity (nothing written on an invalid link), idempotency, delivered projects, RLS
-  (another designer cannot read a board or its rounds; the client cannot read internal data), and
+  (another designer cannot read a board, its rounds, its link or any comment written by another
+  designer, anywhere on the project; the client cannot read internal data), and
   `review_publication` on project-level versions.
 - Unit tests cover the Miro bar's controls by role and channel, the dialogs, and the empty states.
 - E2E runs the full round trip on a fixture client: the agency adds a board for a designer, the
   designer sends a round, the agency shares it with a client link, the client requests changes,
   then approves a second version. Each role sees only its own side. The client-visible payload
-  holds no internal identifiers.
+  holds no internal identifiers. A second designer on the same project never sees the first
+  designer's board, rounds, comments or name.
 - The canonical seed counts and the SABRE overlay are unchanged. No seed data is added.
 
 ## Out of scope
