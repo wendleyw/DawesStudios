@@ -195,8 +195,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
   const activeClient = clients.data?.find((client) => client.id === activeClientId);
-  const homeLabel =
-    profile.role === "agency" ? "Overview" : profile.role === "designer" ? "My work" : "Home";
+  // Inside a client workspace the sidebar's first item is that client's Overview (the top navigation
+  // has none); elsewhere it is the viewer's home. Designers have no client Overview.
+  const clientOverview =
+    activeClient && profile.role !== "designer" ? `/clients/${activeClient.id}/overview` : null;
+  const homeHref = clientOverview ?? "/home";
+  const homeLabel = clientOverview
+    ? "Overview"
+    : profile.role === "agency"
+      ? "Overview"
+      : profile.role === "designer"
+        ? "My work"
+        : "Home";
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
 
   return (
@@ -264,9 +274,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <nav aria-label="Main navigation">
             <Link
-              className={`nav-item ${pathname === "/home" ? "active" : ""}`}
-              aria-current={pathname === "/home" ? "page" : undefined}
-              href="/home"
+              className={`nav-item ${pathname === homeHref ? "active" : ""}`}
+              aria-current={pathname === homeHref ? "page" : undefined}
+              href={homeHref}
             >
               <Home size={17} />
               <span>{homeLabel}</span>

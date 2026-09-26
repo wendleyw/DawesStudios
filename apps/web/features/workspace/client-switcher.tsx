@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 import type { Client } from "./workspace-data";
+import { ClientMark } from "./client-mark";
 
 /** Uses the shell's authorized client query; the picker never loads a separate client directory. */
 export function ClientSwitcher({
@@ -43,9 +44,13 @@ export function ClientSwitcher({
 
   const identity = (
     <>
-      <span className="client-initials" aria-hidden="true">
-        {selected ? selected.initials || selected.name.slice(0, 2) : <Building2 size={18} />}
-      </span>
+      {selected ? (
+        <ClientMark client={selected} className="client-switcher-mark" />
+      ) : (
+        <span className="client-initials" aria-hidden="true">
+          <Building2 size={18} />
+        </span>
+      )}
       <span className="client-switcher-copy">
         <small>Client workspace</small>
         <strong>{selected?.name ?? (loading ? "Loading clients…" : "Select a client")}</strong>
@@ -129,9 +134,7 @@ export function ClientSwitcher({
                   aria-current={client.id === selected?.id ? "location" : undefined}
                   onClick={() => setOpen(false)}
                 >
-                  <span className="client-initials" aria-hidden="true">
-                    {client.initials || client.name.slice(0, 2)}
-                  </span>
+                  <ClientMark client={client} className="client-switcher-option-mark" />
                   <span>{client.name}</span>
                   {client.id === selected?.id && <Check size={16} aria-hidden="true" />}
                 </Link>

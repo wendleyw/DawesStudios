@@ -7,6 +7,8 @@ vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ profile: { role: viewer.role } }),
 }));
 
+vi.mock("@/features/brand/brand-data", () => ({ useClientLogo: () => ({ data: undefined }) }));
+
 import { ClientSwitcher } from "./client-switcher";
 
 const clients: Client[] = [

@@ -25,7 +25,7 @@
 
   --sidebar: light-dark(#202226, #0f1012);
 
-  --sidebar-width: 248px;
+  --sidebar-width: 216px;
   --topbar-height: 64px;
   --radius: 8px;
   --radius-lg: 12px;
@@ -1291,7 +1291,7 @@ img.client-mark {
 @media (max-width: 1200px) {
   :root {
     --space-page: 28px;
-    --sidebar-width: 224px;
+    --sidebar-width: 204px;
   }
   .topbar {
     padding-inline: 28px;

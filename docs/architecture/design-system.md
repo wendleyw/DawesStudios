@@ -16,48 +16,48 @@ Numeric values below have one of three meanings:
 
 ## Brand and visual direction
 
-Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`. The sidebar animates the symbol: [`brand/logo-animation.webm`](../../brand/logo-animation.webm) plays once when the app opens and rests on the finished symbol, beside the wordmark cut from this asset, so the lockup keeps the original composition and proportions (see `workspace/brand-mark.tsx`). Sign-in, invitation and recovery screens and the favicon keep the static logo.
+Use the supplied [Brianna Dawes Studios logo](../../brand/brianna-dawes-studios.webp). It is a 2409 × 619 RGBA asset with a white wordmark and organic symbol, approximately 3.892:1. Preserve its aspect ratio, transparency, and complete composition. Do not recreate the wordmark in a UI font, replace the symbol with initials, or stretch the image. Its light artwork belongs on the dark navigation surface. A 156 × 40 display area is an inferred starting point for the desktop sidebar, with `object-fit: contain`. The sidebar animates the symbol: [`brand/logo-animation.webm`](../../brand/logo-animation.webm) plays when the app opens, rests on the finished symbol for ten seconds and plays again (a still with reduced motion), beside the wordmark cut from this asset, so the lockup keeps the original composition and proportions (see `workspace/brand-mark.tsx`). Sign-in, invitation and recovery screens and the favicon keep the static logo.
 
 The brand's italic “Studios” lettering is part of the image, not the application's body typeface. Client artwork may have its own brand colors; application navigation, buttons, charts, and canvas controls remain monochrome. Both themes keep that rule; neither recolours artwork. The status badge is the one documented exception — see the Decision below — added at the user's request on 2026-09-24. Actual asset thumbnails replace the prototype's grey illustrative placeholders when a real file exists.
 
-**Decision**: status chrome differentiates by shape first, so status never reads from color alone, and now also carries a restrained hue per tone, added at the user's request on 2026-09-24. `.status-badge` styles four *meanings* rather than the enum values of any one domain: `neutral` (the base — a filled grey dot on the subtle surface), `active` (a hollow ring on a soft blue tint), `attention` (a dashed border on a soft amber tint) and `complete` (a solid green fill, full-strength text and a square dot). The three colored tones are `--tone-active-fg/-bg/-border` (`#1d4e89` / `#e7f0fb` / `#a9c6ea`), `--tone-attention-fg/-bg/-border` (`#7a5400` / `#fbf1dc` / `#e3bd6e`) and `--tone-complete-fg/-bg/-border` (`#2f5d34` / `#e7f0df` / `#a9c48a`, harmonizing with the board timeline's olive/green family below) in `app/globals.css`; foreground-on-background contrast measures 7.29:1 (active), 6.05:1 (attention) and 6.55:1 (complete) against the 4.5:1 WCAG AA floor for the 12 px badge text. Each domain maps its own enum onto that vocabulary in TypeScript beside its label map, so briefings, credit requests and projects read consistently and a new domain needs no new CSS — see [`features/shared/status-tone.ts`](../../apps/web/features/shared/status-tone.ts). The board timeline is the documented exception to sharing this exact palette: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
+**Decision**: status chrome differentiates by shape first, so status never reads from color alone, and now also carries a restrained hue per tone, added at the user's request on 2026-09-24. `.status-badge` styles four _meanings_ rather than the enum values of any one domain: `neutral` (the base — a filled grey dot on the subtle surface), `active` (a hollow ring on a soft blue tint), `attention` (a dashed border on a soft amber tint) and `complete` (a solid green fill, full-strength text and a square dot). The three colored tones are `--tone-active-fg/-bg/-border` (`#1d4e89` / `#e7f0fb` / `#a9c6ea`), `--tone-attention-fg/-bg/-border` (`#7a5400` / `#fbf1dc` / `#e3bd6e`) and `--tone-complete-fg/-bg/-border` (`#2f5d34` / `#e7f0df` / `#a9c48a`, harmonizing with the board timeline's olive/green family below) in `app/globals.css`; foreground-on-background contrast measures 7.29:1 (active), 6.05:1 (attention) and 6.55:1 (complete) against the 4.5:1 WCAG AA floor for the 12 px badge text. Each domain maps its own enum onto that vocabulary in TypeScript beside its label map, so briefings, credit requests and projects read consistently and a new domain needs no new CSS — see [`features/shared/status-tone.ts`](../../apps/web/features/shared/status-tone.ts). The board timeline is the documented exception to sharing this exact palette: at a 56 px lane a bar has no room for texture, and seven states have to be told apart across a dense grid, so `.timeline-project-bar` uses a restrained olive and amber family — the same families the calendar already used — stepped tonally per status. Measured text-to-fill contrast is 6.4:1 to 7.9:1 and bar edges are at least 3.0:1, and the dot shape still matches the badge so the two readings agree. Hue is additive here: the bar also carries its status in text, so the calendar does not rely on colour alone.
 
 ## Shared tokens
 
 The shared shell styles are implemented in [globals.css](../../apps/web/app/globals.css). The following product values reflect the September 23 unified UI refresh; measured reference values are identified separately. Functional and visual conformance remain subject to the audit gate.
 
-| Token | Target | Dark | Basis and use |
-|---|---|---|---|
-| `color.canvas` | `#f7f8fa` | `#131416` | Implemented lighter workspace; reference dominant background was `#ededed` |
-| `color.surface` | `#ffffff` | `#1c1e21` | Measured panels and topbar |
-| `color.surfaceSubtle` | `#f2f3f5` | `#25272b` | Implemented subtle control surface; reference used `#f4f4f4` |
-| `color.navigation` | `#202226` | `#0f1012` | Implemented dark navigation; reference was `#202020` |
-| `color.navigationActive` | `#36393f` | `#25272b` | Implemented selected navigation; reference was `#353535` |
-| `color.text` | `#272a30` | `#ececee` | Implemented primary copy, headings, icons |
-| `color.textMuted` | `#636872` | `#9ea1a8` | Implemented secondary text on light surfaces |
-| `color.textOnDark` | `#f5f6f8` | `#ececee` | Decision: primary navigation (filled controls: `--on-ink`) |
-| `color.textMutedOnDark` | `#b4b8c1` | `#a3a6ae` | Implemented secondary navigation copy |
-| `color.border` | `#e5e7eb` | `#28292c` | Implemented surface rules; measured home reference was `#e0e0e0` |
-| `color.controlBorder` | `#ccd0d7` | `#3a3c41` | Implemented stronger input boundary |
-| `color.primary` | `#272a30` | `#ececee` | Implemented filled primary action |
-| `color.focus` | `#272a30` | `#ececee` | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces |
-| `--on-ink` | `#fff` | `#131416` | Text on filled `--ink` controls |
-| `--canvas-background` | `#f3f4f6` | `#131416` | Shared board, project and single-design canvas surface |
-| `--canvas-grid` | `#c5c9d0` | `#363739` | Shared 24-unit dot grid, 1.5-unit dots; follows pan/zoom |
-| Playground canvas overrides | `#e9e9e2` / `#bdbdb2` | `#0f1012` / `#333438` | Slightly darker background and dots, scoped to the Playground canvas |
-| `radius.small` | `8px` | — | `--radius`. Implemented controls; reference was approximately 4 px |
-| `radius.medium` | `12px` | — | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners |
-| `radius.round` | `999px` | — | Decision: only avatars, pins, and circular marks. No token; one call site |
-| `text.xs` | `11px` | — | `--text-xs`. Compact annotations |
-| `text.sm` | `12px` | — | `--text-sm`. Timestamps, counts, badges, table headers and secondary metadata |
-| `text.base` | `13px` | — | `--text-base`. Navigation, supporting copy, small controls |
-| `text.lg` | `14px` | — | `--text-lg`. Inputs, labels, action copy, list titles |
-| `eyebrow.tracking` | `0.015em` | — | `--eyebrow-tracking`. The one tracking every eyebrow-shaped rule reads |
-| `space.xs` / `sm` / `md` / `lg` | `8` / `12` / `16` / `24px` | — | `--space-xs`…`--space-lg`. The four steps the stylesheets lean on most |
-| `space.page` | `40px` | — | `--space-page`. The page gutter |
-| `border.default` | `1px solid` | — | Measured surface separation |
-| `shadow.surface` | `none` | — | Shell/list/workspace cards use borders; draggable board cards have a subtle 2% shadow |
-| `shadow.overlay` | `0 20px 64px rgb(20 23 29 / 16%)` | `0 20px 64px rgb(0 0 0 / 55%)` | Implemented dialogs only |
+| Token                           | Target                            | Dark                           | Basis and use                                                                         |
+| ------------------------------- | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
+| `color.canvas`                  | `#f7f8fa`                         | `#131416`                      | Implemented lighter workspace; reference dominant background was `#ededed`            |
+| `color.surface`                 | `#ffffff`                         | `#1c1e21`                      | Measured panels and topbar                                                            |
+| `color.surfaceSubtle`           | `#f2f3f5`                         | `#25272b`                      | Implemented subtle control surface; reference used `#f4f4f4`                          |
+| `color.navigation`              | `#202226`                         | `#0f1012`                      | Implemented dark navigation; reference was `#202020`                                  |
+| `color.navigationActive`        | `#36393f`                         | `#25272b`                      | Implemented selected navigation; reference was `#353535`                              |
+| `color.text`                    | `#272a30`                         | `#ececee`                      | Implemented primary copy, headings, icons                                             |
+| `color.textMuted`               | `#636872`                         | `#9ea1a8`                      | Implemented secondary text on light surfaces                                          |
+| `color.textOnDark`              | `#f5f6f8`                         | `#ececee`                      | Decision: primary navigation (filled controls: `--on-ink`)                            |
+| `color.textMutedOnDark`         | `#b4b8c1`                         | `#a3a6ae`                      | Implemented secondary navigation copy                                                 |
+| `color.border`                  | `#e5e7eb`                         | `#28292c`                      | Implemented surface rules; measured home reference was `#e0e0e0`                      |
+| `color.controlBorder`           | `#ccd0d7`                         | `#3a3c41`                      | Implemented stronger input boundary                                                   |
+| `color.primary`                 | `#272a30`                         | `#ececee`                      | Implemented filled primary action                                                     |
+| `color.focus`                   | `#272a30`                         | `#ececee`                      | Implemented 2 px ring with 4 px offset; inverted ring on dark surfaces                |
+| `--on-ink`                      | `#fff`                            | `#131416`                      | Text on filled `--ink` controls                                                       |
+| `--canvas-background`           | `#f3f4f6`                         | `#131416`                      | Shared board, project and single-design canvas surface                                |
+| `--canvas-grid`                 | `#c5c9d0`                         | `#363739`                      | Shared 24-unit dot grid, 1.5-unit dots; follows pan/zoom                              |
+| Playground canvas overrides     | `#e9e9e2` / `#bdbdb2`             | `#0f1012` / `#333438`          | Slightly darker background and dots, scoped to the Playground canvas                  |
+| `radius.small`                  | `8px`                             | —                              | `--radius`. Implemented controls; reference was approximately 4 px                    |
+| `radius.medium`                 | `12px`                            | —                              | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners        |
+| `radius.round`                  | `999px`                           | —                              | Decision: only avatars, pins, and circular marks. No token; one call site             |
+| `text.xs`                       | `11px`                            | —                              | `--text-xs`. Compact annotations                                                      |
+| `text.sm`                       | `12px`                            | —                              | `--text-sm`. Timestamps, counts, badges, table headers and secondary metadata         |
+| `text.base`                     | `13px`                            | —                              | `--text-base`. Navigation, supporting copy, small controls                            |
+| `text.lg`                       | `14px`                            | —                              | `--text-lg`. Inputs, labels, action copy, list titles                                 |
+| `eyebrow.tracking`              | `0.015em`                         | —                              | `--eyebrow-tracking`. The one tracking every eyebrow-shaped rule reads                |
+| `space.xs` / `sm` / `md` / `lg` | `8` / `12` / `16` / `24px`        | —                              | `--space-xs`…`--space-lg`. The four steps the stylesheets lean on most                |
+| `space.page`                    | `40px`                            | —                              | `--space-page`. The page gutter                                                       |
+| `border.default`                | `1px solid`                       | —                              | Measured surface separation                                                           |
+| `shadow.surface`                | `none`                            | —                              | Shell/list/workspace cards use borders; draggable board cards have a subtle 2% shadow |
+| `shadow.overlay`                | `0 20px 64px rgb(20 23 29 / 16%)` | `0 20px 64px rgb(0 0 0 / 55%)` | Implemented dialogs only                                                              |
 
 Spacing uses `4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 64px`. These form an inferred four-pixel scale. Prefer 8–12 px within a compact control group, 16–24 px inside panels, 24–32 px between sections, and 36–40 px at large content boundaries. Add a new spacing value only when a named component requires it.
 
@@ -83,27 +83,27 @@ Controls use 40 px standard and 32 px compact heights, with the existing larger 
 
 ## Reference geometry and fresh shell decisions
 
-The following measurements explain the source hierarchy. They are not pixel-level acceptance constraints. The current implementation uses a 248 px desktop sidebar. Non-client document pages have a 64 px topbar, 40 px desktop content inset and 1280 px maximum wrapper including padding; client surfaces use the floating layout described above. The sidebar narrows to 224 px below 1200 px and becomes a drawer below 901 px. The collapsed desktop rail is 76 px. The project inspector is 380 px wide with viewport insets on phones. Let the canvas fill the remaining work area; avoid stacking multiple persistent toolbars above it.
+The following measurements explain the source hierarchy. They are not pixel-level acceptance constraints. The current implementation uses a 216 px desktop sidebar. Non-client document pages have a 64 px topbar, 40 px desktop content inset and 1280 px maximum wrapper including padding; client surfaces use the floating layout described above. The sidebar narrows to 204 px below 1200 px and becomes a drawer below 901 px. The collapsed desktop rail is 76 px. The project inspector is 380 px wide with viewport insets on phones. Let the canvas fill the remaining work area; avoid stacking multiple persistent toolbars above it.
 
-| Region | Desktop target | Evidence / behavior |
-|---|---|---|
-| Sidebar | 248 px wide, full viewport height | Measured agency, client, and designer captures |
-| Brand area | Approximately 82 px tall; 20 px horizontal inset | Inferred from home capture |
-| Navigation row | 36 px high; 12 px outer inset | Measured home selection is x=12 to x=236 |
-| Client navigation | One searchable client switcher and a flat icon list | The active workspace stays clear even with many clients |
-| Topbar | 56 px high | Measured boundary y=56 |
-| Board/project action bar | Approximately 56 px high | Measured breadcrumb/action row below topbar; the board now folds this row into its identity header |
-| Board filter strip | Approximately 58 px high in the reference | Current filters open from the floating left toolbar |
-| Canvas bottom toolbar | 42 px high in the reference | Current zoom pill anchors to the bottom of the floating tool dock |
-| Home and credits content | Approximately 1052 px maximum width, centered in main region | Measured x=398–1450 on home/credits |
-| Home top content inset | 40 px below topbar | Inferred page eyebrow y≈100 |
-| Home metric strip | 96 px high, six equal cells on wide screens | Measured x=398–1450, y=208–304 |
-| Home attention list | Approximately 64 px rows | Measured list boundaries; allow growth for long text |
-| Wide page inset | 32–36 px | Board, Brand Hub, and briefing captures |
-| Project inspector | Approximately 336 px | Measured starts at x=1264 |
-| Design comments panel | Approximately 340 px | Measured starts at x=1260 |
-| Brief summary | Approximately 270 px, 28 px gap from wizard | Measured starts at x=1294 on briefing detail |
-| Brand Hub secondary nav | Approximately 186 px, 32 px gap | Measured x=284–470, main content starts x=502 |
+| Region                   | Desktop target                                               | Evidence / behavior                                                                                |
+| ------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Sidebar                  | 248 px wide, full viewport height                            | Measured agency, client, and designer captures                                                     |
+| Brand area               | Approximately 82 px tall; 20 px horizontal inset             | Inferred from home capture                                                                         |
+| Navigation row           | 36 px high; 12 px outer inset                                | Measured home selection is x=12 to x=236                                                           |
+| Client navigation        | One searchable client switcher and a flat icon list          | The active workspace stays clear even with many clients                                            |
+| Topbar                   | 56 px high                                                   | Measured boundary y=56                                                                             |
+| Board/project action bar | Approximately 56 px high                                     | Measured breadcrumb/action row below topbar; the board now folds this row into its identity header |
+| Board filter strip       | Approximately 58 px high in the reference                    | Current filters open from the floating left toolbar                                                |
+| Canvas bottom toolbar    | 42 px high in the reference                                  | Current zoom pill anchors to the bottom of the floating tool dock                                  |
+| Home and credits content | Approximately 1052 px maximum width, centered in main region | Measured x=398–1450 on home/credits                                                                |
+| Home top content inset   | 40 px below topbar                                           | Inferred page eyebrow y≈100                                                                        |
+| Home metric strip        | 96 px high, six equal cells on wide screens                  | Measured x=398–1450, y=208–304                                                                     |
+| Home attention list      | Approximately 64 px rows                                     | Measured list boundaries; allow growth for long text                                               |
+| Wide page inset          | 32–36 px                                                     | Board, Brand Hub, and briefing captures                                                            |
+| Project inspector        | Approximately 336 px                                         | Measured starts at x=1264                                                                          |
+| Design comments panel    | Approximately 340 px                                         | Measured starts at x=1260                                                                          |
+| Brief summary            | Approximately 270 px, 28 px gap from wizard                  | Measured starts at x=1294 on briefing detail                                                       |
+| Brand Hub secondary nav  | Approximately 186 px, 32 px gap                              | Measured x=284–470, main content starts x=502                                                      |
 
 Agency Home summarizes only authorized studio data and provides one attention queue. Client Home opens that client's board. Designer My work lists assigned production work. Counts must derive from the same scoped data used by the corresponding list; the screenshot's fixture counts are not production values. Navigation must not imply access to unassigned client work.
 
@@ -212,7 +212,7 @@ Opening a design presents the artwork on the canvas and comments to its right. T
 
 Pins are stored relative to the design's intrinsic coordinate space, not screen pixels. They must remain anchored after pan, zoom, resize, fit-to-view, reopening, and publication. Pin selection highlights its thread; selecting a thread highlights its pin. A pending pin is visibly distinct until its comment is saved. Moving between designs, versions, or channels must not show unrelated pins or retain an unsent draft on the wrong design.
 
-A video design plays in the same viewer slot an image occupies, with native controls in place of the click-to-zoom canvas interaction — the design still sits inside the same xyflow node, but the node hosts a `<video>` element instead of an `<img>`. Placing a pin on a still image needs only a point; placing one on video needs a point *and* a moment, so the pin tool pauses playback on click and records the player's exact `currentTime` alongside the click coordinate as the pin's `pin_t`, in seconds from the start of the file. A pin with no time belongs to a still image and is always shown; a video's pins are windowed to the ones near the current playhead position so a long recording with many comments does not paint every pin over the same frame at once. Below the player, a marker track lays out every timed comment along the video's duration as a row of position-proportional buttons — the calendar-strip idiom applied to a timeline instead of a date range — and clicking one seeks the player to that pin's moment and selects its thread, the same cross-highlight relationship a spatial pin already has with its comment.
+A video design plays in the same viewer slot an image occupies, with native controls in place of the click-to-zoom canvas interaction — the design still sits inside the same xyflow node, but the node hosts a `<video>` element instead of an `<img>`. Placing a pin on a still image needs only a point; placing one on video needs a point _and_ a moment, so the pin tool pauses playback on click and records the player's exact `currentTime` alongside the click coordinate as the pin's `pin_t`, in seconds from the start of the file. A pin with no time belongs to a still image and is always shown; a video's pins are windowed to the ones near the current playhead position so a long recording with many comments does not paint every pin over the same frame at once. Below the player, a marker track lays out every timed comment along the video's duration as a row of position-proportional buttons — the calendar-strip idiom applied to a timeline instead of a date range — and clicking one seeks the player to that pin's moment and selects its thread, the same cross-highlight relationship a spatial pin already has with its comment.
 
 ## Playground canvas
 
@@ -244,12 +244,12 @@ The reference Brand Hub contains ten sections: Brand Overview, Logos, Colors, Ty
 
 No responsive captures exist in the package. These are implementation decisions to validate, not inferred mobile designs.
 
-| Viewport | Required adaptation |
-|---|---|
-| 1600 × 1000 | Full shell and side panels; assess the fresh design against the principles, not pixel identity |
-| 1440 × 900 | Normal desktop; maintain a clear hierarchy with fluid canvas and centered content |
-| 1024 × 768 | Collapsible sidebar; inspectors become overlays if canvas would be unusably narrow; metrics wrap to three columns |
-| 768 × 1024 | Navigation drawer; Brand Hub section links scroll inside their row; briefing summary collapses; metrics wrap to two columns |
+| Viewport                | Required adaptation                                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1600 × 1000             | Full shell and side panels; assess the fresh design against the principles, not pixel identity                                   |
+| 1440 × 900              | Normal desktop; maintain a clear hierarchy with fluid canvas and centered content                                                |
+| 1024 × 768              | Collapsible sidebar; inspectors become overlays if canvas would be unusably narrow; metrics wrap to three columns                |
+| 768 × 1024              | Navigation drawer; Brand Hub section links scroll inside their row; briefing summary collapses; metrics wrap to two columns      |
 | 390 × 844 and 320 × 800 | Single-column forms and lists; menus contain secondary actions; controls remain reachable; canvas pans inside its bounded region |
 
 Document-level horizontal overflow is a defect. Timeline and canvas may pan or scroll within a visibly bounded, labeled region. Tables may scroll horizontally within their own region or use equivalent stacked rows while preserving headers and action labels. Never scale the entire application down to fit a phone. At narrow widths, a bounded artwork canvas is followed by the feedback panel in a scrolling viewer body, preserving draft and selection. Short windows also scroll the viewer body to keep the floating header and viewer controls clear. Dialogs fit the viewport and scroll internally when necessary; their close and confirmation actions remain available.
@@ -274,18 +274,18 @@ The same project entity drives Home, Board, Reviews, Credits links, and notifica
 
 One concept, one word. The interface uses these nouns and no synonym of them:
 
-| Concept | Word | Not |
-|---|---|---|
-| A client organisation | **Client** | workspace, client workspace |
-| The studio's own account and settings | **Studio** | workspace |
-| The required output a briefing commissions | **Deliverable** | — |
-| The image produced inside a version | **Design** | artwork |
-| A downloadable file on `/clients/:id/assets` | **File**, and **Working file** for a source upload | asset |
-| A file in the Brand Hub library | **Asset** | file, resource |
-| A brief document | **Briefing** | brief |
-| A person a project is assigned to | **Designer** | creative partner |
-| A record on `/notifications` | **Notification** | update |
-| The billing unit | **credits** | cr |
+| Concept                                      | Word                                               | Not                         |
+| -------------------------------------------- | -------------------------------------------------- | --------------------------- |
+| A client organisation                        | **Client**                                         | workspace, client workspace |
+| The studio's own account and settings        | **Studio**                                         | workspace                   |
+| The required output a briefing commissions   | **Deliverable**                                    | —                           |
+| The image produced inside a version          | **Design**                                         | artwork                     |
+| A downloadable file on `/clients/:id/assets` | **File**, and **Working file** for a source upload | asset                       |
+| A file in the Brand Hub library              | **Asset**                                          | file, resource              |
+| A brief document                             | **Briefing**                                       | brief                       |
+| A person a project is assigned to            | **Designer**                                       | creative partner            |
+| A record on `/notifications`                 | **Notification**                                   | update                      |
+| The billing unit                             | **credits**                                        | cr                          |
 
 Deliverable, asset, working file and design are four different things and are never merged.
 `features/workspace/` keeps its directory name because it is the application shell, not a client

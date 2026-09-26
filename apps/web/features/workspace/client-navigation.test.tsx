@@ -13,22 +13,9 @@ const labels = () =>
     .map((link) => link.textContent);
 
 describe("ClientNavigation", () => {
-  it("opens with Overview for clients and the studio", () => {
+  it("leaves Overview to the sidebar for clients and the studio", () => {
     render(<ClientNavigation client={client} role="client" />);
-    expect(labels()).toEqual([
-      "Overview",
-      "Board",
-      "Briefings",
-      "Reviews",
-      "Files",
-      "Brand Hub",
-      "Credits",
-    ]);
-    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
-      "href",
-      "/clients/c1/overview",
-    );
+    expect(labels()).toEqual(["Board", "Briefings", "Reviews", "Files", "Brand Hub", "Credits"]);
   });
 
   it("keeps designers on their five destinations", () => {

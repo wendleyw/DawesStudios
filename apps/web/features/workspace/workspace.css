@@ -401,10 +401,23 @@
   flex: 1;
   overflow-wrap: anywhere;
 }
-.client-switcher-option .client-initials {
-  background: var(--surface-subtle);
-  color: var(--muted);
-  border-color: var(--border);
+/* The selected client's logo in the dark sidebar: uploaded logos are often dark marks on
+   transparency, so the image always sits on a light plate here; initials take the sidebar's tones. */
+.client-switcher-mark {
+  --client-mark-size: 28px;
+}
+/* The sidebar is dark in both themes, so the plate is the same light value in both. */
+img.client-switcher-mark {
+  background: light-dark(#f4f4f5, #f4f4f5);
+  box-shadow: 0 0 0 3px light-dark(#f4f4f5, #f4f4f5);
+}
+.client-switcher-trigger .client-mark-initials {
+  border-color: var(--sidebar-border);
+  background: var(--sidebar-active);
+  color: var(--sidebar-muted);
+}
+.client-switcher-option-mark {
+  --client-mark-size: 24px;
 }
 .client-switcher-option:hover,
 .client-switcher-option[aria-current] {

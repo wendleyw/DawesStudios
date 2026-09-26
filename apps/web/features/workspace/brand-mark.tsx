@@ -12,8 +12,8 @@ function subscribeToMotionPreference(onChange: () => void) {
 }
 
 /**
- * The studio's mark at the top of the sidebar. The animation plays once when the app opens and
- * rests on the finished mark; it is silent decoration, because the link around it carries the
+ * The studio's mark at the top of the sidebar. The animation plays when the app opens, rests on
+ * the finished mark for ten seconds, and plays again; it is silent decoration, because the link around it carries the
  * name. With reduced motion, or where the browser cannot play it, the finished mark shows as a
  * still. `public/brand/logo-mark.webm` is a small, silent, inverted cut of the master file
  * `brand/logo-animation.webm`, screened onto the sidebar by `.brand-mark` in `workspace.css`.
@@ -32,6 +32,19 @@ export function BrandMark() {
     // Browsers only autoplay muted media, and React does not reflect `muted` as an attribute.
     element.muted = true;
     element.play().catch(() => {});
+    // After each run the finished mark rests for ten seconds, then the animation plays again.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const replay = () => {
+      timer = setTimeout(() => {
+        element.currentTime = 0;
+        element.play().catch(() => {});
+      }, 10_000);
+    };
+    element.addEventListener("ended", replay);
+    return () => {
+      element.removeEventListener("ended", replay);
+      clearTimeout(timer);
+    };
   }, [reducedMotion, failed]);
 
   if (reducedMotion || failed)

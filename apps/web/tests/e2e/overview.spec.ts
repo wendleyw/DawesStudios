@@ -168,7 +168,7 @@ test("the studio sees a client's Overview as the client does", async ({ page, br
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`What ${client.name} sees`);
   await expect(
     page
-      .getByRole("navigation", { name: `${client.name} navigation`, exact: true })
+      .getByRole("navigation", { name: "Main navigation", exact: true })
       .getByRole("link", { name: "Overview", exact: true }),
   ).toHaveAttribute("aria-current", "page");
 
