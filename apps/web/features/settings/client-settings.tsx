@@ -16,7 +16,7 @@ import {
   useInvalidateClients,
 } from "./settings-data";
 import { CampaignSettings } from "./campaign-settings";
-import { InvitePerson } from "@/features/team/team-page";
+import { ClientPeopleDialog } from "@/features/team/client-people-dialog";
 import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
 import { ClientMark } from "@/features/workspace/client-mark";
@@ -28,7 +28,7 @@ export function ClientSettings() {
   const [logoClientId, setLogoClientId] = useState<string | null>(null);
   // Read from the live list, so the dialog shows the logo that was just saved.
   const logoClient = clients.data?.find((client) => client.id === logoClientId);
-  const [inviting, setInviting] = useState<string | null>(null);
+  const [peopleClient, setPeopleClient] = useState<Client | null>(null);
   const [notice, setNotice] = useState("");
   return (
     <section className="settings-block">
@@ -71,8 +71,12 @@ export function ClientSettings() {
               <button className="button quiet" onClick={() => setCampaignClient(client)}>
                 Campaigns
               </button>
-              <button className="button quiet" onClick={() => setInviting(client.id)}>
-                Invite
+              <button
+                className="button quiet"
+                aria-label={`${client.name} people`}
+                onClick={() => setPeopleClient(client)}
+              >
+                People
               </button>
               <button className="button quiet" onClick={() => setEditing(client)}>
                 Edit
@@ -115,14 +119,11 @@ export function ClientSettings() {
           }}
         />
       )}
-      {inviting && (
-        <InvitePerson
-          clientId={inviting}
-          onClose={() => setInviting(null)}
-          onSent={() => {
-            setInviting(null);
-            setNotice("Invitation email sent.");
-          }}
+      {peopleClient && (
+        <ClientPeopleDialog
+          clientId={peopleClient.id}
+          clientName={peopleClient.name}
+          onClose={() => setPeopleClient(null)}
         />
       )}
     </section>

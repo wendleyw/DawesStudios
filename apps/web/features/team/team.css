@@ -29,3 +29,14 @@
   color: light-dark(#65655e, #a3a39b);
   flex-shrink: 0;
 }
+/* Settings → Clients → People: the client's people, pending invitations, then Invite person. */
+.client-people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+.client-people h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}

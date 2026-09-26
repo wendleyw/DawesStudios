@@ -965,6 +965,7 @@ img.client-mark {
   color: var(--muted);
   line-height: 1.6;
   margin: 7px 0 0;
+  overflow-wrap: anywhere;
 }
 .settings-dialog-actions {
   display: flex;
