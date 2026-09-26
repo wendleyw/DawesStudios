@@ -21,7 +21,7 @@ import { CanvasHeader } from "./canvas-header";
 import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
-import { BrandMark } from "./brand-mark";
+import { BrandMark } from "@/features/shared/brand-mark";
 import { ClientSwitcher } from "./client-switcher";
 import { NotificationsBell } from "./notifications-bell";
 import { ThemeToggle } from "./theme-toggle";

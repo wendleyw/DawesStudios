@@ -210,9 +210,9 @@ sidebar no longer uses `.brand-logo`, which moved to `auth.css` with its one rem
 
 ## Sidebar brand lockup
 
-The top of the sidebar shows the animated studio mark beside the wordmark. `brand-mark.tsx` plays
-`public/brand/logo-mark.webm` once when the shell mounts (muted, inline, no loop) and it rests on
-the finished mark; with reduced motion, or if the video cannot play, it shows the still
+The top of the sidebar shows the animated studio mark beside the wordmark. `shared/brand-mark.tsx`
+plays `public/brand/logo-mark.webm` when the shell mounts (muted, inline), rests on the finished mark
+for ten seconds and plays again; with reduced motion, or if the video cannot play, it shows the still
 `public/brand/logo-mark.webp` instead. Both are decorative: the link's label carries the name. The
 wordmark is `public/brand/wordmark.webp`, cut from `logo.webp` at x = 589. `workspace.css` lays the
 lockup out in `logo.webp`'s own units (`--brand-unit`), so the finished mark lands where the static

@@ -22,6 +22,15 @@ The CSS-only `.section-tabs` primitive is consumed by `brand/brand-page`, `brief
 
 ## Components
 
+### Brand mark
+
+`BrandMark` (`brand-mark.tsx`) is the studio's animated mark: `public/brand/logo-mark.webm` plays,
+rests on the finished mark for ten seconds and plays again, or shows the still
+`public/brand/logo-mark.webp` with reduced motion or when the video cannot play. It is decorative
+and carries its own `.brand-mark` class; each consumer sizes and screens it. Consumers:
+`workspace/app-shell` (the sidebar lockup) and `projects/project-tool-bar` (a tile in the menu
+colour beside the first tool).
+
 ### Canvas background and controls
 
 `CanvasBackground` (`canvas-background.tsx`) renders a 24-unit dot grid (1.5-unit dots, after the

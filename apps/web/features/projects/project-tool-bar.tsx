@@ -2,11 +2,13 @@
 
 import { Info, MessageSquare } from "lucide-react";
 import type { ReactNode } from "react";
+import { BrandMark } from "@/features/shared/brand-mark";
 import type { ProjectPanelKind } from "./project-panel";
 
 /**
- * The project's tools float at the bottom of its canvas, as on a design canvas: the two side
- * panels, a divider, then the page's own actions (the Playground).
+ * The project's tools float at the bottom of its canvas, as on a design canvas: the studio's
+ * animated mark (branding, not a control), the two side panels, a divider, then the page's own
+ * actions (the Playground).
  */
 export function ProjectToolBar({
   panel,
@@ -21,6 +23,9 @@ export function ProjectToolBar({
 }) {
   return (
     <div className="project-tool-bar" role="group" aria-label="Project actions">
+      <span className="project-tool-bar-brand" aria-hidden="true">
+        <BrandMark />
+      </span>
       <button
         type="button"
         className={`icon-button ${panel === "details" ? "selected" : ""}`}

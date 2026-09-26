@@ -1,6 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+// The animated mark is decorative and needs a browser's matchMedia; its own test covers it.
+vi.mock("@/features/shared/brand-mark", () => ({ BrandMark: () => null }));
+
 import { ProjectToolBar } from "./project-tool-bar";
 
 const playground = (

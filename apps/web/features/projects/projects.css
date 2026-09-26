@@ -535,6 +535,26 @@
   color: var(--foreground);
   box-shadow: inset 0 0 0 1px var(--border);
 }
+/* The studio's animated mark, white on the menu colour, as a tile beside the first tool. */
+.project-tool-bar-brand {
+  display: flex;
+  width: var(--control-height);
+  height: var(--control-height);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--menu-surface);
+}
+.project-tool-bar-brand > .brand-mark {
+  width: auto;
+  height: 28px;
+}
+/* The animation is stored as a white mark on black; screening drops the black into the tile. */
+.project-tool-bar-brand > video.brand-mark {
+  mix-blend-mode: screen;
+}
 .project-tool-bar-divider {
   width: 1px;
   height: 24px;

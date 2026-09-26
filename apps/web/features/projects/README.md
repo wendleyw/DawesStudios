@@ -19,6 +19,8 @@ bottom of the canvas. While a side panel is open the bar re-centres in the space
 pill and the panel; on canvases narrower than 800 px it hides until the panel closes. The open
 panel's button is selected. On phones it moves to the bottom right with touch-sized buttons, clear of
 the zoom pill. It is not shown while reviewing a design; the viewer keeps its own Playground button.
+The bar opens with the studio's animated mark (`shared/brand-mark.tsx`) in a tile of the menu
+colour, as branding rather than a control.
 The Playground (or, in Miro mode, its asset strip) and the side panels do not stack: opening the
 Playground closes an open panel, and opening a panel closes the asset strip.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.
