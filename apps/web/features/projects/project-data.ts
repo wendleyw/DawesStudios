@@ -608,7 +608,7 @@ export async function createDesignVersion(
 
 /*
  * `findUnchangedDesign` and `findDesignByAsset` are plain functions rather than `use<Thing>()`
- * hooks. Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx`, where a
+ * hooks. Both are called from inside `mutation.mutationFn` in `project-action-design.tsx`, where a
  * hook cannot be called at all, so the contract's read rule cannot apply — see the `Reads that
  * cannot be hooks` rule in `docs/architecture/data-access.md` and this feature's `README.md`.
  *

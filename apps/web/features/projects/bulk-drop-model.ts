@@ -176,7 +176,7 @@ export function deriveDesignTitle(fileName: string): string {
 }
 
 /**
- * The same default text-field shape `project-action-dialog.tsx` writes for a plain image upload
+ * The same default text-field shape `project-action-design.tsx` writes for a plain image upload
  * (`headline` defaulted to the title, empty body/eyebrow, the two default swatch colors) — kept
  * identical so a bulk-dropped design renders exactly like one added through Add design.
  */
