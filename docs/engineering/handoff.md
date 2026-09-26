@@ -1,7 +1,7 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT. Owner: **Claude Code**. `dawesstudios-29` finished the repo-wide audit,
-refactor and complete test after `dawesstudios-71` finished Miro links; no session holds the tree.
+Updated: 2026-09-26 EDT. Owner: **Claude Code**. Session `dawesstudios-8c` finished Miro mode after
+the repo-wide audit; no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -17,15 +17,13 @@ history only when a task needs earlier evidence.
 
 ## Done (2026-09-26)
 
-**System audit, refactor and complete test** (`5519811..c2a104f`,
-[verification](../verification/system-audit-2026-09-26.md)): three read-only audits, then reviewed
-fixes. Expired invitations leave People; one shared helper each for credit counts, outside-click
-dismissal and bounded concurrency; the project action dialog is split by action; briefing size
-limits and an `adjust_credits` lock (`202609260003`); pgTAP for six uncovered security-definer
-functions; three browser specs updated for the 2026-09-24 product changes.
-
-Earlier on 2026-09-26: Miro frame links and client people
-([history](history/handoff-2026-09-26.md)); before: [2026-09-25](history/handoff-2026-09-25.md).
+**Miro mode** ([spec](../superpowers/specs/2026-09-26-miro-mode-design.md),
+[plan](../superpowers/plans/2026-09-26-miro-mode.md), `4ce756b..f6db41f`): the project page switches
+its canvas to the version's Miro board (**Versions | Miro** in the header or **View on Miro** on a card,
+`?view=miro&version=`); the tool bar and side panels stay; the Playground button opens an asset strip
+whose images copy as PNG for pasting into Miro (drag into the embed does not work — user-tested).
+The full-screen Miro panel is gone. [Verification](../verification/miro-mode-2026-09-26.md).
+Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress
 
@@ -48,7 +46,8 @@ Earlier on 2026-09-26: Miro frame links and client people
 - **Client people:** one login each, managed only by the studio; everyone at a client has the same
   permissions; designers see neither requester nor reviewer.
 - **Miro:** product → Miro only (no API, no sync); one link per version and channel; agency-only
-  writes; prefill never crosses channels; the raw URL is never stored or framed.
+  writes; prefill never crosses channels; the raw URL is never stored or framed. Miro is a view
+  of the project page; assets reach it by copy and paste only.
 
 ## Environment (observed 2026-09-26)
 
@@ -66,7 +65,8 @@ Earlier on 2026-09-26: Miro frame links and client people
 - Complete test at `1e6a675`: `npm run check` 1168 tests / 109 files; media 70/70 and its live
   integration 15/15; `supabase test db` 25 files / 633 tests (only the six known overlay failures);
   `next build` passes; all 34 browser specs 105 passed, 3 skipped, 8 failed — the 5 known overlay
-  counts plus 3 stale specs, fixed and green twice each in `c2a104f`. Miro evidence: its record.
+  counts plus 3 stale specs, fixed and green twice each in `c2a104f`.
+- Miro mode at `f6db41f`: `npm run check` 1200 tests / 113 files; Miro + CSP browser specs green.
 
 ## Open gaps
 
@@ -83,8 +83,8 @@ Earlier on 2026-09-26: Miro frame links and client people
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 - Safari and Firefox not run; zoom pill and project bar centres differ by 4–6 px (parked); What's
   moving has no overdue cue; pgTAP does not call `mark_project_delivered` (a browser test does).
-- Miro: real-board embed unchecked (needs a user board); Escape is inert inside the cross-origin
-  embed (Back to project stays visible); an open panel keeps its link until reopened.
+- Miro: Escape is inert inside the cross-origin embed; the embed signs in only if Miro allows
+  third-party cookies (Open in Miro stays visible); copy needs a browser with image clipboard support.
 - Client people: a person in one client cannot accept an invitation to a second, nor a removed one be
   re-invited (`accept_invitation`); the canvas version panel omits the reviewer's name (parked).
 
@@ -93,8 +93,7 @@ Earlier on 2026-09-26: Miro frame links and client people
 **Production setup (user-deferred on 2026-09-23):** follow the
 [production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
-1. The user's look at client people and the Miro links (publish dialog field, card button, panel);
-   a real Miro board for the pending embed check.
+1. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
 2. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
    default is "Dawes Studio"). To preview Meta ads, set `META_AD_LIBRARY_ACCESS_TOKEN`.
