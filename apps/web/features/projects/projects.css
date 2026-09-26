@@ -29,30 +29,91 @@
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-/* Miro mode's deliverable bar: the name centred between the version toggle and "Open in Miro", in
-   the same equal-sided grid as the title row above it. */
-.project-header.miro-title-bar {
-  display: grid;
-  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+/* Miro mode folds the header into one compact bar so the board keeps the height. */
+.project-header.miro-bar {
+  display: flex;
   align-items: center;
-  gap: 14px;
-  padding-block: 8px;
-  text-align: center;
+  gap: 12px;
+  padding: 6px 8px;
 }
-.miro-title-bar > .segmented-control {
-  justify-self: start;
+.miro-bar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-.miro-title-bar > .segmented-control button {
+.miro-bar-title > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.miro-bar-title > span:first-child {
+  flex-shrink: 1000;
+  color: var(--muted);
+}
+.miro-bar-title > span:nth-child(2) {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-weight: 400;
+}
+.miro-bar .segmented-control {
+  flex-shrink: 0;
+}
+.miro-bar .segmented-control button {
   min-height: 26px;
   padding: 3px 10px;
   font-size: var(--text-xs);
 }
-.miro-title-bar > .button {
-  justify-self: end;
+.miro-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.miro-bar-actions > .button {
   min-height: 34px;
   padding: 5px 10px;
   border-color: var(--border);
   font-size: var(--text-xs);
+}
+.miro-bar-menu {
+  position: relative;
+}
+.miro-bar-popover {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: max-content;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
+}
+.miro-bar-popover > select {
+  padding: 6px 28px 6px 10px;
+  font-size: var(--text-xs);
+}
+@media (max-width: 639px) {
+  .project-header.miro-bar {
+    flex-wrap: wrap;
+  }
+  .miro-bar-title {
+    flex: 1;
+  }
+  .miro-bar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 /* Equal flexible sides keep the title centred between the back arrow and the credits chip. */
 .project-title-row {
@@ -75,9 +136,7 @@
   min-width: 0;
   text-align: center;
 }
-/* Miro mode's deliverable name takes the title's style, smaller (sized in the rule after this one). */
-.project-heading h1,
-.miro-title-bar > h2 {
+.project-heading h1 {
   min-width: 0;
   margin: 0;
   font-size: 28px;
@@ -87,9 +146,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.miro-title-bar > h2 {
-  font-size: 18px;
 }
 .project-heading > div {
   display: flex;
@@ -1258,16 +1314,12 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  .project-heading h1,
-  .miro-title-bar > h2 {
+  .project-heading h1 {
     font-size: 20px;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-  }
-  .miro-title-bar > h2 {
-    font-size: 16px;
   }
   .project-title-row {
     gap: 6px;

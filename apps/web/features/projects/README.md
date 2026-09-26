@@ -295,11 +295,14 @@ one, and `readProjectView`/`writeProjectView` keep `view=miro` and `version=<id>
 reload or a shared link returns to the same frame. `project-page.tsx` mounts `MiroView`
 (`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`visibility:
 hidden`, `aria-hidden`) rather than unmounting, so switching back to **Versions** is instant. The
-header adds a second, smaller bar under the title's, `MiroTitleBar` (same file): the deliverable's
-name (in the title's style) between a **Miro version** toggle (`V1`, `V2`, … — the linked versions of
-the shown deliverable, oldest first; the deliverable filter changes the deliverable) and **Open in
-Miro** (`miroBoardUrl`, `target="_blank"` — the embed can fail to sign in behind third-party-cookie
-restrictions, so this link is the way through to the real board regardless). `MiroView` renders the optional asset strip and
+header folds into one compact bar, `MiroBar` (same file), so the board keeps the height: back, `Project
+title / Deliverable`, a **Miro version** toggle (`V1`, `V2`, … — the linked versions of the shown
+deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miroBoardUrl`,
+`target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
+is the way through to the real board regardless) and a **More** menu holding the agency's channel
+switch and the deliverable filter (which changes the deliverable). Status, due date and credits are
+left to Versions. The sidebar folds while Miro mode is shown (`useFoldSidebarWhile` from
+`workspace/app-shell.tsx`) and returns to its previous state on leaving. `MiroView` renders the optional asset strip and
 `iframe.miro-view-frame`, which runs from the header to the bottom edge with the tool bar floating
 over it (on phones, where the bar sits over Miro's zoom controls, the embed stops above the bar); the
 iframe is rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with

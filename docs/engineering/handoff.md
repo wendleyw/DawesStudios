@@ -22,8 +22,8 @@ history only when a task needs earlier evidence.
 its canvas to the version's Miro board (**Versions | Miro** in the header or **View on Miro** on a card,
 `?view=miro&version=`); the tool bar and side panels stay; the Playground button opens an asset strip
 whose images copy as PNG for pasting into Miro (drag into the embed does not work — user-tested).
-The full-screen Miro panel is gone. Later: a second header bar holds the deliverable name, a version
-toggle and **Open in Miro**; the embed runs under the floating tool bar (phones: below).
+The full-screen Miro panel is gone. Later: one compact header bar (title / deliverable, versions, More
+menu), folded sidebar, Miro's top bar cropped; being tested by the user.
 Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress

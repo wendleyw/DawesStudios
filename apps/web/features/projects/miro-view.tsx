@@ -1,34 +1,53 @@
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowUpRight, MoreHorizontal } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
+import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
 import { miroBoardUrl, miroEmbedUrl, type MiroLink } from "./miro-links";
 import { miroVersionLabel } from "./miro-mode";
 import type { CanvasVersion } from "./project-data";
 
-type MiroFrame = CanvasVersion & { miro: MiroLink };
+export type MiroFrame = CanvasVersion & { miro: MiroLink };
 
 /**
- * Miro mode's second header bar, under the project title's: the shown deliverable's name between a
- * toggle of its linked versions (the deliverable filter changes the deliverable) and "Open in Miro"
- * for when the embed cannot sign in.
+ * Miro mode's header, folded into one bar so the board gets the height: back, the project and
+ * deliverable names, a toggle of the deliverable's linked versions, the Versions | Miro switch,
+ * "Open in Miro" (for when the embed cannot sign in) and a "More" menu holding the rarely used
+ * channel switch and deliverable filter (the filter changes the deliverable).
  */
-export function MiroTitleBar({
+export function MiroBar({
+  back,
+  title,
   name,
   linked,
   current,
   onSelect,
+  viewControl,
+  menu,
 }: {
+  back: ReactNode;
+  title: string;
   name: string;
   linked: CanvasVersion[];
   current: MiroFrame;
   onSelect: (versionId: string) => void;
+  viewControl: ReactNode;
+  menu: ReactNode;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRoot = useRef<HTMLDivElement>(null);
+  useDismissOnOutsideClick(menuRoot, menuOpen, () => setMenuOpen(false));
   const versions = linked
     .filter((version) => version.deliverableId === current.deliverableId)
     .sort((a, b) => a.number - b.number);
   return (
-    <div className="project-header miro-title-bar">
+    <div className="project-header miro-bar">
+      {back}
+      <h1 className="miro-bar-title" title={`${title} / ${name}`}>
+        <span>{title}</span>
+        <span aria-hidden="true">/</span>
+        <span>{name}</span>
+      </h1>
       <div className="segmented-control" role="group" aria-label="Miro version">
         {versions.map((version) => (
           <button
@@ -43,16 +62,36 @@ export function MiroTitleBar({
           </button>
         ))}
       </div>
-      <h2 title={name}>{name}</h2>
-      <a
-        className="button"
-        href={miroBoardUrl(current.miro)}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Open in Miro
-        <ArrowUpRight size={13} aria-hidden="true" />
-      </a>
+      <div className="miro-bar-actions">
+        {viewControl}
+        <a
+          className="button"
+          href={miroBoardUrl(current.miro)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open in Miro
+          <ArrowUpRight size={13} aria-hidden="true" />
+        </a>
+        <div
+          className="miro-bar-menu"
+          ref={menuRoot}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setMenuOpen(false);
+          }}
+        >
+          <button
+            className="icon-button"
+            aria-label="More"
+            title="More"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <MoreHorizontal size={17} />
+          </button>
+          {menuOpen && <div className="miro-bar-popover">{menu}</div>}
+        </div>
+      </div>
     </div>
   );
 }

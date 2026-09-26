@@ -79,7 +79,9 @@ The selected route determines client context, including directly opened project 
 retains client switching, Overview/My work, studio controls, support and account/sign out.
 It uses tighter spacing in short client-workspace windows so those global actions fit without
 scrolling. Client links stay in the top navigation when the sidebar is collapsed or opened as a
-mobile drawer.
+mobile drawer. A page can fold the sidebar while it needs the width with `useFoldSidebarWhile(active)`
+(`app-shell.tsx`): it collapses on activation, can still be expanded by hand, and returns to its
+previous state on deactivation or unmount. The project page's Miro mode is the one consumer.
 
 The workspace layout also renders the briefing `@modal` slot. In-app New briefing links open the
 shared editor over the current route; direct URL loads use the full page. See the

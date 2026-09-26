@@ -22,7 +22,8 @@ import {
   writeProjectView,
   type ProjectView,
 } from "./miro-mode";
-import { MiroTitleBar, MiroView } from "./miro-view";
+import { MiroView } from "./miro-view";
+import { useFoldSidebarWhile } from "@/features/workspace/app-shell";
 import {
   nodeTypes,
   type DeliverableNode,
@@ -147,6 +148,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     if (query === window.location.search.replace(/^\?/, "")) return;
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [projectView, resolvedMiroVersion, pathname, router]);
+  // Miro mode wants the width: the sidebar folds while it is shown and comes back on leaving.
+  useFoldSidebarWhile(!!resolvedMiroVersion?.miro && !selected?.designId);
   function enterMiro(versionId: string | null) {
     setSelected(null);
     setMiroVersionId(versionId);
@@ -421,18 +424,17 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
-        miroBar={
-          miroActive && miroVersion?.miro ? (
-            <MiroTitleBar
-              name={
-                deliverables.find((entry) => entry.id === miroVersion.deliverableId)?.name ??
-                "Version"
+        miro={
+          miroActive && miroVersion?.miro
+            ? {
+                name:
+                  deliverables.find((entry) => entry.id === miroVersion.deliverableId)?.name ??
+                  "Version",
+                linked,
+                current: { ...miroVersion, miro: miroVersion.miro },
+                onSelect: setMiroVersionId,
               }
-              linked={linked}
-              current={{ ...miroVersion, miro: miroVersion.miro }}
-              onSelect={(id) => setMiroVersionId(id)}
-            />
-          ) : undefined
+            : undefined
         }
       />
       <div className="project-workspace">

@@ -14,7 +14,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSelectedLayoutSegments } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
 import { CanvasHeader } from "./canvas-header";
@@ -27,6 +27,17 @@ import { NotificationsBell } from "./notifications-bell";
 import { ThemeToggle } from "./theme-toggle";
 import { useClients, useProjectClient } from "./workspace-data";
 import "./workspace.css";
+
+/**
+ * Lets a page fold the sidebar while it needs the width (the project page's Miro mode). The call
+ * collapses it and returns the restore; the person can still expand it by hand meanwhile.
+ */
+const SidebarFold = createContext<() => () => void>(() => () => {});
+
+export function useFoldSidebarWhile(active: boolean) {
+  const fold = useContext(SidebarFold);
+  useEffect(() => (active ? fold() : undefined), [active, fold]);
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { database, session, profile, loading, error } = useAuth();
@@ -42,6 +53,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const projectClient = useProjectClient(pathname.match(/^\/projects\/([^/]+)/)?.[1]);
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const collapsedNow = useRef(collapsed);
+  useEffect(() => {
+    collapsedNow.current = collapsed;
+  }, [collapsed]);
+  const foldSidebar = useCallback(() => {
+    const before = collapsedNow.current;
+    setCollapsed(true);
+    return () => setCollapsed(before);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -180,202 +200,204 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
 
   return (
-    <div
-      className={`application ${activeClient ? "has-client-context" : ""} ${canvasRoute ? "board-workspace" : ""} ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}
-    >
-      <nav aria-label="Accessibility">
-        <a className="skip-link" href="#main-content">
-          Skip to content
-        </a>
-      </nav>
-      {mobileOpen && (
-        <button
-          className="sidebar-backdrop"
-          aria-label="Close navigation"
-          tabIndex={-1}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+    <SidebarFold.Provider value={foldSidebar}>
       <div
-        id="workspace-navigation"
-        ref={sidebar}
-        className="sidebar"
-        role={mobileOpen ? "dialog" : "complementary"}
-        aria-modal={mobileOpen || undefined}
-        aria-label="Workspace navigation"
-        onClickCapture={(event) => {
-          if (mobileOpen && event.target instanceof Element && event.target.closest("a[href]"))
-            setMobileOpen(false);
-        }}
+        className={`application ${activeClient ? "has-client-context" : ""} ${canvasRoute ? "board-workspace" : ""} ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "mobile-sidebar-open" : ""}`}
       >
-        <Link href="/home" className="brand-link" aria-label={`${studioName} home`}>
-          <BrandMark />
-          <Image
-            src="/brand/wordmark.webp"
-            alt=""
-            width={1820}
-            height={619}
-            sizes="126px"
-            className="brand-wordmark"
-          />
-        </Link>
-        <button
-          className="icon-button mobile-sidebar-close"
-          aria-label="Close workspace navigation"
-          onClick={() => setMobileOpen(false)}
-        >
-          <X size={18} />
-        </button>
-        <button
-          className="icon-button sidebar-collapse"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          <PanelLeftClose size={17} />
-        </button>
-        <ClientSwitcher
-          key={pathname}
-          clients={clients.data ?? []}
-          activeClientId={activeClientId}
-          loading={clients.isPending}
-          failed={clients.isError}
-          onRetry={() => void clients.refetch()}
-        />
-        <nav aria-label="Main navigation">
-          <Link
-            className={`nav-item ${pathname === "/home" ? "active" : ""}`}
-            aria-current={pathname === "/home" ? "page" : undefined}
-            href="/home"
-          >
-            <Home size={17} />
-            <span>{homeLabel}</span>
-          </Link>
+        <nav aria-label="Accessibility">
+          <a className="skip-link" href="#main-content">
+            Skip to content
+          </a>
         </nav>
-        <div className="sidebar-footer">
-          {profile.role === "agency" && (
-            <Link
-              href="/settings"
-              className={`nav-item ${pathname.startsWith("/settings") && pathname !== "/settings/account" ? "active" : ""}`}
-              aria-current={
-                pathname.startsWith("/settings") && pathname !== "/settings/account"
-                  ? "location"
-                  : undefined
-              }
-            >
-              <Settings2 size={17} />
-              <span>Studio settings</span>
-            </Link>
-          )}
-          {profile.role === "agency" && (
-            <Link
-              href="/team"
-              className={`nav-item ${pathname === "/team" ? "active" : ""}`}
-              aria-current={pathname === "/team" ? "page" : undefined}
-            >
-              <Users size={17} />
-              <span>Team</span>
-            </Link>
-          )}
-          <ThemeToggle />
+        {mobileOpen && (
           <button
-            className="nav-item"
-            onClick={() => {
+            className="sidebar-backdrop"
+            aria-label="Close navigation"
+            tabIndex={-1}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+        <div
+          id="workspace-navigation"
+          ref={sidebar}
+          className="sidebar"
+          role={mobileOpen ? "dialog" : "complementary"}
+          aria-modal={mobileOpen || undefined}
+          aria-label="Workspace navigation"
+          onClickCapture={(event) => {
+            if (mobileOpen && event.target instanceof Element && event.target.closest("a[href]"))
               setMobileOpen(false);
-              setHelpOpen(true);
-            }}
+          }}
+        >
+          <Link href="/home" className="brand-link" aria-label={`${studioName} home`}>
+            <BrandMark />
+            <Image
+              src="/brand/wordmark.webp"
+              alt=""
+              width={1820}
+              height={619}
+              sizes="126px"
+              className="brand-wordmark"
+            />
+          </Link>
+          <button
+            className="icon-button mobile-sidebar-close"
+            aria-label="Close workspace navigation"
+            onClick={() => setMobileOpen(false)}
           >
-            <CircleHelp size={17} />
-            <span>Help & support</span>
+            <X size={18} />
           </button>
-          <div className="profile-bar">
+          <button
+            className="icon-button sidebar-collapse"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            <PanelLeftClose size={17} />
+          </button>
+          <ClientSwitcher
+            key={pathname}
+            clients={clients.data ?? []}
+            activeClientId={activeClientId}
+            loading={clients.isPending}
+            failed={clients.isError}
+            onRetry={() => void clients.refetch()}
+          />
+          <nav aria-label="Main navigation">
             <Link
-              href="/settings/account"
-              className="profile-account"
-              aria-label={`Account settings for ${profile.display_name}`}
+              className={`nav-item ${pathname === "/home" ? "active" : ""}`}
+              aria-current={pathname === "/home" ? "page" : undefined}
+              href="/home"
             >
-              <span className="profile-avatar" aria-hidden="true">
-                {profile.display_name
-                  .split(" ")
-                  .map((value) => value[0])
-                  .slice(0, 2)
-                  .join("")}
-              </span>
-              <div className="profile-account-copy">
-                <strong>{profile.display_name}</strong>
-                <span>
-                  {profile.role === "agency"
-                    ? "Studio team"
-                    : profile.role === "designer"
-                      ? "Designer"
-                      : "Client"}
+              <Home size={17} />
+              <span>{homeLabel}</span>
+            </Link>
+          </nav>
+          <div className="sidebar-footer">
+            {profile.role === "agency" && (
+              <Link
+                href="/settings"
+                className={`nav-item ${pathname.startsWith("/settings") && pathname !== "/settings/account" ? "active" : ""}`}
+                aria-current={
+                  pathname.startsWith("/settings") && pathname !== "/settings/account"
+                    ? "location"
+                    : undefined
+                }
+              >
+                <Settings2 size={17} />
+                <span>Studio settings</span>
+              </Link>
+            )}
+            {profile.role === "agency" && (
+              <Link
+                href="/team"
+                className={`nav-item ${pathname === "/team" ? "active" : ""}`}
+                aria-current={pathname === "/team" ? "page" : undefined}
+              >
+                <Users size={17} />
+                <span>Team</span>
+              </Link>
+            )}
+            <ThemeToggle />
+            <button
+              className="nav-item"
+              onClick={() => {
+                setMobileOpen(false);
+                setHelpOpen(true);
+              }}
+            >
+              <CircleHelp size={17} />
+              <span>Help & support</span>
+            </button>
+            <div className="profile-bar">
+              <Link
+                href="/settings/account"
+                className="profile-account"
+                aria-label={`Account settings for ${profile.display_name}`}
+              >
+                <span className="profile-avatar" aria-hidden="true">
+                  {profile.display_name
+                    .split(" ")
+                    .map((value) => value[0])
+                    .slice(0, 2)
+                    .join("")}
                 </span>
-              </div>
-            </Link>
+                <div className="profile-account-copy">
+                  <strong>{profile.display_name}</strong>
+                  <span>
+                    {profile.role === "agency"
+                      ? "Studio team"
+                      : profile.role === "designer"
+                        ? "Designer"
+                        : "Client"}
+                  </span>
+                </div>
+              </Link>
+            </div>
+            <button
+              className="nav-item"
+              onClick={async () => {
+                setMobileOpen(false);
+                await database.auth.signOut();
+                router.replace("/login");
+              }}
+            >
+              <LogOut size={17} />
+              <span>Sign out</span>
+            </button>
           </div>
-          <button
-            className="nav-item"
-            onClick={async () => {
-              setMobileOpen(false);
-              await database.auth.signOut();
-              router.replace("/login");
-            }}
-          >
-            <LogOut size={17} />
-            <span>Sign out</span>
-          </button>
         </div>
-      </div>
-      {/* All client routes share floating navigation; each canvas owns its own placement. */}
-      <div
-        className={`workspace ${activeClient ? "client-workspace" : ""} ${activeClient && !canvasRoute ? "client-page-workspace" : ""}`}
-        inert={mobileOpen || undefined}
-      >
-        <header className="topbar">
-          <button
-            ref={menuButton}
-            className="icon-button mobile-menu"
-            aria-label="Open navigation"
-            aria-expanded={mobileOpen}
-            aria-controls="workspace-navigation"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={20} />
-          </button>
-          {!activeClient && (
-            <div className="topbar-identity">
-              <Layers3 size={16} />
-              <strong>{studioName}</strong>
-            </div>
-          )}
-          <div className="topbar-actions">{!activeClient && <NotificationsBell />}</div>
-        </header>
-        <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
-          {activeClient && !canvasRoute && (
-            <div className="client-page-chrome">
-              <CanvasHeader client={activeClient} viewer={profile} />
-            </div>
-          )}
-          {children}
-        </main>
-      </div>
-      <Modal
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        title="Help & support"
-        footer={
-          <button className="button primary" onClick={() => setHelpOpen(false)}>
-            Done
-          </button>
-        }
-      >
-        <div className="form-stack">
-          <p>
-            Open a project to message the studio. Select a design to add feedback or place a comment
-            pin.
-          </p>
-          <p>For account access or a new client, contact your studio representative.</p>
+        {/* All client routes share floating navigation; each canvas owns its own placement. */}
+        <div
+          className={`workspace ${activeClient ? "client-workspace" : ""} ${activeClient && !canvasRoute ? "client-page-workspace" : ""}`}
+          inert={mobileOpen || undefined}
+        >
+          <header className="topbar">
+            <button
+              ref={menuButton}
+              className="icon-button mobile-menu"
+              aria-label="Open navigation"
+              aria-expanded={mobileOpen}
+              aria-controls="workspace-navigation"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
+            {!activeClient && (
+              <div className="topbar-identity">
+                <Layers3 size={16} />
+                <strong>{studioName}</strong>
+              </div>
+            )}
+            <div className="topbar-actions">{!activeClient && <NotificationsBell />}</div>
+          </header>
+          <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
+            {activeClient && !canvasRoute && (
+              <div className="client-page-chrome">
+                <CanvasHeader client={activeClient} viewer={profile} />
+              </div>
+            )}
+            {children}
+          </main>
         </div>
-      </Modal>
-    </div>
+        <Modal
+          open={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          title="Help & support"
+          footer={
+            <button className="button primary" onClick={() => setHelpOpen(false)}>
+              Done
+            </button>
+          }
+        >
+          <div className="form-stack">
+            <p>
+              Open a project to message the studio. Select a design to add feedback or place a
+              comment pin.
+            </p>
+            <p>For account access or a new client, contact your studio representative.</p>
+          </div>
+        </Modal>
+      </div>
+    </SidebarFold.Provider>
   );
 }
