@@ -8,6 +8,7 @@ import { validatePassword } from "./settings-model";
 import { updateProfile, useInvalidateAccount } from "./settings-data";
 import { SettingsSuccess } from "./settings-success";
 import { FormError } from "@/features/shared/form-error";
+import { ClientTeamSections } from "./client-team-section";
 
 export function AccountSettings() {
   const { database, profile, session } = useAuth();
@@ -76,6 +77,7 @@ export function AccountSettings() {
           </button>
         </form>
       </section>
+      <ClientTeamSections />
       <section className="settings-section">
         <div>
           <h2>Password</h2>
