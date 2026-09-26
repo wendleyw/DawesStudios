@@ -426,5 +426,136 @@ reset role;
 select ok(not has_function_privilege('anon','public.remove_client_member(uuid,uuid)','execute'),
   'Anonymous callers cannot remove anyone');
 
+-- ---------------------------------------------------------------------------------------------
+-- Final-review fixes: a requester-only update must not re-run the briefing scope triggers, and a
+-- studio save must not keep a departed person as the requester.
+-- A SABRE campaign for a submittable briefing, and a two-person "duo" client for the one-remaining-
+-- person default.
+-- ---------------------------------------------------------------------------------------------
+insert into client_team_context values
+  ('campaign',md5('client-team:campaign')::uuid),
+  ('duo',md5('client-team:duo-client')::uuid),
+  ('duo-departed',md5('client-team:duo-departed')::uuid),
+  ('duo-remaining',md5('client-team:duo-remaining')::uuid),
+  ('trio-briefing',md5('client-team:trio-briefing')::uuid);
+insert into public.campaigns(id,client_id,title)
+  values(pg_temp.context('campaign'),pg_temp.context('sabre'),'Client team: campaign');
+insert into auth.users(id,email,raw_user_meta_data) values
+  (pg_temp.context('duo-departed'),'duo-departed@client-team.test','{"display_name":"Devon Departed"}'),
+  (pg_temp.context('duo-remaining'),'duo-remaining@client-team.test','{"display_name":"Remy Remaining"}');
+insert into public.clients(id,name,slug)
+  values(pg_temp.context('duo'),'Client team duo fixture','client-team-duo-fixture');
+insert into public.client_memberships(client_id,user_id) values
+  (pg_temp.context('duo'),pg_temp.context('duo-departed')),
+  (pg_temp.context('duo'),pg_temp.context('duo-remaining'));
+
+-- Group 2: a fully valid, submitted SABRE briefing, so both scope triggers now validate every
+-- update to it.
+select pg_temp.act_as('sabre-person');
+set local role authenticated;
+insert into client_team_context
+  select 'submitted-briefing',public.save_briefing(pg_temp.context('sabre'),'social','Client team: submitted',
+    p_campaign_id:=pg_temp.context('campaign'),
+    p_overview:='Keep the requester guard covered end to end.',
+    p_direction:='{"questions":{"content":"Please help create it"}}'::jsonb,
+    p_deliverables:='[{"name":"Launch post","scope":"original","width":1080,"format":"feed","height":1350,"quantity":1}]'::jsonb);
+select lives_ok($$select public.submit_briefing(pg_temp.context('submitted-briefing'))$$,
+  'The briefing is submitted, so both scope triggers now validate every update to it');
+reset role;
+
+-- The requester change itself: succeeds despite the triggers, and never touches updated_at.
+select set_config('client_team.moment',
+  (select updated_at::text from public.briefings where id=pg_temp.context('submitted-briefing')),true);
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok(
+  $$select public.set_briefing_requester(pg_temp.context('submitted-briefing'),pg_temp.context('quiet'))$$,
+  'The studio changes the requester on a submitted briefing despite the scope triggers');
+select is((select requested_by from public.briefings where id=pg_temp.context('submitted-briefing')),
+  pg_temp.context('quiet'),'The new requester is recorded');
+select is((select updated_at::text from public.briefings where id=pg_temp.context('submitted-briefing')),
+  current_setting('client_team.moment'),'set_briefing_requester leaves updated_at unchanged');
+reset role;
+
+-- As the postgres test role: make the briefing's scope invalid without either trigger seeing it
+-- (mirrors 202609250002_client_team.sql's own backfill pattern), then prove a requester-only
+-- change still succeeds, because it never re-validates scope.
+alter table public.briefings disable trigger validate_submitted_briefing_scope;
+alter table public.briefings disable trigger validate_submitted_service_answers;
+update public.briefings set requested_deliverables='[]'::jsonb
+  where id=pg_temp.context('submitted-briefing');
+alter table public.briefings enable trigger validate_submitted_briefing_scope;
+alter table public.briefings enable trigger validate_submitted_service_answers;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok(
+  $$select public.set_briefing_requester(pg_temp.context('submitted-briefing'),pg_temp.context('sabre-person'))$$,
+  'A requester change still succeeds even though the briefing''s scope is now invalid');
+reset role;
+
+-- A client's open draft is unaffected by a requester change elsewhere: save_briefing's own
+-- optimistic-concurrency check sees no conflict, because the requester change left updated_at alone.
+select pg_temp.act_as('duo-departed');
+set local role authenticated;
+insert into client_team_context
+  select 'duo-briefing',public.save_briefing(pg_temp.context('duo'),'social','Client team: duo before departure');
+insert into client_team_context
+  select 'duo-departed-briefing',public.save_briefing(pg_temp.context('duo'),'social','Client team: duo departs');
+reset role;
+select set_config('client_team.moment',
+  (select updated_at::text from public.briefings where id=pg_temp.context('duo-briefing')),true);
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok(
+  $$select public.set_briefing_requester(pg_temp.context('duo-briefing'),pg_temp.context('duo-remaining'))$$,
+  'The studio reassigns the duo briefing''s requester');
+reset role;
+select pg_temp.act_as('duo-remaining');
+set local role authenticated;
+select lives_ok($$select public.save_briefing(pg_temp.context('duo'),'social','Client team: still editing',
+    p_briefing_id:=pg_temp.context('duo-briefing'),
+    p_expected_updated_at:=current_setting('client_team.moment')::timestamptz)$$,
+  'A client save with the briefing''s previous p_expected_updated_at still succeeds after a requester change');
+reset role;
+
+-- Group 4: a studio save without p_requested_by treats a departed stored requester as absent.
+update public.profiles set removed_at=now() where id=pg_temp.context('duo-departed');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select public.save_briefing(pg_temp.context('duo'),'social','Client team: duo departs',
+    p_briefing_id:=pg_temp.context('duo-departed-briefing'),
+    p_expected_updated_at:=(select updated_at from public.briefings where id=pg_temp.context('duo-departed-briefing')))$$,
+  'The studio saves a briefing whose stored requester has left, without naming anyone');
+reset role;
+select is((select requested_by from public.briefings where id=pg_temp.context('duo-departed-briefing')),
+  pg_temp.context('duo-remaining'),
+  'With exactly one remaining active person, the departed requester is replaced by that person');
+
+-- With several remaining active people (SABRE still has three: sabre-person, teammate and quiet),
+-- the studio must choose again once the stored requester has left.
+insert into public.briefings(id,client_id,service_type,title,created_by,requested_by)
+  values(pg_temp.context('trio-briefing'),pg_temp.context('sabre'),'social',
+    'Client team: trio requester left',pg_temp.context('sabre-person'),pg_temp.context('former'));
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok(
+  $$select public.save_briefing(pg_temp.context('sabre'),'social','Client team: trio requester left',
+      p_briefing_id:=pg_temp.context('trio-briefing'),
+      p_expected_updated_at:=(select updated_at from public.briefings where id=pg_temp.context('trio-briefing')))$$,
+  'P0001','Choose who requested this briefing',
+  'With several remaining active people, the studio must choose again once the requester left');
+reset role;
+
+-- (Optional) a person who is both the requester and notify_all is still notified exactly once.
+select pg_temp.act_as('sabre-person');
+set local role authenticated;
+select lives_ok($$select public.set_client_notifications(pg_temp.context('sabre'),true)$$,
+  'The requester also switches on all SABRE activity');
+reset role;
+select pg_temp.act_as('agency');
+select pg_temp.notify('routed-project','Client team: requester and all activity');
+select is(pg_temp.notified('sabre-person','Client team: requester and all activity'),1,
+  'A person who is both the requester and notify_all is notified exactly once');
+
 select * from finish();
 rollback;
