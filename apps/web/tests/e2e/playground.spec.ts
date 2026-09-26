@@ -115,7 +115,7 @@ for (const role of ["agency", "designer", "client"] as const) {
     page,
     workspace,
   }) => {
-    await signIn(page, credentials[role]);
+    await signIn(page, role === "client" ? workspace.client.email : credentials[role]);
     await page.goto(`/clients/${workspace.clientId}/board`);
     await expect(
       page.getByRole("heading", { name: workspace.name, level: 1, exact: true }),
@@ -137,14 +137,18 @@ for (const role of ["agency", "designer", "client"] as const) {
     await addNote(page, `${role} alternate direction`);
     await playground(page).getByRole("button", { name: "Back to project", exact: true }).click();
     await expect(page).toHaveURL(`/projects/${workspace.otherProjectId}`);
-    const caller = await localCaller(credentials[role]);
+    const caller = await localCaller(
+      role === "client" ? workspace.client.email : credentials[role],
+    );
     const ownBoards = await caller
       .from("playground_boards")
       .select("id")
       .eq("client_id", workspace.clientId);
     expect(ownBoards.error).toBeNull();
     expect(ownBoards.data).toHaveLength(2);
-    const other = await localCaller(credentials[role === "client" ? "agency" : "client"]);
+    const other = await localCaller(
+      role === "client" ? credentials.agency : workspace.client.email,
+    );
     const leaked = await other
       .from("playground_items")
       .select("*")
@@ -257,7 +261,7 @@ test("a dropped image/document bundle persists and files remain private", async 
     .eq("board_id", board.data!.id);
   expect(files.error).toBeNull();
   expect(files.data).toHaveLength(3);
-  const client = await localCaller(credentials.client);
+  const client = await localCaller(workspace.client.email);
   for (const file of files.data!) {
     const denied = await client.storage.from("playground-assets").download(file.asset_path!);
     expect(denied.error).not.toBeNull();
@@ -299,7 +303,7 @@ test("a dropped image/document bundle persists and files remain private", async 
 });
 
 test("Playground is readable and accessible on desktop and mobile", async ({ page, workspace }) => {
-  await signIn(page, credentials.client);
+  await signIn(page, workspace.client.email);
   await page.goto(`/projects/${workspace.projectId}`);
   await openPlayground(page);
   await addNote(page, "Campaign mood", "Natural colors, generous space, and a clear message.");
@@ -615,7 +619,7 @@ test("a client session sees only its shared versions, drags a published design o
       if (path.includes("/internal-assets/")) requestedInternalAssets.push(path);
     });
 
-    await signIn(page, credentials.client);
+    await signIn(page, workspace.client.email);
     await page.goto(`/projects/${workspace.projectId}`);
     await openPlayground(page);
     const board = playground(page);

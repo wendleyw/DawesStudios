@@ -95,7 +95,8 @@ test("brand folders persist, organize real files, and preserve files when delete
       const context = await browser.newContext();
       contexts.push(context);
       const viewer = await context.newPage();
-      await signIn(viewer, credentials[role]);
+      // The fixture's own client user: the shared demo login never joins a fixture client.
+      await signIn(viewer, role === "client" ? fixture.client.email : credentials[role]);
       await viewer.goto(`${base}/assets`);
       await viewer
         .getByRole("navigation", { name: "Asset folders" })

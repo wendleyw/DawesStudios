@@ -22,7 +22,7 @@ test("version feedback preserves review history, scoped comments, drafts and cli
   test.setTimeout(90_000);
   const fixture = await createPlaygroundFixture();
   const agency = await localAgency();
-  const client = await localCaller(credentials.client);
+  const client = await localCaller(fixture.client.email);
   const publications: string[] = [];
   const releaseNote =
     "Please review the composition across both directions. The headline and call to action should remain consistent throughout this campaign.";
@@ -104,7 +104,7 @@ test("version feedback preserves review history, scoped comments, drafts and cli
         p_pin_y: 0.3,
       }),
     );
-    await signIn(page, credentials.client);
+    await signIn(page, fixture.client.email);
     await page.goto(`/projects/${fixture.projectId}`);
     await expect(page.locator(".version-card")).toHaveCount(2);
     await expect(page.locator(".version-note, .version-feedback")).toHaveCount(0);
@@ -230,7 +230,7 @@ test("floating project chrome fits desktop and mobile, including feedback and se
   // version, so this passes against the canonical dataset too.
   const fixture = await createPlaygroundFixture();
   const agency = await localAgency();
-  const client = await localCaller(credentials.client);
+  const client = await localCaller(fixture.client.email);
   const revisionNote =
     "Acceptance revision request: give the headline more breathing room and simplify the supporting copy.";
   try {
@@ -633,7 +633,7 @@ test("touch opens design feedback without requiring a double tap", async ({ brow
     });
     try {
       const page = await context.newPage();
-      await signIn(page, credentials.client);
+      await signIn(page, fixture.client.email);
       await page.goto(`/projects/${fixture.projectId}`);
       await page.locator(".design-preview-artwork").first().tap();
       await expect(page.locator(".design-viewer")).toBeVisible();

@@ -143,7 +143,7 @@ for (const role of ["agency", "client", "designer"] as const) {
             .eq("id", fixture.projectId)
         ).error,
       ).toBeNull();
-      await signIn(page, credentials[role]);
+      await signIn(page, role === "client" ? fixture.client.email : credentials[role]);
       await page.goto(`/clients/${fixture.clientId}/board`);
       await expect(
         page.getByRole("group", { name: "Board view", exact: true }).getByRole("button"),
@@ -401,7 +401,7 @@ test("view choices are isolated by viewer and client", async ({ browser }) => {
   const client = await clientContext.newPage();
   try {
     await signIn(studio, credentials.agency);
-    await signIn(client, credentials.client);
+    await signIn(client, first.client.email);
     await studio.goto(`/clients/${first.clientId}/board`);
     await chooseView(studio, "calendar");
     await client.goto(`/clients/${first.clientId}/board`);

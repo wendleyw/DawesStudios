@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { cleanupTestProject } from "./project-fixture";
-import { credentials, localAdmin, localCaller } from "./test-support";
+import { credentials, localAdmin, localCaller, password } from "./test-support";
 
 function value<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (result.error) throw new Error(result.error.message);
@@ -8,7 +8,14 @@ function value<T>(result: { data: T; error: { message: string } | null }): NonNu
   return result.data as NonNullable<T>;
 }
 
-/** Isolated client/project, using existing role accounts without changing their access elsewhere. */
+const clientEmailPattern = /^acceptance-playground-[0-9a-f-]{36}@client\.dawes\.local$/i;
+
+/**
+ * Isolated client/project, plus a disposable client-role user created just for this fixture. The
+ * fixture must never add the shared SABRE demo client login to a temporary client: a real person
+ * signed in with those demo credentials would then see this throwaway workspace in their client
+ * switcher while the test runs.
+ */
 export async function createPlaygroundFixture() {
   const name = `Acceptance Playground ${randomUUID()}`;
   const client = value(
@@ -18,8 +25,10 @@ export async function createPlaygroundFixture() {
       .select("id")
       .single(),
   );
+  const clientEmail = `acceptance-playground-${randomUUID()}@client.dawes.local`;
   let projectId: string | undefined;
   let otherProjectId: string | undefined;
+  let reviewerId: string | undefined;
   async function cleanup() {
     const found = value(
       await localAdmin.from("clients").select("name").eq("id", client.id).single(),
@@ -63,18 +72,30 @@ export async function createPlaygroundFixture() {
     if (otherProjectId) await cleanupTestProject(otherProjectId);
     const removed = await localAdmin.from("clients").delete().eq("id", client.id);
     if (removed.error) throw removed.error;
+    if (reviewerId) {
+      if (!clientEmailPattern.test(clientEmail))
+        throw new Error("Refusing to remove a non-Playground acceptance client user.");
+      const account = await localAdmin.auth.admin.getUserById(reviewerId);
+      if (account.error || account.data.user?.email !== clientEmail)
+        throw new Error("Refusing to remove a non-Playground acceptance client user.");
+      const removedUser = await localAdmin.auth.admin.deleteUser(reviewerId);
+      if (removedUser.error) throw removedUser.error;
+    }
   }
   try {
     const designer = await localCaller(credentials.designer);
-    const reviewer = await localCaller(credentials.client);
     const designerAccount = await designer.auth.getUser();
-    const reviewerAccount = await reviewer.auth.getUser();
     if (designerAccount.error || !designerAccount.data.user)
       throw new Error("Designer fixture authentication failed.");
-    if (reviewerAccount.error || !reviewerAccount.data.user)
-      throw new Error("Client fixture authentication failed.");
     const designerId = designerAccount.data.user.id;
-    const reviewerId = reviewerAccount.data.user.id;
+    const reviewer = await localAdmin.auth.admin.createUser({
+      email: clientEmail,
+      password,
+      email_confirm: true,
+    });
+    if (reviewer.error || !reviewer.data.user)
+      throw reviewer.error ?? new Error("The Playground client user was not created.");
+    reviewerId = reviewer.data.user.id;
     const project = value(
       await localAdmin
         .from("projects")
@@ -116,6 +137,7 @@ export async function createPlaygroundFixture() {
       projectId: project.id,
       otherProjectId: otherProject.id,
       name,
+      client: { email: clientEmail, password },
       cleanup,
     };
   } catch (error) {
