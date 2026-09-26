@@ -1,7 +1,7 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT. Owner: **Claude Code**. Session `dawesstudios-71` finished Miro links;
-`dawesstudios-29` (client people) is next, with a repo-wide analysis, refactor and test pass.
+Updated: 2026-09-26 EDT. Owner: **Claude Code**. `dawesstudios-29` finished the repo-wide audit,
+refactor and complete test after `dawesstudios-71` finished Miro links; no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -17,12 +17,15 @@ history only when a task needs earlier evidence.
 
 ## Done (2026-09-26)
 
-**Miro frame links on versions** ([spec](../superpowers/specs/2026-09-26-miro-version-links-design.md),
-[plan](../superpowers/plans/2026-09-26-miro-version-links.md), `87db789..67b5c03`): the agency links a
-frame to a published version (client board) or an internal version (designer board); **View on Miro**
-opens a full-screen panel (frame shared with Playground as `useFullscreenLayer`). Migration
-`202609260001`; CSP `frame-src https://miro.com`. [Verification](../verification/miro-version-links-2026-09-26.md);
-earlier: client people ([history](history/handoff-2026-09-26.md)), [2026-09-25](history/handoff-2026-09-25.md).
+**System audit, refactor and complete test** (`5519811..c2a104f`,
+[verification](../verification/system-audit-2026-09-26.md)): three read-only audits, then reviewed
+fixes. Expired invitations leave People; one shared helper each for credit counts, outside-click
+dismissal and bounded concurrency; the project action dialog is split by action; briefing size
+limits and an `adjust_credits` lock (`202609260003`); pgTAP for six uncovered security-definer
+functions; three browser specs updated for the 2026-09-24 product changes.
+
+Earlier on 2026-09-26: Miro frame links and client people
+([history](history/handoff-2026-09-26.md)); before: [2026-09-25](history/handoff-2026-09-25.md).
 
 ## In progress
 
@@ -52,7 +55,7 @@ earlier: client people ([history](history/handoff-2026-09-26.md)), [2026-09-25](
 - Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
   `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
   (last done 2026-09-26 ~02:10, pid 78562). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260002`, plus Miro `202609260001`; local
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260003`; local
   delivered projects show a 2026-09-25 `updated_at`); media on 55430. Do not reset or re-provision.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
@@ -60,10 +63,10 @@ earlier: client people ([history](history/handoff-2026-09-26.md)), [2026-09-25](
 
 ## Evidence (2026-09-26)
 
-- Miro, at `67b5c03`: `npm run check` 1147 tests / 103 files; `miro_version_links` pgTAP 31/31;
-  Miro + CSP browser specs 4/4; panel and card audit 1440/390 × both themes (`outputs/miro/`).
-- Client people, at `517bbb0`: `supabase test db` 24 files / 593 tests with only the six known
-  overlay assertions failing; eleven browser specs 41 of 41. Not re-run: `apps/media`, overlay-count suites.
+- Complete test at `1e6a675`: `npm run check` 1168 tests / 109 files; media 70/70 and its live
+  integration 15/15; `supabase test db` 25 files / 633 tests (only the six known overlay failures);
+  `next build` passes; all 34 browser specs 105 passed, 3 skipped, 8 failed — the 5 known overlay
+  counts plus 3 stale specs, fixed and green twice each in `c2a104f`. Miro evidence: its record.
 
 ## Open gaps
 
@@ -72,16 +75,14 @@ earlier: client people ([history](history/handoff-2026-09-26.md)), [2026-09-25](
 - The notification feed shows only the latest 100 items, with no pagination (product decision).
 - `add_design` computes `sort_order` with an unlocked `count(*)`, so concurrent adds to one version
   can collide (found while planning bulk drop, which registers sequentially per deliverable).
-- tus termination on Supabase is unverified; a cancelled partial upload relies on the 24-hour
-  window (R2: a one-day incomplete-multipart rule). Deferred minors from the video review: a
-  missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
+- tus termination on Supabase is unverified (a cancelled partial upload relies on the 24-hour window);
+  a missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
 - Unknown URLs (now `/search` too) show "page unavailable" with HTTP 200, not 404 (pre-existing).
   The tracked root `login.png` was deleted in the working tree by someone else; left for the user.
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
-- Themes and dashboards: Safari and Firefox not run; the zoom pill's and project bar's vertical
-  centres differ by 4–6 px (parked, cosmetic). What's moving has no overdue cue (the product has
-  no overdue concept); pgTAP does not call `mark_project_delivered` (a browser test does).
+- Safari and Firefox not run; zoom pill and project bar centres differ by 4–6 px (parked); What's
+  moving has no overdue cue; pgTAP does not call `mark_project_delivered` (a browser test does).
 - Miro: real-board embed unchecked (needs a user board); Escape is inert inside the cross-origin
   embed (Back to project stays visible); an open panel keeps its link until reopened.
 - Client people: a person in one client cannot accept an invitation to a second, nor a removed one be
@@ -89,12 +90,11 @@ earlier: client people ([history](history/handoff-2026-09-26.md)), [2026-09-25](
 
 ## Next actions
 
-**Production setup (user-deferred on 2026-09-23).** Follow the
-[production guide](../operations/production.md) on a real server: R2 bucket and lifecycle rule,
-storage override, TLS proxy with per-IP limits, SMTP, first agency account, backups, restore drill.
+**Production setup (user-deferred on 2026-09-23):** follow the
+[production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
 1. The user's look at client people and the Miro links (publish dialog field, card button, panel);
-   a real Miro board for the pending embed check. Then `dawesstudios-29`'s repo-wide refactor.
+   a real Miro board for the pending embed check.
 2. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
    default is "Dawes Studio"). To preview Meta ads, set `META_AD_LIBRARY_ACCESS_TOKEN`.
