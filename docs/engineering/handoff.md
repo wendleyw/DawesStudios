@@ -24,7 +24,7 @@ folded sidebar and Miro's top bar cropped; the Playground button opens a copy-to
 Afternoon (`5303c21..97df9a3`): 216 px sidebar with client logo and repeating studio mark, client
 Overview in the sidebar only, calendar days never scroll, briefings by due date, client review bar in
 Miro mode, Brand Hub colors in one row and Products (image + link) atop Assets, black Playground.
-Board cards always sit on the campaign grid; a drop on a card swaps the two. Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
+Board cards always sit on the campaign grid (a drop on a card swaps them); the client logo opens the Overview; Files is a Brand Hub section (`/brand/files`, `/assets` redirects) with the sections beside the title — its e2e specs were edited but not run. Earlier today: the system audit, Miro links, client people ([history](history/handoff-2026-09-26.md)).
 
 ## In progress
 
