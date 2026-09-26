@@ -235,6 +235,46 @@ existing exports (`uploadArtwork`, `discardUnreferencedArtwork`) are called. `cr
 now returns the created version's id, which bulk drop needs to register several designs into a
 version it just created.
 
+## Miro frame links
+
+A version can carry a link to a Miro board/frame, kept per channel in its own table under its own
+RLS: `publication_miro_links` (keyed by `publication_id`) for the client channel and
+`design_version_miro_links` (keyed by `version_id`) for the internal one. Reading one channel's
+table for the other channel's versions never happens; `readMiroLinks` in `project-data.ts` takes
+the channel as an explicit argument rather than inferring it, so the client board and the internal
+board stay apart even though both render through the same `MiroBoardPanel`. Only the agency writes
+either table — `set_publication_miro_link` / `set_version_miro_link` / `clear_publication_miro_link`
+/ `clear_version_miro_link` (Supabase RPCs, called from `setMiroLink` / `clearMiroLink`) parse and
+validate the pasted URL server-side; `miro-links.ts`'s `parseMiroBoardUrl` only lets the dialog
+refuse an obviously bad link before it is sent. A designer or client never sees the write path.
+
+The publish dialog ("Share with client." / "Share update.") carries an optional **Miro frame**
+field alongside the client note. `useLatestMiroLink` prefills it from the newest earlier client-
+channel link on the same deliverable (not the version being published), so republishing the same
+deliverable keeps its board without retyping the URL; the field remains editable and blank clears
+it. The separate **Add a Miro link.** dialog (`kind: "miro"` in `project-action-dialog.tsx`) sets or
+clears a single version's link on whichever channel opened it, prefilling from that version's own
+existing link, or otherwise the deliverable's newest link on that channel.
+
+On the version card, an agency or assigned-designer session that can produce also sees a
+`Link2` icon button beside the card's comment shortcut, `aria-label` "Add/Change Miro link for
+version N" depending on whether a link already exists; only the agency actually has `canManageMiro`
+true today, so the button currently renders for the agency alone in both channels, at the icon-
+button's usual 24 px size against the row's 36 px height, matching `.version-comments`'s own
+padding and font size, so both rows read as one aligned list of small tools. Whenever the current
+channel's version carries a link, every role additionally sees a plain **View on Miro** action next
+to it (no icon button for a client or an unassigned designer, matching the read-only RPCs they can
+call). Opening it mounts `MiroBoardPanel`, the shared full-screen layer (see
+[the shared canvas primitives](../shared/README.md#canvas-background-and-controls) for the lifecycle
+`use-fullscreen-layer.ts` also drives for Playground): a header with **Back to project**, the
+truncating `deliverable · V<number>` title, and **Open in Miro**, then an `iframe.miro-board-frame`
+rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl`, never from the pasted URL again.
+**Open in Miro** (`miroBoardUrl`, `target="_blank"`) stays visible because the embed can fail to
+sign in behind third-party-cookie restrictions and the viewer still needs a way through to the real
+board. The panel needs no fallback beyond that link: `frame-src https://miro.com` is the one
+Content-Security-Policy exception this feature requires (`apps/web/next.config.ts`), and the panel
+is not rendered at all unless a link exists for the viewer's channel.
+
 ## Deviation from the data-access contract: reads that are not hooks
 
 `findUnchangedDesign`, `findDesignByAsset` and `downloadDesignAssetFile` in `project-data.ts` are
@@ -268,6 +308,15 @@ the shared failures table.
 `npx playwright test tests/e2e/project-feedback.spec.ts` verifies persisted review decisions,
 version/design comment isolation, draft restoration, client-only reads and five viewport sizes.
 The mutation scenario uses a disposable isolated client; the populated SABRE scenario is read-only.
+
+`npx playwright test tests/e2e/miro-version-links.spec.ts` verifies the client/internal Miro link
+tables by role on the seeded SABRE landing page: a client opens only the client-channel board and
+never the internal one, an assigned designer sees only the internal board, and the agency manages
+the link and can switch to the client channel to open that board too. It sets both links through
+the `set_publication_miro_link` / `set_version_miro_link` RPCs before the run and clears them in
+`afterAll` through the matching `clear_*` RPCs, so the seeded project is unchanged afterward; the
+embed itself is never loaded, only the iframe's rebuilt `src` and each role's gating. See
+[the verification record](../../../../docs/verification/miro-version-links-2026-09-26.md).
 
 Video loading and playback-state regressions can be run from `apps/web` with:
 
