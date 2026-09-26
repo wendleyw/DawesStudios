@@ -6,6 +6,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   team: [] as { user_id: string; display_name: string; email: string }[],
   pending: [] as { id: string; display_name: string }[],
+  peoplePending: false,
+  peopleError: null as Error | null,
+  invitationsPending: false,
+  invitationsError: null as Error | null,
+  peopleRefetch: vi.fn(),
+  pendingRemovalsRefetch: vi.fn(),
+  invitationsRefetch: vi.fn(),
   remove: vi.fn(),
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
@@ -24,15 +31,15 @@ vi.mock("./team-data", () => ({
   clientPeopleQueryKeys: { people: "client-people", notifications: "client-notification-choices" },
   useClientPeople: () => ({
     data: { team: state.team, names: {} },
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
+    isPending: state.peoplePending,
+    error: state.peopleError,
+    refetch: state.peopleRefetch,
   }),
   usePendingClientRemovals: () => ({
     data: state.pending,
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
+    isPending: state.peoplePending,
+    error: state.peopleError,
+    refetch: state.pendingRemovalsRefetch,
   }),
   useInvitations: () => ({
     data: [
@@ -73,9 +80,9 @@ vi.mock("./team-data", () => ({
         created_at: "2026-09-20T00:00:00Z",
       },
     ],
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
+    isPending: state.invitationsPending,
+    error: state.invitationsError,
+    refetch: state.invitationsRefetch,
   }),
   removeClientMember: state.remove,
 }));
@@ -114,6 +121,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.team = [ana, ben];
   state.pending = [];
+  state.peoplePending = false;
+  state.peopleError = null;
+  state.invitationsPending = false;
+  state.invitationsError = null;
   state.remove.mockResolvedValue(undefined);
 });
 
@@ -191,11 +202,66 @@ describe("ClientPeopleDialog", () => {
     );
   });
 
+  it("words a pending Finish removal as finishing the sign-in block, not losing access", async () => {
+    state.pending = [{ id: "cy", display_name: "Cy Gone" }];
+    const user = userEvent.setup();
+    const dialog = renderDialog();
+    await user.click(dialog.getByRole("button", { name: "Finish removal for Cy Gone" }));
+    const confirm = screen.getByRole("dialog", { name: "Remove Cy Gone?" });
+    expect(confirm).toHaveTextContent(
+      "Cy Gone no longer has access to SABRE. This finishes blocking their sign-in.",
+    );
+    expect(confirm).not.toHaveTextContent("loses access");
+  });
+
+  it("disables Cancel, Remove and the confirm dialog's close button while removing", async () => {
+    state.remove.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    const dialog = renderDialog();
+    await user.click(dialog.getByRole("button", { name: "Remove Ben Cole" }));
+    const confirm = screen.getByRole("dialog", { name: "Remove Ben Cole?" });
+    await user.click(within(confirm).getByRole("button", { name: "Remove" }));
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(within(confirm).getByRole("button", { name: "Removing…" })).toBeDisabled();
+    expect(within(confirm).getByRole("button", { name: "Close Remove Ben Cole?" })).toBeDisabled();
+  });
+
   it("opens the existing invite form and confirms the sent invitation", async () => {
     const user = userEvent.setup();
     const dialog = renderDialog();
     await user.click(dialog.getByRole("button", { name: "Invite person" }));
     await user.click(screen.getByRole("button", { name: "Send the sabre invitation" }));
     expect(await dialog.findByText("Invitation email sent.")).toBeInTheDocument();
+  });
+
+  it("shows the people list is loading", () => {
+    state.peoplePending = true;
+    const dialog = renderDialog();
+    expect(dialog.getByRole("status")).toHaveTextContent("Loading people…");
+  });
+
+  it("offers Try again when the people list fails to load", async () => {
+    state.peopleError = new Error("People unavailable");
+    const user = userEvent.setup();
+    const dialog = renderDialog();
+    expect(dialog.getByRole("alert")).toHaveTextContent("People could not be loaded.");
+    await user.click(dialog.getByRole("button", { name: "Try again" }));
+    expect(state.peopleRefetch).toHaveBeenCalled();
+    expect(state.pendingRemovalsRefetch).toHaveBeenCalled();
+  });
+
+  it("shows the invitations list is loading", () => {
+    state.invitationsPending = true;
+    const dialog = renderDialog();
+    expect(dialog.getByRole("status")).toHaveTextContent("Loading invitations…");
+  });
+
+  it("offers Try again when the invitations list fails to load", async () => {
+    state.invitationsError = new Error("Invitations unavailable");
+    const user = userEvent.setup();
+    const dialog = renderDialog();
+    expect(dialog.getByRole("alert")).toHaveTextContent("Invitations could not be loaded.");
+    await user.click(dialog.getByRole("button", { name: "Try again" }));
+    expect(state.invitationsRefetch).toHaveBeenCalled();
   });
 });

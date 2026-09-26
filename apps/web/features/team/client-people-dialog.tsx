@@ -68,6 +68,13 @@ export function ClientPeopleDialog({
     setNotice("");
     setRemoving(target);
   };
+  // A pending row already lost project access; only the sign-in block is left to finish, so the
+  // confirmation reads that instead of "loses access" and skips the last-person warning below.
+  const removalDescription = removing
+    ? removing.pending
+      ? `${removing.name} no longer has access to ${clientName}. This finishes blocking their sign-in.`
+      : `${removing.name} loses access to ${clientName}.`
+    : undefined;
   return (
     <>
       <Modal
@@ -186,7 +193,8 @@ export function ClientPeopleDialog({
       <Modal
         open={!!removing}
         title={removing ? `Remove ${removing.name}?` : "Remove this person?"}
-        description={removing ? `${removing.name} loses access to ${clientName}.` : undefined}
+        description={removalDescription}
+        closeDisabled={remove.isPending}
         onClose={() => {
           if (!remove.isPending) setRemoving(null);
         }}

@@ -1,6 +1,6 @@
 # The studio's People dialog and the client removal route
 
-- Updated: 2026-09-25T23:13:00-03:00 · Agent: Claude Code · Model: Sonnet 5
+- Updated: 2026-09-25T23:29:00-03:00 · Agent: Claude Code · Model: Sonnet 5
 - State: implemented and tested
 - Objective and owned paths: let the studio see, invite and remove a client's people — the client
   removal route, `client-people-dialog.tsx`, `team.css`, the shared list-row wrap rule,
@@ -21,6 +21,9 @@
 - Data-access grep on `features/team/*.tsx` + `client-settings.tsx` — no `.from(`/`.rpc(`/`.storage.`.
 - `npx prettier --write` + `npm run check` from `apps/web` — all green (96 files / 1074 tests).
 - `npx playwright test tests/e2e/team-management.spec.ts --output=../outputs/pw-client-team-4` — 9/9.
+- Fix round 1: pending-wording, closeDisabled and 4 loading/error tests added to
+  `client-people-dialog.test.tsx`; description/`closeDisabled` added to `client-people-dialog.tsx`.
+  `npx vitest run features/team` (5 files/42 tests) and `npm run check` (96 files/1080 tests) — green.
 
 ## Risks and next action
 - None known. Next: Task 5 relies on the list-row wrap-anywhere change made here.
