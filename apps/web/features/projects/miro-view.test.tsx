@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CanvasVersion } from "./project-data";
 import { MiroControls, MiroView } from "./miro-view";
@@ -37,14 +37,7 @@ describe("MiroView", () => {
 
 describe("MiroControls", () => {
   it("offers the current frame in Miro", () => {
-    render(
-      <MiroControls
-        linked={[v3, v2]}
-        current={v3}
-        deliverables={deliverables}
-        onSelect={() => {}}
-      />,
-    );
+    render(<MiroControls linked={[v3, v2]} current={v3} onSelect={() => {}} />);
     const open = screen.getByRole("link", { name: /Open in Miro/ });
     expect(open).toHaveAttribute(
       "href",
@@ -54,22 +47,23 @@ describe("MiroControls", () => {
     expect(open).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("lists only the linked versions and reports a change", () => {
+  it("toggles between the shown deliverable's linked versions, oldest first", () => {
     const onSelect = vi.fn();
-    render(
-      <MiroControls
-        linked={[v3, v2]}
-        current={v3}
-        deliverables={deliverables}
-        onSelect={onSelect}
-      />,
+    const other = { ...v2, id: "o1", deliverableId: "other", number: 1 } as CanvasVersion;
+    render(<MiroControls linked={[v3, v2, other]} current={v3} onSelect={onSelect} />);
+    const group = screen.getByRole("group", { name: "Miro version" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["V2", "V3"]);
+    expect(within(group).getByRole("button", { name: "V3" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-    const select = screen.getByLabelText("Miro frame");
-    expect(Array.from((select as HTMLSelectElement).options).map((o) => o.textContent)).toEqual([
-      "Key visual · V3",
-      "Key visual · V2",
-    ]);
-    fireEvent.change(select, { target: { value: "v2" } });
+    fireEvent.click(within(group).getByRole("button", { name: "V3" }));
+    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.click(within(group).getByRole("button", { name: "V2" }));
     expect(onSelect).toHaveBeenCalledWith("v2");
   });
 });

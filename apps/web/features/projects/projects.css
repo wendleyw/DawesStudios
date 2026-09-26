@@ -50,6 +50,19 @@
   min-width: 0;
   text-align: center;
 }
+.project-heading hgroup {
+  min-width: 0;
+  margin: 0;
+}
+.project-heading hgroup > p {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .project-heading h1 {
   min-width: 0;
   margin: 0;
@@ -1414,31 +1427,34 @@
     right: 0;
   }
 }
-/* The frame selector and "Open in Miro" sit in the header beside the view switch, in the same pill
-   as the deliverable filter, so the embed runs from the header to the page's bottom edge and the
-   tool bar floats over it like it floats over the canvas. */
+/* The version toggle and "Open in Miro" sit in the header beside the view switch, so the embed runs
+   from the header to the page's bottom edge and the tool bar floats over it like it floats over the
+   canvas. */
 .miro-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   max-width: 100%;
-  padding: 5px;
+}
+.miro-controls > * {
   pointer-events: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-.miro-controls > select {
-  min-width: 0;
-  width: 200px;
-  padding: 6px 28px 6px 10px;
+.miro-controls > .segmented-control {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.miro-controls > .segmented-control button {
+  padding: 7px 10px;
   font-size: var(--text-xs);
 }
+/* Same height and edge as the toggle beside it. */
 .miro-controls > .button {
   flex-shrink: 0;
-  padding: 6px 10px;
+  min-height: 38px;
+  border-color: var(--border);
+  padding: 7px 10px;
   font-size: var(--text-xs);
 }
 /* On phones the tool bar moves to the right edge, over Miro's own zoom controls; the embed stops

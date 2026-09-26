@@ -32,6 +32,7 @@ export function ProjectHeader({
   miroAvailable,
   onView,
   miroControls,
+  subtitle,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -47,8 +48,10 @@ export function ProjectHeader({
   view: ProjectView;
   miroAvailable: boolean;
   onView: (view: ProjectView) => void;
-  /** Miro mode's frame selector and "Open in Miro", shown beside the view switch. */
+  /** Miro mode's version toggle and "Open in Miro", shown beside the view switch. */
   miroControls?: ReactNode;
+  /** A line under the title: in Miro mode, the deliverable whose board is shown. */
+  subtitle?: string;
 }) {
   const { formatDate } = useDateFormat();
   return (
@@ -65,7 +68,10 @@ export function ProjectHeader({
             <ArrowLeft size={17} />
           </Link>
           <div className="project-heading">
-            <h1 title={project.title}>{project.title}</h1>
+            <hgroup>
+              <h1 title={project.title}>{project.title}</h1>
+              {subtitle && <p>{subtitle}</p>}
+            </hgroup>
             <div>
               <span className={statusToneClass(projectStatusTones[project.status])}>
                 {statusLabels[project.status]}

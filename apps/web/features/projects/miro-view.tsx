@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight } from "lucide-react";
-import { useId, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { miroBoardUrl, miroEmbedUrl, type MiroLink } from "./miro-links";
 import { miroVersionLabel } from "./miro-mode";
 import type { CanvasVersion } from "./project-data";
@@ -9,35 +9,40 @@ import type { CanvasVersion } from "./project-data";
 type MiroFrame = CanvasVersion & { miro: MiroLink };
 
 /**
- * Miro mode's header controls, beside the Versions | Miro switch: a selector of the versions that
- * have a link, and "Open in Miro" for when the embed cannot sign in.
+ * Miro mode's header controls, beside the Versions | Miro switch: a toggle between the shown
+ * deliverable's linked versions (the deliverable filter changes the deliverable), and "Open in
+ * Miro" for when the embed cannot sign in.
  */
 export function MiroControls({
   linked,
   current,
-  deliverables,
   onSelect,
 }: {
   linked: CanvasVersion[];
   current: MiroFrame;
-  deliverables: { id: string; name: string }[];
   onSelect: (versionId: string) => void;
 }) {
-  const selectId = useId();
+  const versions = linked
+    .filter((version) => version.deliverableId === current.deliverableId)
+    .sort((a, b) => a.number - b.number);
   return (
     <div className="miro-controls">
-      <label className="visually-hidden" htmlFor={selectId}>
-        Miro frame
-      </label>
-      <select id={selectId} value={current.id} onChange={(event) => onSelect(event.target.value)}>
-        {linked.map((version) => (
-          <option key={version.id} value={version.id}>
-            {miroVersionLabel(version, deliverables)}
-          </option>
+      <div className="segmented-control" role="group" aria-label="Miro version">
+        {versions.map((version) => (
+          <button
+            key={version.id}
+            className={version.id === current.id ? "active" : ""}
+            aria-pressed={version.id === current.id}
+            onClick={() => {
+              if (version.id !== current.id) onSelect(version.id);
+            }}
+          >
+            V{version.number}
+          </button>
         ))}
-      </select>
+      </div>
       <a
-        className="button quiet"
+        className="button"
         href={miroBoardUrl(current.miro)}
         target="_blank"
         rel="noopener noreferrer"

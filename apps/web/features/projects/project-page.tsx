@@ -426,10 +426,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             <MiroControls
               linked={linked}
               current={{ ...miroVersion, miro: miroVersion.miro }}
-              deliverables={deliverables}
               onSelect={(id) => setMiroVersionId(id)}
             />
           ) : undefined
+        }
+        subtitle={
+          miroActive
+            ? deliverables.find((entry) => entry.id === miroVersion?.deliverableId)?.name
+            : undefined
         }
       />
       <div className="project-workspace">

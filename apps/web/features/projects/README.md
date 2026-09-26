@@ -295,15 +295,15 @@ one, and `readProjectView`/`writeProjectView` keep `view=miro` and `version=<id>
 reload or a shared link returns to the same frame. `project-page.tsx` mounts `MiroView`
 (`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`visibility:
 hidden`, `aria-hidden`) rather than unmounting, so switching back to **Versions** is instant. The
-header shows `MiroControls` (same file) beside the Versions | Miro switch: a selector labelled "Miro
-frame" (one option per linked version, `miroVersionLabel`) and **Open in Miro** (`miroBoardUrl`,
-`target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
-is the way through to the real board regardless). `MiroView` renders the optional asset strip and
+header shows `MiroControls` (same file) beside the Versions | Miro switch: a **Miro version** toggle
+(`V1`, `V2`, … — the linked versions of the shown deliverable, oldest first; the deliverable filter
+changes the deliverable) and **Open in Miro** (`miroBoardUrl`, `target="_blank"` — the embed can fail
+to sign in behind third-party-cookie restrictions, so this link is the way through to the real board regardless). `MiroView` renders the optional asset strip and
 `iframe.miro-view-frame`, which runs from the header to the bottom edge with the tool bar floating
 over it (on phones, where the bar sits over Miro's zoom controls, the embed stops above the bar); the
 iframe is rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with
 `autoplay=true`, never from the pasted URL again; `key={current.id}` reloads the frame when the
-selector changes the version. The header's **Project view** segmented control (Versions/Miro,
+toggle changes the version, and the deliverable's name shows under the project title. The header's **Project view** segmented control (Versions/Miro,
 `project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one
 linked version under the current deliverable filter — and is the other entry point beside a
 version card's **View on Miro**; clicking the option already pressed is a no-op, never a jump back
