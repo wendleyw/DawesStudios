@@ -64,4 +64,27 @@ describe("ProjectToolBar", () => {
     expect(screen.getByRole("button", { name: "Project details" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Conversation" })).toBeDisabled();
   });
+
+  it("shows Feedback only when a workspace item is shown", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <ProjectToolBar panel={null} onPanel={vi.fn()} disabled={false}>
+        {null}
+      </ProjectToolBar>,
+    );
+    expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+    rerender(
+      <ProjectToolBar
+        panel={null}
+        onPanel={vi.fn()}
+        disabled={false}
+        feedback={{ open: false, onToggle }}
+      >
+        {null}
+      </ProjectToolBar>,
+    );
+    await user.click(screen.getByRole("button", { name: "Feedback" }));
+    expect(onToggle).toHaveBeenCalled();
+  });
 });

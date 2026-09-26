@@ -105,6 +105,38 @@ export function MiroBar({
   );
 }
 
+/** The Miro embed itself: a cropped live-embed iframe; `frameKey` reloads it on a new frame. */
+export function MiroEmbed({
+  title,
+  link,
+  frameKey,
+  strip,
+}: {
+  title: string;
+  link: MiroLink;
+  frameKey: string;
+  strip?: ReactNode;
+}) {
+  return (
+    <section className="miro-view" aria-label="Miro board">
+      {strip}
+      {/* Miro's own top bar is cropped off (see `.miro-view-crop`); the board, its tools and paste
+          stay fully usable. */}
+      <div className="miro-view-crop">
+        <iframe
+          key={frameKey}
+          className="miro-view-frame"
+          title={title}
+          src={miroEmbedUrl(link)}
+          allow="fullscreen; clipboard-read; clipboard-write"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+    </section>
+  );
+}
+
 /**
  * Miro mode's view: the chosen version's frame in place of the canvas, running under the header and
  * the floating tool bar. The iframe source is rebuilt from stored ids; `key` reloads it on the new
@@ -120,22 +152,12 @@ export function MiroView({
   strip?: ReactNode;
 }) {
   return (
-    <section className="miro-view" aria-label="Miro board">
-      {strip}
-      {/* Miro's own top bar is cropped off (see `.miro-view-crop`); the board, its tools and paste
-          stay fully usable. */}
-      <div className="miro-view-crop">
-        <iframe
-          key={current.id}
-          className="miro-view-frame"
-          title={`Miro board for ${miroVersionLabel(current, deliverables)}`}
-          src={miroEmbedUrl(current.miro)}
-          allow="fullscreen; clipboard-read; clipboard-write"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
-      </div>
-    </section>
+    <MiroEmbed
+      title={`Miro board for ${miroVersionLabel(current, deliverables)}`}
+      link={current.miro}
+      frameKey={current.id}
+      strip={strip}
+    />
   );
 }
 

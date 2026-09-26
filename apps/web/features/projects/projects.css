@@ -69,6 +69,23 @@
   padding: 3px 10px;
   font-size: var(--text-xs);
 }
+.miro-bar-board {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 220px;
+  padding: 4px 28px 4px 10px;
+  font-size: var(--text-xs);
+}
+.miro-workspace-empty {
+  position: absolute;
+  inset: var(--project-chrome-height) 0 0;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
 .miro-bar-status,
 .miro-bar-due {
   flex-shrink: 0;
