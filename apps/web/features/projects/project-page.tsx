@@ -15,6 +15,7 @@ import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
 import { CanvasOpeningView, ProjectCanvasControls } from "./project-canvas-view";
 import { DesignViewer } from "./design-viewer";
+import { MiroBoardPanel } from "./miro-board-panel";
 import {
   nodeTypes,
   type DeliverableNode,
@@ -102,6 +103,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     };
   }, []);
   const [action, setAction] = useState<ProjectAction | null>(null);
+  const [miroVersion, setMiroVersion] = useState<CanvasVersion | null>(null);
   const [playgroundOrigin, setPlaygroundOrigin] = useState<"project" | "upload" | null>(null);
   const playgroundOpen = playgroundOrigin !== null;
   const playgroundTrigger = useRef<HTMLButtonElement>(null);
@@ -308,6 +310,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             : undefined,
         canPublish: profile?.role === "agency" && channel === "internal",
         canReview: reviewFor(version) !== undefined,
+        canManageMiro: profile?.role === "agency",
+        openMiro: version.miro ? () => setMiroVersion(version) : undefined,
         artworkHeight: frame.artworkHeight,
         visibleDesigns: frame.visible,
         openDesign: (id) => setSelected({ designId: id, versionId: version.id }),
@@ -353,6 +357,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         format={format}
         onChannel={(next) => {
           setSelected(null);
+          setMiroVersion(null);
           setAgencyChannel(next);
         }}
         onFormat={setFormat}
@@ -518,6 +523,13 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             projectId={projectId}
             onClose={closePlayground}
             returnLabel={playgroundOrigin === "upload" ? "Back to upload" : "Back to project"}
+          />
+        )}
+        {miroVersion?.miro && (
+          <MiroBoardPanel
+            link={miroVersion.miro}
+            title={`${deliverables.find((entry) => entry.id === miroVersion.deliverableId)?.name ?? "Version"} · V${miroVersion.number}`}
+            onClose={() => setMiroVersion(null)}
           />
         )}
       </div>

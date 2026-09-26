@@ -1,7 +1,16 @@
 "use client";
 
 import type { Node, NodeProps } from "@xyflow/react";
-import { ArrowUpRight, Check, ChevronRight, MessageSquare, Plus, Send } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Link2,
+  MessageSquare,
+  Plus,
+  Presentation,
+  Send,
+} from "lucide-react";
 import { memo, type CSSProperties } from "react";
 import { Artwork } from "./artwork";
 import type { ProjectAction } from "./project-action-dialog";
@@ -28,6 +37,10 @@ export type VersionNode = Node<
     creationHint?: string;
     openDesign: (id: string) => void;
     action: (action: ProjectAction) => void;
+    /** The agency sets this channel's Miro link from the card. */
+    canManageMiro: boolean;
+    /** Present only when this version has a Miro link on the viewer's channel. */
+    openMiro?: () => void;
   },
   "version"
 >;
@@ -65,6 +78,28 @@ const VersionCard = memo(function VersionCard({ data }: NodeProps<VersionNode>) 
               : `${data.commentCount} comment${data.commentCount === 1 ? "" : "s"}`}
           </span>
         </button>
+        {(data.openMiro || data.canManageMiro) && (
+          <div className="version-miro">
+            {data.openMiro && (
+              <button className="version-miro-open nodrag" onClick={data.openMiro}>
+                <Presentation size={14} aria-hidden="true" />
+                View on Miro
+              </button>
+            )}
+            {data.canManageMiro && (
+              <button
+                className="icon-button nodrag"
+                aria-label={`${data.version.miro ? "Change" : "Add"} Miro link for version ${data.version.number}`}
+                title={data.version.miro ? "Change Miro link" : "Add Miro link"}
+                onClick={() =>
+                  data.action({ kind: "miro", version: data.version, channel: data.channel })
+                }
+              >
+                <Link2 size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
         <footer>
           <span>
             {data.designs.length} design{data.designs.length === 1 ? "" : "s"}

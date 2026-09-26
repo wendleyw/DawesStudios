@@ -18,18 +18,23 @@ import {
 } from "./media-client";
 import {
   addDesign,
+  clearMiroLink,
   createDesignVersion,
   findDesignByAsset,
   findUnchangedDesign,
   publishVersion,
   reviewPublication,
+  setMiroLink,
   submitDesignVersion,
   updateDesignContent,
   updateWorkingDesign,
   useInvalidateProject,
+  useLatestMiroLink,
   type CanvasDesign,
   type CanvasVersion,
+  type ProjectChannel,
 } from "./project-data";
+import { miroBoardUrl, miroUrlHint, parseMiroBoardUrl } from "./miro-links";
 import { FormError } from "@/features/shared/form-error";
 import {
   ARTWORK_MAX_BYTES,
@@ -42,7 +47,8 @@ import {
 export type ProjectAction =
   | { kind: "version"; deliverableId: string; sourceVersionId?: string }
   | { kind: "design" | "publish" | "submit" | "review"; version: CanvasVersion }
-  | { kind: "edit-design"; version: CanvasVersion; design: CanvasDesign };
+  | { kind: "edit-design"; version: CanvasVersion; design: CanvasDesign }
+  | { kind: "miro"; version: CanvasVersion; channel: ProjectChannel };
 const titles = {
   version: "A fresh version.",
   design: "Add a design.",
@@ -50,6 +56,9 @@ const titles = {
   publish: "Share with the client.",
   submit: "Ready for the studio?",
   review: "Your thoughts make it better.",
+  // Not "Link a Miro frame." — the Modal's close button aria-label prefixes the title with
+  // "Close ", and that exact phrase collides with the field's own `/Miro frame/` query in tests.
+  miro: "Add a Miro link.",
 };
 
 export function ProjectActionDialog({
@@ -108,6 +117,23 @@ export function ProjectActionDialog({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [uploadProgress]);
+  // What a new Miro link starts from: a client link only from an earlier publication, an internal
+  // link only from an earlier internal version. The hook runs on every render; `enabled` scopes it.
+  const miroChannel: ProjectChannel = action?.kind === "miro" ? action.channel : "client";
+  const miroTarget = action?.kind === "publish" || action?.kind === "miro" ? action.version : null;
+  const latestMiro = useLatestMiroLink(
+    miroTarget?.deliverableId ?? "",
+    miroChannel,
+    action?.kind === "miro"
+      ? { excludeId: action.version.id, enabled: !action.version.miro }
+      : { enabled: action?.kind === "publish" },
+  );
+  const miroPrefill =
+    action?.kind === "miro" && action.version.miro
+      ? miroBoardUrl(action.version.miro)
+      : latestMiro.data
+        ? miroBoardUrl(latestMiro.data)
+        : "";
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       if (!action) return;
@@ -215,9 +241,12 @@ export function ProjectActionDialog({
             });
         }
       } else if (action.kind === "publish") {
+        const miroUrl = value("miro");
+        if (miroUrl && !parseMiroBoardUrl(miroUrl)) throw new Error(miroUrlHint);
         const assets = await preparePublicationAssets(database, mediaUrl, action.version.id);
+        let publicationId: string;
         try {
-          await publishVersion(database, {
+          publicationId = await publishVersion(database, {
             versionId: action.version.id,
             releaseNote: value("note"),
             assets,
@@ -227,6 +256,36 @@ export function ProjectActionDialog({
           await discardPreparedAssets(database, mediaUrl, Object.values(assets)).catch(
             () => undefined,
           );
+        }
+        if (miroUrl) {
+          try {
+            await setMiroLink(database, {
+              channel: "client",
+              versionId: publicationId,
+              url: miroUrl,
+            });
+          } catch (error) {
+            // Publishing without a key is idempotent, so sharing again returns this same
+            // publication and retries only the link.
+            await invalidate();
+            throw new Error(
+              `V${action.version.number} was shared, but the Miro link was not saved (${
+                error instanceof Error ? error.message : "unknown error"
+              }). Share again to retry the link.`,
+            );
+          }
+        }
+      } else if (action.kind === "miro") {
+        const miroUrl = value("miro");
+        if (!miroUrl)
+          await clearMiroLink(database, { channel: action.channel, versionId: action.version.id });
+        else {
+          if (!parseMiroBoardUrl(miroUrl)) throw new Error(miroUrlHint);
+          await setMiroLink(database, {
+            channel: action.channel,
+            versionId: action.version.id,
+            url: miroUrl,
+          });
         }
       } else if (action.kind === "submit") {
         await submitDesignVersion(database, { versionId: action.version.id });
@@ -452,6 +511,11 @@ export function ProjectActionDialog({
                     maxLength={2000}
                   />
                 </label>
+                <MiroField
+                  prefill={miroPrefill}
+                  loading={latestMiro.isPending && latestMiro.fetchStatus !== "idle"}
+                  hint="The client opens this frame from the version. Copy the frame's link in Miro."
+                />
               </>
             )}
             {action.kind === "submit" && (
@@ -478,6 +542,20 @@ export function ProjectActionDialog({
                     maxLength={5000}
                   />
                 </label>
+              </>
+            )}
+            {action.kind === "miro" && (
+              <>
+                <p>
+                  {action.channel === "client"
+                    ? "The client opens this frame from the shared version."
+                    : "Assigned designers open this frame from the version. The client never sees it."}
+                </p>
+                <MiroField
+                  prefill={miroPrefill}
+                  loading={latestMiro.isPending && latestMiro.fetchStatus !== "idle"}
+                  hint="Leave empty to remove the link."
+                />
               </>
             )}
             {uploadErrorKind === "cancelled" && !closeError && (
@@ -517,6 +595,7 @@ export function ProjectActionDialog({
                         publish: "Share version",
                         submit: "Send to studio",
                         review: "Send review",
+                        miro: "Save link",
                       }[action.kind]}
               </button>
             </div>
@@ -524,5 +603,35 @@ export function ProjectActionDialog({
         )}
       </Modal>
     </>
+  );
+}
+
+/**
+ * The Miro link input; remounted once its prefill arrives so `defaultValue` takes it. It is a text
+ * input, not `type="url"`, so the dialog's own message (not the browser's) explains a bad link.
+ */
+function MiroField({
+  prefill,
+  loading,
+  hint,
+}: {
+  prefill: string;
+  loading: boolean;
+  hint: string;
+}) {
+  return (
+    <label>
+      Miro frame (optional)
+      <input
+        key={loading ? "loading" : prefill}
+        name="miro"
+        type="text"
+        inputMode="url"
+        defaultValue={prefill}
+        disabled={loading}
+        placeholder="https://miro.com/app/board/…/?moveToWidget=…"
+      />
+      <small>{hint}</small>
+    </label>
   );
 }

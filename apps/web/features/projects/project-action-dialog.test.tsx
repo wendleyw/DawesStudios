@@ -9,15 +9,18 @@ vi.mock("@/features/auth/auth-provider", () => auth);
 
 const projectData = vi.hoisted(() => ({
   addDesign: vi.fn(),
+  clearMiroLink: vi.fn(),
   createDesignVersion: vi.fn(),
   findDesignByAsset: vi.fn(),
   findUnchangedDesign: vi.fn(),
   publishVersion: vi.fn(),
   reviewPublication: vi.fn(),
+  setMiroLink: vi.fn(),
   submitDesignVersion: vi.fn(),
   updateDesignContent: vi.fn(),
   updateWorkingDesign: vi.fn(),
   useInvalidateProject: () => vi.fn(),
+  useLatestMiroLink: vi.fn(),
 }));
 vi.mock("./project-data", () => projectData);
 
@@ -118,6 +121,12 @@ beforeEach(() => {
   projectData.findDesignByAsset.mockResolvedValue([]);
   projectData.addDesign.mockResolvedValue(undefined);
   artworkFiles.discardRawUpload.mockResolvedValue(undefined);
+  projectData.useLatestMiroLink.mockReturnValue({ isPending: false, data: null });
+  projectData.publishVersion.mockResolvedValue("pub-1");
+  projectData.setMiroLink.mockResolvedValue(undefined);
+  projectData.clearMiroLink.mockResolvedValue(undefined);
+  mediaClient.preparePublicationAssets.mockResolvedValue({});
+  mediaClient.discardPreparedAssets.mockResolvedValue(undefined);
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -377,5 +386,95 @@ describe("Try processing again", () => {
     submit();
     await waitFor(() => expect(screen.getByText(/failed to upload chunk/i)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /^add design$/i })).toBeInTheDocument();
+  });
+});
+
+const publishedVersion = {
+  ...version,
+  id: "pub-1",
+  deliverableId: "d-1",
+  number: 3,
+} as CanvasVersion;
+
+describe("Miro links", () => {
+  it("prefills the publish field from the previous publication", () => {
+    projectData.useLatestMiroLink.mockReturnValue({
+      isPending: false,
+      data: { boardId: "uXjVKabc123=", widgetId: "7" },
+    });
+    renderDialog({
+      kind: "publish",
+      version: { ...version, deliverableId: "d-1" } as CanvasVersion,
+    });
+    expect(projectData.useLatestMiroLink).toHaveBeenCalledWith("d-1", "client", { enabled: true });
+    expect(screen.getByLabelText(/Miro frame/)).toHaveValue(
+      "https://miro.com/app/board/uXjVKabc123%3D/?moveToWidget=7",
+    );
+  });
+
+  it("refuses an invalid link before publishing", async () => {
+    renderDialog({ kind: "publish", version });
+    fireEvent.change(screen.getByLabelText(/Miro frame/), {
+      target: { value: "https://example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Share version" }));
+    expect(await screen.findByText(/Paste a Miro board or frame link/)).toBeInTheDocument();
+    expect(projectData.publishVersion).not.toHaveBeenCalled();
+  });
+
+  it("saves the link on the new publication", async () => {
+    const { onClose } = renderDialog({ kind: "publish", version });
+    fireEvent.change(screen.getByLabelText(/Miro frame/), {
+      target: { value: "https://miro.com/app/board/uXjVKabc123=/?moveToWidget=9" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Share version" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(projectData.setMiroLink).toHaveBeenCalledWith(expect.anything(), {
+      channel: "client",
+      versionId: "pub-1",
+      url: "https://miro.com/app/board/uXjVKabc123=/?moveToWidget=9",
+    });
+  });
+
+  it("reports a shared version whose link was not saved", async () => {
+    projectData.setMiroLink.mockRejectedValue(new Error("network down"));
+    const { onClose } = renderDialog({ kind: "publish", version });
+    fireEvent.change(screen.getByLabelText(/Miro frame/), {
+      target: { value: "https://miro.com/app/board/uXjVKabc123=/" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Share version" }));
+    expect(
+      await screen.findByText(/was shared, but the Miro link was not saved/),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("removes the link when the field is saved empty", async () => {
+    const { onClose } = renderDialog({
+      kind: "miro",
+      version: { ...publishedVersion, miro: { boardId: "uXjVKabc123=", widgetId: null } },
+      channel: "client",
+    });
+    fireEvent.change(screen.getByLabelText(/Miro frame/), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(projectData.clearMiroLink).toHaveBeenCalledWith(expect.anything(), {
+      channel: "client",
+      versionId: "pub-1",
+    });
+  });
+
+  it("sets an internal link on the internal channel", async () => {
+    const { onClose } = renderDialog({ kind: "miro", version, channel: "internal" });
+    fireEvent.change(screen.getByLabelText(/Miro frame/), {
+      target: { value: "https://miro.com/app/board/uXjVStudio1=/" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save link" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(projectData.setMiroLink).toHaveBeenCalledWith(expect.anything(), {
+      channel: "internal",
+      versionId: "version-1",
+      url: "https://miro.com/app/board/uXjVStudio1=/",
+    });
   });
 });

@@ -1399,3 +1399,26 @@
   min-height: 0;
   border: 0;
 }
+.version-miro {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 0;
+}
+.version-miro-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.version-miro-open:hover {
+  color: var(--foreground);
+}
