@@ -177,5 +177,59 @@ select throws_ok($$select public.submit_design_version(pg_temp.k('round-a1'))$$,
 select is((select count(*)::int from public.designs where version_id=pg_temp.k('round-a1')),0,'The round still has no design row');
 reset role;
 
+-- Sharing: agency only; from a round or direct; idempotent; atomic on a bad link; delivered refused.
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','x')$$,'42501',null,'A designer cannot share with the client');
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://evil.example/app/board/uXjVClient1=/','x')$$,'22023',null,'An invalid client link is refused');
+select is((select count(*)::int from public.published_versions where project_id=pg_temp.k('project')),0,'A refused share wrote nothing');
+select lives_ok($$select pg_temp.remember('shared-1',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=5',' First look ',pg_temp.k('round-a1'),md5('mw:share-1')::uuid))$$,'The agency shares a round');
+select is(public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=5',' First look ',pg_temp.k('round-a1'),md5('mw:share-1')::uuid),pg_temp.k('shared-1'),'A retry returns the same version');
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','other',null,md5('mw:share-1')::uuid)$$,'P0001','Idempotency key conflicts with a different version','A reused key for another share is refused');
+select throws_ok($$select public.share_miro_version(pg_temp.k('delivered'),'https://miro.com/app/board/uXjVClient1=/','late')$$,'P0001','Delivered projects cannot publish new revisions','A delivered project refuses sharing');
+reset role;
+select is((select deliverable_id from public.published_versions where id=pg_temp.k('shared-1')),null,'A shared version belongs to the project, not a deliverable');
+select is((select version_number from public.published_versions where id=pg_temp.k('shared-1')),1,'The first shared version is V1');
+select is((select release_note from public.published_versions where id=pg_temp.k('shared-1')),'First look','The note is trimmed');
+select is((select widget_id from public.publication_miro_links where publication_id=pg_temp.k('shared-1')),'5','The client link is stored');
+select is((select status from public.publication_reviews where publication_id=pg_temp.k('shared-1')),'pending','A pending review opens');
+select is((select internal_version_id from private.publication_sources where publication_id=pg_temp.k('shared-1')),pg_temp.k('round-a1'),'The source round is recorded');
+select is((select status from public.design_versions where id=pg_temp.k('round-a1')),'reviewed','The round is marked shared');
+select is((select status::text from public.projects where id=pg_temp.k('project')),'client_review','The project waits for the client');
+select ok(exists(select 1 from public.notifications where client_id=pg_temp.k('client-org') and project_id=pg_temp.k('project') and title='New designs ready for review'),'The client is notified');
+
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select pg_temp.remember('shared-2',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=6','Second look'))$$,'The agency adds a version directly');
+reset role;
+select is((select version_number from public.published_versions where id=pg_temp.k('shared-2')),2,'Direct versions continue the project numbering');
+select is((select count(*)::int from private.publication_sources where publication_id=pg_temp.k('shared-2')),0,'A direct version has no source round');
+select is((select requested_by from private.miro_share_requests where publication_id=pg_temp.k('shared-2')),pg_temp.k('agency'),'The publisher of a direct version is recorded');
+
+-- The client reads the versions and links but nothing internal.
+select pg_temp.act_as('client');
+set local role authenticated;
+select is((select count(*)::int from public.published_versions where project_id=pg_temp.k('project')),2,'The client reads both shared versions');
+select is((select count(*)::int from public.publication_miro_links where project_id=pg_temp.k('project')),2,'The client reads the client links');
+select is((select count(*)::int from public.design_versions),0,'The client reads no round');
+select is((select count(*)::int from public.design_boards),0,'The client reads no board');
+-- Review: only the latest; a project-level decision sets the project status directly.
+select throws_ok($$select public.review_publication(pg_temp.k('shared-1'),'approved')$$,'P0001','Review the latest published version','An older version cannot be reviewed');
+select lives_ok($$select public.review_publication(pg_temp.k('shared-2'),'changes_requested','Warmer tones')$$,'The client requests changes on the latest');
+reset role;
+select is((select status::text from public.projects where id=pg_temp.k('project')),'changes_requested','Requested changes reach the project');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select pg_temp.remember('shared-3',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=7','Third look'))$$,'The agency shares the revision');
+reset role;
+select pg_temp.act_as('client');
+set local role authenticated;
+select lives_ok($$select public.review_publication(pg_temp.k('shared-3'),'approved')$$,'The client approves');
+reset role;
+select is((select status::text from public.projects where id=pg_temp.k('project')),'approved','Approval of the latest project-level version approves the project');
+
 select * from finish();
 rollback;

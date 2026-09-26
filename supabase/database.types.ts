@@ -1692,7 +1692,7 @@ export type Database = {
       }
       published_versions: {
         Row: {
-          deliverable_id: string
+          deliverable_id: string | null
           id: string
           project_id: string
           published_at: string
@@ -1700,7 +1700,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          deliverable_id: string
+          deliverable_id?: string | null
           id?: string
           project_id: string
           published_at?: string
@@ -1708,7 +1708,7 @@ export type Database = {
           version_number: number
         }
         Update: {
-          deliverable_id?: string
+          deliverable_id?: string | null
           id?: string
           project_id?: string
           published_at?: string
@@ -2252,6 +2252,16 @@ export type Database = {
       set_version_miro_link: {
         Args: { p_url: string; p_version_id: string }
         Returns: undefined
+      }
+      share_miro_version: {
+        Args: {
+          p_idempotency_key?: string
+          p_note?: string
+          p_project_id: string
+          p_source_round?: string
+          p_url: string
+        }
+        Returns: string
       }
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
       submit_design_version: {
