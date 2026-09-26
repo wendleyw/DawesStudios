@@ -126,6 +126,20 @@ production creation cards or internal fetches. Creating working content never ch
 snapshot or sends it automatically; explicit agency publication remains required. The backend
 permissions and write commands are unchanged.
 
+Every card and toolbar action above opens `ProjectActionDialog` (`project-action-dialog.tsx`) with
+one of `ProjectAction`'s seven `kind`s. That component is only a dispatcher: it renders one
+component per kind — `project-action-version.tsx`, `project-action-design.tsx` (design and
+edit-design share a form, so they share this one component), `project-action-publish.tsx`,
+`project-action-miro.tsx` (also the home of `MiroField`, which `project-action-publish.tsx` reuses),
+`project-action-submit.tsx` and `project-action-review.tsx` — so a change to one action never
+requires reading the other six. `project-action-shell.tsx` holds what every kind renders alike: the
+`Modal` shell, the error paragraph and the Cancel/submit footer, plus the `useProjectActionClose` and
+`useCloseOnSuccess` hooks each kind's own mutation calls into. `project-action-design.tsx` stays the
+largest of the six, because it alone owns the image/video upload state machine described below;
+`project-action-design-text-options.tsx` and `project-action-design-upload-status.tsx` hold its two
+purely presentational fragments (the text-concept fields and the live upload/processing line) to keep
+that file smaller without splitting the mutation itself.
+
 `artwork-files.ts` owns an uploaded design artwork's whole lifecycle: `sanitizeArtwork` re-encodes
 the image and enforces the type, size and megapixel limits, `uploadArtwork` stores it under an
 opaque `<project UUID>/<random UUID>.png` path in the private `internal-assets` bucket, and
@@ -136,7 +150,7 @@ other read hooks in `project-data.ts`. `media-client.ts` talks to the media serv
 snapshots, delivery files, and the video-sanitisation round trip; `comment-draft.ts` keeps an unsent
 comment and its pending pin.
 
-`uploadDesignAsset` is the single entry point `project-action-dialog.tsx` calls for a design file,
+`uploadDesignAsset` is the single entry point `project-action-design.tsx` calls for a design file,
 and it takes one of two paths depending on the file's declared type — the two paths differ because
 the browser can prepare one of them and not the other. An **image** goes through `sanitizeArtwork`:
 a canvas decode-and-re-encode that strips metadata as a side effect, enforces `ARTWORK_MAX_BYTES`
@@ -230,7 +244,7 @@ uploading finishes and is registered. `bulk-drop-dialog.tsx` renders one block p
 its size, file count and version choice, the picker for unmatched or tied files, the files that
 cannot be added with their reasons, per-file progress, and **Try again** for the failed files only,
 reusing any version the first attempt created. `project-page.tsx` mounts one dialog per drop.
-Neither `artwork-files.ts` nor `project-action-dialog.tsx` changed for this feature; only their
+Neither `artwork-files.ts` nor `project-action-design.tsx` changed for this feature; only their
 existing exports (`uploadArtwork`, `discardUnreferencedArtwork`) are called. `createDesignVersion`
 now returns the created version's id, which bulk drop needs to register several designs into a
 version it just created.
@@ -254,10 +268,10 @@ the client note. `useLatestMiroLink` prefills it from the newest earlier client-
 same deliverable (not the version being published), so republishing the same deliverable keeps its
 board without retyping the URL. The field is genuinely optional: leaving it blank when publishing
 leaves any existing client-channel link on the published version untouched, because
-`project-action-dialog.tsx`'s `mutationFn` only calls `setMiroLink` when the field is non-empty.
+`project-action-publish.tsx`'s `mutationFn` only calls `setMiroLink` when the field is non-empty.
 Removing a link is not possible from the publish dialog; it only happens through the separate
-version dialog below, by saving that dialog's field empty. That dialog (`kind: "miro"` in
-`project-action-dialog.tsx`, titled **Add a Miro link.** or **Change the Miro link.** depending on
+version dialog below, by saving that dialog's field empty. That dialog (`project-action-miro.tsx`,
+dispatched for `kind: "miro"`, titled **Add a Miro link.** or **Change the Miro link.** depending on
 whether the version already has one) sets or clears a single version's link on whichever channel
 opened it, prefilling from that version's own existing link, or otherwise the deliverable's newest
 link on that channel; saving it empty clears the link (`clearMiroLink`).
@@ -285,7 +299,7 @@ is not rendered at all unless a link exists for the viewer's channel.
 `findUnchangedDesign`, `findDesignByAsset` and `downloadDesignAssetFile` in `project-data.ts` are
 exported as plain `async (database, input)` functions instead of `use<Thing>()` hooks.
 
-Both are called from inside `mutation.mutationFn` in `project-action-dialog.tsx`
+Both are called from inside `mutation.mutationFn` in `project-action-design.tsx`
 (both by name, inside `mutationFn`), where React does not permit a hook
 to be called at all. This is the case [rule 2 of the contract](../../../../docs/architecture/data-access.md)
 now names directly, so it is the rule for these call sites rather than a licence this feature
