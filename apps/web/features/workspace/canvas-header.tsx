@@ -27,24 +27,22 @@ export function CanvasHeader({
     .slice(0, 2)
     .map((part) => part[0])
     .join("");
+  const logo = (
+    <Link
+      className="board-identity-logo"
+      href={`/clients/${client.id}/${viewer?.role === "designer" ? "board" : "overview"}`}
+      title={client.name}
+    >
+      <ClientMark client={client} className="board-identity-mark" alt={client.name} />
+    </Link>
+  );
   return (
     <header className="board-header">
       <div className="board-identity">
         <div className="board-client-context">
-          {/* The client's logo stands in for their name; the name stays its accessible label. */}
-          {heading ? (
-            <h1 className="board-identity-logo" title={client.name}>
-              <ClientMark client={client} className="board-identity-mark" alt={client.name} />
-            </h1>
-          ) : (
-            <Link
-              className="board-identity-logo"
-              href={`/clients/${client.id}/board`}
-              title={client.name}
-            >
-              <ClientMark client={client} className="board-identity-mark" alt={client.name} />
-            </Link>
-          )}
+          {/* The client's logo stands in for their name and leads to their Overview; designers have
+              no client Overview, so theirs leads to the board. The name stays its accessible label. */}
+          {heading ? <h1 className="board-identity-heading">{logo}</h1> : logo}
           {context}
         </div>
         {viewer && <ClientNavigation client={client} role={viewer.role} />}

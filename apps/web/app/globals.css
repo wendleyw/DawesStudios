@@ -1604,6 +1604,10 @@ img.client-mark {
 .board-identity .client-navigation {
   flex-shrink: 0;
 }
+.board-identity-heading {
+  display: flex;
+  margin: 0;
+}
 .board-identity-logo {
   display: flex;
   flex-shrink: 0;

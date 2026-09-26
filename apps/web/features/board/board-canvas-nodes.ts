@@ -27,9 +27,11 @@ function contentBounds(nodes: Node[]): { width: number; height: number } {
  * no dimensions: it is rendered hidden and clamped to its parent's corner. On this board the array
  * is rebuilt whenever a card is selected or dragged, which is exactly when a card has to stay
  * under the pointer — the second click of a double click would otherwise land on the pane.
+ * `measured` matters while dragging: xyflow reads it to keep a card inside its frame and warns
+ * that the node is uninitialised when it is missing.
  */
 function sized(width: number, height: number) {
-  return { width, height, style: { width, height } };
+  return { width, height, measured: { width, height }, style: { width, height } };
 }
 
 /**
