@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   brandDefaults,
+  byDueDate,
   briefingPayload,
   catalogWithPresets,
   decodeBriefing,
@@ -289,5 +290,24 @@ describe("the requester the studio names", () => {
     expect(briefingPayload("client", draft, null, 3, "ana").p_requested_by).toBe("ana");
     expect(briefingPayload("client", draft, null, 3, "")).not.toHaveProperty("p_requested_by");
     expect(briefingPayload("client", draft, null)).not.toHaveProperty("p_requested_by");
+  });
+});
+
+describe("byDueDate", () => {
+  it("lists the latest due date first and undated briefings last, keeping ties in order", () => {
+    const list = [
+      { id: "none", due_date: null },
+      { id: "may", due_date: "2026-05-01" },
+      { id: "sep-a", due_date: "2026-09-20" },
+      { id: "sep-b", due_date: "2026-09-20" },
+      { id: "dec", due_date: "2026-12-01" },
+    ];
+    expect(byDueDate(list).map((item) => item.id)).toEqual([
+      "dec",
+      "sep-a",
+      "sep-b",
+      "may",
+      "none",
+    ]);
   });
 });

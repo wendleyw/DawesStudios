@@ -8,7 +8,7 @@ import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { personName, requesterLabel } from "@/features/team/client-people";
 import { useClientPeople } from "@/features/team/team-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
-import { briefingStatusLabels, briefingStatusTones, services } from "./briefing-model";
+import { briefingStatusLabels, briefingStatusTones, byDueDate, services } from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
 import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
@@ -41,7 +41,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
         </button>
       </div>
     );
-  const visible = (briefings.data ?? []).filter(
+  const visible = byDueDate(briefings.data ?? []).filter(
     (item) =>
       tab === "all" ||
       (tab === "awaiting_review"

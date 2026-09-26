@@ -157,6 +157,19 @@ export const briefingStatusTones: Record<Briefing["status"], StatusTone> = {
   accepted: "active",
 };
 
+/**
+ * The briefing list's order: by due date, latest first, so upcoming work leads and past work
+ * follows; briefings without a due date come last. Ties keep the order they arrived in.
+ */
+export function byDueDate<T extends Pick<Briefing, "due_date">>(briefings: T[]): T[] {
+  return [...briefings].sort((a, b) => {
+    if (a.due_date === b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return b.due_date.localeCompare(a.due_date);
+  });
+}
+
 export function serviceEstimate(service: ServiceDefinition | undefined) {
   return service?.min ? Math.round((service.min + (service.max ?? service.min)) / 2) : 1;
 }
