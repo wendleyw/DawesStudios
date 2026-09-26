@@ -65,19 +65,22 @@ correctly, while designers stay invisible to clients and no client sees another 
 
 ### 1. The studio manages a client's people
 
-In Settings → Clients, each client row's **Invite** button becomes **People**, which opens a dialog:
+In Settings → Clients, each client row's **Invite** button becomes **People**, which opens a
+dialog:
 
 - **People**: each active person's name and email, with **Remove**.
 - **Invited**: pending invitations (email and expiry), read-only.
 - **Invite person**: the existing `InvitePerson` form, unchanged.
 
 **Remove** asks for confirmation ("<name> loses access to <client>"). A new
-`public.remove_client_member(p_client_id, p_profile_id)` (agency only, audited) deletes that
-membership. If it was the person's last membership, it also deactivates the account the way
-`remove_team_member` does (`profiles.removed_at`, their notifications deleted), and a route that
-mirrors `/api/team-members/[id]/remove` completes the Auth ban. A person who still belongs to
-another client keeps their login. Removing a client's last person is allowed; the dialog says the
-workspace will have nobody until someone is invited.
+`public.remove_client_member(p_client_id, p_profile_id)` (agency only, audited) removes the person
+from that client. If they still belong to another client, it deletes this membership and this
+client's notifications for them, and they keep their login. If it was their last client, it
+deactivates the account the way `remove_team_member` does (`profiles.removed_at`, notifications
+deleted) and keeps the membership row as the record of which client the pending removal belongs to;
+a route that mirrors `/api/team-members/[id]/remove` then completes the Auth block, and the dialog
+offers **Finish removal** if that step failed, even after a reload. Removing a client's last person
+is allowed; the dialog says "<client> will have nobody who can sign in until someone is invited."
 
 ### 2. Each person sees their team
 
@@ -97,7 +100,8 @@ the function.
 - `briefings.requested_by uuid` (nullable, references `profiles`). The client person who first
   saves a briefing becomes its requester; teammates who later edit or submit it do not change it.
   When the studio creates one, the Details step requires a **Requested by** choice among the
-  client's people; for a client with no people it stays empty.
+  client's people; a client with exactly one person defaults to that person, and a client with no
+  people leaves it empty.
 - The database accepts only an active client member of the briefing's client (or null when the
   studio files for a client with nobody), whatever the UI sends.
 - The studio can change the requester on the briefing page (`public.set_briefing_requester`,
@@ -112,8 +116,9 @@ the function.
 
 `publication_reviews.reviewed_by uuid` is set by `review_publication` to the person deciding. The
 Reviews page and the project's review status read "Approved by <name> · <date>" or "Changes
-requested by <name> · <date>"; older reviews without a reviewer keep today's wording. A studio
-reviewer shows as "the studio" to the client.
+requested by <name> · <date>"; older reviews without a reviewer keep today's wording. Only client
+members can review (`review_publication`), so the reviewer is always a client person; one who has
+left reads like a requester who left.
 
 ### 5. Notifications
 
@@ -121,7 +126,9 @@ reviewer shows as "the studio" to the client.
   `public.set_client_notifications(p_client_id, p_all)`.
 - `private.notify_client` keeps its signature. With no project (credit updates) it notifies every
   member, as today. With a project it notifies the project's requester, members with `notify_all`,
-  and, for a studio message, client people who have written in that project's client conversation.
+  and, for a studio message, client people who have written in that project's client conversation
+  and are still members. The studio message is recognised by `post_comment`'s fixed title "New
+  message from Studio", which a database test pins.
   If the project has no requester or the requester is no longer a member, every member is notified.
 - The actor is never notified, and removed people never are.
 
@@ -154,9 +161,10 @@ the People dialog. Old briefings keep the shared login as requester until the st
 
 ## Documentation
 
-Feature READMEs for settings, team, briefings, reviews and notifications; `docs/architecture/`
-(data access, sitemap, design system where the People dialog and Team section live, the acceptance
-matrix with a dated amendment under family C); the verification record; `docs/engineering/handoff.md`.
+Feature READMEs for settings, team, briefings, reviews and workspace (which owns notifications);
+`docs/architecture/` (data access, sitemap, design system where the People dialog and Team section
+live, the acceptance matrix with a dated amendment under family C); the verification record;
+`docs/engineering/handoff.md`.
 
 ## Risks
 
