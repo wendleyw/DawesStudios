@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
 import { isVideoAsset } from "./video-pins";
+import type { MiroLink } from "./miro-links";
 
 /**
  * Supabase access for a project: the canvas the project page draws, its two comment channels, the
@@ -31,6 +32,8 @@ export type CanvasVersion = {
   /** The client person who decided on a published version, and when; absent on the internal channel. */
   reviewedBy?: string | null;
   reviewedAt?: string | null;
+  /** The Miro frame this version points at, on the viewer's channel; null when none is set. */
+  miro?: MiroLink | null;
 };
 export type CanvasDesign = {
   id: string;
@@ -77,10 +80,14 @@ type CanvasReviewRow = Pick<
  * therefore has no review this query can reach, and the channel, not an id comparison, decides
  * whether a review applies at all.
  */
+/** A version's Miro link as either channel's table returns it, keyed by that channel's version id. */
+export type MiroLinkRow = { versionId: string; boardId: string; widgetId: string | null };
+
 export function toCanvasVersions(
   versions: CanvasVersionRow[],
   reviews: CanvasReviewRow[],
   clientChannel: boolean,
+  links: MiroLinkRow[] = [],
 ): CanvasVersion[] {
   return versions.map((version) => {
     const review = clientChannel
@@ -97,8 +104,64 @@ export function toCanvasVersions(
       feedback: review?.feedback,
       reviewedBy: review?.reviewed_by,
       reviewedAt: review?.reviewed_at,
+      miro: (() => {
+        const link = links.find((entry) => entry.versionId === version.id);
+        return link ? { boardId: link.boardId, widgetId: link.widgetId } : null;
+      })(),
     };
   });
+}
+
+/** The newest version's link among `versions`, skipping `excludeId`: what a new link prefills from. */
+export function latestMiroLink(
+  versions: { id: string; number: number }[],
+  links: MiroLinkRow[],
+  excludeId?: string,
+): MiroLink | null {
+  const newestFirst = [...versions].sort((a, b) => b.number - a.number);
+  for (const version of newestFirst) {
+    if (version.id === excludeId) continue;
+    const link = links.find((entry) => entry.versionId === version.id);
+    if (link) return { boardId: link.boardId, widgetId: link.widgetId };
+  }
+  return null;
+}
+
+/**
+ * Each channel keeps its links in its own table under its own read rule. Reading one channel's
+ * table for the other's versions is never done: the client board and the internal board stay apart.
+ */
+async function readMiroLinks(
+  database: SupabaseDatabase,
+  channel: ProjectChannel,
+  filter: { projectId: string } | { versionIds: string[] },
+): Promise<MiroLinkRow[]> {
+  if (channel === "client") {
+    const query = database
+      .from("publication_miro_links")
+      .select("publication_id, board_id, widget_id");
+    const result =
+      "projectId" in filter
+        ? await query.eq("project_id", filter.projectId)
+        : await query.in("publication_id", filter.versionIds);
+    return assertResult(result).map((row) => ({
+      versionId: row.publication_id,
+      boardId: row.board_id,
+      widgetId: row.widget_id,
+    }));
+  }
+  const query = database
+    .from("design_version_miro_links")
+    .select("version_id, board_id, widget_id");
+  const result =
+    "projectId" in filter
+      ? await query.eq("project_id", filter.projectId)
+      : await query.in("version_id", filter.versionIds);
+  return assertResult(result).map((row) => ({
+    versionId: row.version_id,
+    boardId: row.board_id,
+    widgetId: row.widget_id,
+  }));
 }
 
 export function useProjectDetail(projectId: string, channel: ProjectChannel, enabled = true) {
@@ -133,7 +196,15 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
       ]);
       if (versionResult.error) throw new Error(versionResult.error.message);
       if (designResult.error) throw new Error(designResult.error.message);
-      const versions = toCanvasVersions(versionResult.data, reviewResult.data ?? [], clientChannel);
+      const miroLinks = await readMiroLinks(database, clientChannel ? "client" : "internal", {
+        projectId,
+      });
+      const versions = toCanvasVersions(
+        versionResult.data,
+        reviewResult.data ?? [],
+        clientChannel,
+        miroLinks,
+      );
       const designs: CanvasDesign[] = designResult.data.map((design) => ({
         id: design.id,
         versionId: "version_id" in design ? design.version_id : design.publication_id,
@@ -149,6 +220,40 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
         designs,
         reviews: assertResult(reviewResult),
       };
+    },
+  });
+}
+
+/**
+ * The link a new Miro link prefills from: the newest earlier version of the same deliverable, on
+ * the same channel. Keyed under `project-detail` so every project write refreshes it.
+ */
+export function useLatestMiroLink(
+  deliverableId: string,
+  channel: ProjectChannel,
+  options: { excludeId?: string; enabled?: boolean } = {},
+) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: [
+      "project-detail",
+      session?.user.id,
+      "miro-latest",
+      deliverableId,
+      channel,
+      options.excludeId,
+    ],
+    enabled: !!session && !!deliverableId && (options.enabled ?? true),
+    queryFn: async () => {
+      const table = channel === "client" ? "published_versions" : "design_versions";
+      const versions = assertResult(
+        await database.from(table).select("id, version_number").eq("deliverable_id", deliverableId),
+      ).map((row) => ({ id: row.id, number: row.version_number }));
+      if (!versions.length) return null;
+      const links = await readMiroLinks(database, channel, {
+        versionIds: versions.map((version) => version.id),
+      });
+      return latestMiroLink(versions, links, options.excludeId);
     },
   });
 }
@@ -610,8 +715,8 @@ export async function addDesign(
 export async function publishVersion(
   database: SupabaseDatabase,
   input: { versionId: string; releaseNote: string; assets: Record<string, string> },
-) {
-  assertResult(
+): Promise<string> {
+  return assertResult(
     await database.rpc("publish_version", {
       p_version_id: input.versionId,
       p_release_note: input.releaseNote,
@@ -641,5 +746,34 @@ export async function reviewPublication(
       p_decision: input.decision,
       p_feedback: input.feedback,
     }),
+  );
+}
+
+/** Sets a version's Miro link on one channel; the agency-only RPC parses and validates the URL. */
+export async function setMiroLink(
+  database: SupabaseDatabase,
+  input: { channel: ProjectChannel; versionId: string; url: string },
+) {
+  assertResult(
+    input.channel === "client"
+      ? await database.rpc("set_publication_miro_link", {
+          p_publication_id: input.versionId,
+          p_url: input.url,
+        })
+      : await database.rpc("set_version_miro_link", {
+          p_version_id: input.versionId,
+          p_url: input.url,
+        }),
+  );
+}
+
+export async function clearMiroLink(
+  database: SupabaseDatabase,
+  input: { channel: ProjectChannel; versionId: string },
+) {
+  assertResult(
+    input.channel === "client"
+      ? await database.rpc("clear_publication_miro_link", { p_publication_id: input.versionId })
+      : await database.rpc("clear_version_miro_link", { p_version_id: input.versionId }),
   );
 }

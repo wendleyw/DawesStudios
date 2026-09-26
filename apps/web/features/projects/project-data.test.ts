@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   addDesign,
   assignDesigner,
+  clearMiroLink,
   createDesignVersion,
   downloadDesignAssetFile,
   findDesignByAsset,
@@ -11,6 +12,7 @@ import {
   resolveComment,
   reviewPublication,
   revokeDesignAssignment,
+  setMiroLink,
   submitDesignVersion,
   updateDesignContent,
   updateProjectDetails,
@@ -576,5 +578,48 @@ describe("project write failures", () => {
   it.each(failures)("%s surfaces the database error message", async (_name, run) => {
     const { database } = stubDatabase({ data: null, error: { message: "permission denied" } });
     await expect(run(database)).rejects.toThrow("permission denied");
+  });
+});
+
+describe("Miro link writes", () => {
+  it("sets a publication link on the client channel", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await setMiroLink(database, {
+      channel: "client",
+      versionId: "pub-1",
+      url: "https://miro.com/app/board/uXjVKabc123=/",
+    });
+    expect(rpc).toHaveBeenCalledWith("set_publication_miro_link", {
+      p_publication_id: "pub-1",
+      p_url: "https://miro.com/app/board/uXjVKabc123=/",
+    });
+  });
+
+  it("sets an internal link on the internal channel", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await setMiroLink(database, {
+      channel: "internal",
+      versionId: "v-1",
+      url: "https://miro.com/app/board/uXjVKabc123=/",
+    });
+    expect(rpc).toHaveBeenCalledWith("set_version_miro_link", {
+      p_version_id: "v-1",
+      p_url: "https://miro.com/app/board/uXjVKabc123=/",
+    });
+  });
+
+  it("clears by channel", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await clearMiroLink(database, { channel: "client", versionId: "pub-1" });
+    await clearMiroLink(database, { channel: "internal", versionId: "v-1" });
+    expect(rpc).toHaveBeenCalledWith("clear_publication_miro_link", { p_publication_id: "pub-1" });
+    expect(rpc).toHaveBeenCalledWith("clear_version_miro_link", { p_version_id: "v-1" });
+  });
+
+  it("publishing returns the publication id", async () => {
+    const { database } = stubDatabase({ data: "pub-9", error: null });
+    await expect(
+      publishVersion(database, { versionId: "version-1", releaseNote: "", assets: {} }),
+    ).resolves.toBe("pub-9");
   });
 });

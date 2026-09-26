@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Database } from "@database";
-import { toCanvasVersions } from "./project-data";
+import { latestMiroLink, toCanvasVersions } from "./project-data";
 
 type Row<Name extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][Name]["Row"];
@@ -78,6 +78,7 @@ describe("canvas versions and their client review", () => {
       status: "reviewed",
       date: "2026-09-21T10:00:00.000Z",
       feedback: undefined,
+      miro: null,
     });
   });
 
@@ -99,5 +100,48 @@ describe("canvas versions and their client review", () => {
     );
     expect(version.reviewedBy).toBeUndefined();
     expect(version.reviewedAt).toBeUndefined();
+  });
+});
+
+describe("Miro links on canvas versions", () => {
+  it("attaches the link whose version id matches", () => {
+    const [version] = toCanvasVersions([publishedVersion], [], true, [
+      { versionId: publishedVersion.id, boardId: "uXjVKabc123=", widgetId: "345" },
+    ]);
+    expect(version.miro).toEqual({ boardId: "uXjVKabc123=", widgetId: "345" });
+  });
+
+  it("leaves a version without a link at null", () => {
+    const [version] = toCanvasVersions([internalVersion], [], false, [
+      { versionId: "another", boardId: "uXjVKabc123=", widgetId: null },
+    ]);
+    expect(version.miro).toBeNull();
+  });
+});
+
+describe("latestMiroLink", () => {
+  const links = [
+    { versionId: "v1", boardId: "uXjVBoard01=", widgetId: "1" },
+    { versionId: "v2", boardId: "uXjVBoard01=", widgetId: "2" },
+  ];
+  const versions = [
+    { id: "v1", number: 1 },
+    { id: "v2", number: 2 },
+    { id: "v3", number: 3 },
+  ];
+
+  it("takes the newest version that has a link", () => {
+    expect(latestMiroLink(versions, links)).toEqual({ boardId: "uXjVBoard01=", widgetId: "2" });
+  });
+
+  it("skips the version being edited", () => {
+    expect(latestMiroLink(versions, links, "v2")).toEqual({
+      boardId: "uXjVBoard01=",
+      widgetId: "1",
+    });
+  });
+
+  it("is null when no version has a link", () => {
+    expect(latestMiroLink(versions, [])).toBeNull();
   });
 });
