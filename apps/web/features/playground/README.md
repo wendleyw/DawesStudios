@@ -20,7 +20,7 @@ that round trip. This feature owns fullscreen framing, animation, state, validat
 data access.
 
 `playground-board.tsx` composes three colocated hooks for its cross-cutting concerns:
-the shared `useFullscreenLayer` (`features/shared/use-fullscreen-layer.ts`, the dialog's open/close
+`use-fullscreen-layer.ts` (the dialog's open/close
 animation phase, focus and body-scroll lock/restore), `use-playground-navigation-guard.ts` (the
 unsaved/busy same-tab navigation guard covering Escape, the close button, same-tab link clicks and the browser's
 reload/close prompt, all routed through one `requestClose` gate) and `use-playground-drop.ts`

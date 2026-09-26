@@ -6,7 +6,7 @@ import { canvasNavigation } from "@/features/shared/canvas-navigation";
 import { ReactFlow } from "@xyflow/react";
 import Link from "next/link";
 import { Lightbulb } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients } from "@/features/workspace/workspace-data";
@@ -15,7 +15,14 @@ import { ProjectDetails } from "./project-details";
 import { CommentPanel } from "./comment-panel";
 import { CanvasOpeningView, ProjectCanvasControls } from "./project-canvas-view";
 import { DesignViewer } from "./design-viewer";
-import { MiroBoardPanel } from "./miro-board-panel";
+import {
+  linkedVersions,
+  pickMiroVersion,
+  readProjectView,
+  writeProjectView,
+  type ProjectView,
+} from "./miro-mode";
+import { MiroView } from "./miro-view";
 import {
   nodeTypes,
   type DeliverableNode,
@@ -38,6 +45,7 @@ import { ProjectHeader } from "./project-header";
 import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
+import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
@@ -103,7 +111,30 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     };
   }, []);
   const [action, setAction] = useState<ProjectAction | null>(null);
-  const [miroVersion, setMiroVersion] = useState<CanvasVersion | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [projectView, setProjectView] = useState<ProjectView>(
+    () => readProjectView(parameters).view,
+  );
+  const [miroVersionId, setMiroVersionId] = useState<string | null>(
+    () => readProjectView(parameters).versionId,
+  );
+  const [assetStripOpen, setAssetStripOpen] = useState(false);
+  // The URL keeps the view, so a reload or a shared link returns to it. `replace` keeps the
+  // browser history to one entry per project visit.
+  useEffect(() => {
+    const query = writeProjectView(new URLSearchParams(window.location.search), {
+      view: projectView,
+      versionId: miroVersionId,
+    });
+    if (query === window.location.search.replace(/^\?/, "")) return;
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [projectView, miroVersionId, pathname, router]);
+  function enterMiro(versionId: string | null) {
+    setSelected(null);
+    setMiroVersionId(versionId);
+    setProjectView("miro");
+  }
   const [playgroundOrigin, setPlaygroundOrigin] = useState<"project" | "upload" | null>(null);
   const playgroundOpen = playgroundOrigin !== null;
   const playgroundTrigger = useRef<HTMLButtonElement>(null);
@@ -166,6 +197,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       </div>
     );
   const { project, versions, designs, deliverables } = data.data;
+  const linked = linkedVersions(versions, format);
+  const miroVersion = projectView === "miro" ? pickMiroVersion(linked, miroVersionId) : null;
+  const miroActive = !!miroVersion?.miro && !selected?.designId;
   const chosenVersion = versions.find((version) => version.id === selected?.versionId);
   const chosenDeliverable = deliverables.find(
     (deliverable) => deliverable.id === chosenVersion?.deliverableId,
@@ -311,7 +345,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         canPublish: profile?.role === "agency" && channel === "internal",
         canReview: reviewFor(version) !== undefined,
         canManageMiro: profile?.role === "agency",
-        openMiro: version.miro ? () => setMiroVersion(version) : undefined,
+        openMiro: version.miro ? () => enterMiro(version.id) : undefined,
         artworkHeight: frame.artworkHeight,
         visibleDesigns: frame.visible,
         openDesign: (id) => setSelected({ designId: id, versionId: version.id }),
@@ -331,8 +365,10 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         title="Playground"
         aria-label="Playground"
         disabled={playgroundOpen}
-        aria-expanded={playgroundOpen}
-        onClick={() => setPlaygroundOrigin("project")}
+        aria-expanded={miroActive ? assetStripOpen : playgroundOpen}
+        onClick={() =>
+          miroActive ? setAssetStripOpen((open) => !open) : setPlaygroundOrigin("project")
+        }
       >
         <Lightbulb size={18} />
       </button>
@@ -357,13 +393,17 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         format={format}
         onChannel={(next) => {
           setSelected(null);
-          setMiroVersion(null);
+          setMiroVersionId(null);
+          setAssetStripOpen(false);
           setAgencyChannel(next);
         }}
         onFormat={setFormat}
         playgroundOpen={playgroundOpen}
         reviewing={!!selected?.designId}
         chromeRef={setChrome}
+        view={miroActive ? "miro" : "versions"}
+        miroAvailable={linkedVersions(versions, "").length > 0}
+        onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
       />
       <div className="project-workspace">
         <div className="project-workspace-content" inert={playgroundOpen}>
@@ -425,6 +465,26 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                   <ProjectToolBar panel={panel} onPanel={changePanel} disabled={playgroundOpen}>
                     {quickActions}
                   </ProjectToolBar>
+                  {miroActive && miroVersion?.miro && (
+                    <MiroView
+                      linked={linked}
+                      current={{ ...miroVersion, miro: miroVersion.miro }}
+                      deliverables={deliverables}
+                      onSelect={(id) => setMiroVersionId(id)}
+                      strip={
+                        assetStripOpen ? (
+                          <PlaygroundAssetStrip
+                            clientId={project.client_id}
+                            projectId={projectId}
+                            onOpenPlayground={() => {
+                              setAssetStripOpen(false);
+                              setPlaygroundOrigin("project");
+                            }}
+                          />
+                        ) : undefined
+                      }
+                    />
+                  )}
                   <ReactFlow
                     {...canvasNavigation}
                     key={`${channel}:${format}`}
@@ -437,6 +497,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                     defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                     minZoom={0.2}
                     maxZoom={1.5}
+                    style={miroActive ? { visibility: "hidden" } : undefined}
+                    aria-hidden={miroActive || undefined}
                   >
                     <CanvasOpeningView
                       key="opening-view"
@@ -466,7 +528,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
                       Switch to Working files to add designs
                     </div>
                   )}
-                  {versions.length === 0 && (
+                  {!miroActive && versions.length === 0 && (
                     <div className="canvas-empty-hint">
                       {canProduce
                         ? "Add a version to start shaping your ideas."
@@ -523,13 +585,6 @@ export function ProjectPage({ projectId }: { projectId: string }) {
             projectId={projectId}
             onClose={closePlayground}
             returnLabel={playgroundOrigin === "upload" ? "Back to upload" : "Back to project"}
-          />
-        )}
-        {miroVersion?.miro && (
-          <MiroBoardPanel
-            link={miroVersion.miro}
-            title={`${deliverables.find((entry) => entry.id === miroVersion.deliverableId)?.name ?? "Version"} · V${miroVersion.number}`}
-            onClose={() => setMiroVersion(null)}
           />
         )}
       </div>

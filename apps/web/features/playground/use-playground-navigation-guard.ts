@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type RefObject } from "react";
-import type { FullscreenLayerPhase } from "@/features/shared/use-fullscreen-layer";
+import type { FullscreenLayerPhase } from "./use-fullscreen-layer";
 
 /**
  * Guards unsaved Playground work against same-tab navigation away from it: a full page

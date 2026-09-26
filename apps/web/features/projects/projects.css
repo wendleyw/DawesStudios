@@ -1370,35 +1370,6 @@
     min-height: 300px;
   }
 }
-.miro-board-shell {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.miro-board-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.miro-board-header h2 {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: var(--text-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.miro-board-frame {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  border: 0;
-}
 .version-miro {
   display: flex;
   align-items: center;

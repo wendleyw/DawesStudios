@@ -32,7 +32,7 @@ import {
 } from "./playground-model";
 import { PlaygroundNode, type PlaygroundCanvasNode } from "./playground-node";
 import { PlaygroundViewport } from "./playground-viewport";
-import { useFullscreenLayer } from "@/features/shared/use-fullscreen-layer";
+import { useFullscreenLayer } from "./use-fullscreen-layer";
 import { usePlaygroundNavigationGuard } from "./use-playground-navigation-guard";
 import { usePlaygroundDrop } from "./use-playground-drop";
 import { downloadBrandAssetFile } from "@/features/brand/brand-data";

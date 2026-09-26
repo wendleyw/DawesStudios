@@ -14,6 +14,7 @@ import {
 import { statusToneClass } from "@/features/shared/status-tone";
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import type { ProjectChannel, TableRow } from "./project-data";
+import type { ProjectView } from "./miro-mode";
 
 export function ProjectHeader({
   client,
@@ -27,6 +28,9 @@ export function ProjectHeader({
   playgroundOpen,
   reviewing,
   chromeRef,
+  view,
+  miroAvailable,
+  onView,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -39,6 +43,9 @@ export function ProjectHeader({
   playgroundOpen: boolean;
   reviewing: boolean;
   chromeRef: Ref<HTMLDivElement>;
+  view: ProjectView;
+  miroAvailable: boolean;
+  onView: (view: ProjectView) => void;
 }) {
   const { formatDate } = useDateFormat();
   return (
@@ -92,6 +99,21 @@ export function ProjectHeader({
               ) : (
                 <span>{channel === "client" ? "Shared designs" : "Working files"}</span>
               )}
+            </div>
+          )}
+          {miroAvailable && (
+            <div className="segmented-control" role="group" aria-label="Project view">
+              {(["versions", "miro"] as const).map((option) => (
+                <button
+                  key={option}
+                  className={view === option ? "active" : ""}
+                  aria-pressed={view === option}
+                  disabled={playgroundOpen}
+                  onClick={() => onView(option)}
+                >
+                  {option === "versions" ? "Versions" : "Miro"}
+                </button>
+              ))}
             </div>
           )}
           <div className="project-header-actions">

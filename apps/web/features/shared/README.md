@@ -119,17 +119,6 @@ that already announces the whole block, and `briefings/briefing-detail` shows a
 standing balance note that is not an alert. Turning those into `FormError` would
 add a live region each site does not have today.
 
-### Full-screen layer
-
-`useFullscreenLayer` (`use-fullscreen-layer.ts`) and `.fullscreen-layer` in `app/globals.css`
-together drive a full-screen native dialog's open/close lifecycle: the native top-layer dialog
-opens and body scroll locks on mount, the heading takes focus, and both restore to the opener on
-unmount; `phase` (`"entering" | "active" | "exiting"`) drives the CSS slide animation and the
-`inert` attribute, with `animationend` authoritative and a 300 ms fallback timer completing the
-transition when CSS is unavailable or reduced motion cancels the animation before its event fires.
-
-Consumers: `playground/playground-board`, `projects/miro-board-panel`.
-
 ### `PageStatus` — `page-status.tsx`
 
 `<div className="page-content" role="status">{children}</div>`. The full-page
