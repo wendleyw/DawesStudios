@@ -17,7 +17,9 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Studio-wide overview/client directory | Scoped | No | No |
 | Own workspace/client session | Scoped | Own client | Assigned scope |
 | Browse brand asset folders | Scoped | Own client | Assigned client |
-| Create/rename/delete folders and move brand assets | Scoped agency capability | No | No |
+| Create brand asset folders | Scoped | Own client | No |
+| Upload brand assets | Scoped, any brand file type | Own client, PNG/JPEG/WebP only | No |
+| Rename/delete folders, move or edit brand assets | Scoped agency capability | No | No |
 | Search and notifications | Scoped | Own client and recipient | Assigned and recipient |
 | View board/campaigns/project summaries | Scoped | Own client, sanitized | Assigned projects only |
 | Save board view | Own preference, scoped client | Own preference, own client | Own preference, assigned client |

@@ -3,7 +3,8 @@
 The Brand Hub lives at `/clients/:clientId/brand/:section`. Its nine sections are Overview, Logos,
 Colors, Typography, Visual style, Assets, Files, Messaging and Brand context. Files renders the
 client's project files (`features/assets/assets-page.tsx`) under its own heading and actions. Products has no tab of its
-own: it leads the Assets section (`brand-products.tsx`), and old `/brand/products` links redirect to
+own: it is an entry in the Assets folder list (`brand-products.tsx`, shown only when that entry is
+chosen, so it no longer sits above every folder), and old `/brand/products` links redirect to
 Assets. They share the
 floating client navigation/account card, a white title card and the plain page background. The title
 card is one row: **Brand Hub** with the section links beside it, which scroll sideways when they do
@@ -41,13 +42,13 @@ optional link. The image is one of the client's previewable brand assets (PNG, J
 stored by its id (`imageAssetId`) and chosen in the editor, so it is uploaded once in Assets and
 previewed through the same signed URL as any asset. The link must be a complete HTTPS address
 (`safeHttpsUrl`) and opens in a new tab. Products saved before images and links read with both
-empty. Readers see the Products strip only when products exist; the agency always sees it to add
+empty. Readers see the Products entry only when products exist; the agency always sees it to add
 one. Specifications and usage guidance sit behind **Details** on each card.
 
 ## Assets and folders
 
 `brand-assets.tsx` owns the asset collection, search/category filters, folder navigation and details.
-Folders are one level deep and belong to one client. All assets and Unfiled remain available;
+Folders are one level deep and belong to one client. All assets, Products and Unfiled remain available;
 existing assets start in Unfiled. Folder buttons show counts for the complete collection, while the
 active folder heading reports the search/category result count.
 
@@ -55,11 +56,15 @@ The agency can create or rename folders, choose a destination when uploading, an
 from its detail dialog. Deleting a folder requires confirmation and moves its assets to Unfiled;
 no asset record or Storage object is deleted. `brand-folder-dialog.tsx` owns form validation and a
 stable creation ID, including recovery after a committed response is lost. A renamed folder retains
-its ID. `brand-asset-folder-picker.tsx` handles per-asset moves. Clients and assigned designers can
-browse folders and download approved files, but cannot organize them.
+its ID. `brand-asset-folder-picker.tsx` handles per-asset moves. A client may also create folders
+and add images (PNG, JPEG or WebP; **Add image**), but cannot rename or delete folders or move,
+edit or delete assets. Assigned designers browse folders and download files only.
 
 Migration `202609230009_brand_asset_folders.sql` adds `brand_asset_folders` and nullable
-`brand_assets.folder_id`. RLS enforces client-scoped reads and agency writes. Names are trimmed,
+`brand_assets.folder_id`. RLS enforces client-scoped reads and agency writes;
+`202609260004_client_brand_uploads.sql` adds client-member folder inserts, raster-only asset inserts
+and Storage uploads, and a client delete limited to its own unreferenced upload (the cleanup after a
+failed save). Names are trimmed,
 1–80 characters and unique case-insensitively per client. A composite foreign key prevents assigning
 an asset to another client's folder. Folder client/ID columns cannot be updated by authenticated
 users. Folder deletion nulls only `folder_id`; file paths and asset ownership stay unchanged.

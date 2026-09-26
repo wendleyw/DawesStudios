@@ -111,6 +111,12 @@ export const standardUploadMimes = [
   "image/webp",
   "application/pdf",
 ] as const satisfies readonly UploadMime[];
+/** What a client may add to its Brand Hub: raster images only (SVG can carry script). */
+export const clientBrandUploadMimes = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+] as const satisfies readonly UploadMime[];
 
 /**
  * Brand assets accept SVG as well, and `brand-assets` is the only bucket whose

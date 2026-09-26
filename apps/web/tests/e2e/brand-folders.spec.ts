@@ -103,10 +103,12 @@ test("brand folders persist, organize real files, and preserve files when delete
         .getByRole("button", { name: "Approved photography 1", exact: true })
         .click();
       await expect(viewer.locator(".brand-asset-card")).toHaveCount(1);
+      // A client may add folders and images to its own Brand Hub; neither role organizes them.
+      await expect(viewer.getByRole("button", { name: /^(New folder|Add image)$/ })).toHaveCount(
+        role === "client" ? 2 : 0,
+      );
       await expect(
-        viewer.getByRole("button", {
-          name: /^(New folder|Add asset|Rename folder|Delete folder)$/,
-        }),
+        viewer.getByRole("button", { name: /^(Add asset|Rename folder|Delete folder)$/ }),
       ).toHaveCount(0);
       await viewer.locator(".brand-asset-card").click();
       await expect(viewer.getByRole("button", { name: "Move asset", exact: true })).toHaveCount(0);

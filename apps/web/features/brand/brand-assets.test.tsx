@@ -10,10 +10,11 @@ const fixture = vi.hoisted(() => ({
   assets: [] as BrandAsset[],
   folders: [] as BrandAssetFolder[],
   move: vi.fn(),
+  role: "agency",
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/features/auth/auth-provider", () => ({
-  useAuth: () => ({ database: {}, profile: { role: "agency" } }),
+  useAuth: () => ({ database: {}, profile: { role: fixture.role } }),
 }));
 vi.mock("./brand-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./brand-data")>()),
@@ -31,6 +32,7 @@ vi.mock("@/features/shared/modal", () => ({
 }));
 
 beforeEach(() => {
+  fixture.role = "agency";
   fixture.move.mockReset().mockResolvedValue(undefined);
   fixture.folders = [
     { id: "logos", client_id: "client", name: "Logos", created_at: "2026-09-23" },
@@ -52,11 +54,11 @@ beforeEach(() => {
   ];
 });
 
-function mountAssets() {
+function mountAssets(props: Partial<Parameters<typeof BrandAssets>[0]> = {}) {
   const cache = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const tree = () => (
     <QueryClientProvider client={cache}>
-      <BrandAssets clientId="client" />
+      <BrandAssets clientId="client" {...props} />
     </QueryClientProvider>
   );
   const view = render(tree());
@@ -115,5 +117,56 @@ describe("Brand asset folder changes", () => {
       {},
       { id: "logo", clientId: "client", folderId: null },
     );
+  });
+});
+
+const product = {
+  name: "Everyday Alarm",
+  description: "Compact concept",
+  specs: "",
+  rules: "",
+  imageAssetId: "",
+  link: "",
+};
+
+describe("Brand asset roles and Products", () => {
+  it("lets a client create folders and add images, but not manage them", async () => {
+    fixture.role = "client";
+    const user = userEvent.setup();
+    mountAssets();
+    expect(screen.getByRole("button", { name: "New folder" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Add image" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Logos 1" }));
+    expect(screen.queryByRole("button", { name: "Rename folder" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete folder" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Approved mark/ }));
+    expect(screen.queryByRole("button", { name: "Move asset" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a designer to browsing", () => {
+    fixture.role = "designer";
+    mountAssets();
+    expect(screen.queryByRole("button", { name: "New folder" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add (asset|image)/ })).not.toBeInTheDocument();
+  });
+
+  it("shows Products only when its folder entry is chosen", async () => {
+    const user = userEvent.setup();
+    mountAssets({ products: { items: [product] } });
+    expect(screen.queryByText("Everyday Alarm")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Products 1" }));
+    expect(screen.getByRole("heading", { name: "Everyday Alarm" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Approved mark/ })).not.toBeInTheDocument();
+  });
+
+  it("hides an empty Products entry from readers", () => {
+    fixture.role = "client";
+    mountAssets({ products: undefined });
+    expect(screen.queryByRole("button", { name: /^Products/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps an empty Products entry for the agency, who adds the first product", () => {
+    mountAssets({ products: undefined, onEditProducts: () => undefined });
+    expect(screen.getByRole("button", { name: "Products 0" })).toBeVisible();
   });
 });

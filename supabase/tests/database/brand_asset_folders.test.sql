@@ -19,7 +19,15 @@ select lives_ok($$update public.brand_asset_folders set name='Folder test rename
 select set_config('request.jwt.claim.sub',md5('dawes:client-1')::uuid::text,true);
 select is((select count(*)::int from public.brand_asset_folders where id in(md5('folder-test:one')::uuid,md5('folder-test:two')::uuid)),1,'Client sees only its own folder');
 select is((select folder_id from public.brand_assets where id=md5('folder-test:asset')::uuid),md5('folder-test:one')::uuid,'Client can browse filed assets');
-select throws_ok($$insert into public.brand_asset_folders(client_id,name) values(md5('dawes:client-org-1')::uuid,'Unauthorized')$$,'42501',null,'Client cannot create folders');
+select lives_ok($$insert into public.brand_asset_folders(id,client_id,name) values(md5('folder-test:client')::uuid,md5('dawes:client-org-1')::uuid,'Client photos')$$,'Client creates a folder in its own Brand Hub');
+select throws_ok($$insert into public.brand_asset_folders(client_id,name) values(md5('dawes:client-org-2')::uuid,'Unauthorized')$$,'42501',null,'Client cannot create folders for another client');
+select lives_ok($$insert into public.brand_assets(id,client_id,name,category,storage_path,mime_type,folder_id) values(md5('folder-test:client-asset')::uuid,md5('dawes:client-org-1')::uuid,'Client photo','Photography',md5('dawes:client-org-1')::uuid::text || '/' || md5('folder-test:client-file')::uuid::text || '.jpg','image/jpeg',md5('folder-test:client')::uuid)$$,'Client uploads an image into its folder');
+select throws_ok($$insert into public.brand_assets(client_id,name,category,storage_path,mime_type) values(md5('dawes:client-org-1')::uuid,'Client vector','Logo',md5('dawes:client-org-1')::uuid::text || '/' || md5('folder-test:client-svg')::uuid::text || '.svg','image/svg+xml')$$,'42501',null,'Client cannot upload SVG or other non-raster files');
+select throws_ok($$insert into public.brand_assets(client_id,name,category,storage_path,mime_type) values(md5('dawes:client-org-2')::uuid,'Cross upload','Photography',md5('dawes:client-org-2')::uuid::text || '/' || md5('folder-test:cross')::uuid::text || '.png','image/png')$$,'42501',null,'Client cannot upload to another client');
+with changed as(update public.brand_assets set name='Renamed' where id=md5('folder-test:client-asset')::uuid returning id)
+select is((select count(*)::int from changed),0,'Client cannot edit an asset after uploading it');
+with removed as(delete from public.brand_assets where id=md5('folder-test:client-asset')::uuid returning id)
+select is((select count(*)::int from removed),0,'Client cannot delete assets');
 with changed as(update public.brand_asset_folders set name='Unauthorized' where id=md5('folder-test:one')::uuid returning id)
 select is((select count(*)::int from changed),0,'Client cannot rename folders');
 with removed as(delete from public.brand_asset_folders where id=md5('folder-test:one')::uuid returning id)
@@ -30,6 +38,7 @@ select is((select count(*)::int from changed),0,'Client cannot move assets');
 select set_config('request.jwt.claim.sub',md5('dawes:designer-1')::uuid::text,true);
 select is((select count(*)::int from public.brand_asset_folders where id=md5('folder-test:one')::uuid),1,'Assigned designer can browse folders');
 select throws_ok($$insert into public.brand_asset_folders(client_id,name) values(md5('dawes:client-org-1')::uuid,'Unauthorized')$$,'42501',null,'Designer cannot create folders');
+select throws_ok($$insert into public.brand_assets(client_id,name,category,storage_path,mime_type) values(md5('dawes:client-org-1')::uuid,'Designer photo','Photography',md5('dawes:client-org-1')::uuid::text || '/' || md5('folder-test:designer')::uuid::text || '.png','image/png')$$,'42501',null,'Designer cannot upload brand assets');
 with changed as(update public.brand_assets set folder_id=null where id=md5('folder-test:asset')::uuid returning id)
 select is((select count(*)::int from changed),0,'Designer cannot move assets');
 reset role;
@@ -50,5 +59,6 @@ select is((select storage_path from public.brand_assets where id=md5('folder-tes
 reset role;
 select ok(not has_table_privilege('anon','public.brand_asset_folders','SELECT'),'Anonymous folder access is revoked');
 select ok(not has_column_privilege('authenticated','public.brand_asset_folders','client_id','UPDATE'),'Folder tenant column is immutable');
+select ok(exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='brand_storage_client_insert' and with_check ~ 'png\|jpg\|jpeg\|webp'),'Client storage uploads are limited to raster image names');
 select * from finish();
 rollback;

@@ -6,6 +6,7 @@ import {
   uploadExtensionMap,
   uploadSizeMessage,
   uploadTypeMessage,
+  type UploadMime,
 } from "@/features/shared/upload-rules";
 
 export const brandNavigation = [
@@ -402,8 +403,12 @@ export function matchesBrandSearch(
  * bucket whose `allowed_mime_types` includes it — a logo legitimately ships as a vector.
  */
 export const brandFileTypes: Record<string, string> = uploadExtensionMap(brandUploadMimes);
-export function validateBrandFile(file: { type: string; size: number }): string {
-  if (!brandFileTypes[file.type]) throw new Error(uploadTypeMessage(brandUploadMimes));
+export function validateBrandFile(
+  file: { type: string; size: number },
+  allowed: readonly UploadMime[] = brandUploadMimes,
+): string {
+  if (!(allowed as readonly string[]).includes(file.type) || !brandFileTypes[file.type])
+    throw new Error(uploadTypeMessage(allowed));
   if (file.size <= 0) throw new Error("Choose a file that contains content.");
   if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   return brandFileTypes[file.type];

@@ -8,7 +8,6 @@ import { AssetsPage } from "@/features/assets/assets-page";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBrandSections } from "./brand-data";
 import { brandNavigation, isBrandSection, type EditableSectionId } from "./brand-model";
-import { BrandProducts } from "./brand-products";
 import { BrandAssets } from "./brand-assets";
 import { BrandSectionContent } from "./brand-sections";
 import { SectionEditor } from "./section-editor";
@@ -80,15 +79,12 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
       {section === "files" ? (
         <AssetsPage key={clientId} clientId={clientId} />
       ) : section === "assets" ? (
-        <>
-          <BrandProducts
-            key={`${clientId}-products`}
-            clientId={clientId}
-            content={contentOf("products")}
-            onEdit={agency ? () => setEditing("products") : undefined}
-          />
-          <BrandAssets key={clientId} clientId={clientId} />
-        </>
+        <BrandAssets
+          key={clientId}
+          clientId={clientId}
+          products={contentOf("products")}
+          onEditProducts={agency ? () => setEditing("products") : undefined}
+        />
       ) : (
         <BrandSectionContent
           key={`${clientId}-${section}`}

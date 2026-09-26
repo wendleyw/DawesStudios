@@ -13,22 +13,34 @@ import {
   removeBrandAssetFile,
   uploadBrandAssetFile,
 } from "./brand-data";
-import { brandFileTypes, validateBrandFile, validationMessage } from "./brand-model";
+import { validateBrandFile, validationMessage } from "./brand-model";
 import { FormError } from "@/features/shared/form-error";
-import { brandUploadMimes, uploadLimitMb, uploadTypesLabel } from "@/features/shared/upload-rules";
+import {
+  brandUploadMimes,
+  clientBrandUploadMimes,
+  uploadExtensionMap,
+  uploadLimitMb,
+  uploadTypesLabel,
+} from "@/features/shared/upload-rules";
 
-/** The dialog that uploads a new brand asset file and its metadata row. */
+/**
+ * The dialog that uploads a new brand asset file and its metadata row. A client adds raster images
+ * only; the database enforces the same rule.
+ */
 export function AssetUpload({
   clientId,
   folderId,
   folders,
+  imagesOnly = false,
   onClose,
 }: {
   clientId: string;
   folderId: string | null;
   folders: BrandAssetFolder[];
+  imagesOnly?: boolean;
   onClose: () => void;
 }) {
+  const allowed = imagesOnly ? clientBrandUploadMimes : brandUploadMimes;
   const { database } = useAuth();
   const queryClient = useQueryClient();
   const formId = useId();
@@ -41,7 +53,7 @@ export function AssetUpload({
   const upload = useMutation({
     mutationFn: async (form: FormData) => {
       if (!file) throw new Error("Choose a brand file to upload.");
-      const extension = validateBrandFile(file);
+      const extension = validateBrandFile(file, allowed);
       const name = String(form.get("name") ?? "").trim();
       if (!name) throw new Error("Give the file a clear name.");
       if (!uploaded.current || uploaded.current.file !== file) {
@@ -94,8 +106,12 @@ export function AssetUpload({
   return (
     <Modal
       open
-      title="Add a brand asset"
-      description="Share an approved file with everyone working with this client."
+      title={imagesOnly ? "Add an image" : "Add a brand asset"}
+      description={
+        imagesOnly
+          ? "Share an image with the studio and everyone working on your brand."
+          : "Share an approved file with everyone working with this client."
+      }
       onClose={() => void close()}
       footer={
         <>
@@ -133,12 +149,12 @@ export function AssetUpload({
             type="file"
             aria-label="File"
             required
-            accept={Object.keys(brandFileTypes).join(",")}
+            accept={Object.keys(uploadExtensionMap(allowed)).join(",")}
             disabled={upload.isPending || fileUploaded}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
           <span className="form-help">
-            {uploadTypesLabel(brandUploadMimes)}. Up to {uploadLimitMb()} MB.
+            {uploadTypesLabel(allowed)}. Up to {uploadLimitMb()} MB.
           </span>
         </label>
         <label>
@@ -152,7 +168,7 @@ export function AssetUpload({
         </label>
         <label>
           Category
-          <select name="category" defaultValue="Logo">
+          <select name="category" defaultValue={imagesOnly ? "Photography" : "Logo"}>
             {["Logo", "Photography", "Product", "Document", "Other"].map((category) => (
               <option key={category}>{category}</option>
             ))}

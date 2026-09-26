@@ -18,6 +18,7 @@ import { Modal } from "@/features/shared/modal";
 import { BrandFolderDialog } from "./brand-folder-dialog";
 import { BrandAssetFolderPicker } from "./brand-asset-folder-picker";
 import { AssetUpload } from "./brand-asset-upload";
+import { BrandProducts } from "./brand-products";
 import {
   downloadBrandAssetFile,
   useBrandAssetPreviewUrl,
@@ -26,7 +27,8 @@ import {
   type BrandAsset,
 } from "./brand-data";
 import { saveBlob } from "@/features/shared/save-blob";
-import { brandFileTypes, matchesBrandSearch, validationMessage } from "./brand-model";
+import { brandFileTypes, matchesBrandSearch, readProducts, validationMessage } from "./brand-model";
+import type { Json } from "@database";
 import { CopyButton } from "@/features/shared/copy-button";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
@@ -70,7 +72,22 @@ export function AssetPreview({
   );
 }
 
-export function BrandAssets({ clientId }: { clientId: string }) {
+/**
+ * Brand Hub Assets: the client's brand files in folders, with Products as one more entry in the
+ * folder list rather than a block above every folder. The agency manages everything; a client may
+ * also create folders and add images; designers browse.
+ */
+export function BrandAssets({
+  clientId,
+  products,
+  onEditProducts,
+}: {
+  clientId: string;
+  /** The Products section's content, shown when its entry is chosen. */
+  products?: Json;
+  /** Present for the agency, who edits the products. */
+  onEditProducts?: () => void;
+}) {
   const { database, profile } = useAuth();
   const params = useSearchParams();
   const assets = useBrandAssets(clientId);
@@ -79,8 +96,16 @@ export function BrandAssets({ clientId }: { clientId: string }) {
   const [folderAction, setFolderAction] = useState<"new" | "rename" | "delete" | null>(null);
   const currentFolder = folders.data?.find((folder) => folder.id === selectedFolderId);
   // A folder deleted by another viewer must not leave an invisible, stale filter active.
-  const folderId = currentFolder?.id ?? (selectedFolderId === "unfiled" ? "unfiled" : "all");
+  const productCount = readProducts(products).length;
+  // Readers only see the entry when there is something in it; the agency always does, to add one.
+  const showProducts = productCount > 0 || !!onEditProducts;
+  const folderId =
+    currentFolder?.id ??
+    (selectedFolderId === "unfiled" || (selectedFolderId === "products" && showProducts)
+      ? selectedFolderId
+      : "all");
   const canManage = profile?.role === "agency";
+  const canContribute = canManage || profile?.role === "client";
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "");
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -145,7 +170,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
             ))}
           </select>
         </label>
-        {canManage && (
+        {canContribute && (
           <>
             <button className="button" onClick={() => setFolderAction("new")}>
               <FolderPlus size={15} />
@@ -153,7 +178,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
             </button>
             <button className="button primary" onClick={() => setUploadOpen(true)}>
               <Plus size={15} />
-              Add asset
+              {canManage ? "Add asset" : "Add image"}
             </button>
           </>
         )}
@@ -161,6 +186,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
       <nav className="brand-folder-list" aria-label="Asset folders">
         {[
           { id: "all", name: "All assets" },
+          ...(showProducts ? [{ id: "products", name: "Products" }] : []),
           { id: "unfiled", name: "Unfiled" },
           ...(folders.data ?? []),
         ].map((folder) => (
@@ -176,87 +202,93 @@ export function BrandAssets({ clientId }: { clientId: string }) {
             <Folder size={16} />
             <span>{folder.name}</span>{" "}
             <small>
-              {
-                (assets.data ?? []).filter(
-                  (asset) => folder.id === "all" || (asset.folder_id ?? "unfiled") === folder.id,
-                ).length
-              }
+              {folder.id === "products"
+                ? productCount
+                : (assets.data ?? []).filter(
+                    (asset) => folder.id === "all" || (asset.folder_id ?? "unfiled") === folder.id,
+                  ).length}
             </small>
           </button>
         ))}
       </nav>
-      <div className="brand-folder-heading">
-        <p>
-          {currentFolder?.name ?? (folderId === "unfiled" ? "Unfiled" : "All assets")}
-          <span>
-            {filtered.length} asset{filtered.length === 1 ? "" : "s"}
-          </span>
-        </p>
-        {canManage && currentFolder && (
-          <div>
-            <button
-              className="icon-button"
-              aria-label="Rename folder"
-              title="Rename folder"
-              onClick={() => setFolderAction("rename")}
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              className="icon-button"
-              aria-label="Delete folder"
-              title="Delete folder"
-              onClick={() => setFolderAction("delete")}
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
-        )}
-      </div>
-      {filtered.length ? (
-        <div className="brand-assets-grid">
-          {filtered.map((asset) => (
-            <button
-              className="brand-asset-card"
-              key={asset.id}
-              onClick={() => setSelectedId(asset.id)}
-            >
-              <AssetPreview asset={asset} />
-              <div>
-                <span className="eyebrow">{asset.category}</span>
-                <h3>{asset.name}</h3>
-                <p>{asset.description}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+      {folderId === "products" ? (
+        <BrandProducts clientId={clientId} content={products} onEdit={onEditProducts} />
       ) : (
-        <div className="empty-state">
-          <ImageIcon size={26} />
-          <h3>
-            {currentFolder && !search && !category
-              ? "This folder is empty."
-              : assets.data?.length
-                ? "No matching assets."
-                : "A place for the essentials."}
-          </h3>
-          <p>
-            {assets.data?.length
-              ? "Try another folder or clear the filters."
-              : "Approved brand files will appear here."}
-          </p>
-          {(search || category) && (
-            <button
-              className="button"
-              onClick={() => {
-                setSearch("");
-                setCategory("");
-              }}
-            >
-              Clear filters
-            </button>
+        <>
+          <div className="brand-folder-heading">
+            <p>
+              {currentFolder?.name ?? (folderId === "unfiled" ? "Unfiled" : "All assets")}
+              <span>
+                {filtered.length} asset{filtered.length === 1 ? "" : "s"}
+              </span>
+            </p>
+            {canManage && currentFolder && (
+              <div>
+                <button
+                  className="icon-button"
+                  aria-label="Rename folder"
+                  title="Rename folder"
+                  onClick={() => setFolderAction("rename")}
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Delete folder"
+                  title="Delete folder"
+                  onClick={() => setFolderAction("delete")}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+          {filtered.length ? (
+            <div className="brand-assets-grid">
+              {filtered.map((asset) => (
+                <button
+                  className="brand-asset-card"
+                  key={asset.id}
+                  onClick={() => setSelectedId(asset.id)}
+                >
+                  <AssetPreview asset={asset} />
+                  <div>
+                    <span className="eyebrow">{asset.category}</span>
+                    <h3>{asset.name}</h3>
+                    <p>{asset.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <ImageIcon size={26} />
+              <h3>
+                {currentFolder && !search && !category
+                  ? "This folder is empty."
+                  : assets.data?.length
+                    ? "No matching assets."
+                    : "A place for the essentials."}
+              </h3>
+              <p>
+                {assets.data?.length
+                  ? "Try another folder or clear the filters."
+                  : "Approved brand files will appear here."}
+              </p>
+              {(search || category) && (
+                <button
+                  className="button"
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("");
+                  }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
       {folderAction && (folderAction === "new" || currentFolder) && (
         <BrandFolderDialog
@@ -272,6 +304,7 @@ export function BrandAssets({ clientId }: { clientId: string }) {
           clientId={clientId}
           folders={folders.data ?? []}
           folderId={currentFolder?.id ?? null}
+          imagesOnly={!canManage}
           onClose={() => setUploadOpen(false)}
         />
       )}
