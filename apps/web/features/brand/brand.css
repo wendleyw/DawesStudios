@@ -1,8 +1,16 @@
 .brand-page {
   max-width: var(--content-width);
 }
-.brand-page .page-heading {
-  align-items: flex-start;
+/* The title and the section tabs share one row, leaving the height to the section itself. */
+.brand-page .client-page-heading {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding-block: 8px;
+}
+.brand-page .client-page-heading > .brand-section-nav {
+  grid-column: auto;
+  margin-bottom: 0;
+  border-bottom: 0;
 }
 /*
  * One row, in the order of the groups, scrolling sideways rather than wrapping. Nine sections fit
@@ -668,8 +676,11 @@
   }
 }
 @media (max-width: 640px) {
-  .brand-page .page-heading {
+  .brand-page .client-page-heading {
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
+    gap: 4px;
+    padding-block: 16px 4px;
   }
   .brand-section-selector {
     width: 100%;

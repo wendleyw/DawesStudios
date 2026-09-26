@@ -41,13 +41,11 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   return (
     <div className="page-content brand-page">
       <header className="page-heading client-page-heading">
-        <div>
-          <h1>Brand Hub</h1>
-          <p>Identity, resources, and guidance for consistent work.</p>
-        </div>
+        <h1>Brand Hub</h1>
         {/*
-        The nine sections read as one row rather than hiding inside a select: where you are and what
-        else there is are the same glance. They are links because they are routes — a section opens
+        The nine sections read as one row beside the title rather than hiding inside a select or
+        taking a row of their own: where you are and what else there is are the same glance, and
+        the section itself starts higher. They are links because they are routes — a section opens
         in a new tab or gets its own address, which a select could never offer. The row scrolls
         sideways instead of wrapping, so the order stays the order of the groups.
       */}
