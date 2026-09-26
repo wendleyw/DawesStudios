@@ -203,7 +203,8 @@ test("client links stay visible at the top across pages without duplicating side
       await expect(page.locator(".sidebar .client-navigation")).toHaveCount(0);
       await expect(menu).toBeInViewport();
     }
-    await page.goto(`/projects/${project.data!.id}`);
+    // A project with a Miro link opens in Miro mode; this checks the header over the Versions canvas.
+    await page.goto(`/projects/${project.data!.id}?view=versions`);
     await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
     await expect(menu.getByRole("link", { name: "Board", exact: true })).toHaveAttribute(
       "aria-current",
