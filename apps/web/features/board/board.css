@@ -1072,6 +1072,18 @@
 .board-list-sort-button:hover {
   color: var(--foreground);
 }
+/* The status that leads the Status sort; the next click brings the following status up. */
+.board-list-sort-lead {
+  overflow: hidden;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+}
 
 /*
  * The phone "Sort by" select stands in for the header row it replaces. `.table-head` hides at

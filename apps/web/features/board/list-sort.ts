@@ -11,7 +11,14 @@ import {
  */
 export type ListSortKey = "project" | "campaign" | "status" | "due";
 export type SortDirection = "asc" | "desc";
-export type ListSort = { key: ListSortKey; direction: SortDirection } | null;
+/**
+ * Status does not sort in two directions: each click brings the next status to the top (`lead`),
+ * with the rest following in workflow order, so every status can be looked at first in turn.
+ */
+export type ActiveListSort = { key: ListSortKey; direction: SortDirection; lead?: ProjectStatus };
+export type ListSort = ActiveListSort | null;
+
+const STATUSES = Object.keys(statusLabels) as ProjectStatus[];
 
 /** Column order and the label both the header buttons and the phone select derive their text from. */
 export const LIST_SORT_COLUMNS: readonly { key: ListSortKey; label: string }[] = [
@@ -38,11 +45,22 @@ const HEADER_STATE_LABELS: Record<ListSortKey, Record<SortDirection, string>> = 
   due: { asc: "earliest first", desc: "latest first" },
 };
 
-/** First click on a column sorts it ascending; a second click on the active column reverses it. */
+/**
+ * First click on a column sorts it ascending; a second click on the active column reverses it.
+ * Status instead steps its lead through the statuses the list holds (`present`, any order), back
+ * to the first after the last, so no click leaves the list looking unchanged.
+ */
 export function nextListSort(
   current: ListSort,
   key: ListSortKey,
-): { key: ListSortKey; direction: SortDirection } {
+  present: readonly ProjectStatus[] = STATUSES,
+): ActiveListSort {
+  if (key === "status") {
+    const cycle = STATUSES.filter((status) => present.includes(status));
+    const order = cycle.length ? cycle : STATUSES;
+    const index = current?.key === "status" && current.lead ? order.indexOf(current.lead) : -1;
+    return { key, direction: "asc", lead: order[(index + 1) % order.length] };
+  }
   if (current && current.key === key)
     return { key, direction: current.direction === "asc" ? "desc" : "asc" };
   return { key, direction: "asc" };
@@ -52,6 +70,8 @@ export function nextListSort(
 export function listSortAccessibleName(key: ListSortKey, active: ListSort): string {
   const label = COLUMN_LABELS[key];
   if (!active || active.key !== key) return label;
+  if (key === "status" && active.lead)
+    return `${label}, ${statusLabels[active.lead]} first. Click for the next status`;
   return `${label}, ${HEADER_STATE_LABELS[key][active.direction]}`;
 }
 
@@ -64,17 +84,17 @@ export const LIST_SORT_OPTIONS: readonly ListSortOption[] = [
   { value: "project-desc", label: "Project Z–A", sort: { key: "project", direction: "desc" } },
   { value: "campaign-asc", label: "Campaign A–Z", sort: { key: "campaign", direction: "asc" } },
   { value: "campaign-desc", label: "Campaign Z–A", sort: { key: "campaign", direction: "desc" } },
-  {
-    value: "status-asc",
-    label: "Status, workflow order",
-    sort: { key: "status", direction: "asc" },
-  },
-  { value: "status-desc", label: "Status, reverse", sort: { key: "status", direction: "desc" } },
+  ...STATUSES.map((status) => ({
+    value: `status-${status}`,
+    label: `Status: ${statusLabels[status]} first`,
+    sort: { key: "status" as const, direction: "asc" as const, lead: status },
+  })),
   { value: "due-asc", label: "Due, earliest first", sort: { key: "due", direction: "asc" } },
   { value: "due-desc", label: "Due, latest first", sort: { key: "due", direction: "desc" } },
 ];
 
 export function listSortOptionValue(sort: ListSort): string {
+  if (sort?.key === "status") return `status-${sort.lead ?? STATUSES[0]}`;
   return sort ? `${sort.key}-${sort.direction}` : "default";
 }
 
@@ -95,7 +115,7 @@ function applyDirection(value: number, direction: SortDirection): number {
 }
 
 function comparatorFor(
-  sort: { key: ListSortKey; direction: SortDirection },
+  sort: ActiveListSort,
   campaignName: (id: string | null) => string,
 ): (a: Project, b: Project) => number {
   const { key, direction } = sort;
@@ -107,11 +127,16 @@ function comparatorFor(
         const primary = compareText(campaignName(a.campaign_id), campaignName(b.campaign_id));
         return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
       };
-    case "status":
+    case "status": {
+      // Workflow order rotated so the lead status comes first and the rest follow it, wrapping.
+      const lead = STATUS_RANK[sort.lead ?? STATUSES[0]];
+      const rank = (status: ProjectStatus) =>
+        (STATUS_RANK[status] - lead + STATUSES.length) % STATUSES.length;
       return (a, b) => {
-        const primary = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+        const primary = rank(a.status) - rank(b.status);
         return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
       };
+    }
     case "due":
       // Missing due dates always sort last, in both directions, so direction never touches this
       // branch — only the tie among two dated (or two undated) projects passes through it.

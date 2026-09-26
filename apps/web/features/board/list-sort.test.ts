@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Project } from "@/features/workspace/workspace-data";
+import type { Project, ProjectStatus } from "@/features/workspace/workspace-data";
 import {
   LIST_SORT_OPTIONS,
   listSortAccessibleName,
@@ -72,18 +72,20 @@ describe("sortProjects", () => {
     ).toEqual(["4", "1", "3", "2"]);
   });
 
-  it("sorts by status workflow order and reverses it", () => {
+  it("puts the lead status first, then the rest in workflow order, wrapping", () => {
     const projects = [
       project({ id: "1", title: "B", status: "delivered" }),
       project({ id: "2", title: "A", status: "planned" }),
       project({ id: "3", title: "C", status: "in_progress" }),
+      project({ id: "4", title: "D", status: "client_review" }),
     ];
-    expect(
-      sortProjects(projects, { key: "status", direction: "asc" }, campaignName).map((p) => p.id),
-    ).toEqual(["2", "3", "1"]);
-    expect(
-      sortProjects(projects, { key: "status", direction: "desc" }, campaignName).map((p) => p.id),
-    ).toEqual(["1", "3", "2"]);
+    const by = (lead: ProjectStatus) =>
+      sortProjects(projects, { key: "status", direction: "asc", lead }, campaignName).map(
+        (p) => p.id,
+      );
+    expect(by("planned")).toEqual(["2", "3", "4", "1"]);
+    expect(by("client_review")).toEqual(["4", "1", "2", "3"]);
+    expect(by("delivered")).toEqual(["1", "2", "3", "4"]);
   });
 
   it("breaks status ties by title", () => {
@@ -128,10 +130,27 @@ describe("sortProjects", () => {
 describe("nextListSort", () => {
   it("sorts a newly clicked column ascending", () => {
     expect(nextListSort(null, "due")).toEqual({ key: "due", direction: "asc" });
-    expect(nextListSort({ key: "project", direction: "desc" }, "status")).toEqual({
-      key: "status",
+    expect(nextListSort({ key: "project", direction: "desc" }, "due")).toEqual({
+      key: "due",
       direction: "asc",
     });
+  });
+
+  it("steps Status through every status the list holds, then starts over", () => {
+    const present: ProjectStatus[] = ["delivered", "in_progress", "client_review", "in_progress"];
+    const first = nextListSort(null, "status", present);
+    expect(first).toEqual({ key: "status", direction: "asc", lead: "in_progress" });
+    const second = nextListSort(first, "status", present);
+    expect(second.lead).toBe("client_review");
+    const third = nextListSort(second, "status", present);
+    expect(third.lead).toBe("delivered");
+    expect(nextListSort(third, "status", present).lead).toBe("in_progress");
+  });
+
+  it("starts the Status cycle over when another column was active", () => {
+    expect(
+      nextListSort({ key: "due", direction: "desc" }, "status", ["approved", "planned"]).lead,
+    ).toBe("planned");
   });
 
   it("reverses the active column on a second click", () => {
@@ -168,12 +187,9 @@ describe("listSortAccessibleName", () => {
     expect(listSortAccessibleName("campaign", { key: "campaign", direction: "asc" })).toBe(
       "Campaign, A to Z",
     );
-    expect(listSortAccessibleName("status", { key: "status", direction: "asc" })).toBe(
-      "Status, workflow order",
-    );
-    expect(listSortAccessibleName("status", { key: "status", direction: "desc" })).toBe(
-      "Status, reverse workflow order",
-    );
+    expect(
+      listSortAccessibleName("status", { key: "status", direction: "asc", lead: "approved" }),
+    ).toBe("Status, Approved first. Click for the next status");
   });
 });
 

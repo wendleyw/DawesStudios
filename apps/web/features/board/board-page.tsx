@@ -500,16 +500,30 @@ function ClientBoard({ clientId }: { clientId: string }) {
                   key={key}
                   type="button"
                   className="board-list-sort-button"
-                  onClick={() => setListSort((current) => nextListSort(current, key))}
+                  onClick={() =>
+                    setListSort((current) =>
+                      nextListSort(
+                        current,
+                        key,
+                        filteredProjects.map((project) => project.status),
+                      ),
+                    )
+                  }
                   aria-label={listSortAccessibleName(key, listSort)}
                 >
                   {label.toUpperCase()}
-                  {listSort?.key === key &&
+                  {listSort?.key === key && listSort.lead ? (
+                    <span className="board-list-sort-lead" aria-hidden="true">
+                      {statusLabels[listSort.lead]}
+                    </span>
+                  ) : (
+                    listSort?.key === key &&
                     (listSort.direction === "asc" ? (
                       <ArrowUp size={14} aria-hidden="true" />
                     ) : (
                       <ArrowDown size={14} aria-hidden="true" />
-                    ))}
+                    ))
+                  )}
                 </button>
               ))}
               <span />

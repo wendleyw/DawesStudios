@@ -727,7 +727,8 @@ test("floating tools open usable search and filter panels at desktop and mobile 
         .getByRole("button", { name: "Clear filters", exact: true })
         .click();
       await expect(page.locator(".board-result-count")).toHaveText("2 projects");
-      await page.getByRole("heading", { level: 1 }).click();
+      // An outside click on the header card's own padding (its logo now links to the Overview).
+      await page.locator(".board-identity").click({ position: { x: 4, y: 4 } });
       await expect(page.locator(".board-tool-panel")).toHaveCount(0);
     }
     await expect(page.getByRole("link", { name: "New briefing", exact: true })).toHaveAttribute(
