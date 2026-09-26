@@ -34,6 +34,7 @@ import {
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { BulkDropDialog } from "./bulk-drop-dialog";
 import {
+  useDesignBoards,
   useProjectDetail,
   useVersionCommentCounts,
   type ProjectChannel,
@@ -46,6 +47,8 @@ import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectHeader } from "./project-header";
 import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
+import { usesWorkspace } from "./miro-workspace";
+import { ProjectWorkspace } from "./project-workspace";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
 
@@ -75,6 +78,10 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         ? "internal"
         : agencyChannel;
   const data = useProjectDetail(projectId, channel);
+  // RLS limits a designer to their own boards; the client channel never reads boards at all.
+  const boards = useDesignBoards(projectId, profile?.role !== "client" && channel === "internal");
+  // The agency may step back to the Versions canvas on a project that still has legacy versions.
+  const [legacyChosen, setLegacyChosen] = useState(false);
   const commentCounts = useVersionCommentCounts(projectId, channel);
   // Only the agency needs a working target while viewing published snapshots. Client sessions
   // never enable this read, and publication IDs are never used as production version IDs.
@@ -223,7 +230,11 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     setSelected(null);
     setAction(next);
   }
-  if (data.isPending || (profile?.role === "agency" && channel === "client" && working.isPending))
+  if (
+    data.isPending ||
+    (profile?.role === "agency" && channel === "client" && working.isPending) ||
+    (boards.fetchStatus !== "idle" && boards.isPending)
+  )
     return <PageStatus>Loading the project…</PageStatus>;
   if (data.error || !data.data)
     return (
@@ -234,6 +245,28 @@ export function ProjectPage({ projectId }: { projectId: string }) {
           Back to your work
         </Link>
       </div>
+    );
+  const workspace = usesWorkspace(channel, {
+    versions: data.data.versions,
+    boards: boards.data ?? [],
+  });
+  const legacyAvailable = data.data.versions.some((version) => version.deliverableId !== null);
+  if (workspace && !legacyChosen)
+    return (
+      <ProjectWorkspace
+        projectId={projectId}
+        channel={channel}
+        onChannel={setAgencyChannel}
+        data={data.data}
+        boards={boards.data ?? []}
+        viewControl={
+          profile?.role === "agency" && legacyAvailable ? (
+            <button className="button quiet" onClick={() => setLegacyChosen(true)}>
+              Versions
+            </button>
+          ) : null
+        }
+      />
     );
   const { project, versions: allVersions, designs, deliverables } = data.data;
   const versions = allVersions.filter(hasDeliverable);
@@ -445,6 +478,13 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         chromeRef={setChrome}
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
+        workspaceControl={
+          profile?.role === "agency" && workspace ? (
+            <button className="button quiet" onClick={() => setLegacyChosen(false)}>
+              Miro workspace
+            </button>
+          ) : undefined
+        }
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
         miro={
           miroActive && miroVersion?.miro

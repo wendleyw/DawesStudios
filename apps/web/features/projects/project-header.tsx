@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import type { Profile } from "@/lib/supabase";
 import { CanvasHeader } from "@/features/workspace/canvas-header";
 import {
@@ -33,6 +33,7 @@ export function ProjectHeader({
   miroAvailable,
   onView,
   miro,
+  workspaceControl,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -55,6 +56,8 @@ export function ProjectHeader({
     current: MiroFrame;
     onSelect: (versionId: string) => void;
   };
+  /** The agency's way back to the Miro workspace after choosing the Versions canvas. */
+  workspaceControl?: ReactNode;
 }) {
   const { formatDate } = useDateFormat();
   const back = (
@@ -139,7 +142,12 @@ export function ProjectHeader({
           title={project.title}
           due={project.due_date ? `Due ${formatDate(project.due_date)}` : "No due date"}
           {...miro}
-          viewControl={viewControl}
+          viewControl={
+            <>
+              {viewControl}
+              {workspaceControl}
+            </>
+          }
           menu={
             <>
               <ProjectCreditsChip projectId={project.id} viewer={viewer} />
@@ -171,6 +179,7 @@ export function ProjectHeader({
         <div className="project-toolbar">
           {channelControl}
           {viewControl}
+          {workspaceControl}
           <div className="project-header-actions">{deliverableFilter}</div>
         </div>
       )}
