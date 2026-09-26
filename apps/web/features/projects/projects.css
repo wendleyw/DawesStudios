@@ -1455,10 +1455,23 @@
     padding-bottom: calc(var(--control-height) + 36px);
   }
 }
-.miro-view-frame {
+/* Miro's embed has no option to hide only its top bar (board name, menu, collaborators) while
+   keeping editing, so the frame is shifted up by the bar's height and the crop hides it. The value
+   follows Miro's current layout: re-check it if a strip of the bar reappears or the board's top is
+   cut short. */
+.miro-view-crop {
+  --miro-top-bar: 64px;
+  position: relative;
   flex: 1;
-  width: 100%;
   min-height: 0;
+  overflow: hidden;
+}
+.miro-view-frame {
+  position: absolute;
+  top: calc(-1 * var(--miro-top-bar));
+  left: 0;
+  width: 100%;
+  height: calc(100% + var(--miro-top-bar));
   border: 0;
   background: var(--surface);
 }

@@ -304,7 +304,10 @@ restrictions, so this link is the way through to the real board regardless). `Mi
 over it (on phones, where the bar sits over Miro's zoom controls, the embed stops above the bar); the
 iframe is rebuilt from the stored `boardId`/`widgetId` via `miroEmbedUrl` with
 `autoplay=true`, never from the pasted URL again; `key={current.id}` reloads the frame when the
-toggle changes the version. The header's **Project view** segmented control (Versions/Miro,
+toggle changes the version. Miro's own top bar (board name, menu, collaborators) is cropped off:
+`.miro-view-crop` shifts the frame up by `--miro-top-bar` (64 px, Miro's current layout — re-check it
+if Miro changes its bar), because the embed has no option that hides only that bar and keeps editing
+and paste; the board's menu and sharing are reached through **Open in Miro**. The header's **Project view** segmented control (Versions/Miro,
 `project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one
 linked version under the current deliverable filter — and is the other entry point beside a
 version card's **View on Miro**; clicking the option already pressed is a no-op, never a jump back

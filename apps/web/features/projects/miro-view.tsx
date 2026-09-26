@@ -74,15 +74,19 @@ export function MiroView({
   return (
     <section className="miro-view" aria-label="Miro board">
       {strip}
-      <iframe
-        key={current.id}
-        className="miro-view-frame"
-        title={`Miro board for ${miroVersionLabel(current, deliverables)}`}
-        src={miroEmbedUrl(current.miro)}
-        allow="fullscreen; clipboard-read; clipboard-write"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-      />
+      {/* Miro's own top bar is cropped off (see `.miro-view-crop`); the board, its tools and paste
+          stay fully usable. */}
+      <div className="miro-view-crop">
+        <iframe
+          key={current.id}
+          className="miro-view-frame"
+          title={`Miro board for ${miroVersionLabel(current, deliverables)}`}
+          src={miroEmbedUrl(current.miro)}
+          allow="fullscreen; clipboard-read; clipboard-write"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
     </section>
   );
 }
