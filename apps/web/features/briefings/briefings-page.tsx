@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
+import { personName, requesterLabel } from "@/features/team/client-people";
+import { useClientPeople } from "@/features/team/team-data";
 import { useBriefings, useCampaigns } from "./briefing-data";
 import { briefingStatusLabels, briefingStatusTones, services } from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
@@ -17,6 +19,7 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
   const { formatDate } = useDateFormat();
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
+  const people = useClientPeople(clientId);
   const [tab, setTab] = useState("all");
   if (briefings.isPending || clients.isPending || campaigns.isPending)
     return <PageStatus>Loading briefings…</PageStatus>;
@@ -106,6 +109,9 @@ export function BriefingsPage({ clientId }: { clientId: string }) {
               <span className="briefing-list-campaign">
                 {campaigns.data?.find((campaign) => campaign.id === item.campaign_id)?.title ??
                   "Campaign not chosen"}
+              </span>
+              <span className="briefing-list-requester">
+                {requesterLabel(personName(item.requested_by, people.data, profile?.role))}
               </span>
               <span className="briefing-list-service">
                 {services.find((service) => service.id === item.service_type)?.name ??

@@ -10,10 +10,14 @@ import {
   useInvalidateNotifications,
   useInvalidateWorkspace,
 } from "@/features/workspace/workspace-data";
+import { Modal } from "@/features/shared/modal";
+import { personName, requesterLabel, type ClientPerson } from "@/features/team/client-people";
+import { useClientPeople } from "@/features/team/team-data";
 import {
   acceptBriefing,
   briefingQueryKeys,
   confirmBriefingBudget,
+  setBriefingRequester,
   useBriefingCreditBalance,
   useBriefingProject,
   useBriefings,
@@ -23,6 +27,7 @@ import {
   briefingStatusLabels,
   briefingStatusTones,
   initialDraft,
+  initialRequester,
   type Briefing,
 } from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
@@ -37,6 +42,8 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
   const briefings = useBriefings(clientId);
   const campaigns = useCampaigns(clientId);
   const linked = useBriefingProject(briefingId);
+  const people = useClientPeople(clientId);
+  const [changingRequester, setChangingRequester] = useState(false);
   if (briefings.isPending || campaigns.isPending)
     return <PageStatus>Loading the briefing…</PageStatus>;
   const briefing = briefings.data?.find((item) => item.id === briefingId);
@@ -50,19 +57,39 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
         </Link>
       </div>
     );
+  const requester = personName(briefing.requested_by, people.data, profile?.role);
+  const canChangeRequester = profile?.role === "agency" && !!people.data?.team.length;
+  const requesterLine =
+    requesterLabel(requester) ?? (canChangeRequester ? "No requester yet" : null);
   return (
     <div className="page-content briefing-detail">
       <header className="page-heading client-page-heading">
-        <div className="page-title-row">
-          <Link
-            href={`/clients/${clientId}/briefings`}
-            className="icon-button"
-            aria-label="All briefings"
-            title="All briefings"
-          >
-            <ArrowLeft size={16} />
-          </Link>
-          <h1>{briefing.title || "Untitled briefing"}</h1>
+        <div>
+          <div className="page-title-row">
+            <Link
+              href={`/clients/${clientId}/briefings`}
+              className="icon-button"
+              aria-label="All briefings"
+              title="All briefings"
+            >
+              <ArrowLeft size={16} />
+            </Link>
+            <h1>{briefing.title || "Untitled briefing"}</h1>
+          </div>
+          {requesterLine && (
+            <p className="briefing-requester">
+              <span>{requesterLine}</span>
+              {canChangeRequester && (
+                <button
+                  className="button quiet small"
+                  aria-label={`${requester ? "Change" : "Choose"} who requested this briefing`}
+                  onClick={() => setChangingRequester(true)}
+                >
+                  {requester ? "Change" : "Choose"}
+                </button>
+              )}
+            </p>
+          )}
         </div>
         <div className="page-actions">
           <span className={statusToneClass(briefingStatusTones[briefing.status])}>
@@ -140,7 +167,79 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
           )}
         </aside>
       </div>
+      {changingRequester && people.data && (
+        <RequesterDialog
+          briefing={briefing}
+          people={people.data.team}
+          onClose={() => setChangingRequester(false)}
+        />
+      )}
     </div>
+  );
+}
+
+/** The studio's choice of who a briefing's work is for; the database accepts only the client's people. */
+function RequesterDialog({
+  briefing,
+  people,
+  onClose,
+}: {
+  briefing: Briefing;
+  people: ClientPerson[];
+  onClose: () => void;
+}) {
+  const { database } = useAuth();
+  const queryClient = useQueryClient();
+  const [choice, setChoice] = useState(() => initialRequester(briefing.requested_by, people));
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!choice) throw new Error("Choose who requested this briefing.");
+      await setBriefingRequester(database, { briefingId: briefing.id, requestedBy: choice });
+    },
+    // Changing the requester rewrites the briefing row only.
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] });
+      onClose();
+    },
+  });
+  return (
+    <Modal
+      open
+      title="Who requested this briefing?"
+      description="Notifications about its project go to this person."
+      onClose={() => {
+        if (!save.isPending) onClose();
+      }}
+    >
+      <form
+        className="stack-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+      >
+        <label>
+          Requested by
+          <select value={choice} onChange={(event) => setChoice(event.target.value)}>
+            <option value="">Choose a person</option>
+            {people.map((person) => (
+              <option key={person.user_id} value={person.user_id}>
+                {person.display_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {save.error && <FormError>{save.error.message}</FormError>}
+        <div className="form-actions">
+          <button className="button" type="button" onClick={onClose} disabled={save.isPending}>
+            Cancel
+          </button>
+          <button className="button primary" type="submit" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

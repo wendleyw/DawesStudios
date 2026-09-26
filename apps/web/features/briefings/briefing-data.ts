@@ -123,6 +123,29 @@ export function useBriefingProject(briefingId: string) {
 }
 
 /**
+ * Who asked for the briefing a project came from, for that project's details. Designers never read
+ * it: the gate skips the query, and `briefings` admits only the studio and the client's own people.
+ */
+export function useBriefingRequester(briefingId: string | null) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: [briefingQueryKeys.briefings, "requester", session?.user.id, briefingId],
+    enabled:
+      !!session && !!briefingId && (profile?.role === "agency" || profile?.role === "client"),
+    queryFn: async () =>
+      (
+        assertResult(
+          await database
+            .from("briefings")
+            .select("requested_by")
+            .eq("id", briefingId!)
+            .maybeSingle(),
+        ) as { requested_by: string | null } | null
+      )?.requested_by ?? null,
+  });
+}
+
+/**
  * The client's credit balance, read for the agency's budget-review panel.
  *
  * This intentionally shares the `credit-account` cache key that `features/credits/credit-data.ts`
@@ -221,6 +244,22 @@ export async function saveBriefingRevision(
  */
 export async function submitBriefing(database: SupabaseDatabase, input: { briefingId: string }) {
   assertResult(await database.rpc("submit_briefing", { p_briefing_id: input.briefingId }));
+}
+
+/**
+ * The studio changes who a briefing's work is for, for example after the requester leaves;
+ * `set_briefing_requester` accepts only one of the client's active people.
+ */
+export async function setBriefingRequester(
+  database: SupabaseDatabase,
+  input: { briefingId: string; requestedBy: string },
+) {
+  assertResult(
+    await database.rpc("set_briefing_requester", {
+      p_briefing_id: input.briefingId,
+      p_requested_by: input.requestedBy,
+    }),
+  );
 }
 
 export async function uploadBriefingAttachmentFile(

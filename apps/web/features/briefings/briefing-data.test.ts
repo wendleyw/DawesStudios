@@ -9,6 +9,7 @@ import {
   removeBriefingAttachment,
   removeBriefingAttachmentFile,
   saveBriefingRevision,
+  setBriefingRequester,
   submitBriefing,
   uploadBriefingAttachmentFile,
 } from "./briefing-data";
@@ -295,5 +296,26 @@ describe("attachment writes", () => {
     await expect(
       downloadBriefingAttachmentFile(database, { path: "briefing-1/a.pdf" }),
     ).rejects.toThrow("object not found");
+  });
+});
+
+describe("requester writes", () => {
+  it("changes who a briefing's work is for", async () => {
+    const { database, rpc } = stubDatabase({ data: null, error: null });
+    await setBriefingRequester(database, { briefingId: "briefing-1", requestedBy: "person-1" });
+    expect(rpc).toHaveBeenCalledWith("set_briefing_requester", {
+      p_briefing_id: "briefing-1",
+      p_requested_by: "person-1",
+    });
+  });
+
+  it("surfaces the database's refusal", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "Choose a person from this client as the requester" },
+    });
+    await expect(
+      setBriefingRequester(database, { briefingId: "briefing-1", requestedBy: "person-2" }),
+    ).rejects.toThrow("Choose a person from this client as the requester");
   });
 });

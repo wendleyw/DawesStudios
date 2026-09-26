@@ -1,26 +1,35 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ClientPeople } from "@/features/team/client-people";
 import { BriefingDetail } from "./briefing-detail";
 import type { Briefing } from "./briefing-model";
 
+const ana = { user_id: "ana", display_name: "Ana Lima", email: "ana@sabre.test" };
+const ben = { user_id: "ben", display_name: "Ben Cole", email: "ben@sabre.test" };
 const fixture = vi.hoisted(() => ({
   briefing: null as Briefing | null,
   balance: 100,
   database: {},
+  role: "agency" as "agency" | "client",
+  people: undefined as ClientPeople | undefined,
+  setRequester: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
-  useAuth: () => ({ database: fixture.database, profile: { id: "agency-1", role: "agency" } }),
+  useAuth: () => ({ database: fixture.database, profile: { id: "viewer-1", role: fixture.role } }),
 }));
 vi.mock("@/features/workspace/workspace-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/workspace/workspace-data")>()),
   useDateFormat: () => ({ formatDate: () => "" }),
   useInvalidateWorkspace: () => vi.fn(),
   useInvalidateNotifications: () => vi.fn(),
+}));
+vi.mock("@/features/team/team-data", () => ({
+  useClientPeople: () => ({ data: fixture.people, isPending: false, error: null }),
 }));
 vi.mock("./briefing-attachments", () => ({ BriefingAttachments: () => null }));
 vi.mock("./briefing-data", async (importOriginal) => ({
@@ -39,7 +48,31 @@ vi.mock("./briefing-data", async (importOriginal) => ({
   }),
   confirmBriefingBudget: vi.fn(),
   acceptBriefing: vi.fn(),
+  setBriefingRequester: fixture.setRequester,
 }));
+
+// jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
+Object.defineProperties(HTMLDialogElement.prototype, {
+  showModal: {
+    configurable: true,
+    value() {
+      this.setAttribute("open", "");
+    },
+  },
+  close: {
+    configurable: true,
+    value() {
+      this.removeAttribute("open");
+    },
+  },
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  fixture.role = "agency";
+  fixture.people = { team: [ana, ben], names: { ana: "Ana Lima", ben: "Ben Cole", cy: "Cy Gone" } };
+  fixture.setRequester.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   cleanup();
@@ -120,5 +153,50 @@ describe("BriefingDetail agency budget review — one primary action at a time",
       screen.queryByRole("button", { name: "Accept & create project" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/unsaved changes/i)).toBeVisible();
+  });
+});
+
+describe("BriefingDetail requester", () => {
+  it("names the requester and lets the studio change them", async () => {
+    fixture.briefing = baseBriefing({ requested_by: "ana" });
+    mountDetail();
+    expect(screen.getByText("Requested by Ana Lima")).toBeVisible();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Change who requested this briefing" }));
+    const dialog = screen.getByRole("dialog", { name: "Who requested this briefing?" });
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Requested by" }), "ben");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(fixture.setRequester).toHaveBeenCalledWith(fixture.database, {
+        briefingId: "briefing-1",
+        requestedBy: "ben",
+      }),
+    );
+  });
+
+  it("tells the studio when the requester has left", () => {
+    fixture.briefing = baseBriefing({ requested_by: "cy" });
+    mountDetail();
+    expect(screen.getByText("Requested by Cy Gone (left)")).toBeVisible();
+  });
+
+  it("lets the studio choose a requester when none is recorded", () => {
+    fixture.briefing = baseBriefing({ requested_by: null });
+    mountDetail();
+    expect(screen.getByText("No requester yet")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Choose who requested this briefing" }),
+    ).toBeVisible();
+  });
+
+  it("shows a client the requester, a former member without a name, and no studio control", () => {
+    fixture.role = "client";
+    fixture.people = { team: [ana, ben], names: {} };
+    fixture.briefing = baseBriefing({ requested_by: "cy" });
+    mountDetail();
+    expect(screen.getByText("Requested by Former member")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /who requested this briefing/ }),
+    ).not.toBeInTheDocument();
   });
 });

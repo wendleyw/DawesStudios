@@ -23,10 +23,12 @@
 .briefing-list-row:focus-visible {
   outline-offset: -3px;
 }
-/* One line per briefing: title, campaign, service, status, due date. */
+/* One line per briefing: title, campaign, requester, service, status, due date. */
 .briefing-list-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 56px 16px;
+  grid-template-columns:
+    minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)
+    136px 56px 16px;
   gap: var(--space-md);
   align-items: center;
   min-height: 56px;
@@ -46,6 +48,7 @@
   white-space: nowrap;
 }
 .briefing-list-campaign,
+.briefing-list-requester,
 .briefing-list-service,
 .briefing-list-date {
   overflow: hidden;
@@ -55,6 +58,13 @@
 }
 .briefing-list-row .status-badge {
   justify-self: start;
+}
+/* "Requested by <name>" under a briefing's title, with the studio's Change beside it. */
+.briefing-requester {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
 }
 .briefing-editor-header {
   display: flex;
@@ -451,6 +461,7 @@
   .briefing-list-row {
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 136px 16px;
   }
+  .briefing-list-requester,
   .briefing-list-service,
   .briefing-list-date {
     display: none;
