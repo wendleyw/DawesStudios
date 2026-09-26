@@ -9,7 +9,7 @@
   studio zone, not 24h blocks.
 - G2 `dcd0615` — designer reads scope to non-delivered project ids, paged 500, stable order.
 - G3 `349e7f5` — `.home-content/-actions/-date`: workspace.css → globals.css (2 consumers).
-- G4/G6 (this commit) — error before isPending in designer-overview; client-role links to
+- G4/G6 `ecc33cb` — error before isPending in designer-overview; client-role links to
   `/overview` from home cards + switcher (studio/designer keep `/board`); "submitted <age>"
   wording; exact tile-number assertions; empty-state tests; README/spec/design-system prose
   fixed; e2e client test also polls in-flight/credits-note/active-note vs DB, all agree; task-3
