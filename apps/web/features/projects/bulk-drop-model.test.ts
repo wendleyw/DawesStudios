@@ -5,7 +5,6 @@ import {
   classifyFiles,
   deriveDesignTitle,
   latestVersionPerDeliverable,
-  mapWithConcurrency,
   matchDeliverable,
   naturalCompare,
   type BulkDropDeliverable,
@@ -33,35 +32,6 @@ describe("naturalCompare", () => {
 
   it("treats an exact match as equal", () => {
     expect(naturalCompare("hero-1.png", "hero-1.png")).toBe(0);
-  });
-});
-
-describe("mapWithConcurrency", () => {
-  it("never runs more than the given limit at once", async () => {
-    let active = 0;
-    let peak = 0;
-    const items = [1, 2, 3, 4, 5];
-    // A real, short timeout rather than manually released gates: with five items and a limit of
-    // three, a fixed delay measures the same peak deterministically without gate bookkeeping.
-    const result = await mapWithConcurrency(items, 3, async (item) => {
-      active++;
-      peak = Math.max(peak, active);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      active--;
-      return item * 10;
-    });
-    expect(peak).toBe(3);
-    expect(result).toEqual([10, 20, 30, 40, 50]);
-  });
-
-  it("preserves input order regardless of resolution order", async () => {
-    const delays = [30, 0, 20];
-    const results = await mapWithConcurrency(
-      delays,
-      3,
-      (ms, index) => new Promise<number>((resolve) => setTimeout(() => resolve(index), ms)),
-    );
-    expect(results).toEqual([0, 1, 2]);
   });
 });
 

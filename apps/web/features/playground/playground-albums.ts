@@ -14,6 +14,7 @@ import type {
   ProjectChannel,
   TableRow,
 } from "@/features/projects/project-data";
+import { mapWithConcurrency } from "@/features/shared/concurrency";
 import { uploadSizeMessage, type UploadMime } from "@/features/shared/upload-rules";
 import { PLAYGROUND_FILE_MIMES, PLAYGROUND_MAX_FILE_BYTES } from "./playground-types";
 
@@ -204,33 +205,28 @@ export async function copyAlbumFilesToBoard(
   deps: CopyDependencies,
   onStatus: (status: CopyStatus) => void,
 ): Promise<File[]> {
-  const results: (File | undefined)[] = new Array(files.length);
-  let cursor = 0;
-  async function worker() {
-    while (cursor < files.length) {
-      const index = cursor++;
-      const file = files[index];
-      const id = crypto.randomUUID();
-      onStatus({ id, file, point, state: "loading" });
-      try {
-        const path = file.source.kind === "brand" ? file.source.storagePath : file.source.assetPath;
-        const blob =
-          file.source.kind === "brand"
-            ? await deps.downloadBrand(file.source.storagePath)
-            : await deps.downloadDesign(file.source.assetPath, file.source.channel);
-        results[index] = new File([blob], fileNameFor(file.title, path), { type: file.mimeType });
-        onStatus({ id, file, point, state: "done" });
-      } catch (error) {
-        onStatus({
-          id,
-          file,
-          point,
-          state: "error",
-          error: error instanceof Error ? error.message : "This file could not be copied.",
-        });
-      }
+  const results = await mapWithConcurrency<AlbumFile, File | undefined>(files, 3, async (file) => {
+    const id = crypto.randomUUID();
+    onStatus({ id, file, point, state: "loading" });
+    try {
+      const path = file.source.kind === "brand" ? file.source.storagePath : file.source.assetPath;
+      const blob =
+        file.source.kind === "brand"
+          ? await deps.downloadBrand(file.source.storagePath)
+          : await deps.downloadDesign(file.source.assetPath, file.source.channel);
+      const copied = new File([blob], fileNameFor(file.title, path), { type: file.mimeType });
+      onStatus({ id, file, point, state: "done" });
+      return copied;
+    } catch (error) {
+      onStatus({
+        id,
+        file,
+        point,
+        state: "error",
+        error: error instanceof Error ? error.message : "This file could not be copied.",
+      });
+      return undefined;
     }
-  }
-  await Promise.all(Array.from({ length: Math.min(3, files.length) }, worker));
+  });
   return results.filter((file): file is File => file !== undefined);
 }

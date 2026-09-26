@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
+import { mapWithConcurrency } from "@/features/shared/concurrency";
 import {
   batchPosition,
   messageOf,
@@ -110,12 +111,7 @@ export function usePlaygroundDrop({
     setIssues((current) => [...current, ...rejected]);
     if (added.length) select(added[0]);
     // A bounded queue keeps a large drop from starting hundreds of simultaneous requests.
-    let cursor = 0;
-    await Promise.all(
-      Array.from({ length: Math.min(3, added.length) }, async () => {
-        while (cursor < added.length) await persist(added[cursor++]);
-      }),
-    );
+    await mapWithConcurrency(added, 3, (id) => persist(id));
   }
 
   return {

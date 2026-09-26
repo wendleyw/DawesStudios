@@ -5,6 +5,7 @@
  *
  * docs/superpowers/specs/2026-09-23-bulk-image-drop-design.md
  */
+import { mapWithConcurrency } from "@/features/shared/concurrency";
 import {
   ARTWORK_MAX_BYTES,
   isVideoUpload,
@@ -50,27 +51,6 @@ export function naturalCompare(a: string, b: string): number {
     return x < y ? -1 : 1;
   }
   return 0;
-}
-
-/**
- * Runs `run` over `items`, never more than `limit` at once, resolving to results in the same
- * order as `items` regardless of which one finishes first.
- */
-export async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  run: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-  async function worker() {
-    while (next < items.length) {
-      const index = next++;
-      results[index] = await run(items[index], index);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
 }
 
 export type BulkDropDeliverable = {
