@@ -123,13 +123,14 @@ export async function latestAuthEmail(
   email: string,
   kind: "invite" | "recovery" | "magiclink",
 ): Promise<string | null> {
-  const list = (await fetch("http://127.0.0.1:55424/api/v1/messages").then((response) =>
-    response.json(),
-  )) as { messages: { ID: string; To?: { Address: string }[] }[] };
+  const mailUrl = acceptanceMailUrl();
+  const list = (await fetch(`${mailUrl}/api/v1/messages`).then((response) => response.json())) as {
+    messages: { ID: string; To?: { Address: string }[] }[];
+  };
   for (const item of list.messages.filter((message) =>
     message.To?.some((recipient) => recipient.Address.toLowerCase() === email.toLowerCase()),
   )) {
-    const detail = (await fetch(`http://127.0.0.1:55424/api/v1/message/${item.ID}`).then(
+    const detail = (await fetch(`${mailUrl}/api/v1/message/${encodeURIComponent(item.ID)}`).then(
       (response) => response.json(),
     )) as { Text?: string; HTML?: string };
     const candidates =
@@ -140,4 +141,32 @@ export async function latestAuthEmail(
     if (result) return result;
   }
   return null;
+}
+
+function acceptanceMailUrl(): string {
+  const backend = process.env.ACCEPTANCE_SUPABASE_URL;
+  const localBackend =
+    !backend || ["http://127.0.0.1:55421", "http://localhost:55421"].includes(backend);
+  const configured = process.env.ACCEPTANCE_MAIL_URL;
+  if (!configured && !localBackend)
+    throw new Error("Set ACCEPTANCE_MAIL_URL for the declared acceptance backend.");
+  const address = configured || "http://127.0.0.1:55424";
+  let url: URL;
+  try {
+    url = new URL(address);
+  } catch {
+    throw new Error("ACCEPTANCE_MAIL_URL must be a loopback HTTP origin.");
+  }
+  if (
+    url.protocol !== "http:" ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
+    !url.port ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  )
+    throw new Error("ACCEPTANCE_MAIL_URL must be a loopback HTTP origin.");
+  return url.origin;
 }

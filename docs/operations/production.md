@@ -186,11 +186,18 @@ elsewhere. The token stays on the server and is never sent to a browser. See the
 
 ## 3. Reverse proxy and TLS
 
-Terminate TLS for the three hosts at the proxy. The proxy must pass WebSocket upgrades to the
-gateway, because Realtime needs them, and it must not cap request bodies below the upload
-ceiling. Caddy does both by default. With nginx, set `client_max_body_size` for the API and media
-hosts and add the upgrade headers. Keep Studio, Postgres and the Supabase analytics endpoints off
-the public interface, and reach them through an SSH tunnel.
+Use the versioned [nginx edge configuration](../../deploy/production/README.md). It provides TLS,
+HTTP redirects, explicit API route allowlists, Auth/media per-IP limits, body/time limits, forwarded
+header replacement and Realtime WebSocket handling. Generate and review the candidate, provision
+certificates, validate `nginx -t`, then install it on the target host. The disposable Docker test
+proves these controls with a trusted rehearsal certificate; public issuance/renewal still requires
+verification on the real domains.
+
+The public API defaults to 404; it never forwards Studio, analytics or Auth admin paths. Keep
+Postgres and every backend listener private. Server-side `SUPABASE_INTERNAL_URL` must use the
+private gateway, not the filtered public API, because invitation/removal routes use Auth admin.
+Current supplementary uploads use standard Storage object routes; resumable/S3 routes are private.
+Proxy access logs omit query strings; review upstream service logs for signed URLs and auth tokens.
 
 ## 4. Backups and recovery
 
@@ -249,18 +256,25 @@ Record the results in `docs/verification/` before serving clients. This is the J
 There is no payment processor. Client credit requests and agency ledger allocations never
 charge a card.
 
+The [2026-09-27 local verification record](../verification/production-refactor-2026-09-27.md)
+records the exercised API, browser, database, proxy, mail and data-preservation checks and their limits.
+
 ## Known gaps to close before or at launch
 
-The 2026-09-23 security audit found no dependency advisories (`npm audit`: 0 for web and media)
-and no leaked secrets in the 155 commits of history (gitleaks). These operational gaps remain:
+The 2026-09-27 security audit found no dependency advisories (`npm audit`: 0 for web and media)
+and no leaked secrets in 551 commits of history or the current tracked source (gitleaks).
+The [CI workflow](../../.github/README.md) now provisions a disposable backend for database and
+critical browser checks; its first remote Actions execution is still unverified. These operational
+gates remain:
 
-- **Aggregate upload capacity.** The 50 MiB per-file cap does not enforce workspace or installation
-  quotas. A repeated uploader can still exhaust disk. Implement atomic server-side capacity
-  reservations across all upload paths, including retries and uncertain Storage responses; an RLS
-  count-before-insert check alone is insufficient. Until verified, this remains a release gap.
-- **Rate limiting.** Nothing throttles requests per IP apart from the media worker's concurrency
-  cap and the database limit on invitations. Add per-IP limits at the proxy, especially for
-  `/auth/v1/token` and the media host.
+- **Storage operation.** Creative work is in Miro; the user confirmed supplementary uploads do not
+  require a simultaneous-upload architecture. Keep their current per-file caps and simple flow.
+  Provision and monitor persistent disk capacity/free inodes, with database and scratch headroom;
+  choose a dedicated filesystem or host quota where needed. No custom reservation service is planned.
+  The edge limits requests, not total disk usage. Actual server capacity/alerts remain unverified.
+- **Public edge.** Versioned nginx controls and isolated TLS tests now cover allowlists, throttles,
+  body limits, forwarding and WebSocket upgrades. Install and verify them with real domains and
+  certificate renewal before launch.
 - **Health depth.** The container health checks (web `/login`, media `/health`) prove the process
   is running, not that Supabase is reachable. Monitor the Supabase gateway separately.
 - **Logging.** Both services log only to stdout and stderr. Ship container logs to a central

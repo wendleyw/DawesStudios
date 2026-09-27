@@ -81,7 +81,7 @@ npm run build
 npm start
 ```
 
-CI runs on Node.js 24 and includes the production web build after the source and media tests. Database and browser checks still require the separately provisioned staging stack.
+CI runs on Node.js 24 and includes the production build, source/media tests and proxy checks. A separate job provisions an isolated canonical Supabase stack for database policies and critical Chromium journeys; see [CI setup](../../.github/README.md).
 
 `check` generates Next.js route types, checks TypeScript, runs ESLint, verifies Prettier formatting and executes the colocated Vitest tests. Formatting is part of the gate so the pre-commit hook cannot rewrite files the gate has already passed. `build` creates production output under `apps/web/.next`; `start` serves that output with Node.js. Next.js fetches the configured Google fonts during the build, so the build requires network access to the font service.
 
@@ -149,3 +149,18 @@ posting destination; project notes and version-specific drafts stay separate. As
 Brand Hub now supports client-scoped folders; Templates is removed from navigation while existing
 data and direct private draft URLs are preserved. See the
 [current verification](../../docs/verification/client-polish-and-brand-folders-2026-09-23.md).
+
+### Optional browser engines
+
+Browser tests default to Chromium. To exercise the core workspace, comments and Drive flows with
+Firefox and WebKit against an already provisioned test backend:
+
+```bash
+cd apps/web
+npx playwright install firefox webkit
+PLAYWRIGHT_BROWSERS=firefox,webkit npx playwright test tests/e2e/workspace.spec.ts tests/e2e/project-feedback.spec.ts tests/e2e/project-drive-link.spec.ts
+```
+
+Set `PLAYWRIGHT_BASE_URL` and the explicit `ACCEPTANCE_*` backend variables when using staging,
+as the [production runbook](../../docs/operations/production.md) requires. These tests mutate and
+clean up test fixtures; never point them at production. Unknown engine names fail configuration.

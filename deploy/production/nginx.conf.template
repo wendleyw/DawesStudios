@@ -1,0 +1,106 @@
+# Include this rendered file inside nginx's http block. This proxy is the public edge.
+# Forwarded client IP headers from the internet are replaced, never trusted.
+log_format dawes '$remote_addr [$time_local] "$request_method $uri" $status $body_bytes_sent $request_time';
+limit_req_zone $binary_remote_addr zone=dawes_auth:10m rate=2r/s;
+limit_req_zone $binary_remote_addr zone=dawes_api:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=dawes_media:10m rate=10r/m;
+limit_conn_zone $binary_remote_addr zone=dawes_connections:10m;
+map $http_upgrade $dawes_connection_upgrade { default upgrade; '' close; }
+
+server {
+    listen @@HTTP_PORT@@ default_server;
+    server_name _;
+    return 444;
+}
+server {
+    listen @@HTTPS_PORT@@ ssl default_server;
+    ssl_reject_handshake on;
+    server_name _;
+}
+server {
+    listen @@HTTP_PORT@@;
+    server_name @@APP_HOST@@ @@API_HOST@@ @@MEDIA_HOST@@;
+    # HTTP-01 certificate issuance is served locally, never forwarded to Studio.
+    location ^~ /.well-known/acme-challenge/ { root @@ACME_ROOT@@; }
+    location / { return 308 https://$host@@HTTPS_SUFFIX@@$request_uri; }
+}
+
+server {
+    listen @@HTTPS_PORT@@ ssl;
+    server_name @@APP_HOST@@;
+    @@APP_TLS@@
+    client_max_body_size 1m;
+    location / {
+        proxy_pass http://@@WEB_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $dawes_connection_upgrade;
+    }
+    location /api/ {
+        limit_req zone=dawes_api burst=30 nodelay;
+        proxy_pass http://@@WEB_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+}
+
+server {
+    listen @@HTTPS_PORT@@ ssl;
+    server_name @@API_HOST@@;
+    @@API_TLS@@
+    client_max_body_size 1m;
+    # Exact path families prevent the gateway's Studio and administrative routes being public.
+    location ~ ^/auth/v1/(token|logout|recover|verify|user|resend|reauthenticate)(/|$) {
+        limit_req zone=dawes_auth burst=10 nodelay;
+        proxy_pass http://@@API_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location = /auth/v1/.well-known/jwks.json {
+        limit_req zone=dawes_api burst=30 nodelay;
+        proxy_pass http://@@API_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location ^~ /rest/v1/ {
+        limit_req zone=dawes_api burst=100 nodelay;
+        proxy_pass http://@@API_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location ^~ /storage/v1/object/ {
+        # 1 MiB multipart envelope above Storage's authoritative 50 MiB file ceiling.
+        client_max_body_size 51m;
+        limit_req zone=dawes_api burst=30 nodelay;
+        limit_conn dawes_connections 8;
+        # Stream bounded uploads; never fill a proxy request-body temporary directory.
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_pass http://@@API_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location ^~ /realtime/v1/ {
+        limit_conn dawes_connections 40;
+        proxy_pass http://@@API_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $dawes_connection_upgrade;
+        proxy_read_timeout 3600s;
+    }
+    location / { return 404; }
+}
+
+server {
+    listen @@HTTPS_PORT@@ ssl;
+    server_name @@MEDIA_HOST@@;
+    @@MEDIA_TLS@@
+    client_max_body_size 50m;
+    location = /health {
+        proxy_pass http://@@MEDIA_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location ~ ^/(covers/(prepare|clear)|deliveries/prepare)$ {
+        limit_req zone=dawes_media burst=5 nodelay;
+        limit_conn dawes_connections 4;
+        proxy_request_buffering off;
+        proxy_pass http://@@MEDIA_UPSTREAM@@;
+        @@PROXY_HEADERS@@
+    }
+    location / { return 404; }
+}

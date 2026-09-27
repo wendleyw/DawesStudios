@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   static:
     name: Types, lint, formatting, unit tests and production build
@@ -20,6 +23,10 @@ jobs:
         run: npm ci --prefix apps/media
       - name: Web gate
         run: npm run check
+      - name: Production proxy and CI bootstrap checks
+        run: |
+          python3 -m unittest discover -s scripts/tests -v
+          RUN_PROXY_INTEGRATION=1 python3 -m unittest discover -s deploy/production/tests -v
       - name: Media unit tests
         run: npm --prefix apps/media test
       - name: Production web build
@@ -28,15 +35,66 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:55421
           NEXT_PUBLIC_MEDIA_URL: http://127.0.0.1:55430
 
-# The browser suite is deliberately absent from this workflow.
-#
-# tests/e2e create and delete real rows, so they need a provisioned Supabase stack, the trusted
-# media worker, the seeded ten-client dataset and the fixture Auth accounts — none of which this
-# runner has. Adding a job that starts them is real work, not a config tweak, and a workflow that
-# silently skipped the suite would read as coverage it does not have.
-#
-# When that job is added it must set ACCEPTANCE_SUPABASE_URL to the throwaway stack it provisions,
-# with ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY, ACCEPTANCE_SUPABASE_ANON_KEY and ACCEPTANCE_DEMO_PASSWORD
-# (tests/e2e/test-support.ts refuses to run against an undeclared backend) and PLAYWRIGHT_BASE_URL
-# to the app it starts, then assert the eight-table before/after count that section B of the
-# acceptance matrix records.
+  acceptance:
+    name: Isolated database and Chromium acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.98.2
+      - name: Guard disposable runner
+        run: python3 scripts/ci-acceptance.py guard
+      - name: Install browser dependencies
+        run: npm ci --prefix apps/web
+      - name: Install media worker dependencies
+        run: npm ci --prefix apps/media
+      - name: Install Chromium
+        run: npm --prefix apps/web exec -- playwright install --with-deps chromium
+      - name: Install media conversion tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+      - name: Start isolated backend and provision real fixtures
+        run: python3 scripts/ci-acceptance.py bootstrap
+      - name: Verify canonical seed and storage
+        run: python3 supabase/scripts/verify_seed.py
+      - name: Database authorization and workflow tests
+        run: supabase test db
+      - name: Record baseline counts
+        id: baseline
+        run: python3 scripts/ci-acceptance.py snapshot before
+      - name: Build production web application
+        run: npm run build
+      - name: Start production web application
+        run: |
+          npm run start > "$RUNNER_TEMP/dawes-web.log" 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:3003/login; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/dawes-web.log"
+          exit 1
+      - name: Critical role and project workflows in Chromium
+        run: >-
+          npm --prefix apps/web run test:e2e -- --project=chromium
+          tests/e2e/workspace.spec.ts
+          tests/e2e/workspace-actions.spec.ts
+          tests/e2e/miro-workspace.spec.ts
+          tests/e2e/miro-version-links.spec.ts
+          tests/e2e/project-feedback.spec.ts
+          tests/e2e/action-notifications.spec.ts
+          tests/e2e/project-drive-link.spec.ts
+          tests/e2e/files-actions.spec.ts
+          tests/e2e/canonical-workspaces.spec.ts
+      - name: Assert fixture cleanup and exact canonical dataset
+        if: always() && steps.baseline.outcome == 'success'
+        run: |
+          python3 scripts/ci-acceptance.py snapshot after
+          python3 supabase/scripts/verify_seed.py

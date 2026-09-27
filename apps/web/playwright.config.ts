@@ -1,4 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
+const enabledBrowsers = (process.env.PLAYWRIGHT_BROWSERS ?? "chromium")
+  .split(",")
+  .map((browser) => browser.trim());
+const browserDevices = {
+  chromium: "Desktop Chrome",
+  firefox: "Desktop Firefox",
+  webkit: "Desktop Safari",
+} as const;
+if (enabledBrowsers.some((browser) => !Object.hasOwn(browserDevices, browser)))
+  throw new Error("PLAYWRIGHT_BROWSERS must contain chromium, firefox or webkit.");
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -12,14 +23,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    {
-      name: "chromium",
-      use: {
-        actionTimeout: 10_000,
-        ...devices["Desktop Chrome"],
-        viewport: { width: 1600, height: 1000 },
-      },
+  projects: [...new Set(enabledBrowsers)].map((name) => ({
+    name,
+    use: {
+      ...devices[browserDevices[name as keyof typeof browserDevices]],
+      viewport: { width: 1600, height: 1000 },
     },
-  ],
+  })),
 });

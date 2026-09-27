@@ -58,6 +58,7 @@ and Postgres data must be retained or explicitly removed together. Neither mode'
 | Postgres (`db`, direct) | 56011 | 56111 |
 | MinIO API / console | 56012 / 56013 | absent |
 | media | 56014 | 56114 |
+| Mailpit UI/API | absent | 56115 |
 
 Both modes keep Studio and Supavisor unpublished. The Realtime container has the upstream
 `realtime-dev.supabase-realtime` network alias, which Envoy needs for WebSocket routing.
@@ -206,17 +207,25 @@ comments for the exact evidence):
   the image's default `mc` entrypoint, not as a shell invocation. `docker run --entrypoint sh ...`
   fixes it. Not a production.md item (that guide never runs `mc` directly), but the same upstream
   image `docker-compose.s3.yml`'s own `minio-createbucket` service uses, so worth recording here.
-- **No SMTP is configured.** The upstream `.env.example` placeholder (`SMTP_HOST=supabase-mail`)
-  refers to a mail-catcher container that this compose file doesn't define — any code path that
-  actually sends email (invite, password recovery) is unproven here and would fail on a real send
-  attempt. `bootstrap` avoids this entirely (admin-created user, `email_confirm: true`, password
-  grant), matching the task's instructions, but it means email delivery itself stays unrehearsed.
+- **The historical MinIO mode has no SMTP capture.** The upstream `.env.example` placeholder
+  (`SMTP_HOST=supabase-mail`) has no matching service in that mode, so invite and recovery sends
+  remain unproven there. Filesystem mode adds `axllent/mailpit:v1.31.1` to its override only. Auth
+  sends without SMTP authentication to Mailpit on the private Compose network at port 1025; its
+  UI and v1 API are reachable only at `http://127.0.0.1:56115`. The generated filesystem-mode
+  Auth site and redirect values already point invite and recovery flows at `http://localhost:3113`.
+  This is a local capture service, not production email delivery. After updating the override on
+  an already prepared filesystem stack, run `STAGING_STORAGE=file ./scripts/stage.sh up` from this
+  directory to create Mailpit and recreate Auth with the new SMTP settings. Check the capture API
+  with `curl --fail http://127.0.0.1:56115/api/v1/messages` before invitation browser tests.
 
 ## Canonical dataset (release checklist step 4)
 
 The commands and outcomes in this section describe the historical MinIO mode. For filesystem
 mode, use `dawes-staging-file-db`, prefix `stage.sh` commands with `STAGING_STORAGE=file`, and
 point browser tests at port 3113 with the filesystem mode's generated credentials.
+Set `ACCEPTANCE_MAIL_URL=http://127.0.0.1:56115` for invitation and recovery journeys against
+this backend. The E2E helper requires an explicit loopback mail origin for any nonlocal backend;
+ordinary local CLI runs keep their Inbucket fallback at `http://127.0.0.1:55424`.
 Run `python3 supabase/scripts/verify_seed.py --staging-file` for that mode.
 
 `supabase/seed.sql` applies cleanly to this rehearsal's self-hosted `auth` schema with plain
