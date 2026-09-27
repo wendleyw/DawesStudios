@@ -307,11 +307,22 @@ export function createMediaServer(config) {
         // `set_project_cover` defaults `p_client_visible` to false, so the current visibility (on
         // a replace) or the chosen one (on a first upload) must be passed through explicitly.
         const visible = url.searchParams.get('visible') === 'true';
+        let previousPath;
         try {
-          const previousPath = await backend.rpc('set_project_cover', { p_project_id: projectId, p_storage_path: path, p_client_visible: visible }, token);
-          if (previousPath) await backend.discard('project-covers', previousPath);
-          return send(201, { path, clientVisible: visible });
+          previousPath = await backend.rpc('set_project_cover', { p_project_id: projectId, p_storage_path: path, p_client_visible: visible }, token);
         } catch (error) { await backend.discard('project-covers', path); throw error; }
+        // The database now points at `path`, not `previousPath` — a transient failure discarding
+        // the OLD object must never take the NEW, now-live cover down with it, so this runs outside
+        // the try above and its own failure is logged, not thrown. The old object stays reachable
+        // but unreferenced: no `project_covers` row still names it, so a later sweep or a repeated
+        // discard can still remove it (same "duplicate remains" recovery as the raw-video discard
+        // failure a few lines above).
+        if (previousPath) {
+          try { await backend.discard('project-covers', previousPath); } catch {
+            process.stderr.write(`Previous cover discard failed for ${previousPath}; a duplicate remains in project-covers.\n`);
+          }
+        }
+        return send(201, { path, clientVisible: visible });
       }
       const projectId = validId(url.searchParams.get('projectId'));
       const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id,status`, { token });

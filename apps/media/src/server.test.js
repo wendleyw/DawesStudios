@@ -725,7 +725,38 @@ describe('POST /covers/prepare and POST /covers/clear', () => {
     expect(discardedPaths).toEqual([previousPath]);
   });
 
-  it('discards the new object and surfaces the RPC failure status when set_project_cover fails', async () => {
+  // A transient failure discarding the OLD cover must never take the NEW, now-live cover down
+  // with it: the database already points at `path`, so `path` is exactly what must survive here.
+  it('keeps the new cover and does not discard it when discarding the previous cover fails', async () => {
+    const previousPath = `${projectId}/${md5Uuid('previous-cover-discard-fails')}.png`;
+    const discardedPaths = [];
+    const stderr = [];
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = chunk => { stderr.push(String(chunk)); return true; };
+    try {
+      const routes = withGeneratedUpload({
+        ...authRoutes,
+        'GET /rest/v1/projects': () => jsonResponse(200, [{ id: projectId }]),
+        'POST /rest/v1/rpc/register_sanitized_asset': () => jsonResponse(200, null),
+        'POST /rest/v1/rpc/set_project_cover': () => jsonResponse(200, previousPath),
+        // The previous cover's own discard lifecycle fails at its first step.
+        'POST /rest/v1/rpc/discard_sanitized_asset': () => jsonResponse(500, { message: 'boom' }),
+        'DELETE /storage/v1/object/project-covers': (url, init) => { discardedPaths.push(...JSON.parse(init.body).prefixes); return jsonResponse(200, {}); },
+      }, 'project-covers', () => jsonResponse(200, {}));
+      stubSupabase(routes);
+
+      const response = await postCover(`projectId=${projectId}`, onePixelPng, 'image/png');
+      const body = await response.json();
+      expect(response.status).toBe(201);
+      expect(body.path).toMatch(new RegExp(`^${projectId}/.*\\.png$`));
+      // Nothing was deleted at all: the failed RPC step never reaches the storage DELETE, and the
+      // new object this response names was never discarded.
+      expect(discardedPaths).toEqual([]);
+      expect(stderr.join('')).toMatch(/Previous cover discard failed/);
+    } finally { process.stderr.write = originalWrite; }
+  });
+
+  it('discards the new object and returns 502 (the mapped status for a failed RPC) when set_project_cover fails', async () => {
     let uploadedPath;
     const discardedPaths = [];
     const routes = withGeneratedUpload({
