@@ -7,11 +7,11 @@ select is((select count(*)::int from public.clients),10,'Fixture contains exactl
 select is((select count(*)::int from public.projects),25,'Fixture contains exactly 25 projects');
 select is((select count(distinct service_type)::int from public.projects),20,'Every catalog service is exercised');
 select is((select count(*)::int from public.credit_ledger where kind='project_debit'),25,'Every fixture project has one debit');
-select ok(not exists(select 1 from public.credit_accounts a where a.balance<>(select sum(l.amount) from public.credit_ledger l where l.client_id=a.client_id)),'Balances reconcile with the ledger');
+select ok(not exists(select 1 from public.credit_months m where m.balance<>(select coalesce(sum(l.amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month)),'Balances reconcile with the ledger');
 
 set local role anon;
 select throws_ok('select * from public.clients','42501',null,'Anonymous users cannot read clients');
-select ok(not has_function_privilege('anon','public.accept_briefing(uuid)','execute'),'Anonymous users cannot execute workflows');
+select ok(not has_function_privilege('anon','public.accept_briefing(uuid,date)','execute'),'Anonymous users cannot execute workflows');
 reset role;
 select set_config('request.jwt.claim.sub',md5('dawes:client-8')::uuid::text,true);
 set local role authenticated;
@@ -70,6 +70,6 @@ select isnt((select content->>'headline' from public.published_designs where id=
 select throws_ok($$update public.published_designs set title='Changed'$$,'42501',null,'Clients snapshots cannot be updated directly');
 select lives_ok($$select public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid,'Second direction')$$,'Agency can publish the next internal version');
 select is(public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid),(select id from public.published_versions where deliverable_id=md5('dawes:deliverable-sabre-campaign-landing-page')::uuid and version_number=2),'Publication retries return the existing snapshot');
-select ok(not exists(select 1 from public.credit_accounts a where a.balance<>(select sum(l.amount) from public.credit_ledger l where l.client_id=a.client_id)),'Workflow operations leave balances reconciled');
+select ok(not exists(select 1 from public.credit_months m where m.balance<>(select coalesce(sum(l.amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month)),'Workflow operations leave balances reconciled');
 select * from finish();
 rollback;

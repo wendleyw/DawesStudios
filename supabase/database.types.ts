@@ -657,6 +657,7 @@ export type Database = {
           id: string
           idempotency_key: string
           kind: string
+          month: string
           project_id: string | null
         }
         Insert: {
@@ -668,6 +669,7 @@ export type Database = {
           id?: string
           idempotency_key: string
           kind: string
+          month: string
           project_id?: string | null
         }
         Update: {
@@ -679,6 +681,7 @@ export type Database = {
           id?: string
           idempotency_key?: string
           kind?: string
+          month?: string
           project_id?: string | null
         }
         Relationships: [
@@ -695,6 +698,77 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id", "client_id"]
+          },
+        ]
+      }
+      credit_months: {
+        Row: {
+          balance: number
+          client_id: string
+          month: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          client_id: string
+          month: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          client_id?: string
+          month?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_months_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_plans: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          monthly_credits: number
+          starts_on: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          monthly_credits: number
+          starts_on: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          monthly_credits?: number
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1506,6 +1580,54 @@ export type Database = {
           },
         ]
       }
+      project_settlements: {
+        Row: {
+          charged_month: string | null
+          difference: number
+          final_credits: number
+          idempotency_key: string
+          project_id: string
+          reason: string
+          settled_at: string
+          settled_by: string | null
+        }
+        Insert: {
+          charged_month?: string | null
+          difference: number
+          final_credits: number
+          idempotency_key: string
+          project_id: string
+          reason: string
+          settled_at?: string
+          settled_by?: string | null
+        }
+        Update: {
+          charged_month?: string | null
+          difference?: number
+          final_credits?: number
+          idempotency_key?: string
+          project_id?: string
+          reason?: string
+          settled_at?: string
+          settled_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_settlements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_settlements_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           board_position: Json
@@ -1513,6 +1635,7 @@ export type Database = {
           campaign_id: string | null
           client_id: string
           created_at: string
+          credit_month: string | null
           delivered_at: string | null
           description: string
           due_date: string | null
@@ -1529,6 +1652,7 @@ export type Database = {
           campaign_id?: string | null
           client_id: string
           created_at?: string
+          credit_month?: string | null
           delivered_at?: string | null
           description?: string
           due_date?: string | null
@@ -1545,6 +1669,7 @@ export type Database = {
           campaign_id?: string | null
           client_id?: string
           created_at?: string
+          credit_month?: string | null
           delivered_at?: string | null
           description?: string
           due_date?: string | null
@@ -1937,7 +2062,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_briefing: { Args: { p_briefing_id: string }; Returns: string }
+      accept_briefing: {
+        Args: { p_briefing_id: string; p_month?: string }
+        Returns: string
+      }
       accept_invitation: { Args: { p_token: string }; Returns: undefined }
       add_briefing_attachment: {
         Args: {
@@ -1965,6 +2093,16 @@ export type Database = {
           p_internal_asset_path?: string
           p_title: string
           p_version_id: string
+        }
+        Returns: string
+      }
+      add_month_extra: {
+        Args: {
+          p_amount: number
+          p_client_id: string
+          p_idempotency_key: string
+          p_month: string
+          p_reason: string
         }
         Returns: string
       }
@@ -2036,6 +2174,21 @@ export type Database = {
           p_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: Json
+      }
+      credit_month_summary: {
+        Args: { p_client_id: string; p_month: string }
+        Returns: {
+          allowance: number
+          available: number
+          expired: number
+          expires_on: string
+          expiring: number
+          extras: number
+          month: string
+          status: string
+          transferred: number
+          used: number
+        }[]
       }
       delete_playground_item: {
         Args: {
@@ -2115,6 +2268,15 @@ export type Database = {
       mark_project_delivered: {
         Args: { p_project_id: string }
         Returns: undefined
+      }
+      move_project_month: {
+        Args: {
+          p_charge_full?: boolean
+          p_idempotency_key: string
+          p_project_id: string
+          p_to_month: string
+        }
+        Returns: string
       }
       post_comment: {
         Args: {
@@ -2282,6 +2444,14 @@ export type Database = {
         Args: { p_all: boolean; p_client_id: string }
         Returns: undefined
       }
+      set_credit_plan: {
+        Args: {
+          p_client_id: string
+          p_monthly_credits: number
+          p_starts_on: string
+        }
+        Returns: undefined
+      }
       set_project_cover: {
         Args: {
           p_client_visible?: boolean
@@ -2309,6 +2479,31 @@ export type Database = {
         Args: { p_url: string; p_version_id: string }
         Returns: undefined
       }
+      settle_project_credits: {
+        Args: {
+          p_charge_month?: string
+          p_final_credits: number
+          p_idempotency_key: string
+          p_project_id: string
+          p_reason: string
+        }
+        Returns: {
+          charged_month: string | null
+          difference: number
+          final_credits: number
+          idempotency_key: string
+          project_id: string
+          reason: string
+          settled_at: string
+          settled_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_settlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       share_miro_version: {
         Args: {
           p_idempotency_key?: string
@@ -2323,6 +2518,17 @@ export type Database = {
       submit_design_version: {
         Args: { p_version_id: string }
         Returns: undefined
+      }
+      transfer_month_credits: {
+        Args: {
+          p_amount: number
+          p_client_id: string
+          p_from_month: string
+          p_idempotency_key: string
+          p_reason: string
+          p_to_month: string
+        }
+        Returns: string
       }
       update_design_board: {
         Args: {

@@ -87,14 +87,14 @@ select is(
 );
 
 reset role;
--- The migration replaces accept_briefing with the same signature; confirm its grants were not
+-- accept_briefing(uuid,date) (202609270003 added the optional month); confirm its grants were not
 -- narrowed or widened by the replace.
 select ok(
-  has_function_privilege('authenticated','public.accept_briefing(uuid)','execute'),
+  has_function_privilege('authenticated','public.accept_briefing(uuid,date)','execute'),
   'accept_briefing execute grant to authenticated is preserved'
 );
 select ok(
-  not has_function_privilege('anon','public.accept_briefing(uuid)','execute'),
+  not has_function_privilege('anon','public.accept_briefing(uuid,date)','execute'),
   'accept_briefing remains revoked from anon'
 );
 
