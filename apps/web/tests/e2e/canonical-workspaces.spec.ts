@@ -15,7 +15,6 @@ test("all ten clients and twenty-five projects render with matching records and 
   const projects = (
     await agency.from("projects").select("id,client_id,title,status").order("title")
   ).data!;
-  const deliverables = (await agency.from("deliverables").select("id,project_id")).data!;
   expect(clients).toHaveLength(10);
   expect(projects).toHaveLength(25);
   const timings: { role: string; projectId: string; milliseconds: number }[] = [];
@@ -54,21 +53,12 @@ test("all ten clients and twenty-five projects render with matching records and 
         const start = performance.now();
         await page.goto(`/projects/${project.id}`);
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(project.title);
-        await expect(page.locator(".project-canvas .react-flow__renderer")).toBeVisible();
+        await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
         timings.push({
           role: actor.role,
           projectId: project.id,
           milliseconds: Math.round(performance.now() - start),
         });
-        const count = deliverables.filter((item) => item.project_id === project.id).length;
-        await expect(page.locator(".react-flow__node-deliverable")).toHaveCount(count);
-        if (actor.role === "agency" && count > 1) {
-          const selected = deliverables.find((item) => item.project_id === project.id)!;
-          await page.getByLabel("Filter deliverable").selectOption(selected.id);
-          await expect(page.locator(".react-flow__node-deliverable")).toHaveCount(1);
-          await page.getByLabel("Filter deliverable").selectOption("");
-          await expect(page.locator(".react-flow__node-deliverable")).toHaveCount(count);
-        }
         if (actor.role === "client") {
           await expect(
             page.getByRole("button", { name: "Working files", exact: true }),
@@ -82,6 +72,8 @@ test("all ten clients and twenty-five projects render with matching records and 
           await caller
             .from("published_versions")
             .select("id,project_id,deliverable_id,version_number")
+            // Client versions only: legacy per-deliverable versions are never shown.
+            .is("deliverable_id", null)
         ).data!;
         const reviews = (await caller.from("publication_reviews").select("publication_id,status"))
           .data!;

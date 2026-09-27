@@ -31,19 +31,8 @@ test("Playground slides over the entire viewport and preserves the project under
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
-  const viewport = page.locator(".project-canvas .react-flow__viewport");
-  await expect(page.getByRole("button", { name: "New version for Campaign square" })).toBeVisible();
-  const initialZoom = await viewport.evaluate(
-    (element) => new DOMMatrix(getComputedStyle(element).transform).a,
-  );
-  await page.locator(".project-canvas").getByRole("button", { name: "zoom in" }).click();
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
-    )
-    .toBeCloseTo(Math.min(initialZoom * 1.2, 1.5), 4);
-  const transform = await viewport.getAttribute("style");
+  await page.goto(`/projects/${workspace.projectId}`);
+  await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await page.getByRole("button", { name: "Playground", exact: true }).click();
   const layer = playground(page);
   await expect(layer).toBeVisible();
@@ -63,7 +52,7 @@ test("Playground slides over the entire viewport and preserves the project under
   ).toEqual({ modal: true, bodyLocked: true, hiddenBoard: true });
   expect(await layer.boundingBox()).toEqual({ x: 0, y: 0, ...page.viewportSize()! });
   // The sidebar and project title are still mounted but cannot receive focus behind the layer.
-  for (const selector of [".sidebar a", ".project-title-row a"]) {
+  for (const selector of [".sidebar a", ".project-chrome a"]) {
     await page
       .locator(selector)
       .first()
@@ -89,7 +78,7 @@ test("Playground slides over the entire viewport and preserves the project under
   });
   expect(exit).toEqual(["translateY(0px)", "translateY(100%)"]);
   await expect(layer).toHaveCount(0);
-  await expect(viewport).toHaveAttribute("style", transform!);
+  await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await expect(page.locator(".project-workspace-content")).not.toHaveAttribute("inert");
   await expect(page.getByRole("button", { name: "Playground", exact: true })).toBeFocused();
   expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
@@ -121,7 +110,7 @@ for (const role of ["agency", "designer", "client"] as const) {
       page.getByRole("heading", { name: workspace.name, level: 1, exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Playground", exact: true })).toHaveCount(0);
-    await page.goto(`/projects/${workspace.projectId}?view=versions`);
+    await page.goto(`/projects/${workspace.projectId}`);
     await openPlayground(page);
     const title = `${role} project direction`;
     await addNote(page, title);
@@ -131,7 +120,7 @@ for (const role of ["agency", "designer", "client"] as const) {
     await openPlayground(page);
     await expect(playground(page).getByText(title, { exact: true }).first()).toBeVisible();
     await playground(page).getByRole("button", { name: "Back to project", exact: true }).click();
-    await page.goto(`/projects/${workspace.otherProjectId}?view=versions`);
+    await page.goto(`/projects/${workspace.otherProjectId}`);
     await openPlayground(page);
     await expect(playground(page).getByText(title, { exact: true })).toHaveCount(0);
     await addNote(page, `${role} alternate direction`);
@@ -161,55 +150,12 @@ for (const role of ["agency", "designer", "client"] as const) {
   });
 }
 
-test("upload form survives Playground and still creates the final design", async ({
-  page,
-  workspace,
-}) => {
-  await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
-  await page.getByRole("button", { name: "New version for Campaign square" }).click();
-  await page.getByLabel("Version note").fill("Explore before uploading.");
-  await page.getByRole("button", { name: "Create version", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("button", { name: "Add design to version 1" }).click();
-  const upload = page.getByRole("dialog", { name: "Add a design.", exact: true });
-  await upload.getByLabel("Design name", { exact: true }).fill("A considered final direction");
-  await upload.getByLabel("Design file").setInputFiles(preview);
-  await upload.getByRole("button", { name: "Open Playground", exact: true }).click();
-  await expect(upload).not.toBeVisible();
-  await expect(page.locator("dialog:modal")).toHaveCount(1);
-  await expect(playground(page)).toBeVisible();
-  await addNote(page, "Try a calmer composition");
-  await playground(page).getByRole("button", { name: "Back to upload", exact: true }).click();
-  await expect(upload).toBeVisible();
-  await expect(upload.getByLabel("Design name", { exact: true })).toHaveValue(
-    "A considered final direction",
-  );
-  expect(
-    await upload
-      .getByLabel("Design file")
-      .evaluate((input: HTMLInputElement) => input.files?.[0]?.name),
-  ).toBe("campaign-preview.png");
-  await upload.getByRole("button", { name: "Add design", exact: true }).click();
-  await expect(upload).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Open A considered final direction" }),
-  ).toBeVisible();
-  const saved = await localAdmin
-    .from("designs")
-    .select("title,internal_asset_path")
-    .eq("project_id", workspace.projectId);
-  expect(saved.error).toBeNull();
-  expect(saved.data).toHaveLength(1);
-  expect(saved.data![0].internal_asset_path).toBeTruthy();
-});
-
 test("a dropped image/document bundle persists and files remain private", async ({
   page,
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
+  await page.goto(`/projects/${workspace.projectId}`);
   await openPlayground(page);
   const transfer = await page.evaluateHandle(
     ({ image }) => {
@@ -304,7 +250,7 @@ test("a dropped image/document bundle persists and files remain private", async 
 
 test("Playground is readable and accessible on desktop and mobile", async ({ page, workspace }) => {
   await signIn(page, workspace.client.email);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
+  await page.goto(`/projects/${workspace.projectId}`);
   await openPlayground(page);
   await addNote(page, "Campaign mood", "Natural colors, generous space, and a clear message.");
   for (const [width, height] of [
@@ -398,7 +344,7 @@ test("notes can be dragged, resized, edited by keyboard and removed durably", as
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
+  await page.goto(`/projects/${workspace.projectId}`);
   await openPlayground(page);
   await addNote(page, "Move this idea");
   const dialog = playground(page);
@@ -459,7 +405,7 @@ test("lost save responses retry once and stale edits retain the local draft", as
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
+  await page.goto(`/projects/${workspace.projectId}`);
   await openPlayground(page);
   let dropped = false;
   await page.route("**/rest/v1/rpc/save_playground_item", async (route) => {
@@ -552,14 +498,14 @@ test("lost save responses retry once and stale edits retain the local draft", as
   await expect(dialog.getByText("An idempotent idea", { exact: true })).toHaveCount(0);
 });
 
-test("an agency session drags a Brand Hub asset and a working design onto the Playground board", async ({
+test("an agency session drags a Brand Hub asset onto the Playground board, with no project album", async ({
   page,
   workspace,
 }) => {
   const seed = await seedPlaygroundAlbumsFixture(workspace);
   try {
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${workspace.projectId}?view=versions`);
+    await page.goto(`/projects/${workspace.projectId}`);
     await openPlayground(page);
     const board = playground(page);
 
@@ -569,12 +515,8 @@ test("an agency session drags a Brand Hub asset and a working design onto the Pl
     await brandThumb.dragTo(board.locator(".playground-canvas"));
     await expect(board.getByText("Acceptance wordmark.png")).toBeVisible();
 
-    await board.getByRole("button", { name: "Campaign square · V1" }).click();
-    const designThumb = board.getByTitle("Acceptance square design");
-    await designThumb.dragTo(board.locator(".playground-canvas"), {
-      targetPosition: { x: 400, y: 200 },
-    });
-    await expect(board.getByText("Acceptance square design.png")).toBeVisible();
+    // Project designs live in Miro, so the Playground offers no project album.
+    await expect(board.getByRole("button", { name: /Campaign square/ })).toHaveCount(0);
     await expect(board.getByText("All changes saved")).toBeVisible({ timeout: 15_000 });
 
     const boardRow = await localAdmin
@@ -590,9 +532,7 @@ test("an agency session drags a Brand Hub asset and a working design onto the Pl
       .select("title,asset_path")
       .eq("board_id", boardRow.data.id);
     if (items.error) throw items.error;
-    expect(items.data.map((item) => item.title).sort()).toEqual(
-      ["Acceptance square design.png", "Acceptance wordmark.png"].sort(),
-    );
+    expect(items.data.map((item) => item.title)).toEqual(["Acceptance wordmark.png"]);
     for (const item of items.data) {
       if (!item.asset_path) continue;
       const [boardId, itemId] = item.asset_path.split("/");
@@ -607,7 +547,7 @@ test("an agency session drags a Brand Hub asset and a working design onto the Pl
   }
 });
 
-test("a client session sees only its shared versions, drags a published design onto its board, and never requests internal-assets", async ({
+test("a client session drags a Brand Hub asset onto its board and never requests internal files", async ({
   page,
   workspace,
 }) => {
@@ -616,22 +556,21 @@ test("a client session sees only its shared versions, drags a published design o
     const requestedInternalAssets: string[] = [];
     page.on("request", (request) => {
       const path = new URL(request.url()).pathname;
-      if (path.includes("/internal-assets/")) requestedInternalAssets.push(path);
+      if (/\/(internal-assets|design_boards|design_versions|internal_comments)\b/.test(path))
+        requestedInternalAssets.push(path);
     });
 
     await signIn(page, workspace.client.email);
-    await page.goto(`/projects/${workspace.projectId}?view=versions`);
+    await page.goto(`/projects/${workspace.projectId}`);
     await openPlayground(page);
     const board = playground(page);
 
-    await expect(board.getByRole("button", { name: "Acceptance logos" })).toBeVisible();
-    await expect(board.getByRole("button", { name: "Campaign square · V1" })).toBeVisible();
-
-    await board.getByRole("button", { name: "Campaign square · V1" }).click();
-    const designThumb = board.getByTitle("Acceptance square design");
-    await designThumb.dragTo(board.locator(".playground-canvas"));
-    await expect(board.getByText("Acceptance square design.png")).toBeVisible();
+    await board.getByRole("button", { name: "Acceptance logos" }).click();
+    const brandThumb = board.getByTitle("Acceptance wordmark");
+    await brandThumb.dragTo(board.locator(".playground-canvas"));
+    await expect(board.getByText("Acceptance wordmark.png")).toBeVisible();
     await expect(board.getByText("All changes saved")).toBeVisible({ timeout: 15_000 });
+    await expect(board.getByRole("button", { name: /Campaign square/ })).toHaveCount(0);
 
     expect(requestedInternalAssets).toEqual([]);
   } finally {

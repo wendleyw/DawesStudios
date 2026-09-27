@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { cleanupTestProject } from "./project-fixture";
+import { cleanupTestProject, removeClientCredits } from "./project-fixture";
 import { credentials, localAdmin, localCaller, password } from "./test-support";
 
 function value<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
@@ -70,6 +70,7 @@ export async function createPlaygroundFixture() {
     if (deleted.error) throw deleted.error;
     if (projectId) await cleanupTestProject(projectId);
     if (otherProjectId) await cleanupTestProject(otherProjectId);
+    removeClientCredits(client.id);
     const removed = await localAdmin.from("clients").delete().eq("id", client.id);
     if (removed.error) throw removed.error;
     if (reviewerId) {
@@ -152,17 +153,12 @@ const onePixelPng = Buffer.from(
 );
 
 /**
- * Adds one Brand Hub asset (in a named folder) and one internal design version/design — plus its
- * published copy, shared with the client — to a fixture project. Kept separate from
+ * Adds one Brand Hub asset, in a named folder, to a fixture's client. Kept separate from
  * `createPlaygroundFixture()` so every other Playground scenario's setup stays as small as today.
- * The design/publication rows and their `internal-assets`/`published-assets` objects are already
- * swept by `cleanupTestProject` (called from the base fixture's `cleanup`, keyed by project id);
- * only the client-scoped Brand Hub asset, its folder and its object need their own cleanup here.
+ * The client-scoped Brand Hub asset, its folder and its object need their own cleanup here, before
+ * the base fixture deletes the client.
  */
-export async function seedPlaygroundAlbumsFixture(fixture: {
-  clientId: string;
-  projectId: string;
-}) {
+export async function seedPlaygroundAlbumsFixture(fixture: { clientId: string }) {
   const folder = value(
     await localAdmin
       .from("brand_asset_folders")
@@ -190,71 +186,6 @@ export async function seedPlaygroundAlbumsFixture(fixture: {
       .single(),
   );
 
-  const designer = await localCaller(credentials.designer);
-  const designerAccount = await designer.auth.getUser();
-  if (designerAccount.error || !designerAccount.data.user)
-    throw new Error("Designer fixture authentication failed.");
-  const deliverable = value(
-    await localAdmin
-      .from("deliverables")
-      .select("id")
-      .eq("project_id", fixture.projectId)
-      .eq("name", "Campaign square")
-      .single(),
-  );
-  const version = value(
-    await localAdmin
-      .from("design_versions")
-      .insert({
-        project_id: fixture.projectId,
-        deliverable_id: deliverable.id,
-        version_number: 1,
-        created_by: designerAccount.data.user.id,
-      })
-      .select("id")
-      .single(),
-  );
-  const designPath = `${fixture.projectId}/${randomUUID()}.png`;
-  const uploadedDesign = await localAdmin.storage
-    .from("internal-assets")
-    .upload(designPath, onePixelPng, { contentType: "image/png", upsert: false });
-  if (uploadedDesign.error) throw uploadedDesign.error;
-  const design = value(
-    await localAdmin
-      .from("designs")
-      .insert({
-        project_id: fixture.projectId,
-        version_id: version.id,
-        title: "Acceptance square design",
-        internal_asset_path: designPath,
-        sort_order: 0,
-        created_by: designerAccount.data.user.id,
-      })
-      .select("id")
-      .single(),
-  );
-  const publication = value(
-    await localAdmin
-      .from("published_versions")
-      .insert({ project_id: fixture.projectId, deliverable_id: deliverable.id, version_number: 1 })
-      .select("id")
-      .single(),
-  );
-  const publishedPath = `${fixture.projectId}/${randomUUID()}.png`;
-  const uploadedPublished = await localAdmin.storage
-    .from("published-assets")
-    .upload(publishedPath, onePixelPng, { contentType: "image/png", upsert: false });
-  if (uploadedPublished.error) throw uploadedPublished.error;
-  const published = await localAdmin.from("published_designs").insert({
-    project_id: fixture.projectId,
-    publication_id: publication.id,
-    title: "Acceptance square design",
-    asset_path: publishedPath,
-    sort_order: 0,
-  });
-  if (published.error) throw published.error;
-
-  // The Brand Hub rows reference the client, so they go before the base fixture deletes it.
   async function cleanup() {
     const removed = await localAdmin.storage.from("brand-assets").remove([assetPath]);
     if (removed.error) throw removed.error;
@@ -263,5 +194,5 @@ export async function seedPlaygroundAlbumsFixture(fixture: {
     const folderRow = await localAdmin.from("brand_asset_folders").delete().eq("id", folder.id);
     if (folderRow.error) throw folderRow.error;
   }
-  return { folderId: folder.id, assetId: asset.id, designId: design.id, cleanup };
+  return { folderId: folder.id, assetId: asset.id, cleanup };
 }

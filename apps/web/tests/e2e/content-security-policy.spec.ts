@@ -2,9 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { credentials, localAdmin, localCaller, signIn } from "./test-support";
 
 // Read-only: loads the primary surfaces as each role and fails on any Content-Security-Policy
-// violation, so a policy that blocks signed Storage images, video posters, media-service calls or
-// Realtime is caught before release. Playback and uploads are exercised by the video and project
-// specs; this one creates and changes no data.
+// violation, so a policy that blocks signed Storage images, the Miro embed, media-service calls or
+// Realtime is caught before release. This one creates and changes no data.
 
 declare global {
   interface Window {
@@ -46,16 +45,21 @@ test("primary surfaces load without Content-Security-Policy violations for every
     .single();
   expect(clientError).toBeNull();
   const clientId = ownClient!.id;
-  // Prefer a published video, so the client's project page renders a video poster.
-  const { data: published, error: publishedError } = await localAdmin
-    .from("published_designs")
-    .select("project_id, asset_path, projects!inner(client_id)")
-    .eq("projects.client_id", clientId);
-  expect(publishedError).toBeNull();
-  const clientProject =
-    published?.find((design) => design.asset_path?.endsWith(".mp4"))?.project_id ??
-    published?.[0]?.project_id;
-  expect(clientProject, "the client needs a published project").toBeTruthy();
+  // Prefer a project with a shared client version, so the client's page embeds its Miro board.
+  const { data: owned, error: projectError } = await localAdmin
+    .from("projects")
+    .select("id")
+    .eq("client_id", clientId);
+  expect(projectError).toBeNull();
+  const ids = owned!.map((project) => project.id);
+  expect(ids.length, "the client needs a project").toBeGreaterThan(0);
+  const { data: shared, error: sharedError } = await localAdmin
+    .from("publication_miro_links")
+    .select("project_id")
+    .in("project_id", ids)
+    .limit(1);
+  expect(sharedError).toBeNull();
+  const clientProject = shared?.[0]?.project_id ?? ids[0];
 
   const designer = await localCaller(credentials.designer);
   const { data: assignment } = await designer

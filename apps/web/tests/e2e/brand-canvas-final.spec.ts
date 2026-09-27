@@ -1,6 +1,6 @@
-import { test, expect, type Page, type Locator } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { credentials, localAgency, screenshotDirectory, signIn } from "./test-support";
+import { credentials, localAgency, signIn } from "./test-support";
 
 test.use({ reducedMotion: "reduce" });
 
@@ -107,89 +107,6 @@ test("logo library downloads actual PNG and PDF exports with usage guidance", as
         expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
       else expect(bytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
       await page.keyboard.press("Escape");
-    }
-  } finally {
-    await agency.auth.signOut();
-  }
-});
-
-async function assertPinAlignment(page: Page, pin: Locator, x: number, y: number) {
-  await expect
-    .poll(
-      async () => {
-        const stage = await page.locator(".artwork-stage").boundingBox();
-        const marker = await pin.boundingBox();
-        if (!stage || !marker || stage.width <= 0 || stage.height <= 0) return 1;
-        return Math.max(
-          Math.abs((marker.x + marker.width / 2 - stage.x) / stage.width - x),
-          Math.abs((marker.y + marker.height / 2 - stage.y) / stage.height - y),
-        );
-      },
-      { message: "The rendered pin center must match its persisted normalized artwork coordinate" },
-    )
-    .toBeLessThan(0.005);
-}
-
-test("published pin coordinates stay aligned through zoom and responsive sidebar changes", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  const agency = await localAgency();
-  try {
-    const pinned = await agency
-      .from("client_comments")
-      .select("id,body,project_id,publication_id,design_id,pin_x,pin_y")
-      .eq("resolved", false)
-      .not("pin_x", "is", null)
-      .not("pin_y", "is", null)
-      .not("design_id", "is", null)
-      .order("id")
-      .limit(1)
-      .single();
-    expect(pinned.error).toBeNull();
-    const comment = pinned.data!;
-    const design = await agency
-      .from("published_designs")
-      .select("title")
-      .eq("id", comment.design_id!)
-      .single();
-    expect(design.error).toBeNull();
-    await signIn(page, credentials.agency);
-    await page.goto("/projects/" + comment.project_id + "?channel=client");
-    const card = page.locator('.react-flow__node[data-id="' + comment.publication_id + '"]');
-    await card.getByRole("button", { name: "Open " + design.data!.title, exact: true }).click();
-    const bodyPrefix = comment.body.slice(0, 60).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pin = page.getByRole("button", {
-      name: new RegExp("^View pin \\d+: " + bodyPrefix + "$"),
-    });
-    await expect(pin).toBeVisible();
-    await assertPinAlignment(page, pin, comment.pin_x!, comment.pin_y!);
-    const controls = page.locator(".design-viewport .react-flow__controls");
-    const beforeZoom = (await page.locator(".artwork-stage").boundingBox())!.width;
-    await controls.getByRole("button", { name: "Zoom In", exact: true }).click();
-    await expect
-      .poll(async () => (await page.locator(".artwork-stage").boundingBox())!.width)
-      .toBeGreaterThan(beforeZoom + 1);
-    await assertPinAlignment(page, pin, comment.pin_x!, comment.pin_y!);
-    await controls.getByRole("button", { name: "Zoom Out", exact: true }).click();
-    await assertPinAlignment(page, pin, comment.pin_x!, comment.pin_y!);
-    const beforeSidebar = (await page.locator(".design-viewport").boundingBox())!.width;
-    await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
-    await expect
-      .poll(async () => (await page.locator(".design-viewport").boundingBox())!.width)
-      .toBeGreaterThan(beforeSidebar + 100);
-    await assertPinAlignment(page, pin, comment.pin_x!, comment.pin_y!);
-    await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
-    for (const width of [1600, 1024, 768, 390]) {
-      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-      await controls.getByRole("button", { name: "Fit View", exact: true }).click();
-      await assertPinAlignment(page, pin, comment.pin_x!, comment.pin_y!);
-      await pin.click();
-      await expect(page.locator('[data-comment-id="' + comment.id + '"]')).toHaveClass(/selected/);
-      await page.screenshot({
-        path: screenshotDirectory + "/design-persisted-pin-alignment-" + width + ".png",
-        fullPage: true,
-      });
     }
   } finally {
     await agency.auth.signOut();

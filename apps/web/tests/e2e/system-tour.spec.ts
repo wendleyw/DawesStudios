@@ -223,16 +223,13 @@ for (const role of ["agency", "designer", "client"] as const) {
         await capture(page, role, name, surfaces, watcher);
       }
 
-      // The project's own layers: a design in the viewer, then the Playground.
+      // The project's own layers: the Conversation panel, then the Playground.
       await page.goto(`/projects/${ids.projectId}`);
       await settle(page);
-      // A design card's own button, not the phone's "Open navigation" or a version's feedback.
-      const openDesign = page
-        .locator(".react-flow__node button[aria-label^='Open ']:not([aria-label^='Open feedback'])")
-        .first();
-      if (await openDesign.isVisible().catch(() => false)) {
-        await openDesign.click();
-        await capture(page, role, "design-viewer", surfaces, watcher);
+      const conversation = page.getByRole("button", { name: "Conversation", exact: true });
+      if (await conversation.isVisible().catch(() => false)) {
+        await conversation.click();
+        await capture(page, role, "project-conversation", surfaces, watcher);
         await page.keyboard.press("Escape");
       }
       await page.goto(`/projects/${ids.projectId}`);

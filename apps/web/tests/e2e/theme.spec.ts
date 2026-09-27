@@ -60,18 +60,3 @@ test("System follows the operating system's colour scheme", async ({ page }) => 
   await page.emulateMedia({ colorScheme: "light" });
   await expect.poll(() => page.evaluate(rootBackground)).toBe(lightPage);
 });
-
-test("the project canvas takes the dark canvas colour and dot grid", async ({
-  page,
-  workspace,
-}) => {
-  await page.emulateMedia({ colorScheme: "dark" });
-  await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}?view=versions`);
-  const background = page.locator(".project-canvas .react-flow__background");
-  await expect(background).toBeVisible();
-  expect(await background.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-    darkPage,
-  );
-  await expect(background.locator("pattern circle")).toHaveCount(1);
-});

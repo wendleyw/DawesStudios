@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { cleanupTestProject } from "./project-fixture";
+import { cleanupTestProject, removeClientCredits } from "./project-fixture";
 import { localAdmin, localAgency, password, runPrivilegedSql } from "./test-support";
 
 export type TeamMemberFixture = { id: string; email: string; name: string };
@@ -99,6 +99,7 @@ commit;`,
         );
       }
       for (const client of clients) {
+        removeClientCredits(client.id);
         const deleted = await localAdmin.from("clients").delete().eq("id", client.id);
         if (deleted.error) throw deleted.error;
       }

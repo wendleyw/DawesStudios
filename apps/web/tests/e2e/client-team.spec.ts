@@ -82,35 +82,15 @@ test("two people at one client act separately, and the product attributes and no
     const projectTitle = value(
       await localAdmin.from("projects").select("title").eq("id", fixture.projectId).single(),
     ).title;
-    const deliverable = value(
-      await agency.from("deliverables").select("id").eq("project_id", fixture.projectId).single(),
-    );
-    const publish = async (note: string) => {
-      const version = value(
-        await agency.rpc("create_design_version", {
-          p_deliverable_id: deliverable.id,
-          p_notes: "",
-        }),
-      );
+    // A client version on the Miro model: the agency shares a client board link directly.
+    const publish = async (note: string) =>
       value(
-        await agency.rpc("add_design", {
-          p_version_id: version,
-          p_title: "Direction A",
-          p_content: {
-            headline: "One client, two people.",
-            background: "#f6f6f4",
-            foreground: "#242424",
-          },
+        await agency.rpc("share_miro_version", {
+          p_project_id: fixture.projectId,
+          p_url: "https://miro.com/app/board/uXjVClientTeam=/",
+          p_note: note,
         }),
       );
-      return value(
-        await agency.rpc("publish_version", {
-          p_version_id: version,
-          p_release_note: note,
-          p_assets: {},
-        }),
-      );
-    };
     const reviewNotices = async (userId: string) =>
       value(
         await localAdmin

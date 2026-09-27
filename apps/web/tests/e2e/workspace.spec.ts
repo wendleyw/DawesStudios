@@ -23,7 +23,7 @@ test.afterEach(async () => {
   for (const restore of restoreViews) await restore();
 });
 
-test("agency signs in, sees ten workspaces, and opens a live project canvas", async ({ page }) => {
+test("agency signs in, sees ten workspaces, and opens a project workspace", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await signIn(page, "studio@dawes.local");
@@ -35,14 +35,21 @@ test("agency signs in, sees ten workspaces, and opens a live project canvas", as
   await expect(page.locator(".board-canvas .react-flow")).toBeVisible();
   await expect(page.locator(".react-flow__node-project .board-card")).toHaveCount(7);
   await page.screenshot({ path: `${screenshotDirectory}/agency-board.png` });
-  // One click selects; a double click opens the project canvas.
+  // One click selects; a double click opens the project's Miro workspace.
   await page.locator(".react-flow__node-project .board-card-body").first().dblclick();
-  await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Working files", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}/);
+  await expect(
+    page
+      .getByRole("group", { name: "Project channel" })
+      .getByRole("button", { name: "Working files", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/agency-project.png` });
-  await page.locator(".design-preview-artwork").first().dblclick();
-  await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
-  await page.screenshot({ path: `${screenshotDirectory}/agency-design.png` });
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Studio conversation", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: `${screenshotDirectory}/agency-conversation.png` });
   expect(errors).toEqual([]);
 });
 
@@ -61,10 +68,15 @@ test("client sees only its own workspace and no internal production controls", a
   await expect(page.getByText("Alex Morgan", { exact: true })).toHaveCount(0);
   await expect(page.locator(".react-flow__node-project .board-card")).toHaveCount(7);
   await expect(page.locator(".board-card-grip")).toHaveCount(0);
-  // One click selects; a double click opens the project canvas.
+  // One click selects; a double click opens the project's Miro workspace.
   await page.locator(".react-flow__node-project .board-card-body").first().dblclick();
-  await expect(page.getByText("Shared designs", { exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Share with client" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Working files" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add design board" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Client conversation", exact: true }),
+  ).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/client-project.png` });
 });

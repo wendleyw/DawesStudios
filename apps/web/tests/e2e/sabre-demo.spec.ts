@@ -71,9 +71,7 @@ for (const role of ["agency", "client"] as const) {
     }
   });
 
-  test(`${role} sees demo artwork, revisions, motion and related workspace content`, async ({
-    page,
-  }) => {
+  test(`${role} opens demo projects and related workspace content`, async ({ page }) => {
     test.setTimeout(120_000);
     const agency = await localAgency();
     const result = await agency.from("projects").select("id,title").eq("client_id", clientId);
@@ -104,59 +102,23 @@ for (const role of ["agency", "client"] as const) {
       "Saturday Run Motion Reel",
     ]) {
       await page.goto(`/projects/${find(title)}`);
-      await expect(page.locator(".design-preview").first()).toBeVisible();
-      await expect
-        .poll(() =>
-          page
-            .locator(".design-preview img")
-            .evaluateAll(
-              (images) =>
-                images.length > 0 &&
-                images.every(
-                  (image) =>
-                    (image as HTMLImageElement).complete &&
-                    (image as HTMLImageElement).naturalWidth > 0,
-                ),
-            ),
-        )
-        .toBe(true);
-      if (title === "Trail Weekend Social Series")
-        await expect(page.locator(".version-card")).toHaveCount(4);
-      if (role === "client")
-        await expect(page.locator(".project-add-design, .project-add-version")).toHaveCount(0);
+      await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
+      if (role === "client") {
+        await expect(page.getByRole("button", { name: "Working files" })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Add design board" })).toHaveCount(0);
+      }
       if (role === "agency")
-        await expect(page.locator(".project-add-design").first()).toBeVisible();
+        await expect(
+          page
+            .getByRole("group", { name: "Project channel" })
+            .getByRole("button", { name: "Working files", exact: true }),
+        ).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      ).toBe(true);
       await page.screenshot({
         path: `${screenshotDirectory}/sabre-demo-${role}-project-${title.split(" ")[0].toLowerCase()}.png`,
       });
-      if (title === "Saturday Run Motion Reel") {
-        await page
-          .locator(".design-preview")
-          .filter({ hasText: "Campaign motion" })
-          .first()
-          .locator(".design-preview-artwork")
-          .dblclick();
-        const video = page.locator("video.artwork-video");
-        await expect(video).toBeVisible();
-        await expect
-          .poll(() =>
-            video.evaluate(
-              (element) =>
-                Number.isFinite((element as HTMLVideoElement).duration) &&
-                (element as HTMLVideoElement).duration >= 14,
-            ),
-          )
-          .toBe(true);
-        await video.evaluate(async (element) => {
-          const clip = element as HTMLVideoElement;
-          clip.muted = true;
-          await clip.play();
-        });
-        await expect
-          .poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime))
-          .toBeGreaterThan(0);
-        await page.screenshot({ path: `${screenshotDirectory}/sabre-demo-${role}-video.png` });
-      }
     }
     for (const section of [
       "briefings",
@@ -199,7 +161,7 @@ for (const role of ["agency", "client"] as const) {
   });
 }
 
-test("an assigned designer opens populated working files on desktop and mobile", async ({
+test("an assigned designer opens the internal workspace on desktop and mobile", async ({
   page,
 }) => {
   const agency = await localAgency();
@@ -214,17 +176,18 @@ test("an assigned designer opens populated working files on desktop and mobile",
   await page.goto(`/projects/${result.data!.id}`);
   for (const width of [1600, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await expect(page.locator(".design-preview").first()).toBeVisible();
-    await expect(page.locator(".project-add-design").first()).toBeVisible();
+    await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
+    await expect(page.getByText("Internal", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Shared with client", exact: true })).toHaveCount(
       0,
     );
     await expect(page.getByRole("button", { name: "Share with client", exact: true })).toHaveCount(
       0,
     );
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
-      true,
-    );
+    // The sidebar and content margin animate on a viewport change, so poll past that transition.
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
+      .toBe(true);
     await page.screenshot({
       path: `${screenshotDirectory}/sabre-demo-designer-project-${width}.png`,
     });

@@ -15,19 +15,15 @@ async function expectedFolders(email: string, clientId: string, includeWorkingFi
     .eq("client_id", clientId);
   expect(projects.error).toBeNull();
   const ids = projects.data!.map((project) => project.id);
-  const [deliveries, working, shared] = await Promise.all([
+  // The designs live in Miro, so the page lists delivery files and, for the studio, working files.
+  const [deliveries, working] = await Promise.all([
     caller.from("delivery_files").select("project_id").in("project_id", ids),
     includeWorkingFiles
       ? caller.from("project_assets").select("project_id").in("project_id", ids)
       : Promise.resolve({ data: [] as { project_id: string }[], error: null }),
-    caller
-      .from("published_designs")
-      .select("project_id")
-      .in("project_id", ids)
-      .not("asset_path", "is", null),
   ]);
-  for (const result of [deliveries, working, shared]) expect(result.error).toBeNull();
-  const files = [...deliveries.data!, ...working.data!, ...shared.data!];
+  for (const result of [deliveries, working]) expect(result.error).toBeNull();
+  const files = [...deliveries.data!, ...working.data!];
   const campaignOf = new Map(
     projects.data!.map((project) => [
       project.id,
@@ -120,15 +116,25 @@ test("files open as campaign folders and each campaign groups its files by proje
 
   // Search narrows the folders to the campaigns holding a match, and carries into a campaign.
   const onlyProject = [...busiest.projects][0];
-  const sample = await localAdmin
-    .from("published_designs")
-    .select("title")
-    .eq("project_id", onlyProject)
-    .not("asset_path", "is", null)
-    .limit(1)
-    .maybeSingle();
-  if (sample.data) {
-    await page.getByRole("textbox", { name: "Search files", exact: true }).fill(sample.data.title);
+  const sample =
+    (
+      await localAdmin
+        .from("delivery_files")
+        .select("name")
+        .eq("project_id", onlyProject)
+        .limit(1)
+        .maybeSingle()
+    ).data ??
+    (
+      await localAdmin
+        .from("project_assets")
+        .select("name")
+        .eq("project_id", onlyProject)
+        .limit(1)
+        .maybeSingle()
+    ).data;
+  if (sample) {
+    await page.getByRole("textbox", { name: "Search files", exact: true }).fill(sample.name);
     await expect(page.locator(`.folder-tile[href="${base}?campaign=${busiestId}"]`)).toBeVisible();
     await page.getByRole("textbox", { name: "Search files", exact: true }).fill("no such file");
     await expect(page.getByRole("heading", { name: "No matching files." })).toBeVisible();

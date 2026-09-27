@@ -362,37 +362,6 @@ test("list sorts by a clicked column title and by the phone menu", async ({ page
   }
 });
 
-test("a canvas card spaces its version, dash and type evenly", async ({ page }) => {
-  const sabre = await localAdmin.from("clients").select("id").eq("slug", "sabre").single();
-  expect(sabre.error).toBeNull();
-  const clientId = sabre.data!.id;
-  const restoreBoard = await preserveBoardPreference(credentials.agency, clientId);
-  try {
-    await signIn(page, credentials.agency);
-    await page.goto(`/clients/${clientId}/board`);
-    await chooseView(page, "canvas");
-    const meta = page.locator(".board-card-meta:has(.board-card-version + span)").first();
-    // The dash sits as far from the version badge as from the deliverable type. Measured in the
-    // card's own pixels, since the canvas is zoomed.
-    const spacing = await meta.evaluate((element) => {
-      const badge = element.querySelector<HTMLElement>(".board-card-version")!;
-      const type = badge.nextElementSibling!;
-      const scale = badge.getBoundingClientRect().width / badge.offsetWidth;
-      return {
-        display: getComputedStyle(element).display,
-        beforeDash:
-          (type.getBoundingClientRect().left - badge.getBoundingClientRect().right) / scale,
-        afterDash: parseFloat(getComputedStyle(type, "::before").marginRight),
-      };
-    });
-    expect(spacing.display).toBe("flex");
-    expect(spacing.afterDash).toBeGreaterThan(0);
-    expect(spacing.beforeDash).toBeCloseTo(spacing.afterDash, 0);
-  } finally {
-    await restoreBoard();
-  }
-});
-
 test("view choices are isolated by viewer and client", async ({ browser }) => {
   const first = await createPlaygroundFixture();
   const second = await createPlaygroundFixture();
