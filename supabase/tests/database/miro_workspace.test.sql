@@ -136,6 +136,40 @@ select throws_ok($$select public.post_comment(pg_temp.k('project'),'internal','S
 select throws_ok($$select public.resolve_comment(pg_temp.k('comment-a-project'),'internal',true)$$,'42501',null,'Designer B cannot resolve Designer A''s comment');
 reset role;
 
+-- Round comment notifications: only the round's designer is notified about a comment on their
+-- round; a project-level comment still reaches every assigned designer, exactly as before.
+-- (notifications_read restricts each user to their own rows, so counts are read as that designer.)
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select pg_temp.remember('comment-agency-round',public.post_comment(pg_temp.k('project'),'internal','Round-only studio note',pg_temp.k('round-a1')))$$,
+  'The agency comments on Designer A''s round');
+reset role;
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select is((select count(*)::int from public.notifications where project_id=pg_temp.k('project') and title='New studio message'),2,
+  'Designer A is notified about the comment on their round');
+reset role;
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+select is((select count(*)::int from public.notifications where project_id=pg_temp.k('project') and title='New studio message'),1,
+  'Designer B is not notified about a round they do not own');
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select pg_temp.remember('comment-agency-project2',public.post_comment(pg_temp.k('project'),'internal','Second studio note'))$$,
+  'The agency comments on the project again');
+reset role;
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select is((select count(*)::int from public.notifications where project_id=pg_temp.k('project') and title='New studio message'),3,
+  'Designer A is still notified about project-level comments');
+reset role;
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+select is((select count(*)::int from public.notifications where project_id=pg_temp.k('project') and title='New studio message'),2,
+  'Designer B is notified about project-level comments');
+reset role;
+
 -- Updating a board: agency only, reassigning moves visibility, unassignment hides it.
 select pg_temp.act_as('agency');
 set local role authenticated;
