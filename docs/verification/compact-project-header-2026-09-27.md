@@ -1,5 +1,10 @@
 # Compact project header preview — 2026-09-27
 
+Historical experiment record. The user subsequently approved this layout for all project pages
+only. It is now the default without a query parameter; see the
+[rollout verification](project-header-default-2026-09-27.md). The opt-in/removal instructions below
+describe the earlier experiment, not current application behavior.
+
 The user requested a reversible visual experiment: use the space between client navigation and
 notifications for the project title alone, with the full Working files / Shared with client bar
 immediately below, then requested the campaign above the title and a due-date badge beside it.

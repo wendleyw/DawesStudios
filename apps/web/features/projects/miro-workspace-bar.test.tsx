@@ -38,12 +38,10 @@ const shared = {
 function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps {
   return {
     back: <button>Back</button>,
-    title: "Campaign",
     channel: "internal",
     role: "agency",
     delivered: false,
     viewerId: "agency",
-    dueLabel: "Due Sep 30",
     boards: [boardA, boardB],
     board: boardA,
     rounds: [round],
@@ -123,11 +121,10 @@ describe("MiroWorkspaceBar in Working files", () => {
 });
 
 describe("MiroWorkspaceBar in Shared with client", () => {
-  it("shows the versions, status and due date, and the agency's add button", () => {
+  it("shows the versions, status and the agency's add button", () => {
     render(<MiroWorkspaceBar {...props({ channel: "client" })} />);
     expect(screen.getByRole("group", { name: "Client versions" })).toHaveTextContent("V1");
     expect(screen.getByText("In review")).toBeInTheDocument();
-    expect(screen.getByText("Due Sep 30")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New client version" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
   });
@@ -193,12 +190,15 @@ describe("MiroWorkspaceBar's tint", () => {
     expect(bar()).not.toHaveClass("is-internal");
     expect(bar()).not.toHaveClass("is-client");
   });
-  it("leaves out the second row for a client with nothing shared", () => {
-    const { container } = render(
+  it("keeps navigation available for a client with nothing shared", () => {
+    render(
       <MiroWorkspaceBar
         {...props({ channel: "client", role: "client", lead: null, shared: [], version: null })}
       />,
     );
-    expect(container.querySelector(".miro-bar-context")).toBeNull();
+    expect(screen.getByRole("button", { name: "Back" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "More" })).toBeVisible();
+    expect(screen.queryByRole("group", { name: "Client versions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New client version" })).not.toBeInTheDocument();
   });
 });

@@ -5,8 +5,8 @@ import { ArrowLeft, CalendarDays, Eye, Lock } from "lucide-react";
 import { useCampaigns } from "@/features/briefings/briefing-data";
 import type { ProjectChannel } from "./project-data";
 
-/** The opt-in header's campaign, project title and role-appropriate due date. */
-export function ProjectTitlePreview({
+/** Every project's campaign, title and role-appropriate due date. */
+export function ProjectTitle({
   clientId,
   campaignId,
   title,
@@ -20,15 +20,15 @@ export function ProjectTitlePreview({
   const campaigns = useCampaigns(clientId);
   const campaign = campaigns.data?.find((item) => item.id === campaignId);
   return (
-    <div className="project-title-preview">
+    <div className="project-heading">
       {campaign && (
-        <p className="project-title-preview-campaign" title={campaign.title}>
+        <p className="project-heading-campaign" title={campaign.title}>
           {campaign.title}
         </p>
       )}
-      <div className="project-title-preview-row">
+      <div className="project-heading-row">
         <h1 title={title}>{title}</h1>
-        <span className="project-title-preview-due">
+        <span className="project-heading-due">
           <CalendarDays size={12} aria-hidden="true" />
           {dueLabel}
         </span>

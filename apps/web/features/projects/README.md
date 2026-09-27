@@ -14,42 +14,43 @@ channel, with Supabase policies rather than the interface deciding what each one
 
 ## Page and chrome
 
-**Temporary layout preview (2026-09-27):** add `?layout=compact-header` to a project URL
-(or `&layout=compact-header` when it already has parameters). A separate card between client
-navigation and the account card shows the campaign above the project title, with the due date
-in a small badge beside the title. `ProjectTitlePreview` reuses the authorized `useCampaigns`
-read; absent campaign data does not invent a label. The due badge retains the viewer's existing
-date rule (the board's internal deadline for a designer). Back, channels, rounds/versions, the
-agency's board due date and actions share the full-width bar immediately below. The project due
-date appears once in the header. At work-area widths of 1100 px or less, the title
-gets its own row and the controls wrap. This URL-only preview saves no preference and makes no
-data changes; remove the parameter to restore the normal layout. See the
-[visual verification](../../../../docs/verification/compact-project-header-2026-09-27.md).
+Every project uses the compact header for agency, designer and client sessions, including direct
+links and notification destinations. No layout query parameter or saved preference is required;
+old `?layout=compact-header` links still open the same page. This direction was approved for
+**project pages only** on 2026-09-27. Other client sections keep their existing headers.
 
-The client logo/name, client navigation and signed-in profile use the same floating
-`workspace/canvas-header.tsx` as every client section. Below it, `MiroWorkspaceBar`
-(`miro-workspace-bar.tsx`, built on `MiroBarShell`/`MiroBarMenu` from `miro-view.tsx`) is the
-two-row bar. The first row says where you are: back (`ProjectBackLink`, `project-header.tsx`), the
-project title, its due date, **Open in Miro** for the shown link (`miroBoardUrl`,
-`target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions) and a
-**More** menu holding the credits the project used (`credits/project-credits-chip.tsx`; designers
-never see it) and, once the agency has set one, the Drive link of the channel on screen only:
-**Open internal Drive folder** on Working files, **Open client Drive folder** on Shared with client
-(`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener noreferrer"`), read from
-`project_drive_links`. A designer is only ever on the internal channel and a client only ever on the
-client channel, so each reads only the one link RLS lets them; the agency sees whichever channel it
-is looking at. Escape on **More** returns focus to it. The second row holds the channel
-(`ProjectChannelLead`: the agency's **Working files / Shared with client** tabs, the designer's
-**Internal** label, nothing for the client), the channel's controls and its primary action.
-`miroBarTone` tints that row by channel for the agency and the designer (amber with a hatch for
-Working files, blue for Shared with client) and leaves the client's plain; see the Miro bar
-decision in [the design system](../../../../docs/architecture/design-system.md). Under 1000 px of
-work area (`@container board`) the title keeps the first row and the rest wraps below it.
+The client logo, navigation and signed-in profile use `workspace/canvas-header.tsx`. Its centre
+card is `ProjectTitle` (`project-header.tsx`): campaign above the project title, with a small due-date
+badge alongside. It reuses the authorized `useCampaigns` read; absent campaign data does not invent
+a label. A designer's badge uses their board's internal deadline, bounded by the project's date;
+agency and client badges use the project date. An unset deadline reads **No due date**. The title
+still renders if client identity data is unavailable. At work-area widths of 1100 px or less, its
+card moves below navigation; the title and date wrap within the card as needed.
+
+`MiroWorkspaceBar` (`miro-workspace-bar.tsx`, built on `MiroBarShell`/`MiroBarMenu` in
+`miro-view.tsx`) is one full-width wrapping controls bar below the title. It contains Back
+(`ProjectBackLink`), the channel (`ProjectChannelLead`: agency **Working files / Shared with
+client**, designer **Internal**, no channel label for clients), board/round/version controls,
+the agency's board due date, the primary action, **Open in Miro** for the shown link (`miroBoardUrl`,
+`target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions), and
+**More**. The project due date appears only in the title card.
+
+More holds the project's credits (`credits/project-credits-chip.tsx`; designers never see it)
+and, once set by the agency, the Drive link of the channel on screen: **Open internal Drive folder**
+or **Open client Drive folder** (`shared/drive-icon.tsx`, `target="_blank" rel="noopener noreferrer"`).
+These are read from `project_drive_links` under RLS, so designers get only the internal link and
+clients only the client link. Escape closes More and restores focus to its trigger.
+
+`miroBarTone` tints the controls bar for agency and designer sessions: amber with a hatch for
+Working files, blue for the agency's Shared with client view. A client's bar stays plain. The bar
+wraps on narrow screens, preserving all authorized actions. See the
+[design system](../../../../docs/architecture/design-system.md) and the
+[default-header verification](../../../../docs/verification/project-header-default-2026-09-27.md).
 
 In Working files the bar shows a compact board picker (only with more than one board; sized to the
 chosen name up to 200 px), a **Board / R1 / R2…** round toggle once the board has rounds, and the
 round's status; in Shared with client a **V1, V2…** toggle and the shown version's status. A client
-with nothing shared yet gets no second row. The board's own designer gets **Send to studio**
+with nothing shared yet retains Back and More without version controls. The board's own designer gets **Send to studio**
 (`project-action-round.tsx`, `kind: "round"`, an optional note and frame link through the
 idempotent `send_board_round`); the agency gets **Share with client** on a round
 (`project-action-share.tsx`, `kind: "share"`) and, in Shared with client, **+ New client version**.
@@ -187,7 +188,7 @@ designer to deliver before the date the client sees. `create_design_board`/`upda
 reject one after the project's own due date (the dialog checks first; the field's `max` is the
 project's date). The designer works to `designerDueDate` (`workspace-data.ts`), the earlier of the
 two, in the bar, in Details and in every project list; the agency sees **Board due …** on the
-second row.
+controls bar.
 
 ## Data access
 

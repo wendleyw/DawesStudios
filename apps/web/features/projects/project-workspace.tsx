@@ -11,7 +11,7 @@ import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-str
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
-import { ProjectBackLink, ProjectChannelLead, ProjectTitlePreview } from "./project-header";
+import { ProjectBackLink, ProjectChannelLead, ProjectTitle } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
@@ -47,8 +47,6 @@ export type ProjectWorkspaceProps = {
    * remount `useProjectDetail` causes while the other channel's data loads.
    */
   panels: ReturnType<typeof usePanelFocusReturn<ProjectPanelKind>>;
-  /** Temporary, opt-in layout preview via `?layout=compact-header`. */
-  compactHeader?: boolean;
   /** URL hints are resolved against authorized rows only; they grant no access. */
   initialSelection?: { board: string | null; round: string | null; version: string | null };
 };
@@ -65,7 +63,6 @@ export function ProjectWorkspace({
   boards,
   panels,
   initialSelection,
-  compactHeader = false,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -110,7 +107,6 @@ export function ProjectWorkspace({
     ? (driveLinks.data?.internal ?? null)
     : (driveLinks.data?.client ?? null);
   const client = clients.data?.find((item) => item.id === project.client_id);
-  const titleInHeader = compactHeader && !!client;
   // A designer works to their board's internal date; everyone else sees the project's own date.
   const dueDate =
     role === "designer"
@@ -165,37 +161,28 @@ export function ProjectWorkspace({
           }
         : { text: "Nothing shared yet. Your studio will share designs here." };
 
+  const title = (
+    <ProjectTitle
+      clientId={project.client_id}
+      campaignId={project.campaign_id}
+      title={project.title}
+      dueLabel={dueLabel}
+    />
+  );
+
   return (
     <div
       className="project-page"
       style={{ "--project-chrome-height": `${chromeHeight}px` } as CSSProperties}
     >
-      <div className={`project-chrome${titleInHeader ? " is-compact" : ""}`} ref={setChrome}>
-        {client && (
-          <CanvasHeader
-            client={client}
-            viewer={profile}
-            center={
-              titleInHeader ? (
-                <ProjectTitlePreview
-                  clientId={project.client_id}
-                  campaignId={project.campaign_id}
-                  title={project.title}
-                  dueLabel={dueLabel}
-                />
-              ) : undefined
-            }
-          />
-        )}
+      <div className="project-chrome" ref={setChrome}>
+        {client ? <CanvasHeader client={client} viewer={profile} center={title} /> : title}
         <MiroWorkspaceBar
-          compact={titleInHeader}
           back={<ProjectBackLink clientId={project.client_id} />}
-          title={project.title}
           channel={channel}
           role={role}
           delivered={project.status === "delivered"}
           viewerId={profile?.id ?? ""}
-          dueLabel={dueLabel}
           boardDueLabel={
             role === "agency" && board?.dueDate
               ? `Board due ${formatDate(board.dueDate)}`

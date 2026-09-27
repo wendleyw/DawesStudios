@@ -8,15 +8,11 @@ import { MiroBarShell, miroBarTone } from "./miro-view";
 import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
 
 export type MiroWorkspaceBarProps = {
-  /** The preview places the project title in the client header above this bar. */
-  compact?: boolean;
   back: ReactNode;
-  title: string;
   channel: ProjectChannel;
   role: "agency" | "designer" | "client";
   delivered: boolean;
   viewerId: string;
-  dueLabel: string;
   /** The agency's view of the shown board's internal due date, e.g. "Board due Oct 3". */
   boardDueLabel?: string;
   boards: DesignBoard[];
@@ -75,10 +71,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
     ) : null;
   return (
     <MiroBarShell
-      compact={props.compact}
       back={props.back}
-      title={props.title}
-      due={props.dueLabel}
       tone={miroBarTone(props.role, props.channel)}
       lead={props.lead}
       link={shown}

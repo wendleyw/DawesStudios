@@ -24,8 +24,6 @@ describe("MiroBarShell", () => {
     render(
       <MiroBarShell
         back={<button>Back</button>}
-        title="Campaign"
-        due="Due Nov 29"
         tone="client"
         lead={<span>channel tabs</span>}
         link={link}
@@ -34,10 +32,9 @@ describe("MiroBarShell", () => {
     );
   }
 
-  it("names the project and offers the shown link in Miro", () => {
+  it("keeps navigation, channel and the shown Miro link together", () => {
     renderBar();
-    expect(screen.getByRole("heading", { name: "Campaign" })).toBeInTheDocument();
-    expect(screen.getByText("Due Nov 29")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open in Miro/ })).toHaveAttribute(
       "href",
       "https://miro.com/app/board/uXjVKabc123%3D/?moveToWidget=345",

@@ -44,7 +44,7 @@ export function MiroBarMenu({ children }: { children: (close: () => void) => Rea
 }
 
 /**
- * Whose view the second row shows: Working files, the agency's view of what the client sees, or
+ * Whose view the bar shows: Working files, the agency's view of what the client sees, or
  * nothing to tell apart (the client has one channel and is never told it has another).
  */
 export type MiroBarTone = "internal" | "client" | null;
@@ -56,17 +56,12 @@ export function miroBarTone(role: string | undefined, channel: ProjectChannel): 
 }
 
 /**
- * The workspace's two-row bar (`miro-workspace-bar.tsx` fills it). The first row says where you
- * are: back, the title, the due date, then on the right "Open in Miro" for the shown link (for when
- * the embed cannot sign in) and the More menu. The second row says what you are
- * looking at and what you can do there: the channel (`lead`), the caller's controls, and its primary
- * action; its tint marks Working files apart from what the client sees.
+ * The workspace's controls below the project title: back, channel (`lead`), board/round/version,
+ * primary action, Open in Miro and More. The bar wraps when needed; its tint distinguishes
+ * Working files from the agency's view of what the client sees.
  */
 export function MiroBarShell({
-  compact = false,
   back,
-  title,
-  due,
   tone,
   lead,
   children,
@@ -74,12 +69,7 @@ export function MiroBarShell({
   link,
   menu,
 }: {
-  /** Title and due date are in the header above; combine the remaining controls into one row. */
-  compact?: boolean;
   back: ReactNode;
-  title: string;
-  /** The project's due date, already formatted ("Due Nov 29" or "No due date"). */
-  due: string;
   tone: MiroBarTone;
   /** The channel: the agency's tabs, or the designer's Internal label. */
   lead?: ReactNode;
@@ -103,28 +93,14 @@ export function MiroBarShell({
     </div>
   );
   return (
-    <div
-      className={`project-header miro-bar${tone ? ` is-${tone}` : ""}${compact ? " is-compact" : ""}`}
-    >
-      {!compact && (
-        <div className="miro-bar-row">
-          {back}
-          <h1 className="miro-bar-title" title={title}>
-            <span>{title}</span>
-          </h1>
-          <span className="miro-bar-due">{due}</span>
-          {actions}
-        </div>
-      )}
-      {(compact || lead || children || primary) && (
-        <div className="miro-bar-context">
-          {compact && back}
-          {lead}
-          {children}
-          {primary && <div className="miro-bar-primary">{primary}</div>}
-          {compact && actions}
-        </div>
-      )}
+    <div className={`project-header miro-bar${tone ? ` is-${tone}` : ""}`}>
+      <div className="miro-bar-context">
+        {back}
+        {lead}
+        {children}
+        {primary && <div className="miro-bar-primary">{primary}</div>}
+        {actions}
+      </div>
     </div>
   );
 }

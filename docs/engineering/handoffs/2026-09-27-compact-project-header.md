@@ -20,4 +20,5 @@
 - Recovery/Resend owner released the shared checkpoint after `a7b35e5`; the UI integration
   now updates it while preserving that task's objective, evidence and production gaps.
 - Unrelated recovery/Resend files and the preexisting `login.png` deletion are preserved.
-- Next: user reviews the preview and chooses to adopt, adjust or remove it. No push/deploy.
+- Superseded by the approved projects-only rollout; see `2026-09-27-project-header-default.md`.
+  Earlier opt-in instructions above are historical. No push/deploy.

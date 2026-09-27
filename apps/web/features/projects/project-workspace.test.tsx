@@ -1,20 +1,29 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CanvasVersion, DesignBoard } from "./project-data";
 
-const state = vi.hoisted(() => ({ role: "agency" as "agency" | "client" | "designer" }));
+const state = vi.hoisted(() => ({
+  role: "agency" as "agency" | "client" | "designer",
+  clientAvailable: true,
+}));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ profile: { id: "viewer-1", role: state.role } }),
 }));
 vi.mock("@/features/workspace/workspace-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/workspace/workspace-data")>()),
-  useClients: () => ({ data: [] }),
-  useDateFormat: () => ({ formatDate: () => "Sep 30" }),
+  useClients: () => ({ data: state.clientAvailable ? [{ id: "c" }] : [] }),
+  useDateFormat: () => ({ formatDate: (date: string) => date }),
+}));
+vi.mock("@/features/briefings/briefing-data", () => ({
+  useCampaigns: () => ({ data: [{ id: "campaign-1", title: "Fresh Start" }] }),
 }));
 vi.mock("@/features/shared/brand-mark", () => ({ BrandMark: () => null }));
 vi.mock("@/features/workspace/app-shell", () => ({ useFoldSidebarWhile: () => {} }));
-vi.mock("@/features/workspace/canvas-header", () => ({ CanvasHeader: () => null }));
+vi.mock("@/features/workspace/canvas-header", () => ({
+  CanvasHeader: ({ center }: { center?: ReactNode }) => <header>{center}</header>,
+}));
 vi.mock("@/features/credits/project-credits-chip", () => ({ ProjectCreditsChip: () => null }));
 vi.mock("@/features/playground/playground-board", () => ({ PlaygroundBoard: () => null }));
 vi.mock("@/features/playground/playground-asset-strip", () => ({
@@ -98,6 +107,7 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
 
 beforeEach(() => {
   state.role = "agency";
+  state.clientAvailable = true;
   dialog.action = null;
   vi.stubGlobal(
     "ResizeObserver",
@@ -109,6 +119,43 @@ beforeEach(() => {
 });
 
 describe("ProjectWorkspace", () => {
+  it.each(["agency", "designer", "client"] as const)(
+    "shows the campaign, title and correct deadline by default for %s",
+    (role) => {
+      state.role = role;
+      renderWorkspace({
+        channel: role === "client" ? "client" : "internal",
+        boards: [{ ...board, dueDate: "2026-09-20" }],
+        data: {
+          project: {
+            id: "p",
+            client_id: "c",
+            title: "Project title",
+            campaign_id: "campaign-1",
+            status: "in_progress",
+            due_date: "2026-09-30",
+          },
+          versions: [],
+          deliverables: [],
+        } as unknown as ProjectWorkspaceProps["data"],
+      });
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole("heading", { name: "Project title" })).toBeVisible();
+      expect(screen.getByText("Fresh Start")).toBeVisible();
+      expect(
+        screen.getAllByText(role === "designer" ? "Due 2026-09-20" : "Due 2026-09-30"),
+      ).toHaveLength(1);
+    },
+  );
+
+  it("keeps the project title available while the client header is unavailable", () => {
+    state.clientAvailable = false;
+    renderWorkspace();
+    expect(screen.getByRole("heading", { name: "Campaign" })).toBeVisible();
+    expect(screen.getByText("No due date")).toBeVisible();
+    expect(screen.queryByText("Fresh Start")).not.toBeInTheDocument();
+  });
+
   it("gives the agency's empty Working files one Add a design board call to action", () => {
     renderWorkspace();
     expect(screen.getByText("No design board yet.")).toBeInTheDocument();
