@@ -79,8 +79,9 @@ def start(provision=True):
     run(['supabase','start'])
     configure_database_compatibility()
     run(['supabase','migration','up','--local'])
-    if provision:run([sys.executable,'supabase/scripts/provision_local_auth.py'],sensitive=False)
+    # Provisioning uploads the project covers through the media worker, so it starts first.
     start_media()
+    if provision:run([sys.executable,'supabase/scripts/provision_local_auth.py'],sensitive=False)
     print('Local backend ready: API55421, Studio55423, email55424, media55430.')
 
 def main():

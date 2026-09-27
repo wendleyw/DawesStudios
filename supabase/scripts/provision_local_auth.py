@@ -1,4 +1,7 @@
-"""Provision local fixture passwords and real delivery files without printing secrets."""
+"""Provision local fixture passwords, fixture files and project covers without printing secrets.
+
+Covers go through the media worker, which sanitizes and attests them, so it must be running first
+(`local_stack.py start` starts it before this script; otherwise run `local_stack.py media-start`)."""
 from pathlib import Path
 import json
 import argparse
@@ -78,26 +81,32 @@ for asset in fixtures.get('brand_assets',[]):
     # each one at the size the generator decided instead of guessing one here.
     else:content=png_card(asset['index']+int(asset['kind'][-1]),asset['width'],asset['height'])
     fixture_object('brand-assets',asset['storage_path'],content,asset['mime_type']);brand_count+=1
-working_count=0
-publication_count=0
-preserved_publication_count=0
-for asset in fixtures.get('working_assets',[]):
-    design=request('/rest/v1/designs?id=eq.'+asset['design_id'],method='GET')
-    if not design or design[0]['internal_asset_path']!=asset['source_path']:continue
-    fixture_object('internal-assets',asset['source_path'],png_card(asset['index'],asset['width'],asset['height'],internal=True),'image/png')
-    working_count+=1
-    # Only a design the fixture actually published owns a client-readable copy; production work that
-    # has not been shared yet must stay in the internal bucket alone.
-    if not asset['published_path']:continue
-    clean=png_card(asset['index'],asset['width'],asset['height'])
-    published=fixture_object('published-assets',asset['published_path'],clean,'image/png')
-    if published.content==clean:
-        # Also retry registration after an earlier successful upload was interrupted.
-        request('/rest/v1/rpc/register_sanitized_asset',{'p_project_id':asset['project_id'],'p_bucket_id':'published-assets','p_storage_path':asset['published_path'],'p_sha256':hashlib.sha256(clean).hexdigest(),'p_mime_type':'image/png','p_file_size':len(clean),'p_prepared_by':agency['id'],'p_source_design_id':asset['design_id'],'p_source_path':asset['source_path']})
-    else:
-        # Preserve a divergent snapshot and its attestation without asserting unverified bytes.
-        preserved_publication_count+=1
-    publication_count+=1
+# Project covers. A cover must be sanitized and attested by the media worker before
+# `set_project_cover` accepts it, so the bytes are posted to `/covers/prepare` under the agency's own
+# session rather than written to Storage here. A project that already has a cover keeps it, and a
+# project the dataset no longer holds is skipped. The client sees a cover only once it has a client
+# version of that project, read from the database rather than assumed from the manifest.
+MEDIA_URL=os.environ.get('MEDIA_URL','http://127.0.0.1:55430')
+def media_prepare(project_id, content, visible):
+    req=urllib.request.Request(f"{MEDIA_URL}/covers/prepare?projectId={project_id}&visible={'true' if visible else 'false'}", data=content, method='POST', headers={'Authorization':'Bearer '+agency_token,'Content-Type':'image/png'})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as response: return json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        try: reason=json.loads(exc.read()).get('error') or str(exc.code)
+        except Exception: reason=str(exc.code)
+        raise RuntimeError(f'Cover preparation failed ({reason})') from None
+    except urllib.error.URLError:
+        raise SystemExit(f'The media worker is not reachable at {MEDIA_URL}. Run python3 supabase/scripts/local_stack.py media-start, then provision again.') from None
+cover_count=0
+preserved_cover_count=0
+# The restore drill has no media worker of its own, so it keeps the covers its backup restored.
+for cover in fixtures.get('covers',[]) if workdir==ROOT else []:
+    if not request('/rest/v1/projects?select=id&id=eq.'+cover['project_id'],method='GET'):continue
+    if request('/rest/v1/project_covers?select=project_id&project_id=eq.'+cover['project_id'],method='GET'):
+        preserved_cover_count+=1;continue
+    visible=bool(request('/rest/v1/published_versions?select=id&project_id=eq.'+cover['project_id'],method='GET'))
+    media_prepare(cover['project_id'],png_card(cover['index'],cover['width'],cover['height']),visible)
+    cover_count+=1
 
 project=fixtures['delivery_project_id']
 current=request('/rest/v1/delivery_files?project_id=eq.'+project, method='GET', token=agency_token)
@@ -120,5 +129,4 @@ content='\n'.join(['# Local demonstration credentials. Never deploy or commit.',
 fd=os.open(env_path, os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
 with os.fdopen(fd,'w') as file:file.write(content)
 os.chmod(env_path,0o600)
-print(f'Provisioned {0 if arguments.files_only else len(fixtures["users"])} Auth accounts, {brand_count} brand files, {working_count} internal working files, {publication_count} published copies and the delivery fixture. Credentials: supabase/.env.local')
-if preserved_publication_count:print(f'Preserved {preserved_publication_count} existing published objects with non-canonical bytes; their attestations were not changed.')
+print(f'Provisioned {0 if arguments.files_only else len(fixtures["users"])} Auth accounts, {brand_count} brand files, {cover_count} new project covers ({preserved_cover_count} existing covers kept) and the delivery fixture. Credentials: supabase/.env.local')

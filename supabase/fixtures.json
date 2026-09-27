@@ -3,66 +3,79 @@
     {
       "id": "374dc241-5bb8-58f3-2fcf-187d011bcfd6",
       "email": "studio@dawes.local",
+      "name": "Dawes Studio",
       "role": "agency"
     },
     {
       "id": "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
       "email": "designer@dawes.local",
+      "name": "Alex Morgan",
       "role": "designer"
     },
     {
       "id": "52711616-ca15-f1b7-957f-52b6415dce39",
       "email": "designer2@dawes.local",
+      "name": "Jordan Reed",
       "role": "designer"
     },
     {
       "id": "ba057ab8-3012-618e-fb52-d0f644222cfd",
       "email": "acme@client.dawes.local",
+      "name": "Acme Team",
       "role": "client"
     },
     {
       "id": "7fdbdc22-bf60-35bb-3539-e2345383f7b2",
       "email": "harbor-pine@client.dawes.local",
+      "name": "Harbor & Pine Team",
       "role": "client"
     },
     {
       "id": "3d1004b9-5f99-7ca2-1d64-108c981e5d97",
       "email": "kestrel-outdoor@client.dawes.local",
+      "name": "Kestrel Outdoor Team",
       "role": "client"
     },
     {
       "id": "e63fbe85-221b-8e23-72c2-a8216b076464",
       "email": "northfield-bank@client.dawes.local",
+      "name": "Northfield Bank Team",
       "role": "client"
     },
     {
       "id": "d0a9419f-f18c-a127-7c71-086cad3c6027",
       "email": "otto-sons@client.dawes.local",
+      "name": "Otto & Sons Team",
       "role": "client"
     },
     {
       "id": "0d44154f-b090-3ac5-cca6-a724074d0743",
       "email": "pelagic@client.dawes.local",
+      "name": "Pelagic Team",
       "role": "client"
     },
     {
       "id": "1eaf1b05-9bd9-a73b-24a3-83b048529639",
       "email": "rune-fitness@client.dawes.local",
+      "name": "Rune Fitness Team",
       "role": "client"
     },
     {
       "id": "0023953f-e0c7-a1db-1cb8-1ae5c8b57020",
       "email": "sabre@client.dawes.local",
+      "name": "SABRE Team",
       "role": "client"
     },
     {
       "id": "78f06310-e7f5-7a98-6b15-7ce91d81f49e",
       "email": "sablefish-provisions@client.dawes.local",
+      "name": "Sablefish Provisions Team",
       "role": "client"
     },
     {
       "id": "95030937-2479-2798-cd6e-85c42c7e8a68",
       "email": "vela-skincare@client.dawes.local",
+      "name": "Vela Skincare Team",
       "role": "client"
     }
   ],
@@ -137,7 +150,12 @@
       "service_type": "ai",
       "title": "Acme / AI-Enhanced Add-On",
       "status": "planned",
-      "credits": 1
+      "credits": 1,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
@@ -147,7 +165,12 @@
       "service_type": "blog",
       "title": "Acme / Blog Design / Infographic",
       "status": "in_progress",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "cd179de9-0dd1-00da-89d1-74fab5225237",
@@ -157,7 +180,13 @@
       "service_type": "guidelines",
       "title": "Harbor & Pine / Brand Guidelines",
       "status": "internal_review",
-      "credits": 10
+      "credits": 10,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39",
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 0
     },
     {
       "id": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
@@ -167,7 +196,12 @@
       "service_type": "specialty",
       "title": "Harbor & Pine / Branded Specialty Design",
       "status": "client_review",
-      "credits": 7
+      "credits": 7,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "438efff4-c04a-d623-d4ac-243072ddccc5",
@@ -177,7 +211,12 @@
       "service_type": "production",
       "title": "Kestrel Outdoor / Content Production",
       "status": "changes_requested",
-      "credits": 3
+      "credits": 3,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
@@ -187,7 +226,12 @@
       "service_type": "direction",
       "title": "Kestrel Outdoor / Creative Direction / Operations",
       "status": "approved",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "0124c675-4357-beea-4c83-0870d323acda",
@@ -197,7 +241,12 @@
       "service_type": "deck",
       "title": "Northfield Bank / Deck / Presentation Design",
       "status": "approved",
-      "credits": 5
+      "credits": 5,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
@@ -207,7 +256,13 @@
       "service_type": "animated-ad",
       "title": "Northfield Bank / Digital Ad (Animated)",
       "status": "in_progress",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
@@ -217,7 +272,12 @@
       "service_type": "static-ad",
       "title": "Otto & Sons / Digital Ad (Static)",
       "status": "client_review",
-      "credits": 2
+      "credits": 2,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "9790601b-4480-3698-12a8-677157977a42",
@@ -227,7 +287,13 @@
       "service_type": "email-hero",
       "title": "Otto & Sons / Email Hero",
       "status": "planned",
-      "credits": 2
+      "credits": 2,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
@@ -237,7 +303,12 @@
       "service_type": "email",
       "title": "Pelagic / Full Email Design",
       "status": "in_progress",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
@@ -247,7 +318,12 @@
       "service_type": "gif",
       "title": "Pelagic / GIF Animation",
       "status": "client_review",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
@@ -257,7 +333,12 @@
       "service_type": "print",
       "title": "Rune Fitness / Printed Marketing Materials",
       "status": "changes_requested",
-      "credits": 6
+      "credits": 6,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
@@ -267,7 +348,12 @@
       "service_type": "reel",
       "title": "Rune Fitness / Short Video / Reel",
       "status": "approved",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
@@ -277,7 +363,12 @@
       "service_type": "static-ad",
       "title": "Instagram Ads",
       "status": "client_review",
-      "credits": 2
+      "credits": 2,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "15e2d399-e215-9707-9499-96b455c83adf",
@@ -287,7 +378,12 @@
       "service_type": "web",
       "title": "Campaign Landing Page",
       "status": "client_review",
-      "credits": 10
+      "credits": 10,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
@@ -297,7 +393,12 @@
       "service_type": "email-hero",
       "title": "Email Banner",
       "status": "approved",
-      "credits": 1
+      "credits": 1,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
@@ -307,7 +408,12 @@
       "service_type": "social",
       "title": "Social Launch",
       "status": "in_progress",
-      "credits": 1
+      "credits": 1,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
@@ -317,7 +423,12 @@
       "service_type": "social",
       "title": "Product Story",
       "status": "internal_review",
-      "credits": 1
+      "credits": 1,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 0
     },
     {
       "id": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
@@ -327,7 +438,13 @@
       "service_type": "branding",
       "title": "Brand Guidelines",
       "status": "internal_review",
-      "credits": 12
+      "credits": 12,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 0
     },
     {
       "id": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
@@ -337,7 +454,12 @@
       "service_type": "print",
       "title": "Stationery",
       "status": "client_review",
-      "credits": 6
+      "credits": 6,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     },
     {
       "id": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
@@ -347,7 +469,12 @@
       "service_type": "web",
       "title": "Sablefish Provisions / UI Web Layout",
       "status": "in_progress",
-      "credits": 10
+      "credits": 10,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "6361cfa3-7996-579e-08ed-9106d5c394f0",
@@ -357,7 +484,12 @@
       "service_type": "whitepaper",
       "title": "Sablefish Provisions / Whitepaper",
       "status": "approved",
-      "credits": 6
+      "credits": 6,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 1,
+      "client_versions": 1
     },
     {
       "id": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
@@ -367,7 +499,12 @@
       "service_type": "youtube",
       "title": "Vela Skincare / YouTube Video",
       "status": "planned",
-      "credits": 5
+      "credits": 5,
+      "designers": [
+        "52711616-ca15-f1b7-957f-52b6415dce39"
+      ],
+      "rounds_per_board": 0,
+      "client_versions": 0
     },
     {
       "id": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
@@ -377,7 +514,12 @@
       "service_type": "other",
       "title": "Vela Skincare / Other",
       "status": "client_review",
-      "credits": 4
+      "credits": 4,
+      "designers": [
+        "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
+      ],
+      "rounds_per_board": 2,
+      "client_versions": 2
     }
   ],
   "delivery_project_id": "0124c675-4357-beea-4c83-0870d323acda",
@@ -1073,249 +1215,181 @@
       "index": 10
     }
   ],
-  "working_assets": [
+  "covers": [
     {
-      "project_id": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
-      "design_id": "fac6fbb3-ae79-2721-8ed8-35b0f15abb31",
-      "source_path": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0/ac009a1e-95fa-0082-8b4b-388bb5349dd7.png",
-      "published_path": null,
+      "project_id": "19b68267-ec9c-7a9f-926c-828b7f882f22",
       "index": 1,
       "width": 1080,
-      "height": 1920
+      "height": 1080,
+      "client_visible": false
+    },
+    {
+      "project_id": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
+      "index": 2,
+      "width": 1080,
+      "height": 1920,
+      "client_visible": false
     },
     {
       "project_id": "cd179de9-0dd1-00da-89d1-74fab5225237",
-      "design_id": "82de7b6b-6d0b-03d1-3b7c-ec4e04470d26",
-      "source_path": "cd179de9-0dd1-00da-89d1-74fab5225237/e64ace38-3dfa-7c2c-c275-c9cd3dce1fa4.png",
-      "published_path": null,
-      "index": 2,
-      "width": 1080,
-      "height": 1080
-    },
-    {
-      "project_id": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
-      "design_id": "75528d98-7910-c20f-d987-55cdad52c23e",
-      "source_path": "0b135ab6-c478-b933-f5b0-fd52d69be33e/02e10a87-f28a-f3ef-02e0-2b605cf2050f.png",
-      "published_path": "0b135ab6-c478-b933-f5b0-fd52d69be33e/49f5bf85-581f-7aab-eb7c-b20e6836e8a7.png",
       "index": 3,
       "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": false
     },
     {
       "project_id": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
-      "design_id": "ea17ad58-7fd0-8ca5-2a18-73d290ea415e",
-      "source_path": "0b135ab6-c478-b933-f5b0-fd52d69be33e/3d770ad8-e7e6-7341-86c1-0a9a1b2e19ad.png",
-      "published_path": "0b135ab6-c478-b933-f5b0-fd52d69be33e/9fb7bb18-0309-7427-ee6e-3c96fd004b14.png",
       "index": 4,
       "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     },
     {
       "project_id": "438efff4-c04a-d623-d4ac-243072ddccc5",
-      "design_id": "dc6a277d-db92-530e-cd62-41935f251b9c",
-      "source_path": "438efff4-c04a-d623-d4ac-243072ddccc5/67763d3c-fd7c-4275-8376-976ad2a0e7c1.png",
-      "published_path": "438efff4-c04a-d623-d4ac-243072ddccc5/0513ca7d-638e-68a7-63f7-9dbb44abc628.png",
       "index": 5,
       "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     },
     {
       "project_id": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
-      "design_id": "e24569a1-7218-5a92-571d-921b3e6f3915",
-      "source_path": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4/69b02e44-24e0-c3b1-c120-5c8a25e3e5fb.png",
-      "published_path": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4/db5ea559-08ef-b8e4-2867-67bd1974630e.png",
       "index": 6,
       "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     },
     {
       "project_id": "0124c675-4357-beea-4c83-0870d323acda",
-      "design_id": "314b9827-8eb9-d545-0fc7-9a15344e1c94",
-      "source_path": "0124c675-4357-beea-4c83-0870d323acda/30c47579-cf8f-d63b-abe7-669cf5d232e9.png",
-      "published_path": "0124c675-4357-beea-4c83-0870d323acda/b7165e70-6da9-5f10-ad41-6ac9da316335.png",
       "index": 7,
       "width": 1920,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     },
     {
       "project_id": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
-      "design_id": "31b3dbcf-7fec-a74f-b804-ccac2924bce1",
-      "source_path": "aa45813c-1ec2-3881-4753-5fd97dda3cf7/9e092a09-9206-a361-f40d-83a6bd538b9f.png",
-      "published_path": null,
       "index": 8,
       "width": 1080,
-      "height": 1920
-    },
-    {
-      "project_id": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
-      "design_id": "56661ada-e360-9b96-b7d0-3e7b2aef0835",
-      "source_path": "aa45813c-1ec2-3881-4753-5fd97dda3cf7/fdca8e85-013e-697f-6bce-aa147d9d7f17.png",
-      "published_path": null,
-      "index": 9,
-      "width": 1080,
-      "height": 1920
+      "height": 1920,
+      "client_visible": false
     },
     {
       "project_id": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
-      "design_id": "9b4bfc5b-a9a4-ab16-98ed-598312dc20c5",
-      "source_path": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613/97a50719-007b-67e4-b6e9-6a7ba01718fe.png",
-      "published_path": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613/3ec4bf95-a4c1-2ab6-81e8-8b11316b231b.png",
-      "index": 10,
+      "index": 9,
       "width": 1080,
-      "height": 1350
+      "height": 1350,
+      "client_visible": true
+    },
+    {
+      "project_id": "9790601b-4480-3698-12a8-677157977a42",
+      "index": 10,
+      "width": 1200,
+      "height": 600,
+      "client_visible": false
     },
     {
       "project_id": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
-      "design_id": "733daa1c-1c54-c977-880b-d019f82a63d8",
-      "source_path": "c04b37ec-9cce-f263-d042-31b7f5e0383b/ffefc423-f272-6345-a4ed-39ba53d0b9ba.png",
-      "published_path": null,
       "index": 11,
       "width": 600,
-      "height": 800
+      "height": 800,
+      "client_visible": false
     },
     {
       "project_id": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
-      "design_id": "69536add-ddbb-b128-4cb1-7746eae9d3a3",
-      "source_path": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f/d3bd6011-f06f-1a71-3ceb-7c392bf861d6.png",
-      "published_path": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f/2b6cafb2-7a0e-884a-1dcf-7390c4b01d25.png",
       "index": 12,
       "width": 1080,
-      "height": 1080
-    },
-    {
-      "project_id": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
-      "design_id": "8cf747f3-109a-45fe-a4c1-529cfc48acce",
-      "source_path": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f/bb769250-1dd0-cac0-a57a-d2941e157337.png",
-      "published_path": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f/90b48c71-e139-67dd-d483-380f0b6ab788.png",
-      "index": 13,
-      "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     },
     {
       "project_id": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
-      "design_id": "871ddd4c-82a6-c4c6-491c-26f383373ccf",
-      "source_path": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf/477ef504-0e5a-41a0-79cd-2b4af1480046.png",
-      "published_path": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf/39a5f150-7db7-adb5-06cd-284819f2a7d7.png",
-      "index": 14,
+      "index": 13,
       "width": 1240,
-      "height": 1754
+      "height": 1754,
+      "client_visible": true
     },
     {
       "project_id": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
-      "design_id": "64a22a34-e016-6266-834c-c8bfd152785d",
-      "source_path": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd/d0a4b3a1-862e-a561-9d09-1b03aeddb462.png",
-      "published_path": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd/94a8187a-c54d-3e6e-b471-ddddab9cad8c.png",
+      "index": 14,
+      "width": 1080,
+      "height": 1920,
+      "client_visible": true
+    },
+    {
+      "project_id": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
       "index": 15,
       "width": 1080,
-      "height": 1920
-    },
-    {
-      "project_id": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
-      "design_id": "3daa14bc-6fe4-ce7e-d63b-dc75e94bba0e",
-      "source_path": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19/984bd87e-06a4-d05b-39d6-4b2029df4517.png",
-      "published_path": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19/b7cba63d-5569-3063-9e50-9fcab226e36d.png",
-      "index": 16,
-      "width": 1080,
-      "height": 1350
-    },
-    {
-      "project_id": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
-      "design_id": "13a61110-69c1-cf2f-d7d3-ed60d0cce075",
-      "source_path": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19/1e7bda5f-5c7b-457e-8722-4f50d91520c5.png",
-      "published_path": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19/d4172270-34bf-cb8a-686a-1c416d608188.png",
-      "index": 17,
-      "width": 1080,
-      "height": 1350
+      "height": 1350,
+      "client_visible": true
     },
     {
       "project_id": "15e2d399-e215-9707-9499-96b455c83adf",
-      "design_id": "3033c92d-7b1e-4f7e-67f9-d853caa53f80",
-      "source_path": "15e2d399-e215-9707-9499-96b455c83adf/457644d1-9ad1-9e8f-77c5-e263fafd74d4.png",
-      "published_path": "15e2d399-e215-9707-9499-96b455c83adf/4ddad0fd-c424-199e-1c48-54083501fab5.png",
-      "index": 18,
+      "index": 16,
       "width": 1440,
-      "height": 1920
+      "height": 1920,
+      "client_visible": true
     },
     {
       "project_id": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
-      "design_id": "83360b99-ce97-3aad-28a1-89fc1bea05bb",
-      "source_path": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b/1c8a9578-2673-5f21-54ec-d0466d9f924d.png",
-      "published_path": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b/38d87e46-5b11-607c-ef4e-1ffbf86d13fa.png",
-      "index": 19,
+      "index": 17,
       "width": 1200,
-      "height": 600
+      "height": 600,
+      "client_visible": true
     },
     {
       "project_id": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
-      "design_id": "0c80f577-5747-2e24-6506-45d11fefa01e",
-      "source_path": "c4737460-ac76-a16f-c89c-e192eb80ca4d/27facc25-f03f-ef4c-2e66-7946ab5079bc.png",
-      "published_path": null,
-      "index": 20,
+      "index": 18,
       "width": 1080,
-      "height": 1350
+      "height": 1350,
+      "client_visible": false
     },
     {
       "project_id": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
-      "design_id": "38caaa7f-499f-b169-98b2-1177435bbde0",
-      "source_path": "668c11ae-ec2e-903e-d3fc-53710f2bdab6/b731f56b-f234-3bb6-490d-4148a04ae93c.png",
-      "published_path": null,
-      "index": 21,
+      "index": 19,
       "width": 1080,
-      "height": 1920
+      "height": 1920,
+      "client_visible": false
     },
     {
       "project_id": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
-      "design_id": "32434468-9489-7106-d584-8fd0dfef64b4",
-      "source_path": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2/6f9fd46a-d514-6096-587e-e49c1274891a.png",
-      "published_path": null,
-      "index": 22,
+      "index": 20,
       "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": false
     },
     {
       "project_id": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
-      "design_id": "3a470eba-ba6f-4f2f-0179-6746ee5b10b3",
-      "source_path": "01302c49-3f1d-aa0c-6447-bc499fa7e995/f8a60c46-b40a-2e81-c7bb-440d6d0ef16c.png",
-      "published_path": "01302c49-3f1d-aa0c-6447-bc499fa7e995/760b935f-d8a4-0b94-6fd7-44ac385acbda.png",
-      "index": 23,
+      "index": 21,
       "width": 1240,
-      "height": 1754
+      "height": 1754,
+      "client_visible": true
     },
     {
       "project_id": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
-      "design_id": "3cfb6abd-7bf8-300a-6467-671c67323417",
-      "source_path": "d4518a68-870f-8eee-ac5f-5417b4a4f74b/6b10cec4-da01-d027-8537-7f9a0d7c46d0.png",
-      "published_path": null,
-      "index": 24,
+      "index": 22,
       "width": 1440,
-      "height": 1920
+      "height": 1920,
+      "client_visible": false
     },
     {
       "project_id": "6361cfa3-7996-579e-08ed-9106d5c394f0",
-      "design_id": "6c77dbf0-d3ee-ee57-b2c0-0509841d804a",
-      "source_path": "6361cfa3-7996-579e-08ed-9106d5c394f0/bd50bfe2-8fbc-acbb-8886-7aa6301fb6de.png",
-      "published_path": "6361cfa3-7996-579e-08ed-9106d5c394f0/f80f8b22-5621-c567-bf26-4dd40b4d270e.png",
-      "index": 25,
+      "index": 23,
       "width": 1240,
-      "height": 1754
+      "height": 1754,
+      "client_visible": true
+    },
+    {
+      "project_id": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
+      "index": 24,
+      "width": 1920,
+      "height": 1080,
+      "client_visible": false
     },
     {
       "project_id": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
-      "design_id": "fcfd1606-e58a-86c1-a3e9-6fec9d318c91",
-      "source_path": "83b5cc40-19c5-c3c7-8825-5a6464be2d01/c9546653-b4b2-2cf6-4bc4-43846da1e73d.png",
-      "published_path": "83b5cc40-19c5-c3c7-8825-5a6464be2d01/c8dbb8c2-e988-e978-bd6e-09eeeeea5e5a.png",
-      "index": 26,
+      "index": 25,
       "width": 1080,
-      "height": 1080
-    },
-    {
-      "project_id": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
-      "design_id": "4eaf564a-0519-d39d-d9d7-1c23faddf80f",
-      "source_path": "83b5cc40-19c5-c3c7-8825-5a6464be2d01/cdd906da-b1e0-71b7-1aa9-06ecb5ec328d.png",
-      "published_path": "83b5cc40-19c5-c3c7-8825-5a6464be2d01/dd80451a-8984-44d6-f9d8-86dc16aaa5cb.png",
-      "index": 27,
-      "width": 1080,
-      "height": 1080
+      "height": 1080,
+      "client_visible": true
     }
   ]
 }

@@ -1,12 +1,16 @@
-"""Read-only acceptance checks for the exact local fixture dataset and actual private files."""
+"""Read-only acceptance checks for the exact fixture dataset, its Miro-model records and actual files.
+
+Targets the local stack by default, the restore drill with `--workdir supabase/.restore-drill`, or the
+disposable staging rehearsal with `--staging` (credentials from deploy/staging/.work/fixtures.env)."""
 from pathlib import Path
 from collections import Counter
 import argparse
 import hashlib
 import json
 import urllib.error
+import re
 import urllib.request
-from fixture_media import FORMAT_FREE_SIZE, format_pixel_size, png_card, png_pixel_size, monogram_svg, monogram_png, monogram_pdf, simple_pdf
+from fixture_media import FORMAT_FREE_SIZE, png_card, png_pixel_size, monogram_svg, monogram_png, monogram_pdf, simple_pdf
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,13 +18,19 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--workdir', type=Path, default=ROOT)
+    parser.add_argument('--staging', action='store_true', help='verify the disposable staging rehearsal instead')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     workdir = args.workdir.resolve()
-    if workdir not in (ROOT, ROOT / 'supabase/.restore-drill'):
-        raise SystemExit('Verification is restricted to the two isolated local projects.')
-    env = dict(line.split('=', 1) for line in (workdir / 'supabase/.env.local').read_text().splitlines() if '=' in line and not line.startswith('#'))
-    expected = 'http://127.0.0.1:55421' if workdir == ROOT else 'http://127.0.0.1:55521'
+    if args.staging:
+        env_file = ROOT / 'deploy/staging/.work/fixtures.env'
+        expected = 'http://127.0.0.1:56010'
+    else:
+        if workdir not in (ROOT, ROOT / 'supabase/.restore-drill'):
+            raise SystemExit('Verification is restricted to the two isolated local projects or --staging.')
+        env_file = workdir / 'supabase/.env.local'
+        expected = 'http://127.0.0.1:55421' if workdir == ROOT else 'http://127.0.0.1:55521'
+    env = dict(line.split('=', 1) for line in env_file.read_text().splitlines() if '=' in line and not line.startswith('#'))
     assert env['SUPABASE_URL'] == expected, 'Unexpected local API URL'
     fixture = json.loads((ROOT / 'supabase/fixtures.json').read_text())
 
@@ -59,24 +69,9 @@ def main():
         assert brief['requested_deliverables'] and all(row['format'] in service['formats'] for row in brief['requested_deliverables'])
         assert project['due_date'] >= project['start_date']
     assert {row['status'] for row in projects} == {'planned', 'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'}
-    deliverables, versions, designs = rows('deliverables'), rows('design_versions'), rows('designs')
-    # Artwork carries the true canvas of the format its deliverable was ordered in, so the board and the
-    # project canvas show every piece in the shape it will really be delivered in. The expected size is
-    # derived from the format catalog; the actual size is read from each downloaded file's IHDR header
-    # further down, never from the manifest that asked for it.
-    deliverable_of_version = {row['id']: row['deliverable_id'] for row in versions}
-    format_of_deliverable = {row['id']: row['format'] for row in deliverables}
-    artwork_size = {row['id']: format_pixel_size(formats[format_of_deliverable[deliverable_of_version[row['version_id']]]]) for row in designs if row['internal_asset_path']}
+    deliverables = rows('deliverables')
     multi = [project for project, count in Counter(row['project_id'] for row in deliverables).items() if count >= 2]
     assert len(multi) >= 4, 'At least four projects need multiple deliverables'
-    # A multi-deliverable project may legitimately still be on its first version throughout — SABRE's
-    # Instagram Ads is — so the guarantee is that at least four of them carry V1 and V2 on every
-    # deliverable, not that all of them do.
-    fully_versioned = [project for project in multi
-                       if all({1, 2} <= {row['version_number'] for row in versions if row['deliverable_id'] == deliverable['id']}
-                              for deliverable in [row for row in deliverables if row['project_id'] == project])]
-    assert len(fully_versioned) >= 4, 'At least four multi-deliverable projects need V1 and V2 on every deliverable'
-    assert max(Counter(row['version_id'] for row in designs).values()) >= 2, 'A version must contain multiple designs'
     ledger = rows('credit_ledger')
     assert Counter(row['project_id'] for row in ledger if row['kind'] == 'project_debit') == Counter({row['id']: 1 for row in projects})
     assert all(account['balance'] == sum(row['amount'] for row in ledger if row['client_id'] == account['client_id']) for account in rows('credit_accounts'))
@@ -90,20 +85,74 @@ def main():
         assert {row['mime_type'] for row in rows('brand_assets') if row['client_id'] == client['id'] and row['category'] == 'Logo'} == {'image/svg+xml', 'image/png', 'application/pdf'}
     assert Counter(row['client_id'] for row in rows('brand_templates')) == Counter({row['id']: 7 for row in clients})
     comments = rows('client_comments')
-    publications = rows('published_versions')
     assert {'studio', 'client'} <= {row['author_kind'] for row in comments}
-    assert {row['id'] for row in publications} <= {row['publication_id'] for row in comments if row['pin_x'] is not None and row['pin_y'] is not None}
     assert rows('internal_comments'), 'Internal channel examples are required'
     assert {row['id'] for row in projects} <= {row['project_id'] for row in comments}, 'Every project has meaningful client activity'
 
-    # Artwork coverage, stated per role because the two channels are filled by different events.
-    # Production starts a project's artwork; publication, and only publication, hands a copy to the
-    # client. A project still in planning has no design at all and therefore carries no image.
-    started = {row['id'] for row in projects if row['status'] != 'planned'}
-    internal_artwork = {row['project_id'] for row in designs if row['internal_asset_path']}
-    published_artwork = {row['project_id'] for row in rows('published_designs') if row['asset_path']}
-    assert internal_artwork == started, 'Every project past planning needs internal artwork'
-    assert published_artwork == {row['project_id'] for row in publications}, 'Every published project shows the client real artwork'
+    # The Miro model, per project: one design board per assigned designer, due on or before the
+    # project; rounds on those boards and client versions whose statuses are the ones the project's
+    # status implies; a placeholder Miro link on every round and version; and a cover.
+    boards, rounds, versions = rows('design_boards'), rows('design_versions'), rows('published_versions')
+    round_links = {row['version_id']: row for row in rows('design_version_miro_links')}
+    version_links = {row['publication_id']: row for row in rows('publication_miro_links')}
+    reviews = {row['publication_id']: row for row in rows('publication_reviews')}
+    assignments = rows('project_assignments')
+    covers = {row['project_id']: row for row in rows('project_covers')}
+    miro_id = re.compile(r'^uXjV[0-9a-f]{8}=$')
+    manifest_projects = {row['id']: row for row in fixture['projects']}
+    shared_rounds = set()
+    for project in projects:
+        pid, status = project['id'], project['status']
+        expected_row = manifest_projects[pid]
+        assert status == expected_row['status'] or (status == 'delivered' and pid == fixture['delivery_project_id']), 'Project status moved: ' + project['title']
+        assigned = sorted(row['designer_id'] for row in assignments if row['project_id'] == pid)
+        project_boards = [row for row in boards if row['project_id'] == pid]
+        assert sorted(row['designer_id'] for row in project_boards) == assigned == sorted(expected_row['designers']), 'One board per assigned designer: ' + project['title']
+        for board in project_boards:
+            assert board['due_date'] and board['due_date'] <= project['due_date'], 'Board due after its project'
+            assert miro_id.match(board['board_id']), 'Board is not on a placeholder Miro id'
+        project_rounds = [row for row in rounds if row['project_id'] == pid]
+        project_versions = sorted((row for row in versions if row['project_id'] == pid), key=lambda row: row['version_number'])
+        for row in project_rounds:
+            board = next(b for b in project_boards if b['id'] == row['board_id'])
+            assert row['created_by'] == board['designer_id'], "A round is on its own designer's board"
+            assert miro_id.match(round_links[row['id']]['board_id']) and round_links[row['id']]['widget_id'], 'Round without a Miro frame'
+        # Sending a round moves a project to internal review, so earlier statuses hold boards only.
+        per_board = Counter(row['board_id'] for row in project_rounds)
+        assert all(per_board[board['id']] == expected_row['rounds_per_board'] for board in project_boards), 'Round count moved: ' + project['title']
+        if status in ('planned', 'in_progress'):
+            assert not project_rounds and not project_versions, 'A project before internal review has no round'
+        else:
+            assert 1 <= expected_row['rounds_per_board'] <= 2, 'Each board holds one or two rounds'
+        assert len(project_versions) == expected_row['client_versions'] <= 2
+        for version in project_versions:
+            assert miro_id.match(version_links[version['id']]['board_id']), 'Client version without a Miro link'
+        decisions = [reviews[row['id']]['status'] for row in project_versions]
+        # Every version before the latest was sent back, so the client only ever decides the newest.
+        assert all(decision == 'changes_requested' for decision in decisions[:-1])
+        if status == 'internal_review':
+            assert {row['status'] for row in project_rounds} == {'submitted'} and not decisions, 'Internal review keeps every round with the studio'
+        elif status == 'client_review':
+            assert decisions and decisions[-1] == 'pending'
+        elif status == 'changes_requested':
+            assert decisions and decisions[-1] == 'changes_requested'
+        elif status in ('approved', 'delivered'):
+            assert decisions and decisions[-1] == 'approved'
+        # A round reads "Shared" exactly when a client version was made from it.
+        assert sum(1 for row in project_rounds if row['status'] == 'reviewed') == len(project_versions)
+        shared_rounds |= {row['id'] for row in project_rounds if row['status'] == 'reviewed'}
+        cover = covers.get(pid)
+        assert cover and cover['storage_path'].startswith(pid + '/'), 'Every project needs a cover: ' + project['title']
+        assert cover['client_visible'] == bool(project_versions), 'A cover is client-visible exactly when the client has a version'
+    assert {row['status'] for row in rounds} == {'submitted', 'reviewed'}
+    assert {row['status'] for row in reviews.values()} == {'pending', 'approved', 'changes_requested'}
+    assert any(len(assignments_of) == 2 for assignments_of in [[row for row in assignments if row['project_id'] == p['id']] for p in projects]), 'Designer isolation needs a two-designer project'
+    # Client-visible rows never name a designer.
+    designer_names = [user['name'] for user in fixture['users'] if user['role'] == 'designer']
+    client_users = {row['user_id'] for row in fixture['clients']}
+    client_notifications = [row for row in rows('notifications') if row['user_id'] in client_users]
+    client_text = json.dumps([comments, versions, list(reviews.values()), client_notifications])
+    assert not any(name in client_text for name in designer_names), 'A client-visible row names a designer'
 
     for email in ['studio@dawes.local', 'designer@dawes.local', 'designer2@dawes.local']:
         session = request('/auth/v1/token?grant_type=password', payload={'email': email, 'password': env['DEMO_PASSWORD']})
@@ -114,17 +163,28 @@ def main():
         if email != 'studio@dawes.local':
             assert rows('briefings', token=token) == [] and rows('credit_ledger', token=token) == []
             assert rows('client_comments', token=token) == []
+            # A designer sees only their own boards and the rounds on them, never another designer's.
+            own = {row['id'] for row in boards if row['designer_id'] == session['user']['id']}
+            assert {row['id'] for row in rows('design_boards', token=token)} == own, 'A designer read another designer\'s board'
+            assert {row['board_id'] for row in rows('design_versions', 'select=id,board_id', token=token)} <= own, 'A designer read another designer\'s round'
 
     # The file total below is an arithmetic statement about the dataset, not a magic number: each
     # term is the count of one kind of fixture file, and each is checked against the manifest first
     # so a term that drifts fails where it is defined rather than as an unexplained total.
     brand_files = 70            # seven brand files for each of the ten clients
-    working_files = 27          # one private production PNG per version-1 design on the 22 started projects
-    publication_files = 18      # the sanitized copy of each version-1 design the agency has actually published
+    cover_files = 25            # one sanitized cover per project, downloaded by the agency
+    visible_cover_files = sum(1 for row in fixture['covers'] if row['client_visible'])  # and by the client
     delivery_files = 1          # the single approved delivery PDF
     assert len(fixture['brand_assets']) == brand_files, 'Brand fixture count moved'
-    assert len(fixture['working_assets']) == working_files, 'Production artwork count moved'
-    assert sum(1 for row in fixture['working_assets'] if row['published_path']) == publication_files, 'Published artwork count moved'
+    assert len(fixture['covers']) == cover_files, 'Cover fixture count moved'
+    agency_session = request('/auth/v1/token?grant_type=password', payload={'email': 'studio@dawes.local', 'password': env['DEMO_PASSWORD']})
+    cover_size = {row['project_id']: (row['width'], row['height']) for row in fixture['covers']}
+    cover_bytes = {}
+    for pid, cover in covers.items():
+        content = request('/storage/v1/object/authenticated/project-covers/' + cover['storage_path'], agency_session['access_token'])
+        # The media worker regenerates the image, so its bytes are not the card's; its canvas is.
+        assert png_pixel_size(content) == cover_size[pid] and b'Author' not in content, 'Cover is not the sanitized card'
+        cover_bytes[pid] = content
 
     downloaded = 0
     for client in fixture['clients']:
@@ -132,8 +192,8 @@ def main():
         token = session['access_token']
         client_project_count = sum(1 for row in fixture['projects'] if row['client_id'] == client['id'])
         assert len(rows('clients', token=token)) == 1 and len(rows('projects', token=token)) == client_project_count
-        for table in ('designs', 'design_versions', 'project_assignments', 'internal_comments'):
-            assert rows(table, token=token) == [], 'Client read leaked internal rows: ' + table
+        for table, column in (('design_boards', 'id'), ('design_versions', 'id'), ('design_version_miro_links', 'version_id'), ('project_assignments', 'project_id'), ('internal_comments', 'id')):
+            assert rows(table, 'select=' + column, token=token) == [], 'Client read leaked internal rows: ' + table
         for asset in [row for row in fixture['brand_assets'] if row['client_id'] == client['id']]:
             if asset['kind'] == 'mark': expected_bytes = monogram_svg(asset['client_name'])
             elif asset['kind'] == 'mark-png': expected_bytes = monogram_png(asset['client_name'])
@@ -146,31 +206,28 @@ def main():
             # format-free canvas instead of a shape that was never ordered.
             if asset['kind'].startswith('product'): assert png_pixel_size(actual) == FORMAT_FREE_SIZE, 'Brand product reference is not the documented format-free size'
             downloaded += 1
-        for asset in [row for row in fixture['working_assets'] if row['project_id'] in {project['id'] for project in projects if project['client_id'] == client['id']}]:
-            internal = request('/storage/v1/object/authenticated/internal-assets/' + asset['source_path'])
-            expected_size = artwork_size[asset['design_id']]
-            assert (asset['width'], asset['height']) == expected_size, 'Manifest artwork size differs from the deliverable format'
-            assert internal == png_card(asset['index'], asset['width'], asset['height'], internal=True) and b'Author' in internal
-            assert png_pixel_size(internal) == expected_size, 'Internal artwork is not rendered at the size of its format'
-            downloaded += 1
+        own_projects = {project['id'] for project in projects if project['client_id'] == client['id']}
+        client_covers = {row['project_id']: row for row in rows('project_covers', 'select=project_id,storage_path,client_visible', token=token)}
+        assert set(client_covers) == {pid for pid in own_projects if covers[pid]['client_visible']}, 'Client cover visibility differs from its client versions'
+        for pid in own_projects:
+            path = covers[pid]['storage_path']
+            if covers[pid]['client_visible']:
+                assert request('/storage/v1/object/authenticated/project-covers/' + path, token) == cover_bytes[pid]
+                downloaded += 1
+                continue
             try:
-                request('/storage/v1/object/authenticated/internal-assets/' + asset['source_path'], token)
-                raise AssertionError('Client downloaded private working bytes')
+                request('/storage/v1/object/authenticated/project-covers/' + path, token)
+                raise AssertionError('Client downloaded a hidden cover')
             except urllib.error.HTTPError as error:
                 assert error.code in (400, 403, 404)
                 error.close()
-            # Unpublished production work has no client-readable copy at all, which is the point.
-            if not asset['published_path']: continue
-            actual = request('/storage/v1/object/authenticated/published-assets/' + asset['published_path'], token)
-            assert actual == png_card(asset['index'], asset['width'], asset['height']) and b'Author' not in actual
-            assert png_pixel_size(actual) == expected_size, 'Published artwork is not rendered at the size of its format'
-            downloaded += 1
         for delivery in rows('delivery_files', token=token):
             actual = request('/storage/v1/object/authenticated/delivery-files/' + delivery['storage_path'], token)
             assert actual.startswith(b'%PDF-') and len(actual) == delivery['file_size']
             downloaded += 1
-    assert downloaded == brand_files + working_files + publication_files + delivery_files, 'Downloaded file total does not match the fixture dataset'
-    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 25, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects': len(multi), 'multiple_deliverable_projects_with_v1_v2': len(fully_versioned), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'verified_actual_file_downloads': downloaded, 'projects_with_internal_artwork': len(internal_artwork), 'projects_with_published_artwork': len(published_artwork), 'artwork_pixel_sizes_match_deliverable_format': True, 'distinct_artwork_pixel_sizes': len(set(artwork_size.values())), 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'all_publications_have_client_pins': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
+    downloaded += len(cover_bytes)
+    assert downloaded == brand_files + cover_files + visible_cover_files + delivery_files, 'Downloaded file total does not match the fixture dataset'
+    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 25, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects': len(multi), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'design_boards': len(boards), 'rounds': len(rounds), 'client_versions': len(versions), 'rounds_by_status': dict(sorted(Counter(row['status'] for row in rounds).items())), 'client_versions_by_decision': dict(sorted(Counter(row['status'] for row in reviews.values()).items())), 'covers': len(covers), 'client_visible_covers': sum(1 for row in covers.values() if row['client_visible']), 'verified_actual_file_downloads': downloaded, 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'designer_board_isolation': True, 'no_designer_names_in_client_rows': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, indent=2) + '\n')

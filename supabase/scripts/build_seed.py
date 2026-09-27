@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import json
 import uuid
+from datetime import date, timedelta
 from fixture_media import FORMAT_FREE_SIZE, format_pixel_size
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,6 +11,10 @@ CATALOG = json.loads((ROOT / 'docs/ref/00-guia/CATALOGO-DE-SERVICOS.json').read_
 CLIENTS = [('Acme','acme','Consumer goods'),('Harbor & Pine','harbor-pine','Hospitality'),('Kestrel Outdoor','kestrel-outdoor','Outdoor'),('Northfield Bank','northfield-bank','Finance'),('Otto & Sons','otto-sons','Retail'),('Pelagic','pelagic','Travel'),('Rune Fitness','rune-fitness','Wellness'),('SABRE','sabre','Personal safety'),('Sablefish Provisions','sablefish-provisions','Food & beverage'),('Vela Skincare','vela-skincare','Beauty')]
 
 ADAPTATION_PROJECTS = (4, 8, 12, 20)
+# Projects with two round cycles (see `miro_history`).
+SECOND_ROUND_PROJECTS = (3, 4, 6, 12, 13, 14, 20)
+# Projects staffed by both designers, one design board each, so designer isolation has real data.
+TWO_DESIGNER_PROJECTS = (3, 8, 10)
 SABRE_SLUG = 'sabre'
 # SABRE is the workspace the reference package documents end to end — its agency board is the one
 # every `#/client/sabre/board` capture in `docs/ref` was taken from — so it is seeded from that
@@ -22,14 +27,14 @@ SABRE_CAMPAIGNS = [
     ('everyday-confidence', 'Everyday Confidence', 'Product storytelling for the core range.', '2026-09-15', '2026-10-15'),
     ('brand-essentials', 'Brand Essentials', 'Always on: the brand system every campaign is built from.', None, None),
 ]
-# key, title, campaign, service, [(deliverable name, format)], status, start, due, designs in V1, second version
+# key, title, campaign, service, [(deliverable name, format)], status, start, due, designers, second round
 SABRE_PROJECTS = [
-    ('instagram-ads', 'Instagram Ads', 'summer-safety', 'static-ad', [('Instagram Feed', 'feed'), ('Instagram Story', 'story')], 'client_review', '2026-09-17', '2026-09-23', 2, False),
+    ('instagram-ads', 'Instagram Ads', 'summer-safety', 'static-ad', [('Instagram Feed', 'feed'), ('Instagram Story', 'story')], 'client_review', '2026-09-17', '2026-09-23', 1, False),
     ('campaign-landing-page', 'Campaign Landing Page', 'summer-safety', 'web', [('Desktop Layout', 'desktop')], 'client_review', '2026-09-18', '2026-09-24', 1, True),
     ('email-banner', 'Email Banner', 'summer-safety', 'email-hero', [('Email Hero', 'email-hero')], 'approved', '2026-09-19', '2026-09-25', 1, False),
     ('social-launch', 'Social Launch', 'everyday-confidence', 'social', [('Portrait Feed', 'feed')], 'in_progress', '2026-09-17', '2026-09-23', 1, False),
     ('product-story', 'Product Story', 'everyday-confidence', 'social', [('Instagram Story', 'story')], 'internal_review', '2026-09-18', '2026-09-24', 1, True),
-    ('brand-guidelines', 'Brand Guidelines', 'brand-essentials', 'branding', [('Brand Guidelines', 'guidelines')], 'internal_review', '2026-09-17', '2026-09-23', 1, False),
+    ('brand-guidelines', 'Brand Guidelines', 'brand-essentials', 'branding', [('Brand Guidelines', 'guidelines')], 'internal_review', '2026-09-17', '2026-09-23', 2, False),
     ('stationery', 'Stationery', 'brand-essentials', 'print', [('A4 Stationery', 'a4')], 'client_review', '2026-09-18', '2026-09-24', 1, True),
 ]
 # Work the client has asked for that the studio has not turned into a project yet: one waiting on the
@@ -46,16 +51,17 @@ def uid(label):
 def answers(service):
     return {q['id']:q['options'][0] if q.get('options') else ('12' if q['id']=='pages' else 'Use the supplied campaign direction and approved brand resources.') for q in service.get('questions',[])}
 
-# Artwork lives in two separate buckets, one per audience, and each file is named after the design it
-# belongs to rather than after the project. That keeps the two paths independent, lets a project hold
-# several distinct images, and satisfies the check constraint that every path starts with its project.
-def working_asset_path(project, design):
-    """The private production file the agency and the assigned designer read from `internal-assets`."""
-    return f'{project}/{uid("working-asset-"+design)}.png'
+# Every design board, round frame and client version points at a placeholder Miro board. The ids
+# follow Miro's `uXjV…` shape and are derived from a label, so the file stays byte-identical between
+# builds; the embed simply shows Miro's own "not found" for them.
+def miro_board(label):
+    return 'uXjV'+hashlib.md5(('miro-board:'+label).encode()).hexdigest()[:8]+'='
 
-def published_asset_path(project, design):
-    """The sanitized copy a publication hands the client from `published-assets`."""
-    return f'{project}/{uid("published-asset-"+design)}.png'
+def miro_widget(label):
+    return '345876'+str(int(hashlib.md5(('miro-widget:'+label).encode()).hexdigest()[:12],16))[:12]
+
+def miro_url(board, widget=None):
+    return f'https://miro.com/app/board/{board}/'+(f'?moveToWidget={widget}' if widget else '')
 
 def sql(value):
     if value is None: return 'null'
@@ -89,79 +95,118 @@ schedules={
   9:('2026-09-15','2026-09-26'), 10:('2026-09-24','2026-09-27'), 11:('2026-09-17','2026-09-30'), 12:('2026-09-12','2026-09-24'),
   13:('2026-09-04','2026-09-21'), 14:('2026-09-03','2026-09-17'), 15:('2026-09-18','2026-09-27'), 16:('2026-09-17','2026-09-21'),
   17:('2026-09-08','2026-10-07'), 18:('2026-09-05','2026-09-19'), 19:('2026-10-12','2026-10-30'), 20:('2026-09-13','2026-09-25')}
-# One project, emitted whole: its accepted briefing, the work itself, the artwork a board card
-# shows, and — where the status says the client has seen it — the publication, its review and the
-# comments on both sides of it. Two callers share it, the uniform nine-client baseline and SABRE's
-# own workspace, so a project means the same set of records whichever one produced it.
-def emit_project(*, key, name, client, customer, campaign, service, specs, title, description,
-                 status, start_date, due_date, credits, balance, designer, designs_in_v1,
-                 extra_version, debit_at, campaign_label='the fall campaign', adaptation_versions=2):
-    project=uid(f'project-{key}'); briefing=uid(f'briefing-{key}'); deliverable=uid(f'deliverable-{key}'); version=uid(f'version-{key}-1')
-    spec=specs[0]
-    format_spec=next(f for f in CATALOG['formats'] if f['id']==spec['format'])
-    # Artwork of this deliverable is rendered at the true canvas of the format it was ordered in, so
-    # a square post is 1080x1080 and a portrait feed 1080x1350 on the board and inside the project.
-    artwork_width,artwork_height=format_pixel_size(format_spec)
-    insert('public.briefings',id=briefing,client_id=client,campaign_id=campaign,title=title,service_type=service['id'],status='accepted',overview=f'Create a focused {service["name"].lower()} for {campaign_label}.',goals='Build awareness and give our audience one clear next step.',direction={'source':'brand_hub','tone':'Clear, confident and human','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=credits,confirmed_credits=credits,budget_note='Scope confirmed.',created_by=customer,requested_by=customer)
-    insert('public.projects',id=project,client_id=client,campaign_id=campaign,briefing_id=briefing,title=title,description=description,service_type=service['id'],status=status,due_date=due_date,start_date=start_date,board_position={'x':0,'y':0})
-    insert('public.project_assignments',project_id=project,designer_id=designer)
-    insert('public.deliverables',id=deliverable,project_id=project,**spec)
-    insert('public.credit_ledger',id=uid(f'debit-{key}'),client_id=client,project_id=project,amount=-credits,balance_after=balance,kind='project_debit',description=title,idempotency_key=f'briefing:{briefing}',created_at=debit_at)
-    insert('public.client_comments',id=uid(f'project-context-{key}'),project_id=project,author_label=f'{name} Team',author_kind='client',body='The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.')
-    insert('private.client_comment_authors',comment_id=uid(f'project-context-{key}'),author_id=customer)
-    # Artwork of the first version of the leading deliverable, which is what a board card shows.
-    # Every started project gets it, so no card falls back to an empty tile; later internal
-    # versions stay bare because publishing one is a production step the fixture has not taken.
-    version_artwork=[]
-    if status!='planned':
-        insert('public.design_versions',id=version,project_id=project,deliverable_id=deliverable,version_number=1,notes='Initial creative direction. Internal production notes.',status='submitted' if status=='internal_review' else 'draft',created_by=designer)
-        for di in range(designs_in_v1):
-            content={'headline':'Every detail,\nconsidered.' if di==0 else 'A new perspective.','subheading':'FALL / 2026','body':'Made for the moments that matter.','background':'#F2F0E8' if di==0 else '#272B27','foreground':'#20231F' if di==0 else '#F2F0E8','accent':'#BAC69B','eyebrow':name.upper(),'layout':'editorial','internal_author':'Alex Morgan — NEVER PUBLISH','internal_note':'Production-only color exploration'}
-            design=uid(f'design-{key}-1-{di}')
-            # The card index gives every fixture image its own accent colour, so a wall of cards
-            # reads as twenty different pieces of work rather than one picture repeated.
-            artwork={'project_id':project,'design_id':design,'source_path':working_asset_path(project,design),'published_path':None,'index':len(manifest['working_assets'])+1,'width':artwork_width,'height':artwork_height}
-            manifest['working_assets'].append(artwork); version_artwork.append(artwork)
-            insert('public.designs',id=design,project_id=project,version_id=version,title=f'Direction {chr(65+di)}',content=content,internal_asset_path=artwork['source_path'],sort_order=di,created_by=designer)
-        insert('public.internal_comments',id=uid(f'internal-comment-{key}'),project_id=project,version_id=version,design_id=uid(f'design-{key}-1-0'),author_id=designer,body='The first direction is ready for studio feedback.',pin_x=.42,pin_y=.35)
-    if status in ('client_review','changes_requested','approved'):
-        publication=uid(f'publication-{key}'); review='changes_requested' if status=='changes_requested' else ('approved' if status=='approved' else 'pending')
-        insert('public.published_versions',id=publication,project_id=project,deliverable_id=deliverable,version_number=1,release_note='A considered direction for the fall campaign.')
-        insert('private.publication_sources',publication_id=publication,internal_version_id=version,published_by=uid('agency'))
-        # Publication copies each design's working artwork into the client bucket under its own
-        # path, so a snapshot a client reads never points back at a private production file. The
-        # snapshot rows are selected from `designs` to reuse the content sanitizer, and the path
-        # is mapped per design id because this generator, not the database, owns the file names.
-        for artwork in version_artwork: artwork['published_path']=published_asset_path(project,artwork['design_id'])
-        published_case='case id '+' '.join(f"when {sql(artwork['design_id'])} then {sql(artwork['published_path'])}" for artwork in version_artwork)+' end'
-        lines.append(f"insert into public.published_designs(id,project_id,publication_id,title,content,asset_path,sort_order) select md5('published:'||id::text)::uuid,project_id,{sql(publication)},title,private.public_design_content(content),{published_case},sort_order from public.designs where version_id={sql(version)};")
-        insert('public.client_comments',id=uid(f'client-pin-{key}'),project_id=project,publication_id=publication,design_id=str(uuid.UUID(hashlib.md5(('published:'+uid(f'design-{key}-1-0')).encode()).hexdigest())),author_label=f'{name} Team',author_kind='client',body='Please preserve this focal point in the final composition.',pin_x=.63,pin_y=.42)
-        insert('private.client_comment_authors',comment_id=uid(f'client-pin-{key}'),author_id=customer)
-        insert('public.publication_reviews',id=uid(f'review-{key}'),publication_id=publication,project_id=project,status=review,feedback='Please give the headline a little more space.' if review=='changes_requested' else ('This feels right. Approved.' if review=='approved' else ''))
-        insert('public.client_comments',id=uid(f'client-comment-{key}'),project_id=project,publication_id=publication,author_label='Studio',author_kind='studio',body='Your first direction is ready. We would love your feedback.')
-        insert('private.client_comment_authors',comment_id=uid(f'client-comment-{key}'),author_id=uid('agency'))
-        insert('public.notifications',id=uid(f'notification-{key}'),user_id=customer,client_id=client,project_id=project,title='New designs ready for review',body=title)
-    if extra_version:
-        insert('public.design_versions',id=uid(f'version-{key}-2'),project_id=project,deliverable_id=deliverable,version_number=2,notes='Unpublished refinement. Keep private.',created_by=designer)
-        insert('public.designs',id=uid(f'design-{key}-2-0'),project_id=project,version_id=uid(f'version-{key}-2'),title='Internal refinement',content={'headline':'Unpublished exploration','internal_author':'Jordan Reed','background':'#DDD9CE','foreground':'#222222'},created_by=designer)
-    if len(specs)>1:
-        extra=uid(f'deliverable-{key}-adaptation')
-        insert('public.deliverables',id=extra,project_id=project,sort_order=1,**specs[1])
-        for revision in range(1,adaptation_versions+1):
-            extra_version_id=uid(f'version-{key}-adaptation-{revision}')
-            insert('public.design_versions',id=extra_version_id,project_id=project,deliverable_id=extra,version_number=revision,notes='Adaptation direction for the secondary format.',created_by=designer)
-            insert('public.designs',id=uid(f'design-{key}-adaptation-{revision}'),project_id=project,version_id=extra_version_id,title=f'Adaptation V{revision}',content={'headline':'A clear next step.','subheading':name,'background':'#E4E7DC','foreground':'#242824','accent':'#BAC69B','layout':'editorial'},created_by=designer)
-        if status=='client_review':
-            extra_publication=uid(f'publication-{key}-adaptation')
-            insert('public.published_versions',id=extra_publication,project_id=project,deliverable_id=extra,version_number=1,release_note='Secondary format adaptation.')
-            insert('private.publication_sources',publication_id=extra_publication,internal_version_id=uid(f'version-{key}-adaptation-1'),published_by=uid('agency'))
-            lines.append(f"insert into public.published_designs(id,project_id,publication_id,title,content,sort_order) select md5('published:'||id::text)::uuid,project_id,{sql(extra_publication)},title,private.public_design_content(content),sort_order from public.designs where version_id={sql(uid(f'version-{key}-adaptation-1'))};")
-            insert('public.publication_reviews',id=uid(f'review-{key}-adaptation'),publication_id=extra_publication,project_id=project,status='pending')
-            insert('public.client_comments',id=uid(f'client-pin-{key}-adaptation'),project_id=project,publication_id=extra_publication,design_id=str(uuid.UUID(hashlib.md5(('published:'+uid(f'design-{key}-adaptation-1')).encode()).hexdigest())),author_label=f'{name} Team',author_kind='client',body='Keep the focal point consistent across formats.',pin_x=.63,pin_y=.42)
-            insert('private.client_comment_authors',comment_id=uid(f'client-pin-{key}-adaptation'),author_id=customer)
-    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':status,'credits':credits})
+# The Miro model a project's status implies. Production happens on design boards, one per assigned
+# designer; a designer sends a round (a Miro frame) to the studio, and only the agency shares a round
+# with the client as an immutable client version, which the client then approves or sends back.
+# Each status is reached by replaying that history through the real RPCs, so every round and client
+# version sits in a state the product itself produces. Sending any round moves a project to
+# internal review, so a project that has not reached it has no round yet. This is the same mapping
+# `sabre_demo.py` uses (`miro_history`), so the canonical seed and the demonstration agree:
+#   planned, in_progress   boards only, no round and no client version;
+#   internal_review        one round per board with the studio (`submitted`), or two;
+#   client_review          R1 shared as V1, awaiting the client; or V1 sent back and V2 awaiting;
+#   changes_requested      V1 sent back; or V1 and V2 both sent back;
+#   approved               V1 approved; or V1 sent back and V2 approved. Delivery (`delivered`) is
+#                          added after provisioning attaches the final file.
+# A project with two designers stays before client review, so its client versions never have to
+# pick one designer's board over the other's.
+TWO_DESIGNER_STATUSES = ('planned','in_progress','internal_review')
 
-manifest={'users':[{'id':uid(k),'email':e,'role':r} for k,e,n,r in accounts],'clients':[],'projects':[],'delivery_project_id':uid('project-7'),'brand_assets':[],'working_assets':[]}
+def miro_history(status, second_round):
+    """One entry per round cycle: None keeps the round inside the studio; a decision shares it."""
+    if status in ('planned','in_progress'): return []
+    if status=='internal_review': return [None,None] if second_round else [None]
+    last={'client_review':'pending','changes_requested':'changes_requested'}.get(status,'approved')
+    return (['changes_requested'] if second_round else [])+[last]
+
+def as_user(user):
+    """Run the RPC calls that follow as `user`, the way PostgREST presents a signed-in session."""
+    lines.append(f"select set_config('request.jwt.claims',{sql(json.dumps({'sub':user,'role':'authenticated'},separators=(',',':')))},false);")
+
+def reset_user():
+    lines.append("select set_config('request.jwt.claims','',false);")
+
+def call(function, *arguments):
+    lines.append(f"select public.{function}({','.join(arguments)});")
+
+def emit_project(*, key, name, client, customer, campaign, service, specs, title, description,
+                 status, start_date, due_date, credits, balance, designers, second_round,
+                 debit_at, campaign_label='the fall campaign'):
+    project=uid(f'project-{key}'); briefing=uid(f'briefing-{key}'); deliverable=uid(f'deliverable-{key}')
+    assert len(designers)==1 or status in TWO_DESIGNER_STATUSES, key
+    insert('public.briefings',id=briefing,client_id=client,campaign_id=campaign,title=title,service_type=service['id'],status='accepted',overview=f'Create a focused {service["name"].lower()} for {campaign_label}.',goals='Build awareness and give our audience one clear next step.',direction={'source':'brand_hub','tone':'Clear, confident and human','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=credits,confirmed_credits=credits,budget_note='Scope confirmed.',created_by=customer,requested_by=customer)
+    insert('public.projects',id=project,client_id=client,campaign_id=campaign,briefing_id=briefing,title=title,description=description,service_type=service['id'],status=status if status=='in_progress' else 'planned',due_date=due_date,start_date=start_date,board_position={'x':0,'y':0})
+    for designer in designers: insert('public.project_assignments',project_id=project,designer_id=designer)
+    insert('public.deliverables',id=deliverable,project_id=project,**specs[0])
+    for si,spec in enumerate(specs[1:],start=1):
+        insert('public.deliverables',id=uid(f'deliverable-{key}-adaptation'),project_id=project,sort_order=si,**spec)
+    insert('public.credit_ledger',id=uid(f'debit-{key}'),client_id=client,project_id=project,amount=-credits,balance_after=balance,kind='project_debit',description=title,idempotency_key=f'briefing:{briefing}',created_at=debit_at)
+    # Later statuses are not written here: the round, share and review RPCs below move the project
+    # there, exactly as the product does.
+    project_sql=sql(project)
+    # A board is due a day before its project where the window allows it, never after it.
+    board_due=due_date if due_date<=start_date else (date.fromisoformat(due_date)-timedelta(days=1)).isoformat()
+    boards=[]
+    for bi,designer in enumerate(designers):
+        board_name=specs[0]['name'] if bi==0 else 'Alternative direction'
+        board=miro_board(f'{key}-{bi}')
+        boards.append((bi,designer,board_name,board))
+    as_user(uid('agency'))
+    for bi,designer,board_name,board in boards:
+        call('create_design_board',project_sql,sql(board_name),sql(miro_url(board)),sql(designer),sql(board_due))
+    as_user(customer)
+    call('post_comment',project_sql,sql('client'),sql('The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.'),'null',sql(f'seed:{key}:context'))
+    def board_ref(board_name):
+        return f"(select id from public.design_boards where project_id={project_sql} and name={sql(board_name)})"
+    def round_key(bi,number):
+        return uid(f'round-{key}-{bi}-{number}')
+    def round_ref(bi,number):
+        return f"(select id from public.design_versions where board_id={board_ref(boards[bi][2])} and version_number={number})"
+    def version_ref(number):
+        return f"(select id from public.published_versions where project_id={project_sql} and version_number={number})"
+    def send_round(bi,designer,board_name,board,number):
+        as_user(designer)
+        note='First direction on the board, ready for studio review.' if number==1 else 'Refined round with tighter spacing, ready for studio review.'
+        call('send_board_round',board_ref(board_name),sql(note),sql(miro_url(board,miro_widget(f'{key}-{bi}-{number}'))),sql(round_key(bi,number)))
+    def share(number):
+        # The client version shows the lead board's frame for that round; only the agency shares.
+        _,_,_,board=boards[0]
+        as_user(uid('agency'))
+        note=f'A considered direction for {campaign_label}.' if number==1 else 'The refined direction, with your feedback applied.'
+        call('share_miro_version',project_sql,sql(miro_url(board,miro_widget(f'{key}-0-{number}'))),sql(note),round_ref(0,number),sql(uid(f'share-{key}-{number}')))
+    def review(number,decision):
+        as_user(customer)
+        feedback='This feels right. Approved.' if decision=='approved' else 'Please give the headline a little more space.'
+        call('review_publication',version_ref(number),sql(decision),sql(feedback))
+    history=miro_history(status,second_round)
+    versions=0
+    for cycle,decision in enumerate(history,start=1):
+        for bi,designer,board_name,board in boards: send_round(bi,designer,board_name,board,cycle)
+        if decision is None: continue
+        share(cycle); versions=cycle
+        if decision!='pending': review(cycle,decision)
+    if history:
+        # Internal conversation on the lead board's first round: the designer asks, the studio
+        # answers. Neither message leaves the internal channel.
+        as_user(designers[0])
+        call('post_comment',project_sql,sql('internal'),sql('The first direction is on the board and ready for studio feedback.'),round_ref(0,1),sql(f'seed:{key}:internal-designer'))
+        as_user(uid('agency'))
+        call('post_comment',project_sql,sql('internal'),sql('Thanks. Tighten the type hierarchy before we share it.'),round_ref(0,1),sql(f'seed:{key}:internal-studio'))
+    if versions:
+        as_user(uid('agency'))
+        call('post_comment',project_sql,sql('client'),sql('Your first direction is ready. We would love your feedback.'),version_ref(1),sql(f'seed:{key}:studio-v1'))
+        as_user(customer)
+        call('post_comment',project_sql,sql('client'),sql('Please preserve the focal point in the final composition.'),version_ref(1),sql(f'seed:{key}:client-v1'))
+    reset_user()
+    # A cover for every project, drawn from the synthetic card artwork at the canvas of the leading
+    # deliverable's format. Its bytes are uploaded after the seed through the media worker, which
+    # sanitizes and attests them; only a project the client already has a version of shows it.
+    format_spec=next(f for f in CATALOG['formats'] if f['id']==specs[0]['format'])
+    width,height=format_pixel_size(format_spec)
+    manifest['covers'].append({'project_id':project,'index':len(manifest['covers'])+1,'width':width,'height':height,'client_visible':versions>0})
+    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':status,'credits':credits,'designers':designers,'rounds_per_board':len(history),'client_versions':versions})
+
+manifest={'users':[{'id':uid(k),'email':e,'name':n,'role':r} for k,e,n,r in accounts],'clients':[],'projects':[],'delivery_project_id':uid('project-7'),'brand_assets':[],'covers':[]}
 for index,(name,slug,industry) in enumerate(CLIENTS):
     ci=index+1; client=uid(f'client-org-{ci}'); campaign=uid(f'campaign-{ci}'); customer=uid(f'client-{ci}'); balance=100
     insert('public.clients',id=client,name=name,slug=slug,industry=industry,initials=''.join(w[0] for w in name.split() if w[0].isalpha())[:2],description=f'{name} brand workspace',website=f'https://{slug}.example')
@@ -212,7 +257,7 @@ for index,(name,slug,industry) in enumerate(CLIENTS):
         fmt=service['formats'][0]; format_spec=next(f for f in CATALOG['formats'] if f['id']==fmt)
         spec={'name':service['name'],'format':fmt,'width':format_spec.get('width'),'height':format_spec.get('height'),'quantity':2 if pi%4==0 else 1,'scope':'original'}
         specs=[spec]
-        # Four representative projects carry a second deliverable in another format, each on V1 and V2.
+        # Four representative projects carry a second deliverable in another format.
         # The fourth used to be project 16, which belonged to SABRE before SABRE took the reference
         # package's own workspace, so it moved to 20 rather than leaving only three behind.
         if pi in ADAPTATION_PROJECTS:
@@ -222,11 +267,11 @@ for index,(name,slug,industry) in enumerate(CLIENTS):
         emit_project(key=pi,name=name,client=client,customer=customer,campaign=campaign,service=service,specs=specs,
                      title=f"{name} / {service['name']}",description=f'A fresh perspective on {name}.',
                      status=states[pi-1],start_date=start_date,due_date=due_date,credits=credits,balance=balance,
-                     designer=designer,designs_in_v1=2 if pi%4==0 else 1,
-                     extra_version=(states[pi-1] in ('client_review','changes_requested','approved') and pi%2==0) or pi in ADAPTATION_PROJECTS,
+                     designers=[designer,uid(f'designer-{1+(pi+1)%2}')] if pi in TWO_DESIGNER_PROJECTS else [designer],
+                     second_round=pi in SECOND_ROUND_PROJECTS,
                      debit_at=f'2026-09-{2+j:02d}T12:00:00Z')
     if slug==SABRE_SLUG:
-        for pi,(key,ptitle,ckey,service_id,deliverables,status,start_date,due_date,designs_in_v1,extra_version) in enumerate(SABRE_PROJECTS,start=1):
+        for pi,(key,ptitle,ckey,service_id,deliverables,status,start_date,due_date,designer_count,second_round) in enumerate(SABRE_PROJECTS,start=1):
             service=next(item for item in CATALOG['types'] if item['id']==service_id)
             specs=[]
             for si,(dname,dformat) in enumerate(deliverables):
@@ -237,8 +282,7 @@ for index,(name,slug,industry) in enumerate(CLIENTS):
             emit_project(key=f'sabre-{key}',name=name,client=client,customer=customer,campaign=campaigns[ckey],service=service,specs=specs,
                          title=ptitle,description=f'{campaign_title} — {service["name"].lower()} for {name}.',
                          status=status,start_date=start_date,due_date=due_date,credits=credits,balance=balance,
-                         designer=uid(f'designer-{1+pi%2}'),designs_in_v1=designs_in_v1,extra_version=extra_version,
-                         adaptation_versions=2 if extra_version else 1,
+                         designers=[uid(f'designer-{1+(pi+n)%2}') for n in range(designer_count)],second_round=second_round,
                          debit_at=f'2026-09-{14+pi:02d}T12:00:00Z',campaign_label=campaign_title)
         for key,btitle,ckey,service_id,status,due_date,deliverables in SABRE_OPEN_BRIEFINGS:
             service=next(item for item in CATALOG['types'] if item['id']==service_id)
