@@ -108,6 +108,20 @@ test("agency, designer and client complete a round trip in Miro", async ({ brows
 
   // The client requests changes, the agency adds V2 directly, the client approves.
   const client = await (await browser.newContext()).newPage();
+  // Every Supabase REST call the client's page makes, with its body, for the payload check below.
+  // Routing reads each body before the page gets it, so none is lost to a later reload.
+  const calls: { url: string; body: string }[] = [];
+  await client.route("**/rest/v1/**", async (route) => {
+    try {
+      const response = await route.fetch();
+      const body = await response.text();
+      calls.push({ url: route.request().url(), body });
+      await route.fulfill({ response, body });
+    } catch {
+      // A request the page abandoned (a reload) never reaches it, so it has nothing to check.
+      await route.abort().catch(() => {});
+    }
+  });
   await signIn(client, credentials.client);
   await client.goto(`/projects/${projectId}`);
   await expect(client.getByRole("group", { name: "Client versions" })).toContainText("V1");
@@ -147,6 +161,34 @@ test("agency, designer and client complete a round trip in Miro", async ({ brows
           ?.status,
     )
     .toBe("approved");
+
+  // The client-visible payload holds no internal identifiers: no internal table is read, and no
+  // response names a designer, a board or a round.
+  const boards = await localAdmin.from("design_boards").select("id").eq("project_id", projectId);
+  const rounds = await localAdmin
+    .from("design_versions")
+    .select("id")
+    .eq("project_id", projectId)
+    .not("board_id", "is", null);
+  const internalIds = [
+    designerA,
+    designerB,
+    ...(boards.data ?? []).map((board) => board.id),
+    ...(rounds.data ?? []).map((round) => round.id),
+  ];
+  expect(internalIds).toHaveLength(5);
+  // Positive control: the recorded bodies do carry the project the client is looking at.
+  expect(calls.some((call) => call.body.includes(projectId))).toBe(true);
+  expect(
+    calls
+      .map((call) => call.url)
+      .filter((url) => /\/rest\/v1\/(design_boards|design_versions|internal_comments)\b/.test(url)),
+  ).toEqual([]);
+  expect(
+    calls.flatMap((call) =>
+      internalIds.filter((id) => call.body.includes(id)).map((id) => `${id} in ${call.url}`),
+    ),
+  ).toEqual([]);
 });
 
 test("a designer never sees another designer's board, rounds or comments", async ({ page }) => {
@@ -164,11 +206,57 @@ test("a designer never sees another designer's board, rounds or comments", async
     .not("board_id", "is", null);
   expect(rounds.error).toBeNull();
   expect(rounds.data).toEqual([]);
-  const comments = await designerBClient
-    .from("internal_comments")
-    .select("author_id")
-    .eq("project_id", projectId);
-  expect((comments.data ?? []).some((comment) => comment.author_id === designerA)).toBe(false);
+
+  // Designer A comments on their round and on the project; the agency comments on the project.
+  const designerAClient = await localCaller(designerAEmail);
+  const agency = await localAgency();
+  const round = await localAdmin
+    .from("design_versions")
+    .select("id")
+    .eq("project_id", projectId)
+    .not("board_id", "is", null)
+    .single();
+  expect(round.error).toBeNull();
+  const roundId = round.data!.id;
+  const posted: Record<string, string> = {};
+  for (const [key, caller, body, versionId] of [
+    ["aRound", designerAClient, "A: round note", roundId],
+    ["aProject", designerAClient, "A: project note", undefined],
+    ["agency", agency, "Studio: project note", undefined],
+  ] as const) {
+    const result = await caller.rpc("post_comment", {
+      p_project_id: projectId,
+      p_channel: "internal",
+      p_body: body,
+      ...(versionId ? { p_version_id: versionId } : {}),
+    });
+    expect(result.error).toBeNull();
+    posted[key] = result.data!;
+  }
+  const readIds = async (caller: typeof agency) => {
+    const result = await caller
+      .from("internal_comments")
+      .select("id,author_id")
+      .eq("project_id", projectId);
+    expect(result.error).toBeNull();
+    return result.data!;
+  };
+  // Positive control: designer A and the agency read all three.
+  for (const caller of [designerAClient, agency])
+    expect((await readIds(caller)).map((row) => row.id).sort()).toEqual(
+      [posted.aRound, posted.aProject, posted.agency].sort(),
+    );
+  // Designer B reads the agency's comment and nothing of A's, and cannot comment on A's round.
+  const seenByB = await readIds(designerBClient);
+  expect(seenByB.map((row) => row.id)).toEqual([posted.agency]);
+  expect(seenByB.some((row) => row.author_id === designerA)).toBe(false);
+  const intrusion = await designerBClient.rpc("post_comment", {
+    p_project_id: projectId,
+    p_channel: "internal",
+    p_body: "B: on A's round",
+    p_version_id: roundId,
+  });
+  expect(intrusion.error).not.toBeNull();
   await signIn(page, designerBEmail);
   await page.goto(`/projects/${projectId}`);
   await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVBoardB1/);
