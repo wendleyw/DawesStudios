@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clearProjectCover,
   deliverySchema,
   MediaRequestError,
   mediaErrorMessage,
+  prepareProjectCover,
   publicationSchema,
 } from "./media-client";
 import { invitationRequestSchema } from "@/features/settings/settings-model";
@@ -106,5 +108,92 @@ describe("MediaRequestError", () => {
     const error = new MediaRequestError("Upload an MP4 or WebM video.", 415);
     expect(error.status).toBe(415);
     expect(error.message).toBe("Upload an MP4 or WebM video.");
+  });
+});
+
+/** Mirrors `artwork-files.test.ts`'s `stubSessionDatabase`: a session-only database double, since
+ * `prepareProjectCover`/`clearProjectCover` never touch `.from(...)` or `.storage.from(...)`
+ * themselves — the media service does that with its own service-role token. */
+function stubSessionDatabase(token: string | null = "token-abc", userId = "user-1") {
+  const getSession = vi.fn().mockResolvedValue({
+    data: { session: token ? { access_token: token, user: { id: userId } } : null },
+    error: null,
+  });
+  return { database: { auth: { getSession } } as never, getSession };
+}
+
+const projectId = "project-1";
+
+describe("prepareProjectCover", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("refuses an unsupported file type before any network call", async () => {
+    const { database } = stubSessionDatabase();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File([new Uint8Array(4)], "cover.gif", { type: "image/gif" });
+    await expect(
+      prepareProjectCover(database, "http://media.test", projectId, file, false),
+    ).rejects.toThrow(/PNG, JPG, or WebP/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file over the project-covers bucket's 10 MB ceiling before any network call", async () => {
+    const { database } = stubSessionDatabase();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File([new Uint8Array(4)], "cover.png", { type: "image/png" });
+    Object.defineProperty(file, "size", { value: 10 * 1024 * 1024 + 1 });
+    await expect(
+      prepareProjectCover(database, "http://media.test", projectId, file, false),
+    ).rejects.toThrow(/no larger than 10 MB/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("passes the current visibility through as a query parameter, not the RPC's own false default", async () => {
+    const { database } = stubSessionDatabase();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ path: "project-1/cover.png", clientVisible: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File([new Uint8Array(4)], "cover.png", { type: "image/png" });
+    const result = await prepareProjectCover(database, "http://media.test", projectId, file, true);
+    expect(result).toEqual({ path: "project-1/cover.png", clientVisible: true });
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://media.test/covers/prepare?projectId=project-1&visible=true");
+    expect(options.headers.Authorization).toBe("Bearer token-abc");
+    expect(options.headers["Content-Type"]).toBe("image/png");
+  });
+});
+
+describe("clearProjectCover", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("posts to the project's clear route and resolves to whether a cover was actually removed", async () => {
+    const { database } = stubSessionDatabase();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ cleared: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(clearProjectCover(database, "http://media.test", projectId)).resolves.toBe(true);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://media.test/covers/clear?projectId=project-1");
+    expect(options.headers.Authorization).toBe("Bearer token-abc");
+  });
+
+  it("resolves to false when the project already had no cover", async () => {
+    const { database } = stubSessionDatabase();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ cleared: false }) }),
+    );
+    await expect(clearProjectCover(database, "http://media.test", projectId)).resolves.toBe(false);
   });
 });

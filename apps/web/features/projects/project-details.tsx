@@ -21,6 +21,7 @@ import {
   type CanvasVersion,
 } from "./project-data";
 import { ProjectPanelHeader } from "./project-panel";
+import { ProjectCover } from "./project-cover";
 import { FormError } from "@/features/shared/form-error";
 
 /**
@@ -134,6 +135,7 @@ export function ProjectDetails({
         }
       />
       <div className="project-details-content">
+        <ProjectCover projectId={project.id} />
         <p>{project.description || "No additional project notes yet."}</p>
         <dl>
           <dt>Service</dt>

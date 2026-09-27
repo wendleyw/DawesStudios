@@ -3,6 +3,7 @@ import { z } from "@/lib/zod";
 import type { Database } from "@database";
 import {
   BUCKET_MAX_BYTES,
+  clientBrandUploadMimes,
   standardUploadMimes,
   uploadSizeMessage,
   uploadTypeMessage,
@@ -257,6 +258,68 @@ export async function prepareDelivery(
     deliverySchema,
     { headers: { "X-File-Name": encodeURIComponent(name) } },
   );
+}
+
+/**
+ * The `project-covers` bucket's own byte ceiling: `file_size_limit=10485760` in
+ * `supabase/migrations/202609270001_project_covers.sql`. Restated here rather than in
+ * `upload-rules.ts`, following the reasoning in that module's own header comment (a client
+ * ceiling must agree with the bucket it precedes, not be collapsed into an unrelated one): no
+ * other uploader shares this ceiling, so it belongs beside the one request that enforces it.
+ */
+const COVER_MAX_BYTES = 10 * 1024 * 1024;
+
+const projectCoverSchema = z.object({ path: z.string().min(1), clientVisible: z.boolean() });
+
+/**
+ * Sends the cover image to `apps/media`, which re-encodes it to PNG, stores it under
+ * `project-covers/<project-uuid>/<random-uuid>.png` and calls the authenticated
+ * `set_project_cover` RPC with the caller's own token.
+ *
+ * `set_project_cover` defaults `p_client_visible` to `false` (see `202609270001_project_covers.sql`),
+ * so `visible` must carry the *current* visibility on a Replace, not always `false` — a caller
+ * replacing an already client-visible cover passes the row's own `clientVisible`, never a
+ * hardcoded default, or the replace would silently hide a cover the agency never asked to hide.
+ */
+export async function prepareProjectCover(
+  database: SupabaseClient<Database>,
+  mediaUrl: string,
+  projectId: string,
+  file: File,
+  visible: boolean,
+) {
+  if (!(clientBrandUploadMimes as readonly string[]).includes(file.type))
+    throw new Error(uploadTypeMessage(clientBrandUploadMimes));
+  if (file.size > COVER_MAX_BYTES) throw new Error(uploadSizeMessage(COVER_MAX_BYTES));
+  return requestMedia(
+    database,
+    mediaUrl,
+    `/covers/prepare?projectId=${encodeURIComponent(projectId)}&visible=${visible}`,
+    file,
+    file.type,
+    projectCoverSchema,
+  );
+}
+
+const clearCoverSchema = z.object({ cleared: z.boolean() });
+
+/** Clears the project's cover through `apps/media`'s `clear_project_cover` RPC and object delete.
+ * `cleared` is `false` when the project already had no cover, so a repeated clear is safe. */
+export async function clearProjectCover(
+  database: SupabaseClient<Database>,
+  mediaUrl: string,
+  projectId: string,
+) {
+  return (
+    await requestMedia(
+      database,
+      mediaUrl,
+      `/covers/clear?projectId=${encodeURIComponent(projectId)}`,
+      "{}",
+      "application/json",
+      clearCoverSchema,
+    )
+  ).cleared;
 }
 
 export async function discardPreparedAssets(

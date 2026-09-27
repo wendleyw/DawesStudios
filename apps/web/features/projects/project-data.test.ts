@@ -13,6 +13,7 @@ import {
   reviewPublication,
   revokeDesignAssignment,
   setMiroLink,
+  setProjectCoverVisibility,
   submitDesignVersion,
   updateDesignContent,
   updateProjectDetails,
@@ -168,6 +169,15 @@ describe("project procedures", () => {
     expect(rpc).toHaveBeenCalledWith("revoke_design_assignment", {
       p_project_id: "project-1",
       p_designer_id: "designer-1",
+    });
+  });
+
+  it("sets a cover's client visibility", async () => {
+    const { database, rpc } = stubDatabase(ok);
+    await setProjectCoverVisibility(database, { projectId: "project-1", visible: true });
+    expect(rpc).toHaveBeenCalledWith("set_project_cover_visibility", {
+      p_project_id: "project-1",
+      p_client_visible: true,
     });
   });
 

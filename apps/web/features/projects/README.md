@@ -39,6 +39,24 @@ the signed-in profile in `workspace/canvas-header.tsx` and open the shared anima
 account popover on every client surface. Notification read actions remain explicit and
 recipient-scoped.
 
+**Cover.** Details opens with a Cover block (`project-cover.tsx`): one sanitized PNG per project,
+set by the agency and optionally shown to the client, ahead of the description and every other
+field. `useProjectCover` (`project-data.ts`) reads `public.project_covers` and signs the stored
+path from the private `project-covers` bucket, the same 300-second/240-second expiry and refresh
+`useDesignAssetUrl` already uses for a still image; it is keyed under `project-detail` rather than a
+key of its own, so the write invalidation every other project edit already calls refreshes it too,
+and it leans on that table's own RLS (agency/designer read every row; a client reads one only while
+`client_visible`) rather than branching on role, so a client session with no readable row resolves
+to `null` and the block renders nothing at all — never an empty placeholder that would hint at a
+hidden cover. The agency alone gets Set/Replace (a hidden file input behind a button, PNG/JPEG/WebP
+only), the **Visible to the client** switch and Remove (with a confirm dialog, like the Remove
+designer one above it); a designer gets the same read-only preview once a cover exists and nothing
+otherwise. `prepareProjectCover`/`clearProjectCover` (`media-client.ts`) call `apps/media`'s
+`POST /covers/prepare`/`POST /covers/clear`, agency only; `set_project_cover` defaults
+`p_client_visible` to `false`, so a Replace always sends the row's own current visibility forward
+rather than the RPC's default, and toggling visibility afterward goes through the separate
+`set_project_cover_visibility` RPC (`setProjectCoverVisibility`).
+
 Design previews open feedback with a desktop double-click. A single click keeps canvas interaction
 available; Enter/Space, the explicit arrow action and a single touch tap also open the design.
 The main board already uses double-click to enter a project. During design review the channel/action
@@ -509,6 +527,15 @@ These tests exercise real query activation against mocked Storage and media-elem
 behavior. Browser decoding, actual network cost and timed-pin interactions require the separate
 browser scenarios. The repeatable loading baseline and its limits are recorded in the
 [video baseline report](../../../../docs/engineering/handoffs/2026-09-23-video-optimization-baseline.md).
+
+The Cover block's own suite (`npx vitest run features/projects/project-cover.test.tsx
+features/projects/project-asset-url.test.tsx features/projects/media-client.test.ts
+features/projects/project-data.test.ts`) covers Set/Replace/visibility/Remove by role, a client's
+absence rather than an empty placeholder when no row is readable, the signed-URL read, the
+type/size rejections `prepareProjectCover` raises before any network call, and
+`set_project_cover_visibility`'s exact RPC arguments. A disposable-project browser pass (set,
+preview, toggle visibility, remove through the confirm dialog) is recorded in
+[the verification record](../../../../docs/verification/project-cover-2026-09-27.md).
 
 Executed for the data-access migration of this feature:
 

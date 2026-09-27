@@ -512,6 +512,66 @@ export function useDesignAssetUrl(
   });
 }
 
+export type ProjectCover = { storagePath: string; clientVisible: boolean; url: string };
+
+/**
+ * The signed URL follows the same 300-second expiry / 240-second refresh as `useDesignAssetUrl`'s
+ * still-image branch above: a cover is always a still PNG, never a video, so there is no reason to
+ * pick different numbers for it.
+ */
+const COVER_URL_EXPIRES_IN_SECONDS = 300;
+const COVER_URL_REFRESH_MS = 240_000;
+
+/**
+ * A project's cover, or `null` when none is set. Keyed under `project-detail` rather than a key of
+ * its own, so `useInvalidateProject()` — already called after every project write — refreshes it
+ * too, the same way `useDesignBoards` above keys its own read under `project-detail`.
+ *
+ * The read leans on `project_covers`' own RLS (`private.can_produce` or a client-visible row under
+ * `private.can_client_channel`) rather than branching on `profile.role` here: a client session that
+ * cannot see the row gets zero rows back, not an error, so `maybeSingle()` resolves to `null` for
+ * exactly the case the block is asked to stay absent for.
+ */
+export function useProjectCover(projectId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-detail", session?.user.id, projectId, "cover"],
+    enabled: !!session,
+    staleTime: 120_000,
+    refetchInterval: COVER_URL_REFRESH_MS,
+    queryFn: async (): Promise<ProjectCover | null> => {
+      const result = await database
+        .from("project_covers")
+        .select("storage_path,client_visible,updated_at")
+        .eq("project_id", projectId)
+        .maybeSingle();
+      const row = assertResult(result);
+      if (!row) return null;
+      const url = assertResult(
+        await database.storage
+          .from("project-covers")
+          .createSignedUrl(row.storage_path, COVER_URL_EXPIRES_IN_SECONDS),
+      ).signedUrl;
+      return { storagePath: row.storage_path, clientVisible: row.client_visible, url };
+    },
+  });
+}
+
+/** Toggles an existing cover's client visibility; setting a cover in the first place goes through
+ * `prepareProjectCover` (`media-client.ts`) instead, since the RPC it calls needs the new object's
+ * path. */
+export async function setProjectCoverVisibility(
+  database: SupabaseDatabase,
+  input: { projectId: string; visible: boolean },
+) {
+  assertResult(
+    await database.rpc("set_project_cover_visibility", {
+      p_project_id: input.projectId,
+      p_client_visible: input.visible,
+    }),
+  );
+}
+
 /**
  * The raw bytes behind a stored design's artwork, for the Playground albums' copy-into-board flow
  * (`features/playground/playground-albums.ts`).
