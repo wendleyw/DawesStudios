@@ -205,7 +205,7 @@ PDF delivery is flattened to newly rendered page images and rebuilt as a new PDF
 - `npm --prefix apps/media run test:integration`: 15 real worker pipeline checks, with temporary-object cleanup.
 - `npm --prefix apps/media audit --omit=dev`: production dependency advisory check.
 - `node supabase/tests/realtime_boundary_test.mjs`: real four-role subscription and deleted-event boundary check.
-- `python3 supabase/tests/concurrent_workflows_test.py`: four concurrent workflow scenarios restricted to the disposable port-55521 backend.
+- `supabase/tests/concurrent_workflows_test.py`: historical Versions-era concurrency harness, coupled to the old port-55521 clone. It is not a current Miro verification command; see the [operations warning](../operations/README.md#database-auth-and-storage-backup) and use current database/browser acceptance.
 - `python3 supabase/scripts/verify_seed.py` (`--staging` for the staging rehearsal): exact all-client scenario, all 20 accepted service answers, ledger, 70 templates, and the Miro model per project: one design board per assigned designer due on or before the project, rounds and client versions whose statuses follow the project status, placeholder Miro links, designer board isolation, no designer name in any client-visible row, and a cover on every project that the client can read exactly when it has a client version. It downloads 110 actual files (70 brand files, 25 covers as the agency, 14 client-visible covers as the client, one delivery) and checks each cover's PNG canvas against the `format_catalog` size of the project's leading deliverable.
 - `python3 supabase/scripts/verify_local.py`: final source-backend verification after browser mutations stop.
 

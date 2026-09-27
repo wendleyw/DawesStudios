@@ -5,6 +5,11 @@ unit tests and a production build. `acceptance` creates a disposable local Supab
 GitHub-hosted Ubuntu runner and exercises the real PostgreSQL, Auth, Storage, media and Chromium
 paths. It does not use repository secrets or a linked Supabase project.
 
+The static job also runs local recovery safety tests. Acceptance includes backend fixture-cleanup
+regressions for Playground files/boards and client preferences. Its final read-only foreign-key
+audit detects orphan records even when table counts still match; trigger-disabled fixture cleanup
+must explicitly remove dependent rows.
+
 The acceptance job pins Supabase CLI 2.98.2, matching the validated local CLI version. It starts
 the CLI stack with the repository's migrations and seed, applies the local PostgreSQL permission
 hint compatibility setting, starts the real media worker, and provisions the fixture Auth accounts

@@ -49,7 +49,7 @@ The local `supabase/config.toml` values are the tested behaviour. Carry them ove
 | Auth redirects | `additional_redirect_urls` | `ADDITIONAL_REDIRECT_URLS=https://app.example.com/auth/recovery,https://app.example.com/auth/invite**` |
 | Access-token lifetime | `jwt_expiry = 900` | `JWT_EXPIRY=900`, which bounds the [revocation window](../architecture/permissions.md#revocation-cannot-reach-a-credential-that-was-already-issued) |
 | Public sign-up | `enable_signup = true` (local tests only) | `DISABLE_SIGNUP=true`. The app has no sign-up screen; accounts come from agency invitations. |
-| Email | Inbucket capture | Real `SMTP_*` provider, `ENABLE_EMAIL_AUTOCONFIRM=false` |
+| Email | Inbucket capture | [Resend SMTP](email.md), `ENABLE_EMAIL_AUTOCONFIRM=false` |
 | Anonymous users | disabled | `ENABLE_ANONYMOUS_USERS=false` |
 | Password policy | 12 characters; lower, upper, digit, symbol | Auth service `GOTRUE_PASSWORD_MIN_LENGTH=12`, plus the matching required-character setting (verify on staging) |
 | Max rows per request | `max_rows = 1000` | `PGRST_DB_MAX_ROWS=1000` on the REST service |
@@ -218,7 +218,9 @@ Proxy access logs omit query strings; review upstream service logs for signed UR
   `supabase_admin`, so use the trusted Supabase administrative restore role in the isolated target.
   Reconcile the empty target's default `public` schema before replaying a dump that creates it.
   See the [same-host offline recovery evidence](../verification/preproduction-hardening-2026-09-27.md);
-  it does not replace an off-host HTTP/Auth recovery drill.
+  it does not replace an off-host HTTP/Auth recovery drill. The later
+  [full local recovery rehearsal](../verification/recovery-and-email-2026-09-27.md) verified Auth,
+  current role isolation and all 237 physical file hashes for the live SABRE overlay.
 - **Monitoring:** watch container health (web `/login`, media `/health`), host disk (Postgres
   volume, Storage directory and `media-scratch`), Postgres, Auth and SMTP errors, and the media
   4xx/5xx rates. Miro-hosted board content is outside the application's database/file backups.

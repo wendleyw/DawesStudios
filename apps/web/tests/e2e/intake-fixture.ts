@@ -109,6 +109,7 @@ delete from public.template_drafts where client_id=${id};
 delete from public.brand_templates where client_id=${id};
 delete from public.brand_assets where client_id=${id};
 delete from public.brand_sections where client_id=${id};
+delete from public.board_preferences where client_id=${id};
 delete from public.client_memberships where client_id=${id};
 delete from public.clients where id=${id};
 commit;`;

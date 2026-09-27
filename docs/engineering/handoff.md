@@ -1,63 +1,66 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; integrated work complete, no active writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex; recovery/Resend integrated, no active delegated writers**.
 
 ## Objective and accepted decisions
 
-- Continue production preparation. Latest user request: actionable notifications for agency,
-  designer and client. Miro is the main workflow; no simultaneous-upload/reservation architecture.
-- Actions derive from current workflow state. Reading historical Activity never completes work.
-- No push or deployment authorized. Actual server/domain/SMTP configuration remains unknown.
+- Continue production preparation and preserve role-specific workflow notifications.
+- Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
+- Resend is the selected production email provider, through Supabase Auth SMTP. No direct SDK.
+- Server, public domain, verified sender and credentials remain unknown. No push/deployment or
+  external email delivery performed. Configure secrets only on the target host.
 - Preserve live SABRE 10 clients / 68 projects / 50 SABRE and canonical staging 10/25.
-- Never run migration down or db reset. Preexisting `login.png` deletion remains unrelated/uncommitted.
+- Never migration down/db reset. Preexisting `login.png` deletion remains unrelated/uncommitted.
 
-## Completed implementation
+## Integrated implementation
 
-- `7231a52`: unified Comments and scoped drafts.
-- `6f6afd1`: coordinated repository cleanup; [folder audit](repository-cleanup-2026-09-27.md).
-  Separate cleanup thread `01a0e4a2-8753-7930-a218-89f4122ac00c` released ownership.
-- `8fdd098`: project details split into credit and Drive dialogs with existing behavior preserved.
-- `6340e66`: nine kinds of role-specific pending actions, separate exact bell counts, pagination,
-  links to authorized briefing/board/round/version/Files/credit destinations, Safari focus return.
-  Internal action labels name the board, so several boards on one project are distinguishable.
-- Migrations018/019/020 applied to both local and filesystem staging via forward commands only.
-  Agency review survives designer departure; removed designers lose access. Client recipient
-  routing preserves requester/notify_all/fallback. No client billing acceptance action was added.
-- Production edge: nginx renderer with TLS hosts, public API allowlist, request/body/time limits,
-  trusted forwarding headers, query-free access logs, WebSocket and private Auth admin gateway.
-- CI: guarded disposable backend/Auth/media, pgTAP, production Chromium and exact count comparison.
-  Filesystem staging includes local Mailpit at56115 and explicit acceptance mail selection.
-- All delegates finished; portable reports are in `docs/engineering/handoffs/2026-09-27-*.md`.
+- Prior `695a7e2`: production proxy and CI gates; `6340e66`: actionable role notifications.
+  [Prior checkpoint](history/handoff-2026-09-27-before-recovery.md) retains their detailed evidence.
+- Separate UI thread committed `f845a5d`, opt-in compact project header preview. Preserve it;
+  its own [report](handoffs/2026-09-27-compact-project-header.md) owns the visual evidence.
+- Resend host SMTP fragment and [email runbook](../operations/email.md) prepared. Invitation and
+  recovery APIs stay in Supabase Auth; actual delivery is still a target-environment gate.
+- Backup format2 retains owners/ACLs, checks all foreign keys, records image versions and binds
+  dump/archive hashes plus every physical file's hash and a delivery-download expectation.
+- Restore uses a unique owned project/workdir/ports, current Miro RLS and four actual Auth logins.
+  Cleanup checks resource identities; retained verification binds the exact backup. It does not
+  reuse the older fixed clone. Logs/backups remain ignored and private.
+- Found historical fixture-cleanup orphans: 4 client preferences and 7 empty Playground boards.
+  Archived all 11 rows plus the original full backup before guarded removal; no valid content
+  removed. Fixed fixture-dependent cleanup, including Playground Storage objects. SABRE checkpoint
+  untouched. Added safety tests, fixture regressions and final CI foreign-key audit.
 
-## Checks executed in this session
+## Checks executed in this task
 
-- Web gate: 127 files / 1,249 unit tests; types/lint/format pass. Media: 31 tests pass.
-- Canonical database: 27 files / 1,108 pgTAP assertions pass, including56 action assertions.
-- Production web/media Docker images built and healthy.
-- Existing Chromium: 53 cases pass. New notifications+Drive:4 cases pass across Chromium/WebKit;
-  complete notification flow passed again in both engines after board-label correction.
-- WebKit Comments, mobile/focus and notification-read cases:3 pass. Mobile page/popover Axe pass.
-- Initial harness races (landing redirect, animation/resize, nonexact labels) fixed with stable
-  destination/layout waits and exact selectors. No assertion or permission check was removed.
-- Proxy:9 tests pass; real filesystem Supabase behind disposable TLS proxy:7 checks pass.
-- CI bootstrap:4 tests pass; YAML/Python parse. npm audit0 advisories; GitLeaks551commits/source clean.
-- Strict seed verifier:110 downloads,10 client logins, designer/tenant/credit checks pass.
-- Final eight-table baseline matches:10clients/25projects/12campaigns/30briefings/29boards/
-  30rounds/22clientversions/155notifications. Live remains10/68/50 with0 acceptance projects.
-- Final images inspected. [Action evidence](../verification/action-notifications-2026-09-27.md);
-  [production evidence](../verification/production-refactor-2026-09-27.md). AGENTS/CLAUDE identical.
+- Web gate: 127 files / 1,249 unit tests; types/lint/format pass.
+- Recovery safety: 11 tests pass. CI guard tests:4 pass. Proxy render:3 pass; Docker proxy checks
+  were not rerun (six skipped). Python parse, diff whitespace and AGENTS/CLAUDE sync pass.
+- Full isolated HTTP/Auth/Storage restore passed:10clients/68projects/72designboards/13Authusers,
+  237Storageobjects,81creditentries,totalbalance1278; all118foreignkeys valid.
+- Agency/client/both designers:4 password logins pass; agency scope, client tenant/internal-data
+  isolation and exact designer board scopes pass. Authenticated delivery hash and all237physical
+  file hashes match. No exhaustive xattr comparison rerun in this task.
+- Source/old-clone16container IDs/start times unchanged and allrunning. Successful and failed owned
+  drill stacks cleaned up. Local preserved data remains10/68/50; canonical staging was untouched.
+- Fixture cleanup:2 backend-only Playwright regressions pass with real persisted Storage bytes
+  and preferences. New spec passes targeted types/lint/format. Retained-target recheck passes;
+  its clone was removed after ownership validation. Final live counts and all118FK match.
+- Live `/login` returns200. No Acceptance clients/projects remain. Preview evidence docs being
+  updated by the separate UI thread are excluded from this task commit.
+- [Current evidence](../verification/recovery-and-email-2026-09-27.md). Original backup/orphan archive:
+  `supabase/.backups/20260927-recovery-hardening/`; successful backup:
+  `supabase/.backups/20260927-recovery-verified/`. Keep these ignored operational artifacts.
 
 ## Environment and next concrete work
 
-- Live app3003/API55421/DB55422/media55430 left available; `/login` responds200.
-- Filesystem staging stopped with all data/volumes retained. Ports when resumed:
-  API56110/DB56111/web3113/media56114/mail56115. Already provisioned; do not re-seed.
-- Remaining release gates require actual target-host evidence: DNS/TLS issuance/renewal, external
-  SMTP delivery, off-host restore and forced monitoring alerts, real Miro sharing permissions,
-  and first hosted CI run. Local checks do not constitute production deployment.
-- Firefox failed before app navigation because its profile could not launch on this host. A broader
-  WebKit workspace scan reported an external Miro response-header warning; core flows above pass.
-  Investigate these environment/third-party limits before claiming complete three-engine coverage.
-- Next: obtain target-host configuration and execute the [release runbook](../operations/production.md)
-  when deployment is explicitly requested. Keep current application changes and data intact.
-- [Previous checkpoint](history/handoff-2026-09-27-pre-production-refactor.md).
+- Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
+- Filesystem staging remains stopped with data/volumes retained. When resumed:
+  API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.
+- Recovery/Resend task is verified and committed separately from the compact-header preview.
+  The unrelated `login.png` deletion and that thread's pending preview docs are preserved.
+- Then obtain target server/domain/sender configuration and use the [production runbook](../operations/production.md)
+  when deployment is explicitly requested. Verify Resend delivery with controlled recipients.
+- Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,
+  monitoring alerts, actual Miro sharing and first hosted CI execution. Local restore is not
+  an off-host or production claim. Firefox launch and external Miro WebKit warning remain as
+  recorded in the prior checkpoint; complete three-engine coverage is not claimed.

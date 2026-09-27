@@ -80,13 +80,11 @@ Normal provisioning keeps a project's existing cover and reports how many it kep
 
 `verify_local.py` runs SQL assertions/lint, real Auth/Storage checks, four-session Realtime boundaries, media behavior/integration/dependency checks, then verifies the final exact dataset and downloads actual files under client sessions. It writes `backend-evidence.json` and `seed-evidence.json`; web build/browser/visual evidence is separate. Run `python3 supabase/scripts/verify_seed.py` for the read-only all-client dataset check.
 
-Concurrency tests are intentionally restricted to `http://127.0.0.1:55521`, the disposable restore-drill project:
-
-```sh
-python3 supabase/tests/concurrent_workflows_test.py
-```
-
-They test simultaneous acceptance/overdraft, allocation/fulfillment/correction, publication/review/delivery races, stale draft saves and duplicate submission. They add test records only to the disposable stack, so run canonical seed assertions before these mutations or reset that disposable stack afterward.
+The historical `supabase/tests/concurrent_workflows_test.py` harness is coupled to the retired
+Versions schema and the older fixed clone at port 55521. Do not run it against current Miro data
+or an existing retained clone. Current database and browser acceptance commands above cover the
+supported workflow; porting the old concurrent HTTP harness requires a separately owned,
+disposable fixture. The new recovery drill below intentionally does not reuse that fixed clone.
 
 ## Storage cleanup: retired Versions bytes
 
@@ -112,15 +110,45 @@ dropped the emptied `published-assets` bucket, its storage policies and
 ## Database, Auth and Storage backup
 
 ```sh
+python3 supabase/scripts/backup_local.py --check-only
 python3 supabase/scripts/backup_local.py --output supabase/.backups/manual-backup
 python3 supabase/scripts/restore_drill.py supabase/.backups/manual-backup
 ```
+
+`--check-only` audits every declared foreign-key relationship without writing data or files. A backup
+also refuses existing orphan rows before creating its destination; validated constraint metadata
+alone does not prove that older trigger-disabled test cleanup preserved referential integrity.
 
 The output directory must not already exist. The backup contains a PostgreSQL custom dump of `public`, `private`, `auth`, `storage` and `supabase_migrations`, plus actual Storage volume bytes, checksums, image version and diagnostic counts. Credentials, audit history, invitation token hashes and Auth password hashes are confidential; backup folders are ignored with restrictive permissions. Encryption and off-host retention must be configured by the production operator.
 
 Storage files require extended attributes. The scripts use GNU tar with xattrs/ACLs and numeric owners; a plain tar copy loses metadata needed by the local Storage backend. Database dumps alone do not include file contents. A dump and later file archive are not one atomic consistency point: pause writes during production backups, or use versioned immutable Storage and record the matching database point.
 
-The drill starts only `dawes-studios-restore-drill` on ports 55521–55524, initializes matching Supabase service schemas, restores application/Auth/Storage data with proper ownership and restores Storage bytes. It then performs actual agency/client password login, exact record comparison, a forbidden private-design query and an authorized PDF download with SHA-256 verification. By default it removes only the drill stack/volumes afterward. `--keep` retains it for inspection; `--verify-only` checks an existing restored drill. Source services and data are never modified by the drill.
+Each drill creates a unique `dawes-restore-<id>` project under the ignored
+`supabase/.restore-drill/runs/` directory and selects an unused local port range. It never reuses
+the older fixed `dawes-studios-restore-drill` stack. Format-2 manifests bind both archive hashes,
+the complete physical-file inventory, and the expected delivery object's byte length and SHA-256.
+Older backups remain preserved but require their historical procedure; create a new backup for
+this drill. The clone must use the source database and Storage images.
+
+The drill restores owners/ACLs through the isolated Supabase administrative role and reconciles
+its empty default `public` schema. It checks database counts/credit totals, four actual password
+logins, agency access, client tenant/internal-data isolation, both designers' board isolation,
+the authenticated delivery download against its expected hash, and every physical file's hash.
+A matching before/after backup count is diagnostic, not a production consistency guarantee.
+
+By default the drill removes its own stack only after comparing recorded Docker resource identities.
+A failed startup or changed resource identity is left for inspection, not automatic deletion.
+`--keep` retains a successfully initialized target; its work directory is printed. Recheck it with:
+
+```sh
+python3 supabase/scripts/restore_drill.py supabase/.backups/manual-backup \
+  --verify-only --workdir "supabase/.restore-drill/runs/dawes-restore-<id>"
+```
+
+Verification rechecks backup hashes, target identity and the exact manifest binding. Logs, target
+metadata and evidence stay in the ignored run directory with restrictive permissions. No source
+stack mutation is part of the drill. The local fixture password is read from `supabase/.env.local`.
+Run safety regressions with `python3 -m unittest discover -s supabase/scripts -p 'test_recovery.py' -v`.
 
 The checked-in [restore evidence](restore-evidence.json) records a successful isolated restoration of the original 10-client/20-project dataset with its real PDF. The richer fixture is separately verified in [seed evidence](seed-evidence.json); those are distinct claims.
 

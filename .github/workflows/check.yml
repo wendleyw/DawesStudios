@@ -26,6 +26,7 @@ jobs:
       - name: Production proxy and CI bootstrap checks
         run: |
           python3 -m unittest discover -s scripts/tests -v
+          python3 -m unittest discover -s supabase/scripts -p 'test_recovery.py' -v
           RUN_PROXY_INTEGRATION=1 python3 -m unittest discover -s deploy/production/tests -v
       - name: Media unit tests
         run: npm --prefix apps/media test
@@ -85,6 +86,7 @@ jobs:
         run: >-
           npm --prefix apps/web run test:e2e -- --project=chromium
           tests/e2e/workspace.spec.ts
+          tests/e2e/fixture-cleanup.spec.ts
           tests/e2e/workspace-actions.spec.ts
           tests/e2e/miro-workspace.spec.ts
           tests/e2e/miro-version-links.spec.ts
@@ -97,4 +99,5 @@ jobs:
         if: always() && steps.baseline.outcome == 'success'
         run: |
           python3 scripts/ci-acceptance.py snapshot after
+          python3 supabase/scripts/backup_local.py --check-only
           python3 supabase/scripts/verify_seed.py

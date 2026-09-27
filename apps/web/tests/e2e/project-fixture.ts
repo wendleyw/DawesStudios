@@ -97,6 +97,30 @@ export async function cleanupTestProject(projectId: string) {
       if (result.error) throw new Error(result.error.message);
     }
   }
+  const playgroundBoards = value(
+    await localAdmin.from("playground_boards").select("id").eq("project_id", projectId),
+  );
+  for (const board of playgroundBoards) {
+    const folders = value(
+      await localAdmin.storage.from("playground-assets").list(board.id, { limit: 1000 }),
+    );
+    if (folders.length === 1000)
+      throw new Error("Acceptance Playground asset listing is incomplete.");
+    for (const folder of folders) {
+      const prefix = `${board.id}/${folder.name}`;
+      const files = folder.id
+        ? [prefix]
+        : value(
+            await localAdmin.storage.from("playground-assets").list(prefix, { limit: 1000 }),
+          ).map((file) => `${prefix}/${file.name}`);
+      if (files.length === 1000)
+        throw new Error("Acceptance Playground asset listing is incomplete.");
+      if (files.length) {
+        const removed = await localAdmin.storage.from("playground-assets").remove(files);
+        if (removed.error) throw new Error(removed.error.message);
+      }
+    }
+  }
   const sql = `begin;
 set local session_replication_role=replica;
 create temporary table acceptance_target as select id,client_id,briefing_id from public.projects where id='${projectId}' and title like 'Acceptance %';
@@ -114,6 +138,8 @@ delete from public.publication_miro_links where project_id in (select id from ac
 delete from public.design_version_miro_links where project_id in (select id from acceptance_target);
 delete from public.design_versions where project_id in (select id from acceptance_target);
 delete from public.design_boards where project_id in (select id from acceptance_target);
+delete from public.playground_items where board_id in (select id from public.playground_boards where project_id in (select id from acceptance_target));
+delete from public.playground_boards where project_id in (select id from acceptance_target);
 delete from public.delivery_files where project_id in (select id from acceptance_target);
 delete from public.project_assets where project_id in (select id from acceptance_target);
 delete from public.project_covers where project_id in (select id from acceptance_target);

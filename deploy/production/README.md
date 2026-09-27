@@ -4,6 +4,9 @@ This directory supplies a public nginx configuration and an isolated TLS test. I
 services, issue certificates or change the host. The application continues to run as the Node.js
 `web` container with the existing media worker and official self-hosted Supabase distribution.
 
+The [Resend SMTP fragment](supabase-smtp.env.example) belongs in the official Supabase distribution's
+`.env`, not the application environment. Follow the [email setup and release checks](../../docs/operations/email.md).
+
 ## Render and install
 
 Use a current supported nginx package with `ssl_reject_handshake` (nginx 1.19.4 or later). Configure
