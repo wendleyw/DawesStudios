@@ -7,8 +7,14 @@ import { formats } from "@/features/briefings/briefing-model";
  * Artwork for the project cards on the board canvas, together with the version and the deliverable
  * type that artwork belongs to.
  *
- * The source is chosen by role, and the private buckets behind it do the real enforcing: working
- * designs live in `public.designs` under `private.can_produce`, their numbering in
+ * A project cover, when one is readable by this viewer, wins over everything else: `public
+ * .project_covers` under its own row-level security (`private.can_produce`, or
+ * `private.can_client_channel` while `client_visible`) already answers "readable by this viewer"
+ * before this module ever sees the row, so the choice below never re-derives that decision from
+ * `profile.role`. A cover is not a version, so a card showing one never carries a version label.
+ *
+ * Otherwise the source is chosen by role, and the private buckets behind it do the real enforcing:
+ * working designs live in `public.designs` under `private.can_produce`, their numbering in
  * `public.design_versions` under the same rule, and what a client may see lives in
  * `public.published_designs` / `public.published_versions` under `private.can_client_channel`. A
  * client never asks for an internal path or an internal version number, and would be refused if it
@@ -20,7 +26,8 @@ import { formats } from "@/features/briefings/briefing-model";
  *
  * The image and the number it is labelled with come out of one query and one selection, so a card
  * can never announce a version it is not actually showing. Where the image is missing — because
- * there is no artwork, or because signing it failed — the version goes with it.
+ * there is no artwork, because signing it failed, or because it is a cover — the version goes with
+ * it (absent for a cover, dropped otherwise).
  */
 
 /**
@@ -49,7 +56,15 @@ type ProjectArtwork = {
   path: string | null;
   version: number | null;
   typeLabel: string | null;
+  /** Set when `path` is a cover's storage path, so the caller signs it against `project-covers`
+   * rather than the role's design bucket, and never treats it as a video asset. */
+  isCover?: boolean;
 };
+
+/** A project's readable cover, as `project_covers.storage_path`, keyed by project id. Board's read
+ * (`board-data.ts`) already scoped the row to what this viewer's role may see through the table's
+ * own row-level security, so every entry here is chosen unconditionally. */
+export type ProjectCoverMap = Record<string, string>;
 
 /** What one card needs, ready to render. */
 export type SignedProjectArtwork = {
@@ -137,21 +152,25 @@ function leadingDesign(designs: VersionArtwork["designs"]) {
  *
  * The type label stands on its own — it describes the work whether or not anything has been drawn
  * yet — while the path and the version are decided together and are returned together or not at
- * all.
+ * all. A readable cover (`covers[projectId]`) always wins here, ahead of any legacy design or
+ * published artwork, and carries no version: `newestArtworkVersion`/`leadingDesign` are not even
+ * consulted for that project. Without a cover, today's rule applies unchanged.
  */
-export function selectProjectArtwork(rows: DeliverableArtwork[]) {
+export function selectProjectArtwork(rows: DeliverableArtwork[], covers: ProjectCoverMap = {}) {
   const chosen: Record<string, ProjectArtwork> = {};
   for (const [projectId, deliverable] of leadingDeliverable(rows)) {
+    const typeLabel = formatTypeLabel(deliverable.format);
+    const coverPath = covers[projectId];
+    if (coverPath) {
+      chosen[projectId] = { path: coverPath, version: null, typeLabel, isCover: true };
+      continue;
+    }
     const newest = newestArtworkVersion(deliverable.versions);
     const design = newest ? leadingDesign(newest.designs) : null;
     chosen[projectId] =
       newest && design
-        ? {
-            path: design.path,
-            version: newest.versionNumber,
-            typeLabel: formatTypeLabel(deliverable.format),
-          }
-        : { path: null, version: null, typeLabel: formatTypeLabel(deliverable.format) };
+        ? { path: design.path, version: newest.versionNumber, typeLabel }
+        : { path: null, version: null, typeLabel };
   }
   return chosen;
 }

@@ -130,6 +130,43 @@ describe("selectProjectArtwork", () => {
     expect(chosen["project-1"].path).toBe("project-1/second-a.png");
   });
 
+  it("prefers a readable cover over any legacy design, and drops the version label", () => {
+    const chosen = selectProjectArtwork(
+      [
+        deliverable({
+          versions: [
+            { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+          ],
+        }),
+      ],
+      { "project-1": "project-covers/project-1/cover.png" },
+    );
+    expect(chosen["project-1"]).toEqual({
+      path: "project-covers/project-1/cover.png",
+      version: null,
+      typeLabel: "Portrait Feed",
+      isCover: true,
+    });
+  });
+
+  it("keeps today's rule when the project has no readable cover", () => {
+    const chosen = selectProjectArtwork(
+      [
+        deliverable({
+          versions: [
+            { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+          ],
+        }),
+      ],
+      { "project-2": "project-covers/project-2/cover.png" },
+    );
+    expect(chosen["project-1"]).toEqual({
+      path: "project-1/one.png",
+      version: 1,
+      typeLabel: "Portrait Feed",
+    });
+  });
+
   it("keeps projects apart", () => {
     const chosen = selectProjectArtwork([
       deliverable({
