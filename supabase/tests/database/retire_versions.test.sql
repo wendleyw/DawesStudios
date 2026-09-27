@@ -41,6 +41,12 @@ select ok(not exists(select 1 from pg_policies where schemaname='storage' and po
 select ok(exists(select 1 from pg_policies where schemaname='storage' and policyname='internal_storage_delete'),'Working files can still be deleted');
 select ok(not exists(select 1 from pg_policies where coalesce(qual,'')||coalesce(with_check,'') ~ '\m(designs|published_designs)\M'),'No policy reads a dropped table');
 select ok(not exists(select 1 from private.sanitized_assets where bucket_id='published-assets'),'No publication attestation is left');
+-- Task 2 (202609270008_drop_published_assets_bucket.sql): the cleanup script emptied the bucket
+-- (`supabase/scripts/cleanup_versions_storage.py --apply`) and this migration dropped the bucket
+-- itself and the private table that only existed to hand the script its inventory.
+select hasnt_table('private','retired_version_objects','The retired-object inventory table is dropped');
+select ok(not exists(select 1 from storage.buckets where id='published-assets'),'The published-assets bucket is dropped');
+select ok(not exists(select 1 from storage.objects where bucket_id='published-assets'),'No published-assets object remains');
 -- Privacy is unchanged: the comment read policies and the designer privacy trigger are still in place.
 select ok(exists(select 1 from pg_policies where tablename='internal_comments' and policyname='internal_comments_read'
   and qual ~ 'can_read_internal_comment'),'Internal comments keep their per-board read policy');

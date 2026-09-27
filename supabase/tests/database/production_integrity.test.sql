@@ -59,9 +59,17 @@ select ok((select pubinsert and pubupdate and not pubdelete and not pubtruncate 
 reset role;
 insert into private.sanitized_assets(bucket_id,storage_path,project_id,sha256,mime_type,file_size,prepared_by,created_at)
 values('delivery-files',md5('dawes:project-2')::uuid::text||'/'||md5('stale-cleanup-test')::uuid::text||'.pdf',md5('dawes:project-2')::uuid,repeat('a',64),'application/pdf',100,md5('dawes:agency')::uuid,now()-interval '25 hours');
+-- Retired Versions cleanup, Task 2: the only test for this exclusion lived in the deleted
+-- video_provenance_attestation.test.sql. `internal-assets` attestations have no TTL -- the
+-- object's lifecycle is Storage's, not this table's, for that bucket -- so this row satisfies
+-- every OTHER staleness condition (discard_requested, older than the 24-hour floor) to prove the
+-- exclusion itself, not merely that a non-stale-looking row is absent.
+insert into private.sanitized_assets(bucket_id,storage_path,project_id,sha256,mime_type,file_size,prepared_by,created_at,discard_requested)
+values('internal-assets',md5('dawes:project-2')::uuid::text||'/'||md5('stale-internal-test')::uuid::text||'.png',md5('dawes:project-2')::uuid,repeat('b',64),'image/png',100,md5('dawes:agency')::uuid,now()-interval '48 hours',true);
 select set_config('request.jwt.claim.role','service_role',true);
 set local role service_role;
 select ok(exists(select 1 from public.list_stale_sanitized_assets() s where s.storage_path=md5('dawes:project-2')::uuid::text||'/'||md5('stale-cleanup-test')::uuid::text||'.pdf'),'Trusted cleanup can enumerate abandoned unreferenced assets');
 select ok(not exists(select 1 from public.list_stale_sanitized_assets() s join public.delivery_files f on f.storage_path=s.storage_path),'Cleanup never selects a registered final delivery');
+select ok(not exists(select 1 from public.list_stale_sanitized_assets() s where s.bucket_id='internal-assets' and s.storage_path=md5('dawes:project-2')::uuid::text||'/'||md5('stale-internal-test')::uuid::text||'.png'),'internal-assets attestations are excluded from the stale sweep even when discard_requested and old enough to otherwise qualify');
 select * from finish();
 rollback;

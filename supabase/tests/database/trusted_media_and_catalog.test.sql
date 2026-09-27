@@ -9,15 +9,26 @@ select is((select count(*)::int from public.format_catalog),25,'Canonical format
 select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
 set local role authenticated;
 select ok(not has_function_privilege('authenticated','public.register_sanitized_asset(uuid,text,text,text,text,bigint,uuid,uuid,text)','execute'),'Browser sessions cannot attest to sanitized bytes');
-select throws_ok($$insert into storage.objects(bucket_id,name,owner_id) values('published-assets',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-output')::uuid::text||'.png',auth.uid()::text)$$,'42501',null,'Agency cannot bypass the worker by uploading publication bytes directly');
+-- Retired Versions, Task 2: `published-assets` no longer exists as a bucket
+-- (`202609270008_drop_published_assets_bucket.sql`), so an agency upload attempt there now fails
+-- on the `storage.objects` bucket foreign key before RLS is ever evaluated -- a stronger
+-- guarantee than the RLS denial this used to assert, and no longer testable as an RLS case.
 select throws_ok($$insert into storage.objects(bucket_id,name,owner_id) values('delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-output')::uuid::text||'.png',auth.uid()::text)$$,'42501',null,'Agency cannot bypass the worker by uploading delivery bytes directly');
 reset role;
-insert into storage.objects(bucket_id,name,metadata) values('published-assets',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-output')::uuid::text||'.png','{"size":100}'),('delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-delivery')::uuid::text||'.png','{"size":100}');
+insert into storage.objects(bucket_id,name,metadata) values('delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-delivery')::uuid::text||'.png','{"size":100}');
 select set_config('request.jwt.claim.role','service_role',true);
 set local role service_role;
+-- `register_sanitized_asset` raises for `p_bucket_id='published-assets'` before it ever checks
+-- whether a matching `storage.objects` row exists, so no fixture object is needed (and none could
+-- exist any more: the bucket itself is gone).
 select throws_ok($$select public.register_sanitized_asset(md5('dawes:project-sabre-campaign-landing-page')::uuid,'published-assets',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-output')::uuid::text||'.png',repeat('a',64),'image/png',100,md5('dawes:agency')::uuid,null,null)$$,'22023','Published design assets are retired','The worker can no longer attest publication bytes');
 select throws_ok($$select public.register_sanitized_asset(md5('dawes:project-sabre-campaign-landing-page')::uuid,'delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-delivery')::uuid::text||'.png',repeat('a',64),'image/png',100,md5('dawes:agency')::uuid,md5('dawes:project-sabre-campaign-landing-page')::uuid,null)$$,'22023','Uploaded designs are retired','A source design is refused');
 select lives_ok($$select public.register_sanitized_asset(md5('dawes:project-sabre-campaign-landing-page')::uuid,'delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-delivery')::uuid::text||'.png',repeat('a',64),'image/png',100,md5('dawes:agency')::uuid,null,null)$$,'Trusted worker can register a sanitized delivery file');
+-- Retired Versions cleanup, Task 2: the only test for the delivery-files video refusal lived in
+-- the deleted video_asset_registration.test.sql. `delivery-files` never widened for video (only
+-- `internal-assets`/`published-assets` did), so the MIME gate still raises before the path is
+-- even checked against `storage.objects`.
+select throws_ok($$select public.register_sanitized_asset(md5('dawes:project-sabre-campaign-landing-page')::uuid,'delivery-files',md5('dawes:project-sabre-campaign-landing-page')::uuid::text||'/'||md5('trusted-delivery-video')::uuid::text||'.mp4',repeat('a',64),'video/mp4',100,md5('dawes:agency')::uuid,null,null)$$,'P0001','Unsupported sanitized delivery type','A delivery file still refuses video');
 reset role;
 select set_config('request.jwt.claim.role','authenticated',true);
 update public.briefings set direction='{}' where id=md5('dawes:pending-1')::uuid;

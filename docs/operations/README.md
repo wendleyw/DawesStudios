@@ -90,6 +90,27 @@ python3 supabase/tests/concurrent_workflows_test.py
 
 They test simultaneous acceptance/overdraft, allocation/fulfillment/correction, publication/review/delivery races, stale draft saves and duplicate submission. They add test records only to the disposable stack, so run canonical seed assertions before these mutations or reset that disposable stack afterward.
 
+## Storage cleanup: retired Versions bytes
+
+`202609270007_retire_versions_schema.sql` deleted the legacy per-deliverable Versions rows and
+recorded every Storage path they referenced in `private.retired_version_objects` — a migration
+cannot delete Storage bytes, only Postgres rows. `supabase/scripts/cleanup_versions_storage.py`
+is the one-time follow-up that deletes those bytes through the Storage API:
+
+```sh
+python3 supabase/scripts/cleanup_versions_storage.py            # dry run: prints counts only
+python3 supabase/scripts/cleanup_versions_storage.py --apply    # deletes through the Storage API
+```
+
+It removes (a) every path `private.retired_version_objects` still has a matching object for, (b)
+every remaining object in the (now retired) `published-assets` bucket, and (c) any `internal-assets`
+object at least 24 hours old that no `project_assets` row references and that (a) does not already
+cover. It never touches `project_assets`, `project-covers` or `delivery-files` objects, is
+idempotent (a dry run after `--apply` reports zero), and refuses to run against a non-local URL the
+same way `local_stack.py`/`sabre_demo.py` do. `202609270008_drop_published_assets_bucket.sql` then
+dropped the emptied `published-assets` bucket, its storage policies and
+`private.retired_version_objects` itself.
+
 ## Database, Auth and Storage backup
 
 ```sh
