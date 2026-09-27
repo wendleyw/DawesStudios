@@ -94,6 +94,9 @@ python3 supabase/scripts/sabre_demo.py status
 python3 supabase/scripts/sabre_demo.py apply
 ```
 
+`status` reads the database without signing in, prints the report and writes it to the ignored
+`supabase/.local/sabre-demo/report.json`. `remove` also runs without user sessions.
+
 Creation checkpoints live in the ignored mode-0600 `state.json`. Keep that file and the original
 integrity record. Most workflow operations use existing idempotency keys; a crash between a
 non-idempotent create response and its checkpoint requires inspecting saved steps and matching
@@ -116,7 +119,10 @@ python3 supabase/scripts/sabre_demo.py backfill
 
 It adds only what is missing (a board per assigned designer, a round and client-version history
 when a project has neither, a cover) through the same RPCs as `apply`, then restores each project's
-status, `updated_at` and `delivered_at`, and marks the notifications those RPCs raised as read. It
+status, `updated_at` and `delivered_at`, and marks the notifications those RPCs raised as read.
+Generated boards, rounds, client versions, reviews and comments are dated inside the project's
+timeline: on or before its due date, before its delivery day and before today (`apply` does the
+same). A backfill completed under an older dating rule re-dates only the rows its layer added. It
 refuses to finish silently if clients, campaigns, briefings, projects, deliverables, assignments,
 credits, project assets or delivery files changed. Re-running resumes; a completed backfill only
 prints `status`. The backfill saves its own before/after snapshot in `state.json` as a second
@@ -125,7 +131,7 @@ rollback layer, because the original checkpoint predates the Miro tables.
 ## Verification and removal
 
 ```sh
-python3 -m unittest supabase/tests/test_sabre_demo.py -v
+python3 -m unittest supabase/tests/test_sabre_demo.py supabase/demo/sabre/test_sabre_rollback.py -v
 python3 supabase/tests/sabre_demo_http_test.py
 cd apps/web
 npx playwright test tests/e2e/sabre-demo.spec.ts --project=chromium
@@ -153,7 +159,10 @@ python3 supabase/scripts/sabre_demo.py remove
 ```
 
 Removal requires the current SABRE snapshot to match the completed overlay (and, after a backfill,
-the backfill's snapshot, which in turn must continue from the overlay's). It refuses if newer
+the backfill's snapshot, which in turn must continue from the overlay's). Rows are compared on the
+columns both snapshots have: a column a later migration added matches while it is still null, and
+a dropped column is ignored and not restored. The overlay checkpoint covers the monthly credit
+tables, so removal restores `credit_months` together with `credit_accounts`. It refuses if newer
 work exists, including comments or read-state changes, so later testing is not silently discarded.
 Stop mutations before removal. The local-only rollback removes added primary keys, restores
 modified original rows and then removes only added Storage paths; it never resets another client
@@ -171,9 +180,13 @@ old checkpoint, in addition to protecting newer Playground work already recorded
 Do not rewrite the checkpoint, remove new content or bypass the guard to force removal. Reconcile
 schema and every newer asset/folder/Playground change explicitly before planning any future rollback.
 
-The same applies after `202609270007`: the saved overlay snapshot still lists the dropped
-`public.designs` and `public.published_designs` and the legacy rows the migration deleted. Scope
-comparisons ignore tables that are no longer in scope, but the overlay layer no longer matches the
-backfill's starting point, so `remove --dry-run` stops with "SABRE changed between population and
-the Miro backfill" before any write. That refusal is expected. The pre-backfill checkpoint is kept
-as the ignored `state.pre-miro-backfill-2026-09-27.json`.
+**The current local overlay (applied 2026-09-23) cannot be removed with the guarded `remove`.**
+Its overlay layer no longer matches the backfill's starting point, for three reasons:
+`202609270007` deleted the legacy rows the checkpoint records, the schema gained columns and
+tables since then, and manual work was done between the layers (12 Playground boards and a test
+board with two client versions on Retail Partner Introduction). `remove --dry-run` stops before any
+write with "SABRE changed between population and the Miro backfill". Do not rebaseline this
+checkpoint. It is superseded by the approved Phase 5 fresh reset followed by `apply`, which writes
+a new, valid checkpoint. The old checkpoint files (`state.json`,
+`state.pre-miro-backfill-2026-09-27.json`, `state.pre-incident-2026-09-26.json`) are kept for
+reference.

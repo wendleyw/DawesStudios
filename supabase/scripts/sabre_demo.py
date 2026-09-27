@@ -1,7 +1,7 @@
 """Prepare, populate, inspect and safely remove the local SABRE agency demonstration."""
 import argparse
 import base64
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -14,7 +14,7 @@ import uuid
 
 from sabre_demo_state import (ROOT, CLIENT_ID, STATE_PATH, STATE_DIR, SCOPES, assert_local,
                              snapshot, save, fingerprint, difference, rollback_sql, sql,
-                             layer_tables, restrict)
+                             layer_tables, rows_match, snapshot_match)
 
 SOURCE = ROOT / 'supabase/demo/sabre'
 PLAN = json.loads((SOURCE / 'plan.json').read_text())
@@ -60,8 +60,25 @@ def miro_history(status, index):
     return (['changes_requested'] if two else []) + [last]
 
 
+def history_times(start, end, cycles):
+    """(round sent, version shared) per cycle, spread evenly from `start` to `end`.
+
+    Every time falls on or before `end` (at 20:00 UTC at the latest: a review follows a share by
+    three hours), so a history never runs past the project's due date or delivery."""
+    start = min(start, end)
+    span, slots = (end - start).days, 2 * cycles + 1
+    def at(slot, hour, cycle):
+        return datetime.combine(start + timedelta(days=span * slot // slots), time(hour), timezone.utc) + timedelta(hours=6 * cycle)
+    return [(at(2 * c + 1, 9, c), at(2 * c + 2, 11, c)) for c in range(cycles)]
+
+
+# Version of the history dating rule; a completed backfill dated under an older rule is re-dated.
+HISTORY_DATING = 2
+
+
 class Demo:
-    def __init__(self):
+    def __init__(self, sign_in=True):
+        """`sign_in=False` (status, remove) uses only SQL and the service key: no user sessions."""
         env = dict(line.split('=', 1) for line in (ROOT / 'supabase/.env.local').read_text().splitlines() if '=' in line and not line.startswith('#'))
         self.api = env['SUPABASE_URL']
         assert_local(self.api)
@@ -69,7 +86,8 @@ class Demo:
         self.service = env['SUPABASE_SERVICE_ROLE_KEY']
         self.tokens = {'service': self.service}
         self.users = {}
-        for role, email in [('agency', 'studio@dawes.local'), ('client', 'sabre@client.dawes.local'), ('designer', 'designer@dawes.local'), ('designer2', 'designer2@dawes.local')]:
+        accounts = [('agency', 'studio@dawes.local'), ('client', 'sabre@client.dawes.local'), ('designer', 'designer@dawes.local'), ('designer2', 'designer2@dawes.local')]
+        for role, email in accounts if sign_in else []:
             session = self.request('/auth/v1/token?grant_type=password', {'email': email, 'password': env['DEMO_PASSWORD']}, role='service')
             self.tokens[role] = session['access_token']
             self.users[role] = session['user']['id']
@@ -240,6 +258,7 @@ class Demo:
         self.comment(key + ':internal', project, 'Demo production note: keep the headline hierarchy consistent across formats and check the safe area before the studio review.', producer, 'internal')
         # Existing projects keep their status; new projects move through the real workflow to their stage.
         self.populate_miro(p, project, index, preserve=bool(p.get('existing')))
+        self.backdate(p, project)
         if p['stage'] in ('approved', 'delivered') and self.project_row(project)['status'] == 'approved':
             deliver_files = []
             for di, deliverable in enumerate(deliverables):
@@ -312,7 +331,7 @@ class Demo:
                 continue
             version_key = f'{key}:v{cycle}'
             version = self.once('miro-share:' + version_key, lambda: self.rpc('share_miro_version', {'p_project_id': project,
-                'p_url': miro_url(f'{key}:board:0', version_key), 'p_source_round': rounds[cycle % len(rounds)],
+                'p_url': miro_url(f'{key}:board:{cycle % len(rounds)}', version_key), 'p_source_round': rounds[cycle % len(rounds)],
                 'p_note': f'Version {cycle + 1} of {p["title"]}: ' + ('spacing refined after your review.' if cycle else 'please review the composition and message across the requested formats.'),
                 'p_idempotency_key': uid('miro-share:' + version_key)}))
             self.comment('miro-client:' + version_key, project, 'Demo client feedback: the image feels right. Please check the headline spacing in the narrow format.', 'client', 'client', version)
@@ -328,6 +347,50 @@ class Demo:
             art = self.artworks[p['artwork'][0][0][0]]['png']
             self.once('miro-cover:' + key, lambda: self.request(f'/covers/prepare?projectId={project}&visible={str(visible).lower()}',
                 Path(art).read_bytes(), media=True, mime='image/png'))
+
+    def backdate(self, p, project, allowed=None):
+        """Date a project's generated boards, rounds, client versions, reviews and comments inside its
+        own timeline: on or before its due date, before its delivery day and before today, rather
+        than on the day the script ran. A project that starts later is dated yesterday.
+
+        Only rows recorded in this project's `miro-*` steps are touched, and with `allowed` (the ids
+        a rollback layer added) only those. Values are absolute, so re-running is idempotent."""
+        key, steps = p['key'], self.state['steps']
+        history = steps.get('miro-plan:' + key) or []
+        row = json.loads(sql(f"select row_to_json(t) from (select start_date, due_date, delivered_at, created_at from public.projects where id='{uuid.UUID(project)}' and client_id='{CLIENT_ID}') t;"))
+        limits = [date.today() - timedelta(days=1)] + [date.fromisoformat(row['due_date'])] * bool(row['due_date'])
+        if row['delivered_at']:
+            limits.append(datetime.fromisoformat(row['delivered_at']).date() - timedelta(days=1))
+        end = min(limits)
+        start = date.fromisoformat(row['start_date']) if row['start_date'] else datetime.fromisoformat(row['created_at']).date()
+        statements = []
+        def stamp(table, columns, column, value, when):
+            if value and (allowed is None or value in allowed):
+                sets = ','.join(f"{c}='{when.isoformat()}'" for c in columns)
+                statements.append(f"update {table} set {sets} where {column}='{uuid.UUID(value)}';")
+        for name, value in steps.items():
+            if name.startswith(f'miro-board:{key}:'):
+                stamp('public.design_boards', ['created_at', 'updated_at'], 'id', value, datetime.combine(min(start, end), time(8), timezone.utc))
+        for cycle, ((sent, shared), decision) in enumerate(zip(history_times(start, end, len(history)), history)):
+            bi = 0
+            while (round_id := steps.get(f'miro-round:{key}:c{cycle}:b{bi}')):
+                round_key = f'{key}:c{cycle}:b{bi}'
+                stamp('public.design_versions', ['created_at'], 'id', round_id, sent)
+                stamp('public.design_version_miro_links', ['updated_at'], 'version_id', round_id, sent)
+                stamp('public.internal_comments', ['created_at'], 'id', steps.get('comment:miro-round-note:' + round_key), sent + timedelta(hours=1))
+                bi += 1
+            version = steps.get(f'miro-share:{key}:v{cycle}') if decision else None
+            if version:
+                stamp('public.published_versions', ['published_at'], 'id', version, shared)
+                stamp('public.publication_miro_links', ['updated_at'], 'publication_id', version, shared)
+                stamp('private.miro_share_requests', ['created_at'], 'publication_id', version, shared)
+                stamp('public.client_comments', ['created_at'], 'id', steps.get(f'comment:miro-client:{key}:v{cycle}'), shared + timedelta(hours=1))
+                stamp('public.client_comments', ['created_at'], 'id', steps.get(f'comment:miro-reply:{key}:v{cycle}'), shared + timedelta(hours=2))
+                if decision != 'pending':
+                    stamp('public.publication_reviews', ['reviewed_at'], 'publication_id', version, shared + timedelta(hours=3))
+        if statements:
+            # Replica role: client versions are immutable to the product, not to a fixture date fix.
+            sql('begin; set local session_replication_role=replica;\n' + '\n'.join(statements) + '\ncommit;')
 
     def apply(self, canary=False):
         self.prepare(canary)
@@ -361,6 +424,17 @@ class Demo:
             raise RuntimeError('The Miro backfill needs the completed SABRE overlay.')
         backfill = self.state.get('backfill')
         if backfill and backfill['phase'] == 'complete':
+            if backfill.get('dated') != HISTORY_DATING:
+                # A backfill completed before dates were fixed: correct only the rows it added.
+                current = snapshot()
+                if not snapshot_match(backfill['after'], current, layer_tables(backfill['before'], backfill['after'])):
+                    raise RuntimeError('SABRE changed after the Miro backfill; its dates were not corrected.')
+                added = {str(row.get('id') or row.get('version_id') or row.get('publication_id'))
+                         for change in difference(backfill['before'], backfill['after']).values() for row in change['added']}
+                for p in self.state['project_plan']:
+                    self.backdate(p, self.project_id(p), added)
+                backfill.update(after=snapshot(), dated=HISTORY_DATING)
+                save(self.state)
             self.status()
             return
         if not (STATE_DIR / 'rendered/index.json').exists():
@@ -371,14 +445,15 @@ class Demo:
             save(self.state)
         for index, p in enumerate(self.state['project_plan']):
             self.populate_miro(p, self.project_id(p), index, preserve=True)
+            self.backdate(p, self.project_id(p))
             print(f'{index + 1:02}/{len(self.state["project_plan"])}  {p["title"]} — Miro model ready', flush=True)
         # The RPCs notify the client and studio as if the history happened today; it did not.
         self.once('miro-notifications-read', lambda: int(sql(
             f"with seen as (update public.notifications set read_at=created_at where client_id='{CLIENT_ID}' and read_at is null "
             f"and created_at>='{backfill['started_at']}' returning 1) select count(*) from seen;")))
         after = snapshot()
-        changed = [t for t in BACKFILL_PROTECTED if fingerprint(backfill['before']['rows'][t]) != fingerprint(after['rows'][t])]
-        backfill.update(after=after, phase='complete', protected_changes=changed)
+        changed = [t for t in BACKFILL_PROTECTED if not rows_match(backfill['before'], after, [t])]
+        backfill.update(after=after, phase='complete', protected_changes=changed, dated=HISTORY_DATING)
         save(self.state)
         if changed:
             raise RuntimeError('The backfill changed protected tables: ' + ', '.join(changed))
@@ -430,11 +505,11 @@ class Demo:
             current = snapshot()
             before, after = layers[-1]
             tables = layer_tables(before, after)
-            if fingerprint(restrict(current, tables)) != fingerprint(restrict(after, tables)) or fingerprint(current['storage']) != fingerprint(after['storage']):
+            if not snapshot_match(after, current, tables):
                 raise RuntimeError('SABRE changed after population. Removal stopped to preserve newer work; compare the saved before/after snapshots first.')
             for (lower_before, lower_after), (upper_before, _) in zip(layers, layers[1:]):
                 tables = layer_tables(lower_before, lower_after)
-                if fingerprint(restrict(upper_before, tables)) != fingerprint(restrict(lower_after, tables)) or fingerprint(upper_before['storage']) != fingerprint(lower_after['storage']):
+                if not snapshot_match(lower_after, upper_before, tables):
                     raise RuntimeError('SABRE changed between population and the Miro backfill. Removal stopped to preserve that work; compare the saved snapshots first.')
             print(json.dumps([{table: {kind: len(rows) for kind, rows in change.items()} for table, change in difference(before, after).items() if any(change.values())}
                               for before, after in layers], indent=2))
@@ -446,10 +521,10 @@ class Demo:
         # Newest layer first; each layer is one transaction, so an interrupted removal resumes.
         for before, after in reversed(layers):
             tables = layer_tables(before, after)
-            current_rows = restrict(snapshot(), tables)
-            if fingerprint(current_rows) == fingerprint(restrict(after, tables)):
-                sql(rollback_sql(before, after))
-            elif fingerprint(current_rows) != fingerprint(restrict(before, tables)):
+            current = snapshot()
+            if rows_match(after, current, tables):
+                sql(rollback_sql(before, after, current.get('columns')))
+            elif not rows_match(before, current, tables):
                 raise RuntimeError('Removal found unexpected database changes; storage cleanup stopped.')
         original = layers[0][0]
         old_paths = {(o['bucket'], o['path']) for o in original['storage']}
@@ -462,7 +537,7 @@ class Demo:
         for before, after in layers:
             tables = [t for t in layer_tables(before, after) if t not in seen]
             seen.update(tables)
-            if fingerprint(restrict(current, tables)) != fingerprint(restrict(before, tables)):
+            if not rows_match(before, current, tables):
                 raise RuntimeError('Removal did not match the original SABRE snapshot; retain the state file for recovery.')
         if fingerprint(current['storage']) != fingerprint(original['storage']):
             raise RuntimeError('Removal did not match the original SABRE snapshot; retain the state file for recovery.')
@@ -476,7 +551,8 @@ def main():
     parser.add_argument('--canary', action='store_true', help='Exercise one new project before the complete overlay.')
     parser.add_argument('--dry-run', action='store_true', help='Inspect guarded removal without writing.')
     args = parser.parse_args()
-    demo = Demo()
+    # `status` and `remove` need no user session; `status` writes supabase/.local/sabre-demo/report.json.
+    demo = Demo(sign_in=args.action in ('prepare', 'apply', 'backfill'))
     if args.action == 'prepare': demo.prepare(args.canary)
     elif args.action == 'apply': demo.apply(args.canary)
     elif args.action == 'backfill': demo.backfill()

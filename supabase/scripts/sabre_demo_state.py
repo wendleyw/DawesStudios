@@ -88,7 +88,9 @@ def snapshot():
     pks = json.loads(sql("select json_object_agg(tab,cols) from (select n.nspname||'.'||c.relname tab,array_agg(a.attname order by x.ord) cols from pg_constraint p join pg_class c on c.oid=p.conrelid join pg_namespace n on n.oid=c.relnamespace cross join lateral unnest(p.conkey) with ordinality x(attnum,ord) join pg_attribute a on a.attrelid=c.oid and a.attnum=x.attnum where p.contype='p' group by n.nspname,c.relname) t;"))
     roots = [CLIENT_ID] + [r['id'] for t in ['public.projects', 'public.briefings', 'public.playground_boards'] for r in rows[t]]
     storage = json.loads(sql("select coalesce(json_agg(json_build_object('bucket',bucket_id,'path',name,'size',metadata->>'size') order by bucket_id,name),'[]') from storage.objects where split_part(name,'/',1) in (" + ','.join(quote(r) for r in roots) + ');'))
-    return {'rows': rows, 'keys': {table: pks[table] for table in SCOPES}, 'storage': storage}
+    columns = json.loads(sql("select json_object_agg(tab,cols) from (select table_schema||'.'||table_name tab,array_agg(column_name::text order by ordinal_position) cols from information_schema.columns group by 1) t;"))
+    return {'rows': rows, 'keys': {table: pks[table] for table in SCOPES}, 'storage': storage,
+            'columns': {table: columns[table] for table in SCOPES}}
 
 
 def save(state):
@@ -117,6 +119,35 @@ def restrict(value, tables):
     return {table: value['rows'].get(table) for table in tables}
 
 
+def rows_match(saved, current, tables):
+    """Whether `current` still holds exactly the rows `saved` recorded, across schema changes.
+
+    Rows compare on the columns both snapshots have. A column a later migration added (absent from
+    every saved row) matches only while it is null in the current row; a dropped column is ignored.
+    A table with no saved rows cannot say which columns it had, so it matches only an empty table.
+    """
+    for table in tables:
+        old, new = saved['rows'].get(table) or [], current['rows'].get(table) or []
+        if len(old) != len(new):
+            return False
+        if not old:
+            continue
+        old_columns = set().union(*old)
+        new_columns = set().union(*new)
+        if any(row.get(column) is not None for row in new for column in new_columns - old_columns):
+            return False
+        shared = old_columns & new_columns
+        def project(rows): return sorted(json.dumps({k: row.get(k) for k in shared}, sort_keys=True) for row in rows)
+        if project(old) != project(new):
+            return False
+    return True
+
+
+def snapshot_match(saved, current, tables):
+    """`rows_match` plus the Storage objects, which carry no schema."""
+    return rows_match(saved, current, tables) and fingerprint(saved['storage']) == fingerprint(current['storage'])
+
+
 def difference(before, after):
     changes = {}
     for table in layer_tables(before, after):
@@ -130,7 +161,11 @@ def difference(before, after):
     return changes
 
 
-def rollback_sql(before, after):
+def rollback_sql(before, after, columns=None):
+    """One transaction that deletes the rows a layer added and restores the rows it changed.
+
+    `columns` (a current snapshot's column lists) limits restored columns to those that still exist,
+    so a column dropped since the checkpoint does not break the restore."""
     changes = difference(before, after)
     statements = ['begin;', 'set local session_replication_role=replica;']
     for table in reversed(list(changes)):
@@ -141,9 +176,10 @@ def rollback_sql(before, after):
     for table in changes:
         keys = before['keys'][table]
         for row in changes[table]['changed']:
-            columns = [c for c in row if c not in keys]
-            names = ','.join('"' + c + '"' for c in columns)
-            values = ','.join('original."' + c + '"' for c in columns)
+            present = (columns or {}).get(table)
+            restored = [c for c in row if c not in keys and (present is None or c in present)]
+            names = ','.join('"' + c + '"' for c in restored)
+            values = ','.join('original."' + c + '"' for c in restored)
             where = ' and '.join(f't."{k}"=original."{k}"' for k in keys)
             statements.append(f'update {table} t set ({names})=({values}) from json_populate_record(null::{table},{quote(json.dumps(row))}) original where {where};')
     statements.append('commit;')
