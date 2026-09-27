@@ -10,12 +10,14 @@ test.describe.configure({ mode: "serial" });
 const clientBoard = "https://miro.com/app/board/uXjVClientE2E=/?moveToWidget=111";
 const studioBoard = "https://miro.com/app/board/uXjVStudioE2E=/?moveToWidget=222";
 let projectId = "";
+let clientId = "";
 let designerEmail = "";
 
 test.beforeAll(async () => {
   const agency = await localAgency();
   const fixture = await createProductionFixture(agency);
   projectId = fixture.projectId;
+  clientId = fixture.clientId;
   designerEmail = (await localAdmin.auth.admin.getUserById(fixture.designerId)).data.user!.email!;
   const board = await agency.rpc("create_design_board", {
     p_project_id: projectId,
@@ -56,12 +58,23 @@ test("the client works in Miro beside the project's tools", async ({ page, conte
   // With a board shown, the Playground opens as the asset strip.
   await page.getByRole("button", { name: "Playground", exact: true }).click();
   await expect(page.getByRole("button", { name: "Open full Playground" })).toBeVisible();
-  // The seeded client's Brand Hub has no folders, so every asset lands in one "Unfiled" album;
-  // its first (alphabetically) file is a PNG, which the clipboard mode can copy.
+  // Brand Hub files outside a folder land in the "Unfiled" album, sorted by title. The file to copy
+  // is the first PNG there, read through the client's own session, so the canonical seed and the
+  // SABRE overlay (whose brand files differ) both name a file the clipboard mode can copy.
+  const assets = await (
+    await localCaller(credentials.client)
+  )
+    .from("brand_assets")
+    .select("name,mime_type,folder_id")
+    .eq("client_id", clientId);
+  expect(assets.error).toBeNull();
+  const png = assets
+    .data!.filter((asset) => asset.folder_id === null && asset.mime_type === "image/png")
+    .map((asset) => asset.name)
+    .sort((a, b) => a.localeCompare(b))[0];
+  expect(png, "the client's Brand Hub has an unfiled PNG").toBeTruthy();
   await page.getByRole("button", { name: "Unfiled" }).click();
-  await page
-    .getByRole("button", { name: "Copy Campus Connections - Campaign photography" })
-    .click();
+  await page.getByRole("button", { name: `Copy ${png}`, exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Copied — paste in Miro with ⌘V / Ctrl+V");
   // A reload keeps the board.
   await page.reload();
