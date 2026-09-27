@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT (night). Owner: **Claude Code**; the session has ended and no session holds the tree.
+Updated: 2026-09-26 EDT (late night). Owner: **Claude Code**; the session has ended and no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -22,16 +22,16 @@ designer each) replace Versions in Working files, and per-project client version
 Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 `review_publication` for project-level versions, and designer-to-designer privacy on
 `internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
-`npm run check` 121/1258 passes; `supabase test db` locally fails only `access_and_workflows`
-2,4,9,18,32,54 — the confirmed SABRE-overlay count baseline. An interrupted Playground e2e run can
-leave an "Acceptance Playground …" client behind (unattested published designs), which briefly also
-failed 1, 41 and `published_asset_attestation_invariant` 1; remove it with the fixture's own cleanup
-rather than editing the assertions. `playground.spec` focus-return is a pre-existing focus issue
-that also fails on `main`; `workspace-actions`:14/`design-audit`:18 also fail on `main` (SABRE-overlay).
-**Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden,
-AGENTS.md/CLAUDE.md); rebuilt via `local_stack.py reset` + the SABRE `apply`; the prior checkpoint
-is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earlier:
-[history](history/handoff-2026-09-26.md).
+`npm run check` 123/1273 passes; `supabase test db` locally fails only `access_and_workflows`
+2,4,9,18,32,54 — the confirmed SABRE-overlay count baseline. A left-behind "Acceptance Playground …"
+client also fails 1, 41 and `published_asset_attestation_invariant` 1: remove it with the fixture's
+cleanup, never by editing assertions. **All-roles pass** (`e565ba4`): 109/3 skipped/8 failed; since
+fixed: video-loading, Playground focus return, board picker, Feedback icon, late share prefill. Only
+SABRE-overlay counts stay failing: `canonical-workspaces`:7, `design-audit`:18,
+`workspace-actions`:14, `workspace.spec`:25/:48.
+**Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden);
+rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
+`supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. [History](history/handoff-2026-09-26.md).
 
 ## In progress
 
@@ -93,7 +93,7 @@ is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earl
 **Production setup (user-deferred on 2026-09-23):** follow the
 [production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
-1. Run the full all-roles Playwright pass on `feat/miro-workspace`, then merge on approval.
+1. Merge `feat/miro-workspace` on the user's approval.
 2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
 3. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
