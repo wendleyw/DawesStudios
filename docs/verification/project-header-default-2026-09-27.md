@@ -40,3 +40,15 @@ branches/styles were removed. Project styling remains in `features/projects/proj
 
 Working screenshots, browser measurements and command logs remain under ignored `outputs/`.
 The earlier [preview record](compact-project-header-2026-09-27.md) is historical. No push or deployment.
+
+## Typography follow-up
+
+The requested project-title emphasis uses weight 700 while retaining 18 px on desktop and
+16 px in narrow work areas. Campaign labels, deadline badges and spacing are unchanged.
+
+- Targeted CSS gate: Prettier and 81 stylesheet-boundary/theme-color tests passed.
+- Isolated Chromium checked Geist and Editorial at 1600×1000 and 390×1000: computed weight
+  700, expected font size and no horizontal document overflow in all four cases.
+- The existing native browser also showed weight 700 without horizontal overflow.
+- Final captures inspected: [desktop](screenshots/project-title-bold-2026-09-27-desktop.png)
+  and [mobile](screenshots/project-title-bold-2026-09-27-mobile.png).

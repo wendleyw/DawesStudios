@@ -16,4 +16,6 @@
 - Unrelated `login.png` deletion retained. Production/SABRE state and release gaps preserved.
 - Shared checkpoint: concurrent sidebar/invitation task owns `handoff.md`; its owner should link
   this report and replace the now-historical opt-in decision with the approved projects-only rollout.
+- Typography follow-up: title weight 700; size/spacing retained; design guidance updated.
+- Current checks: Prettier, 81 CSS tests, both fonts at desktop/mobile sizes and native browser pass.
 - Next: normal project use and user feedback. No push or deployment authorized.
