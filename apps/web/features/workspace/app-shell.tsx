@@ -418,8 +418,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div className="form-stack">
             <p>
-              Open a project to message the studio. Select a design to add feedback or place a
-              comment pin.
+              Open a project and use Conversation to message the studio. Use Feedback for a specific
+              round or client version, and open the Miro board to work on the design.
             </p>
             <p>For account access or a new client, contact your studio representative.</p>
           </div>

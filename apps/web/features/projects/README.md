@@ -54,6 +54,11 @@ icon (**Add design board**) adds another board, and the agency's **More** menu h
 `kind: "miro"`). An empty board or channel shows an inline call to action (**Add a design board** /
 **New client version**) to the agency and a plain waiting message to everyone else.
 
+The agency may edit a client version's link after sharing, approval or delivery. Its version
+identity, number, note and review/comment history remain intact; changing the link does not create
+a new version or reopen approval. A shared version cannot have an empty link. Clients and designers
+cannot change that link. This was explicitly confirmed by the user on 2026-09-27.
+
 The embed (`MiroEmbed`, `miro-view.tsx`) runs from the bar to the bottom edge; the iframe is rebuilt
 from the stored `boardId`/`widgetId` via `miroEmbedUrl` with `autoplay=true`, never from the pasted
 URL, and `frameKey` reloads it when the board, round or version changes. Miro's own top bar is
@@ -231,10 +236,15 @@ Role isolation and end-to-end flows are proved by the orchestrator's database an
 `npx playwright test tests/e2e/miro-workspace.spec.ts` verifies the workspace round trip on a
 disposable SABRE acceptance project: the agency adds a design board for designer A beside designer
 B's, designer A sends round 1, the agency shares it, the client requests changes, the agency adds V2
-directly and the client approves. A second test proves, through designer B's own session, that
-designer B receives only their own board and none of designer A's rounds, comments or name. The
-end-to-end specs written for the retired Versions canvas are being removed or rewritten in the same
-phase and are expected to fail until then.
+directly and the client approves. The agency then uploads a final file through the media flow and
+completes delivery. The client cannot read the staged file before delivery, and afterward downloads
+bytes matching the stored final. Reloads verify the delivered state and absence of repeated
+delivery, review and designer-send controls. A second test proves, through designer B's own session,
+that designer B receives only their own board and none of designer A's rounds, comments or name.
+The [2026-09-27 action audit](../../../../docs/verification/extension-role-actions-2026-09-27.md)
+records current browser coverage and the confirmed agency link-editing rule. The round-trip test
+edits V2's link after delivery, verifies both agency/client reloads and unchanged version/review
+rows, and checks that client/designer RPC writes are denied.
 
 The Cover block's browser pass is recorded in
 [the verification record](../../../../docs/verification/project-cover-2026-09-27.md).

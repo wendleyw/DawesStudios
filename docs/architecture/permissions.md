@@ -41,9 +41,9 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Read internal rounds (design board history) | Scoped | No | Assigned work |
 | Create a design board / send a round | Scoped | No | Assigned work (own board only) |
 | Send a round to the studio | Scoped internal workflow | No | Assigned work |
-| Share an immutable client version (Miro link + note) | Agency only | No | No |
+| Share a client version (immutable identity/number/note; editable Miro link) | Agency only | No | No |
 | Read a version's Miro frame link | Both boards, scoped | Client board, own shared client versions only | Internal board, assigned work only |
-| Set/change/remove a Miro frame link | Agency only | No | No |
+| Set/change a client version's Miro frame link; removing its required link is denied | Agency only, including after approval/delivery | No | No |
 | Read internal Drive folder link | Scoped | No | Assigned project only |
 | Read client Drive folder link | Scoped | Own client | No |
 | Set/change/remove either Drive folder link | Agency only | No | No |
@@ -71,7 +71,14 @@ Client payloads contain only authorized public project metadata, approved briefi
 
 Never serialize designer names, avatars, emails, staff membership IDs, assignment relations, internal author metadata, internal comments, unshared rounds/client versions, internal notes, internal activity, internal notification counts, or storage paths containing private identity. Do not fetch these fields and hide them with CSS. Apply the restriction to nested relations, search results, reports, CSV, notifications, realtime events, error details, file names, downloadable file metadata, and browser caches.
 
-A shared client version is immutable: it carries only its own Miro link and note. Internal work on a later round does not replace or mutate an already-shared client version. Sharing a later round creates a new client version and keeps review/comment history bound to the prior one. Client summaries may show that work is in progress before anything is shared, with an explicit **Not shared yet** state; they must not include internal round/board content.
+A shared client version preserves its identity, number and note. The agency may change its Miro
+link after publication, including after approval or delivery; this does not create another version
+or reset its review/comment history. The shared version must retain a valid link. This flexibility
+was explicitly confirmed by the user on 2026-09-27. Internal work on a later round does not replace
+an already-shared client version. Sharing a later round creates a new client version and keeps
+review/comment history bound to the prior one. Client summaries may show that work is in progress
+before anything is shared, with an explicit **Not shared yet** state; they must not include internal
+round/board content. Miro itself controls the external board's mutable contents.
 
 Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, their assigned design board's rounds, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
 

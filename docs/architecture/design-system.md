@@ -230,7 +230,17 @@ Saved content and geometry persist; unsaved local edits have explicit save/disca
 
 Role differences come from authenticated, server-enforced permissions, not a “Preview as” dropdown. Agency members can use two explicitly labeled channels: **Agency & designer** and **Agency & client**. The designer sees only the internal channel for assigned work; the client sees only the agency/client channel. Client-facing agency messages use the Studio identity. Client responses, notifications, file names, activity items, previews, and accessible labels must not reveal designer names, avatars, assignments, or internal authorship metadata.
 
-The agency shares an immutable client version — a Miro link and a note — for the client to review. Internal work on a later round does not silently mutate an already-shared client version. Only the agency shares; the designer sends a round to the studio, and the client requests changes or approves the project's latest shared client version. A comment belongs to its project and, optionally, a round (internal channel) or a client version (client channel); there is no design or pin anchor. The Feedback panel holds a round's or client version's own studio note, review decision and comments; the generic project Conversation holds messages with no round/version scope. Existing review records are preserved; drafts and queries distinguish channel and, when relevant, round/version.
+The agency shares a client version with a Miro link and a note for the client to review. The
+version's identity, number and note remain immutable; the agency may edit its link after sharing,
+approval or delivery without creating a version or resetting review history. The link is required.
+Internal work on a later round does not silently replace an already-shared client version. Only
+the agency shares; the designer sends a round to the studio, and the client requests changes or
+approves the project's latest shared client version. A comment belongs to its project and,
+optionally, a round (internal channel) or a client version (client channel); there is no design or
+pin anchor. The Feedback panel holds a round's or client version's own studio note, review decision
+and comments; the generic project Conversation holds messages with no round/version scope.
+Existing review records are preserved; drafts and queries distinguish channel and, when relevant,
+round/version.
 
 Approvals, revision requests, assignments, delivery, uploads, and notifications need pending, success, and actionable failure states. Do not optimistically announce success when persistence has failed. A delivered state must resolve to real authorized files; a share link must resolve to the intended client perspective and access boundary.
 
@@ -285,7 +295,7 @@ One concept, one word. The interface uses these nouns and no synonym of them:
 | The required output a briefing commissions   | **Deliverable**                                    | —                           |
 | A designer's named internal Miro board for a project | **Design board**                           | canvas                      |
 | A round of work a design board sends to the studio | **Round**                                    | version                     |
-| The immutable Miro link and note the agency shares with the client | **Client version**            | publication, snapshot       |
+| The numbered version and note the agency shares, with an agency-editable Miro link | **Client version**            | publication, snapshot       |
 | A downloadable file on `/clients/:id/brand/files` | **File**, and **Working file** for a source upload | asset                  |
 | A file in the Brand Hub library              | **Asset**                                          | file, resource              |
 | A brief document                             | **Briefing**                                       | brief                       |

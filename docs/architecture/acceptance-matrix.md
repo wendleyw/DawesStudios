@@ -13,6 +13,13 @@ functional/visual evidence for the current model, the separate Drive channels an
 invitation flows. Canonical and live-overlay checks run in separate environments; J10 still requires
 the real production operational checks listed in that record.
 
+The subsequent [extension and role-action audit](../verification/extension-role-actions-2026-09-27.md)
+records 113 distinct Chromium cases with passing runs/reruns, 147 toured surfaces, real Chrome
+extension actions and new durable account/file/edit coverage. It also records a
+contract clarification confirmed by the user: version identity/number/note stay immutable while
+the agency may edit the Miro link after sharing, approval or delivery, preserving review history.
+The regression verifies this rule; the extension connection and passing suites do not close J10.
+
 ## How to use this matrix
 
 The [711 reference captures](../ref/manifest.json), representing 499 base states, are an inventory and design reference. They are **not** a requirement to reproduce 711 screenshots, 499 UI states, identical modal counts, or a pixel-for-pixel prototype. The current product direction is minimal, lightweight, and modern. Consolidate duplicate views and controls while preserving meaningful tasks, role boundaries, and durable data.

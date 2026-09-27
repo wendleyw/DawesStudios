@@ -8,6 +8,7 @@ import {
 } from "./test-support";
 
 const name = "Acceptance competitor Rival";
+const editedName = "Acceptance competitor Updated";
 
 async function sabreId() {
   const client = await localAdmin.from("clients").select("id").eq("slug", "sabre").single();
@@ -110,13 +111,46 @@ test("the agency places the widget and follows a competitor; a designer reads it
     await page.keyboard.press("Escape");
     await expect(screen).toBeHidden();
 
+    await widget.getByRole("button", { name: new RegExp(name) }).click();
+    await page.getByRole("dialog", { name }).getByRole("button", { name: "Edit" }).click();
+    const edit = page.getByRole("dialog", { name: "Edit competitor" });
+    await edit.getByLabel("Name", { exact: true }).fill(editedName);
+    await edit.getByLabel(/Facebook Page ID/).fill("987654321");
+    await edit.getByLabel(/TikTok advertiser name/).fill("Updated advertiser");
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toBeHidden();
+    await page.reload();
+    const updatedWidget = page.getByRole("region", { name: "Competitor ads" });
+    await updatedWidget.getByRole("button", { name: new RegExp(editedName) }).click();
+    const updatedScreen = page.getByRole("dialog", { name: editedName });
+    await expect(
+      updatedScreen.getByRole("link", { name: "Open in Meta Ad Library" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ALL&media_type=all&search_type=page&view_all_page_id=987654321",
+    );
+    await updatedScreen.getByRole("button", { name: "TikTok" }).click();
+    await expect(
+      updatedScreen.getByRole("link", { name: "Open in TikTok Ad Library" }),
+    ).toHaveAttribute(
+      "href",
+      "https://library.tiktok.com/ads?region=all&adv_name=Updated+advertiser",
+    );
+    await page.keyboard.press("Escape");
+    await expect(updatedScreen).toBeHidden();
+
     const competitor = await localAdmin
       .from("competitors")
-      .select("id")
+      .select("id,name,meta_page_id,tiktok_advertiser")
       .eq("client_id", clientId)
-      .eq("name", name)
+      .eq("name", editedName)
       .single();
     if (competitor.error) throw competitor.error;
+    expect(competitor.data).toMatchObject({
+      name: editedName,
+      meta_page_id: "987654321",
+      tiktok_advertiser: "Updated advertiser",
+    });
     const adsPath = `/api/competitors/${competitor.data.id}/ads`;
 
     // An assigned designer reads the widget, cannot change it, and may ask the route.
@@ -125,7 +159,9 @@ test("the agency places the widget and follows a competitor; a designer reads it
     await signIn(designerPage, credentials.designer);
     await openCanvas(designerPage, clientId);
     const designerWidget = designerPage.getByRole("region", { name: "Competitor ads" });
-    await expect(designerWidget.getByRole("button", { name: new RegExp(name) })).toBeVisible();
+    await expect(
+      designerWidget.getByRole("button", { name: new RegExp(editedName) }),
+    ).toBeVisible();
     await expect(designerWidget.getByRole("button", { name: "Add competitor" })).toHaveCount(0);
     await expect(designerPage.getByRole("button", { name: "Board widgets" })).toHaveCount(0);
     const designerSession = (await (await localCaller(credentials.designer)).auth.getSession()).data
@@ -154,18 +190,22 @@ test("the agency places the widget and follows a competitor; a designer reads it
     await clientContext.close();
 
     // The agency removes the competitor, then the widget.
-    await widget.getByRole("button", { name: new RegExp(name) }).click();
+    await updatedWidget.getByRole("button", { name: new RegExp(editedName) }).click();
     await page
-      .getByRole("dialog", { name })
+      .getByRole("dialog", { name: editedName })
       .getByRole("button", { name: "Remove competitor" })
       .click();
     await page
-      .getByRole("dialog", { name })
+      .getByRole("dialog", { name: editedName })
       .getByRole("button", { name: "Remove", exact: true })
       .click();
-    await expect(widget.getByRole("button", { name: new RegExp(name) })).toHaveCount(0);
-    await widget.getByRole("button", { name: "Remove competitor ads from the board" }).click();
-    await expect(widget).toHaveCount(0);
+    await expect(updatedWidget.getByRole("button", { name: new RegExp(editedName) })).toHaveCount(
+      0,
+    );
+    await updatedWidget
+      .getByRole("button", { name: "Remove competitor ads from the board" })
+      .click();
+    await expect(updatedWidget).toHaveCount(0);
   } finally {
     await removeFixtures(clientId);
     await localAdmin.from("client_board_widgets").delete().eq("client_id", clientId);

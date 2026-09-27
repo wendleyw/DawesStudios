@@ -201,3 +201,10 @@ Executed for this data-access migration (Task 12):
   returns no output: no component in this feature issues a Supabase query directly.
 - `npm --prefix apps/web run test:e2e -- intake-admin` — see the task-12 handoff report for the full
   run output.
+
+## Browser action coverage
+
+`tests/e2e/settings-actions.spec.ts` verifies disposable agency, designer and client accounts changing
+their display names and passwords, rejection of old passwords, sign-out/sign-in, agency logo upload with decoded
+image persistence and removal, client logo-write denial, and campaign edits with cross-client
+denial and reload persistence. Campaign settings currently offer creation and editing, not deletion.

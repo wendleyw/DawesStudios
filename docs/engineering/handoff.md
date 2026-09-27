@@ -1,80 +1,67 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex**, taking over both interrupted Claude tasks at the user's request.
+Updated: 2026-09-27 EDT. Owner: **Codex**. No delegated writer remains active.
 
-## Ownership and recovery
+## Current result
 
-- The user asked Codex to recover and finish both Claude sessions after their weekly usage limit.
-- Recovered project-scoped session messages for `dawesstudios-9e` and `dawesstudios-f4`.
-  Their workers stopped with rate-limit errors; the process check found no remaining test/editor
-  commands, only idle tool servers and the existing `caffeinate` command. Do not resume competing writes.
-- Preserved the current diff and untracked files under ignored `outputs/recovery-2026-09-27/`.
-- Previous checkpoint: [pre-recovery history](history/handoff-2026-09-27-pre-recovery.md).
-- Base commit: `f111bf6`. Existing `login.png` deletion is unrelated and remains outside this task.
-- Codex owns integration, the checkpoint and acceptance evidence. Delegated paths must be disjoint.
-
-## Completed task 1 — Drive links by channel
-
-- Internal/client links are isolated by RLS and rendered per channel; agency edits both, Files reads client only.
-- Integrated Claude's migration 0011, generated types/seed and scripts with the completed frontend.
-- Forward migration 0012 rejects NULL channels; guarded SABRE removal blocks uncovered populated tables.
-- Current checks: source gate 1,195 tests; Drive pgTAP 40; Python 22; Drive journey 1;
-  navigation/Files journeys 8; canonical seed; canonical pgTAP 1,020; canonical browser 7; container build.
-- [Integration evidence](../verification/drive-links-recovery-2026-09-27.md) records corrections and limits.
-
-## Completed task 2 — All-role audit
-
-- Recovered directive: audit every role, action, text, badge, status and layout, then fix findings.
-- Agency audit: 86 route/viewport visits and 14 axe samples. Client/designers: 130 route visits,
-  network role checks and mobile/dark inspection. System tour: 147 surfaces, zero overflow,
-  serious/critical accessibility violations or uncaught exceptions in the application.
-- Broad browser pass: 95/95 active overlay tests plus 7/7 canonical tests. The three optional
-  system-tour tests were then enabled explicitly and passed. Miro regression: 2/2.
-- Fixed delivered-project Send/Share/New version controls, repeated sharing of an already-shared
-  round, and raw service names in Details. Desktop/mobile rechecks passed for agency and both designers.
-- Also fixed existing-client and removed-client invitations. Forward migrations 0013–0016 are applied
-  locally and in staging; trusted token metadata preserves passwords and validates email before mutation.
-  Return waits for completed Auth removal; stale memberships are deleted before restoring access.
-- Final gate: source 1,206 tests; canonical pgTAP 1,052; corrected invitation/intake/Miro browser 10/10;
-  container build; SABRE HTTP 42/42; canonical seed. Dependency audit and history secret scan passed.
-- [Audit evidence](../verification/all-roles-recovery-2026-09-27.md) records scope, screenshots and limits.
-- SABRE removal guard deliberately refuses the old snapshot: missing Drive table coverage plus
-  newer credit timestamps and Playground data. Preserve both live state and ignored checkpoint.
+- Completed the requested Playwright MCP extension connection and fresh role-action audit.
+- The initial relay WebSocket error cleared after a fresh connection. Actual Chrome actions ran
+  through a temporary standard MCP SDK client; native Playwright tools were absent in this session.
+- Agency, both designers and client completed board/round/share/review flows. Delivery completed
+  through the extension; normal Playwright verified upload and exact client download bytes.
+- The extension rejected native file upload (`DOM.setFileInputFiles: Not allowed`) and did not
+  return the download event. Keep the normal CLI browser suite alongside interactive extension QA.
+- Corrected stale Help text; added all-role account, logo/campaign and working-file cases;
+  expanded competitor/project edits and the full Miro delivery/link-editing regression.
+- [Action audit](../verification/extension-role-actions-2026-09-27.md) records coverage, corrections,
+  final screenshots and limits. [Browser guide](browser-testing.md) records setup/troubleshooting.
+- Prior recovery details: [archived checkpoint](history/handoff-2026-09-27-pre-extension.md).
+  Drive recovery is committed as `85d0a6f`, role/invitation fixes as `d804799`, no-R2 docs as `b1d4e19`.
+- Existing `login.png` deletion is unrelated; leave it outside this task's commit.
 
 ## Accepted decisions
 
-- Creative work lives in Miro. R2 is not required; remaining app uploads use persistent filesystem
-  Supabase Storage. [Production guide](../operations/production.md), [decision](handoffs/2026-09-27-production-without-r2.md).
-- Official self-hosted Supabase plus web/media containers behind TLS; keep the upstream Realtime hostname.
-- Miro is a project view with separate internal/client channels, immutable client versions and
-  agency-only sharing/link writes. No Miro API or sync; copy/paste assets into Miro.
-- Project covers are sanitized by media and visible to clients only when marked. Files delivers finals.
-- Monthly credits support plans, extras, transfers, current plus 11 future months, and agency
-  movement/one-time final settlement with a reason. Briefing submission is free; acceptance is atomic.
-- Canonical baseline: 10 clients / 25 projects. Preserve the active SABRE overlay: 10 / 68 / 50 SABRE.
-- Default theme is System per browser; designers see assigned work without credits or client identities.
-- Every client person has a separate login and the same client permissions; studio manages membership.
+- The user confirmed on 2026-09-27 that the agency may edit a shared version's Miro link.
+  Identity, number and note remain immutable; link edits after approval/delivery preserve reviews
+  and do not create a new version or reopen approval. A valid link is required. Existing behavior
+  implements this; the new browser regression verifies it. AGENTS.md and CLAUDE.md are synchronized.
+- Creative work lives in Miro. R2 is not required; app uploads use Supabase persistent filesystem
+  Storage. See [production guide](../operations/production.md).
+- Official self-hosted Supabase plus web/media containers behind TLS; keep upstream Realtime hostname.
+- Internal/client channels stay separate; designer boards stay isolated. Files delivers final files.
+- Monthly credits retain atomic acceptance and current plus 11 future month rules.
+- Canonical baseline stays 10 clients / 25 projects; live SABRE overlay stays 10 / 68 / 50 SABRE.
 
-## Environment and constraints
+## Checks executed in this session
 
-- Next.js dev server: `http://localhost:3003`; local Supabase ports 55421–55424; media port 55430.
-- No competing dev server. Never `supabase migration down` or `supabase db reset`.
-- Correct applied migrations forward. A fresh reset would need new explicit user approval.
-- Disposable MinIO staging was stopped after the final production-image browser pass (7/7), with
-  containers/volumes retained. It does not verify the production filesystem Storage target.
-- No push, PR or deployment requested. Complete each integrated task with a gate and Conventional Commit.
+- Final source gate: types, lint, formatting; 124 Vitest files / 1,206 tests pass.
+- 113 distinct Chromium cases have passing executions across runs/reruns. This was not one clean
+  invocation: shared trace paths and new test selectors were corrected, then affected cases passed.
+- Settings/account final run: 5/5. Miro delivery/privacy plus post-delivery link edit: 2/2.
+- Explicit system tour: 147 surfaces, zero overflow, serious/critical axe violations or page errors.
+  External Miro placeholders produced failed requests; their real board contents were not verified.
+- Canonical pgTAP: 26 files / 1,052 assertions. Canonical seed: 10 clients / 25 projects, reconciled
+  credits, scopes and 110 real file downloads. Staging used the existing app image.
+- Final SABRE HTTP: 42/42; clean live counts 10/68/50; zero Acceptance clients/projects/users and
+  orphan Drive links. Temporary MCP and regression fixtures were removed through guarded helpers.
+- Help copy inspected through Chrome extension at desktop 1600×1000 and mobile 390×844.
+- No database reset, migration down, migration change, push or deployment occurred.
 
-## Verification still required
+## Environment and remaining scope
 
-- Application audit is complete within its documented browser/dataset scope. No reset was performed;
-  final local counts are 10/68/50, with zero Acceptance clients/projects or orphan Drive rows.
-- Real deployment remains deferred: persistent Storage/restore, TLS, SMTP and proxy rate limiting.
-- J10 remains open. Prior matrix rows describing retired designs/video/Versions are historical.
-- Known limits: dummy Miro boards are not live creative content; unknown routes can stream the
-  unavailable page with HTTP 200; Safari/Firefox coverage and browser CI remain outside this pass.
+- Local app: `http://localhost:3003`; Supabase API/DB 55421/55422; media 55430; mail 55424.
+- The audit's Chrome tab was signed out and closed; other tabs and personal MCP configuration remain.
+- Canonical staging was resumed for checks, then stopped with containers/volumes retained.
+  It uses MinIO and does not verify production persistent filesystem Storage.
+- Never run `supabase migration down` or `supabase db reset`; correct migrations forward.
+  Preserve the live SABRE data and guarded ignored rollback checkpoint.
+- J10 remains open for production Storage/restore, TLS, SMTP and proxy rate limiting.
+- Other limits: real external Miro content, Firefox/WebKit and browser CI. Unknown routes can
+  stream the unavailable UI with HTTP 200. Older matrix rows for retired design/video models
+  remain historical evidence, as marked at the top of the acceptance matrix.
 
 ## Next concrete action
 
-Both recovered tasks are integrated. Drive is `85d0a6f`; the following audit commit contains its
-verification record and current checkpoint. Further work is the explicitly separate production
-readiness gate; no push or production release is authorized.
+The requested extension/action pass is integrated. Use the browser guide if relay attachment
+fails again; a new session may be needed to expose personal MCP tools natively. The next separate
+release task is J10 operational verification when requested. No push or release is authorized.

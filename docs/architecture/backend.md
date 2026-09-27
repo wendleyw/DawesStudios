@@ -35,7 +35,16 @@ passwords are preserved, and token setup is validated before a new account sets 
 
 Designers cannot select raw briefing rows because those contain budgets and requester IDs. `get_assigned_briefings(p_client_id=null)` returns an allowlisted production brief without financial/author fields, restricted to accepted briefs for assigned projects. Assignment revocation removes project, brief, file and internal-channel access on subsequent authenticated reads; repeating an existing assignment does not notify twice.
 
-`published_versions` is the separate immutable client projection: a **client version** is project-level, numbered per project, and is only its release note plus its Miro link (`publication_miro_links`). Each client version gets an independent UUID and client version number; source IDs, creator IDs and internal notes are absent. The source round mapping is in the unexposed `private` schema (`private.publication_sources`). Only agency users may share (`share_miro_version`). Uploaded production artwork, the `published_designs` snapshot and the publication asset copy were retired by `202609270007` (see below).
+`published_versions` is the separate client projection: a **client version** is project-level and
+numbered per project. Its row, including identity, number and release note, is immutable. Its Miro
+link lives in `publication_miro_links` and the agency may change that link after publication,
+approval or delivery without creating a version or resetting reviews/comments. The user confirmed
+this behavior on 2026-09-27; it matches the existing agency-only setter. A shared version cannot
+lose its required link. Each client version gets an independent UUID and client version number;
+source IDs, creator IDs and internal notes are absent. The source round mapping is in the unexposed
+`private` schema (`private.publication_sources`). Only agency users may share (`share_miro_version`).
+Uploaded production artwork, the `published_designs` snapshot and the publication asset copy were
+retired by `202609270007` (see below).
 
 Miro frame links sit beside versions without touching either projection. `publication_miro_links` (keyed by `published_versions.id`) is the client board and reads under `private.can_client_channel`; `design_version_miro_links` (keyed by `design_versions.id`) is the internal board and reads under `private.can_produce`, so a client never receives an internal link and a designer never receives a client link. Both store only the parsed `board_id` and optional `widget_id`, never the pasted URL. Only the agency writes, through `set_`/`clear_publication_miro_link` and `set_`/`clear_version_miro_link`, which parse the URL in `private.parse_miro_board_url` (HTTPS `miro.com/app/board/...` with an optional numeric `moveToWidget`; anything else raises `22023`). The tables are not in the Realtime publication; links refresh on the next project read. The web app's Content-Security-Policy allows `frame-src https://miro.com` for the embed and nothing else.
 

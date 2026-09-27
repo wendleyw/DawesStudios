@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
@@ -9,6 +9,7 @@ import { credentials, localAdmin, localAgency, localCaller, signIn } from "./tes
 // assigned, with a board of their own, and must never see anything of designer A's.
 test.describe.configure({ mode: "serial" });
 let projectId = "";
+let clientId = "";
 let designerA = "";
 let designerB = "";
 let designerAEmail = "";
@@ -26,6 +27,7 @@ test.beforeAll(async () => {
     { name: "Campaign square", format: "square", width: 1080, height: 1080 },
   ]);
   projectId = fixture.projectId;
+  clientId = fixture.clientId;
   designerA = fixture.designerId;
   const second = await localAdmin
     .from("profiles")
@@ -59,7 +61,9 @@ test.afterAll(async () => {
   if (projectId) await cleanupTestProject(projectId);
 });
 
-test("agency, designer and client complete a round trip in Miro", async ({ browser }) => {
+test("agency, designer and client complete Miro review and final-file delivery", async ({
+  browser,
+}) => {
   test.setTimeout(120_000);
   const studio = await (await browser.newContext()).newPage();
   await signIn(studio, credentials.agency);
@@ -165,6 +169,130 @@ test("agency, designer and client complete a round trip in Miro", async ({ brows
           ?.status,
     )
     .toBe("approved");
+
+  // The studio uploads through the real media flow. Approval alone does not release the file.
+  const filesUrl = `/clients/${clientId}/brand/files?project=${projectId}`;
+  await studio.goto(filesUrl);
+  await studio.getByRole("button", { name: "Delivery file", exact: true }).click();
+  const uploadDialog = studio.getByRole("dialog", { name: "Add a delivery file" });
+  await expect(uploadDialog.getByRole("combobox", { name: "Project", exact: true })).toHaveValue(
+    projectId,
+  );
+  await uploadDialog.getByLabel("File name").fill("Reviewed final");
+  await uploadDialog
+    .getByLabel("File", { exact: true })
+    .setInputFiles(fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url)));
+  await uploadDialog.getByRole("button", { name: "Add file", exact: true }).click();
+  await expect(uploadDialog).toBeHidden();
+  await expect(studio.getByRole("button", { name: "Download Reviewed final" })).toBeVisible();
+  const clientCaller = await localCaller(credentials.client);
+  const unreleased = await clientCaller
+    .from("delivery_files")
+    .select("id")
+    .eq("project_id", projectId);
+  expect(unreleased.error).toBeNull();
+  expect(unreleased.data).toEqual([]);
+
+  await studio.getByRole("button", { name: "Complete delivery", exact: true }).click();
+  const deliveryDialog = studio.getByRole("dialog", { name: "Ready to wrap up?" });
+  await deliveryDialog.getByRole("button", { name: "Complete delivery", exact: true }).click();
+  await expect(deliveryDialog).toBeHidden();
+  await studio.reload();
+  await expect(studio.getByRole("button", { name: "Download Reviewed final" })).toBeVisible();
+  await expect(studio.getByRole("button", { name: "Complete delivery", exact: true })).toHaveCount(
+    0,
+  );
+  const delivered = await localAdmin.from("projects").select("status").eq("id", projectId).single();
+  expect(delivered.error).toBeNull();
+  expect(delivered.data?.status).toBe("delivered");
+
+  await client.goto(filesUrl);
+  const receiving = client.waitForEvent("download");
+  await client.getByRole("button", { name: "Download Reviewed final" }).click();
+  const download = await receiving;
+  expect(await download.failure()).toBeNull();
+  expect(download.suggestedFilename()).toBe("Reviewed final.png");
+  const released = await clientCaller
+    .from("delivery_files")
+    .select("storage_path")
+    .eq("project_id", projectId)
+    .single();
+  expect(released.error).toBeNull();
+  const stored = await clientCaller.storage
+    .from("delivery-files")
+    .download(released.data!.storage_path);
+  expect(stored.error).toBeNull();
+  const bytes = Buffer.from(await stored.data!.arrayBuffer());
+  expect(bytes.byteLength).toBeGreaterThan(0);
+  expect(readFileSync(await download.path())).toEqual(bytes);
+  await client.goto(`/projects/${projectId}`);
+  await expect(client.getByRole("button", { name: "V2", exact: true })).toBeVisible();
+  await expect(client.getByRole("button", { name: /^(Approve|Request changes)$/ })).toHaveCount(0);
+  await designer.reload();
+  await expect(designer.locator("iframe.miro-view-frame")).toBeVisible();
+  await expect(designer.getByRole("button", { name: "Send to studio" })).toHaveCount(0);
+
+  // The agency can correct a published link, including after delivery, without rewriting history.
+  const publicationsBefore = await localAdmin
+    .from("published_versions")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("version_number");
+  expect(publicationsBefore.error).toBeNull();
+  const latestId = publicationsBefore.data!.at(-1)!.id;
+  const reviewsBefore = await clientCaller
+    .from("publication_reviews")
+    .select("*")
+    .eq("publication_id", latestId);
+  expect(reviewsBefore.error).toBeNull();
+  expect(reviewsBefore.data).toHaveLength(1);
+  const correctedLink = "https://miro.com/app/board/uXjVCorrected=/?moveToWidget=9876";
+  await studio.goto(`/projects/${projectId}?channel=client`);
+  await studio.getByRole("button", { name: "V2", exact: true }).click();
+  await studio.getByRole("button", { name: "More", exact: true }).click();
+  await studio.getByRole("button", { name: "Edit Miro link", exact: true }).click();
+  const linkDialog = studio.getByRole("dialog", { name: "Change the Miro link." });
+  await linkDialog.getByRole("textbox", { name: /^Miro frame/ }).fill(correctedLink);
+  await linkDialog.getByRole("button", { name: "Save link", exact: true }).click();
+  await expect(linkDialog).toBeHidden();
+  await studio.reload();
+  await expect(studio.locator("iframe.miro-view-frame")).toHaveAttribute(
+    "src",
+    /uXjVCorrected.*moveToWidget=9876/,
+  );
+  await client.reload();
+  await expect(client.locator("iframe.miro-view-frame")).toHaveAttribute(
+    "src",
+    /uXjVCorrected.*moveToWidget=9876/,
+  );
+  await expect(client.getByRole("button", { name: /^(Approve|Request changes)$/ })).toHaveCount(0);
+  for (const caller of [clientCaller, await localCaller(designerAEmail)]) {
+    const denied = await caller.rpc("set_publication_miro_link", {
+      p_publication_id: latestId,
+      p_url: "https://miro.com/app/board/uXjVForbidden=/",
+    });
+    expect(denied.error?.code).toBe("42501");
+  }
+  const publicationsAfter = await localAdmin
+    .from("published_versions")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("version_number");
+  expect(publicationsAfter.error).toBeNull();
+  expect(publicationsAfter.data).toEqual(publicationsBefore.data);
+  const reviewsAfter = await clientCaller
+    .from("publication_reviews")
+    .select("*")
+    .eq("publication_id", latestId);
+  expect(reviewsAfter.error).toBeNull();
+  expect(reviewsAfter.data).toEqual(reviewsBefore.data);
+  const savedLink = await clientCaller
+    .from("publication_miro_links")
+    .select("board_id,widget_id")
+    .eq("publication_id", latestId)
+    .single();
+  expect(savedLink.error).toBeNull();
+  expect(savedLink.data).toEqual({ board_id: "uXjVCorrected=", widget_id: "9876" });
 
   // The client-visible payload holds no internal identifiers: no internal table is read, and no
   // response names a designer, a board or a round.

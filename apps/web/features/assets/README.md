@@ -115,3 +115,8 @@ counts and cover choice under a filter, project grouping, and resolving the view
 both views for the studio and a client against counts read through each role's own session, the
 Back button and back arrow, `?project=` links, unknown campaigns, axe, and that a campaign opened
 from far down the phone folder list starts at its title.
+
+`tests/e2e/files-actions.spec.ts` additionally uploads working files through the agency and assigned
+designer UI, reloads and downloads identical bytes, verifies project/Approved filters, and checks
+that a client can neither list those records nor download their private Storage objects. It uses
+a disposable acceptance project and guarded cleanup.

@@ -187,7 +187,11 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(page.locator("main [role=alert]")).toContainText("changed while you were editing");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.locator(".project-details")).toContainText("A newer edit from another tab.");
+    const editedTitle = `Acceptance edited ${crypto.randomUUID().slice(0, 8)}`;
+    const editedNotes = "The revised production brief is saved with the project.";
     await page.getByRole("button", { name: "Edit project details" }).click();
+    await page.getByLabel("Project title").fill(editedTitle);
+    await page.getByRole("dialog").getByRole("textbox", { name: "Notes" }).fill(editedNotes);
     await page.getByLabel("Start date").fill("2026-10-20");
     await page.getByLabel("Due date").fill("2026-10-30");
     await page.getByRole("button", { name: "Save details" }).click();
@@ -195,15 +199,25 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     const saved = (
       await agency
         .from("projects")
-        .select("start_date,due_date,description")
+        .select("title,start_date,due_date,description")
         .eq("id", fixture.projectId)
         .single()
     ).data;
     expect(saved).toEqual({
+      title: editedTitle,
       start_date: "2026-10-20",
       due_date: "2026-10-30",
-      description: "A newer edit from another tab.",
+      description: editedNotes,
     });
+    await page.reload();
+    await page.getByRole("button", { name: "Project details", exact: true }).click();
+    await expect(page.locator(".project-details")).toContainText(editedNotes);
+    await page.getByRole("button", { name: "Edit project details" }).click();
+    await expect(page.getByLabel("Project title")).toHaveValue(editedTitle);
+    await expect(page.getByRole("dialog").getByRole("textbox", { name: "Notes" })).toHaveValue(
+      editedNotes,
+    );
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
     const designer = await localCaller(credentials.designer);
     expect(
       (await designer.from("projects").select("id").eq("id", fixture.projectId)).data,
