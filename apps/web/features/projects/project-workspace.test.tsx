@@ -92,7 +92,6 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
       deliverables: [],
     } as unknown as ProjectWorkspaceProps["data"],
     boards: [],
-    viewControl: null,
     ...overrides,
   };
   return render(<Harness {...props} />);
@@ -127,6 +126,19 @@ describe("ProjectWorkspace", () => {
     );
     await userEvent.setup().click(within(tabs).getByRole("button", { name: "Shared with client" }));
     expect(onChannel).toHaveBeenCalledWith("client");
+  });
+
+  it("keeps earlier versions behind More, only when the project has them", async () => {
+    const user = userEvent.setup();
+    const onEarlierVersions = vi.fn();
+    const { unmount } = renderWorkspace({ onEarlierVersions });
+    await user.click(screen.getByRole("button", { name: "More" }));
+    await user.click(screen.getByRole("button", { name: "Earlier versions" }));
+    expect(onEarlierVersions).toHaveBeenCalled();
+    unmount();
+    renderWorkspace();
+    await user.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.queryByRole("button", { name: "Earlier versions" })).toBeNull();
   });
 
   it("labels a designer's view Internal without offering a channel switch", () => {
@@ -213,7 +225,6 @@ describe("ProjectWorkspace", () => {
         deliverables: [],
       } as unknown as ProjectWorkspaceProps["data"],
       boards: [ownBoard],
-      viewControl: null,
     };
     const { rerender } = render(<Harness {...props} />);
     expect(screen.getByRole("button", { name: "Send to studio" })).toBeInTheDocument();

@@ -131,6 +131,7 @@ export function ProjectHeader({
   onView,
   miro,
   workspaceControl,
+  onAddBoard,
 }: {
   client?: Client;
   viewer: Profile | null;
@@ -153,8 +154,10 @@ export function ProjectHeader({
     current: MiroFrame;
     onSelect: (versionId: string) => void;
   };
-  /** The agency's way back to the Miro workspace after choosing the Versions canvas. */
+  /** The agency's way back to the design boards after opening earlier versions. */
   workspaceControl?: ReactNode;
+  /** The agency's first design board on a project that has only earlier versions. */
+  onAddBoard?: () => void;
 }) {
   const { formatDate } = useDateFormat();
   const back = <ProjectBackLink clientId={project.client_id} />;
@@ -227,7 +230,22 @@ export function ProjectHeader({
               {workspaceControl}
             </>
           }
-          menu={<ProjectCreditsChip projectId={project.id} viewer={viewer} />}
+          menu={(close) => (
+            <>
+              <ProjectCreditsChip projectId={project.id} viewer={viewer} />
+              {onAddBoard && (
+                <button
+                  className="button quiet"
+                  onClick={() => {
+                    close();
+                    onAddBoard();
+                  }}
+                >
+                  Add design board
+                </button>
+              )}
+            </>
+          )}
         />
       </div>
     );
@@ -254,6 +272,11 @@ export function ProjectHeader({
           {channelControl}
           {viewControl}
           {workspaceControl}
+          {onAddBoard && (
+            <button className="button quiet" disabled={playgroundOpen} onClick={onAddBoard}>
+              Add design board
+            </button>
+          )}
           <div className="project-header-actions">{deliverableFilter}</div>
         </div>
       )}

@@ -169,7 +169,7 @@ export function MiroBar({
   current: MiroFrame;
   onSelect: (versionId: string) => void;
   viewControl: ReactNode;
-  menu: ReactNode;
+  menu: (close: () => void) => ReactNode;
 }) {
   const versions = linked
     .filter((version) => version.deliverableId === current.deliverableId)
@@ -184,7 +184,7 @@ export function MiroBar({
       lead={lead}
       tools={viewControl}
       link={current.miro}
-      menu={() => menu}
+      menu={menu}
     >
       <div className="segmented-control" role="group" aria-label="Miro version">
         {versions.map((version) => (

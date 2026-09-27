@@ -36,12 +36,10 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const data = useProjectDetail(projectId, channel);
   // RLS limits a designer to their own boards; the client channel never reads boards at all.
   const boards = useDesignBoards(projectId, profile?.role !== "client" && channel === "internal");
-  // The agency may step back to the Versions canvas on a project that still has legacy versions;
-  // the choice lasts until the channel changes.
+  // The agency may step back to the Versions canvas ("Earlier versions") on a project that still
+  // has legacy versions; the choice lasts until the channel changes. A project with only legacy
+  // versions moves to the workspace on its own once the agency adds its first design board.
   const [legacyChosen, setLegacyChosen] = useState(false);
-  // The agency may also open the workspace of a project that has only legacy versions, to add its
-  // first design board; that choice too lasts until the channel changes.
-  const [workspaceChosen, setWorkspaceChosen] = useState(false);
   // `?view=versions` asks for the legacy canvas for every role. Read once: the URL effect in
   // `project-versions-canvas.tsx` drops `view` when no Miro link exists, and the request must
   // outlive that.
@@ -50,7 +48,6 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   );
   function switchChannel(next: ProjectChannel) {
     setLegacyChosen(false);
-    setWorkspaceChosen(false);
     setAgencyChannel(next);
   }
   // Only the agency needs a working target while viewing published snapshots. Client sessions
@@ -107,7 +104,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     boards: boards.data ?? [],
   });
   const legacyAvailable = data.data.versions.some((version) => version.deliverableId !== null);
-  if ((workspace || workspaceChosen) && !legacyChosen && !legacyRequested)
+  if (workspace && !legacyChosen && !legacyRequested)
     return (
       <ProjectWorkspace
         projectId={projectId}
@@ -116,12 +113,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         data={data.data}
         boards={boards.data ?? []}
         panels={panels}
-        viewControl={
-          profile?.role === "agency" && legacyAvailable ? (
-            <button className="button quiet" onClick={() => setLegacyChosen(true)}>
-              Versions
-            </button>
-          ) : null
+        onEarlierVersions={
+          profile?.role === "agency" && legacyAvailable ? () => setLegacyChosen(true) : undefined
         }
       />
     );
@@ -137,11 +130,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       panels={panels}
       format={format}
       onFormat={setFormat}
-      onOpenWorkspace={() => {
-        setWorkspaceChosen(true);
-        setLegacyChosen(false);
-        setLegacyRequested(false);
-      }}
+      onBackToBoards={
+        workspace
+          ? () => {
+              setLegacyChosen(false);
+              setLegacyRequested(false);
+            }
+          : undefined
+      }
     />
   );
 }

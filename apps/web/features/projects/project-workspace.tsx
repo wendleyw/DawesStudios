@@ -1,7 +1,7 @@
 "use client";
 
 import { Lightbulb } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { designerDueDate, useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { useFoldSidebarWhile } from "@/features/workspace/app-shell";
@@ -41,7 +41,8 @@ export type ProjectWorkspaceProps = {
   data: ProjectData;
   /** Exactly what `useDesignBoards` returns: RLS limits a designer to their own boards. */
   boards: DesignBoard[];
-  viewControl: ReactNode;
+  /** Opens the Versions canvas, for the agency on a project that also has earlier versions. */
+  onEarlierVersions?: () => void;
   /**
    * The open side panel, owned by `project-page.tsx` (above its early returns) so it survives the
    * remount `useProjectDetail` causes while the other channel's data loads.
@@ -60,7 +61,7 @@ export function ProjectWorkspace({
   onChannel,
   data,
   boards,
-  viewControl,
+  onEarlierVersions,
   panels,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
@@ -198,8 +199,16 @@ export function ProjectWorkspace({
           }
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           lead={channelLead}
-          viewControl={viewControl}
-          menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
+          menu={
+            <>
+              <ProjectCreditsChip projectId={projectId} viewer={profile} />
+              {onEarlierVersions && (
+                <button className="button quiet" onClick={onEarlierVersions}>
+                  Earlier versions
+                </button>
+              )}
+            </>
+          }
         />
       </div>
       <div className="project-workspace">

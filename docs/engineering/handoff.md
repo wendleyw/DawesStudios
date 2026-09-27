@@ -30,7 +30,7 @@ the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/
 
 ## Done (2026-09-27)
 
-**Two-row Miro bar**: row 2 holds the channel, tinted amber/blue; `reviewed` reads "Sent to client".
+**Two-row Miro bar** (channel row tinted amber/blue); no "Miro workspace" button: Add/Earlier in More.
 **Board due dates** (`202609270002`): internal, on or before the project's; designers see the earlier.
 
 ## In progress

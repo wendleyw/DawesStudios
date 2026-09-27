@@ -122,7 +122,7 @@ describe("board dialog", () => {
         onClose={vi.fn()}
       />,
     );
-    const due = screen.getByLabelText(/^Board due date/);
+    const due = screen.getByLabelText("Board due date");
     expect(due).toHaveAttribute("max", "2026-10-10");
     await user.type(screen.getByLabelText("Board name"), "Alpha");
     await user.type(
@@ -154,7 +154,7 @@ describe("board dialog", () => {
       screen.getByLabelText("Miro board"),
       "https://miro.com/app/board/uXjVAlpha01=/",
     );
-    fireEvent.change(screen.getByLabelText(/^Board due date/), {
+    fireEvent.change(screen.getByLabelText("Board due date"), {
       target: { value: "2026-10-11" },
     });
     fireEvent.submit(container.ownerDocument.querySelector("form")!);

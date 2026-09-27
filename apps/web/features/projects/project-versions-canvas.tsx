@@ -42,7 +42,6 @@ import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectHeader } from "./project-header";
 import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
-import { offersWorkspace } from "./miro-workspace";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
@@ -73,9 +72,10 @@ export type ProjectVersionsCanvasProps = {
   data: ProjectData;
   /** The agency's own working versions, read while it views a client's published snapshot. */
   workingVersions?: CanvasVersion[];
-  /** Whether the channel already uses the Miro workspace; decides the "Miro workspace" control. */
+  /** Whether the channel already uses the Miro workspace; no first board is offered then. */
   workspace: boolean;
-  onOpenWorkspace: () => void;
+  /** Back to the design boards, once the agency opened earlier versions from the workspace. */
+  onBackToBoards?: () => void;
   /**
    * The open side panel, owned by `project-page.tsx` (above its early returns) so it survives the
    * remount `useProjectDetail` causes while the other channel's data loads.
@@ -100,7 +100,7 @@ export function ProjectVersionsCanvas({
   data,
   workingVersions,
   workspace,
-  onOpenWorkspace,
+  onBackToBoards,
   panels,
   format,
   onFormat,
@@ -428,11 +428,18 @@ export function ProjectVersionsCanvas({
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
         workspaceControl={
-          offersWorkspace(profile?.role, channel, workspace) ? (
-            <button className="button quiet" onClick={onOpenWorkspace}>
-              Miro workspace
+          onBackToBoards ? (
+            <button className="button quiet" onClick={onBackToBoards}>
+              Design boards
             </button>
           ) : undefined
+        }
+        // A project with only earlier versions gets its first design board from here; once it
+        // exists, the page moves to the workspace on its own (`usesWorkspace`).
+        onAddBoard={
+          profile?.role === "agency" && channel === "internal" && !workspace
+            ? () => setAction({ kind: "board", projectId, projectDueDate: project.due_date })
+            : undefined
         }
         onView={(next) => (next === "miro" ? enterMiro(null) : setProjectView("versions"))}
         miro={

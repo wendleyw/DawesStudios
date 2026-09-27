@@ -32,7 +32,6 @@ export type MiroWorkspaceBarProps = {
   onEditLink: () => void;
   /** The channel, from `ProjectChannelLead`. */
   lead: ReactNode;
-  viewControl: ReactNode;
   menu: ReactNode;
 };
 
@@ -68,7 +67,6 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
       tone={miroBarTone(props.role, props.channel)}
       lead={props.lead}
       link={shown}
-      tools={props.viewControl}
       primary={primary}
       menu={(close) => (
         <>

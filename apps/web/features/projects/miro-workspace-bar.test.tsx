@@ -61,7 +61,6 @@ function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps
     onAddVersion: vi.fn(),
     onEditLink: vi.fn(),
     lead: <span>channel</span>,
-    viewControl: null,
     menu: null,
     ...overrides,
   };

@@ -51,7 +51,7 @@ describe("MiroBar", () => {
         current={v3}
         onSelect={onSelect}
         viewControl={<span>view switch</span>}
-        menu={<span>menu content</span>}
+        menu={() => <span>menu content</span>}
       />,
     );
     return onSelect;
@@ -105,7 +105,7 @@ describe("MiroBar", () => {
         current={v3}
         onSelect={vi.fn()}
         viewControl={null}
-        menu={null}
+        menu={() => null}
       />,
     );
     expect(container.querySelector(".miro-bar")).toHaveClass("is-internal");

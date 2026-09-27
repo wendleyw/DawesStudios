@@ -4,7 +4,6 @@ import {
   boardRounds,
   canReviewShared,
   latestSharedLink,
-  offersWorkspace,
   pickById,
   sharedVersions,
   usesWorkspace,
@@ -107,21 +106,5 @@ describe("canReviewShared", () => {
     expect(
       canReviewShared({ ...shared[0], status: "approved" }, shared, "client", "approved"),
     ).toBe(false);
-  });
-});
-
-describe("offersWorkspace", () => {
-  it("lets the agency open the workspace from a legacy project's Working files", () => {
-    expect(offersWorkspace("agency", "internal", false)).toBe(true);
-  });
-  it("offers the way back wherever the channel already uses the workspace", () => {
-    expect(offersWorkspace("agency", "client", true)).toBe(true);
-    expect(offersWorkspace("agency", "client", false)).toBe(false);
-  });
-  it("never offers it to a designer or a client", () => {
-    expect(offersWorkspace("designer", "internal", false)).toBe(false);
-    expect(offersWorkspace("designer", "internal", true)).toBe(false);
-    expect(offersWorkspace("client", "client", true)).toBe(false);
-    expect(offersWorkspace(undefined, "internal", true)).toBe(false);
   });
 });

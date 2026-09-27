@@ -128,11 +128,11 @@ export function ProjectActionBoard({
           defaultValue={action.board?.dueDate ?? ""}
           aria-describedby="board-due-hint"
         />
-        <small id="board-due-hint">
-          Internal: only you and the designer see it.{" "}
-          {latest ? `The client's date is ${formatDate(latest)}.` : "The project has no due date."}
-        </small>
       </label>
+      <small id="board-due-hint">
+        Internal: only you and the designer see it.{" "}
+        {latest ? `The client's date is ${formatDate(latest)}.` : "The project has no due date."}
+      </small>
     </ProjectActionShell>
   );
 }

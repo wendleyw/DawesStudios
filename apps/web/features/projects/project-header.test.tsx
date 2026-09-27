@@ -60,4 +60,22 @@ describe("ProjectHeader", () => {
     fireEvent.click(within(group).getByRole("button", { name: "Versions" }));
     expect(onView).not.toHaveBeenCalled();
   });
+
+  it("offers the agency its first design board instead of a Miro workspace button", () => {
+    const onAddBoard = vi.fn();
+    render(
+      <ProjectHeader
+        {...base}
+        viewer={{ role: "agency" } as never}
+        channel="internal"
+        view="versions"
+        miroAvailable={false}
+        onView={() => {}}
+        onAddBoard={onAddBoard}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Miro workspace" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add design board" }));
+    expect(onAddBoard).toHaveBeenCalled();
+  });
 });

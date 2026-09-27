@@ -457,13 +457,15 @@ button opens the full Playground when nothing is on Miro yet, or the asset strip
 a board or version has a link, exactly as in Miro mode.
 
 The agency alone can step back to the legacy canvas on a project that still has per-deliverable
-versions: `viewControl`'s **Versions** button (only rendered when `legacyAvailable`) sets
-`legacyChosen`, which lasts until the channel switch resets it (`switchChannel`). Opening the URL
-with `?view=versions` forces the legacy canvas for every role on load (`legacyRequested`, read once).
-The other way, the agency's legacy canvas always offers **Miro workspace** (`offersWorkspace`): back
-to a workspace the channel already uses, or, on Working files of a project with only per-deliverable
-versions, into an empty workspace (`workspaceChosen`, also reset by `switchChannel`) where the agency
-adds the first design board. Designers and clients never get this control;
+versions: **Earlier versions** in the workspace's **More** menu (`onEarlierVersions`, only passed
+when `legacyAvailable`) sets `legacyChosen`, which lasts until the channel switch resets it
+(`switchChannel`); the legacy canvas then offers **Design boards** (`onBackToBoards`) to return.
+Opening the URL with `?view=versions` forces the legacy canvas for every role on load
+(`legacyRequested`, read once). A project with only per-deliverable versions has no workspace to go
+back to: on Working files its legacy canvas offers the agency **Add design board** instead (a
+button beside the view switch in Versions, an item in **More** in Miro mode), which opens the board
+dialog directly; once the board exists, `usesWorkspace` moves the page to the workspace on its own.
+There is no separate "Miro workspace" button, so the bar never opens an empty workspace. Designers and clients never get this control;
 `miro-workspace.spec.ts`'s fixtures rely on this to exercise the older per-deliverable flows on a
 seeded project without disturbing its workspace state. Designer privacy for boards and rounds —
 RLS on `design_boards`/`design_versions`/`internal_comments`, enforced on both read and write — is
