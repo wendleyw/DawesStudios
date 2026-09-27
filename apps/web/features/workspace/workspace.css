@@ -80,8 +80,9 @@
  * order and inert in every rendered pixel.
  */
 .sidebar-collapse {
-  position: absolute;
-  right: -14px;
+  /* Keep the edge control outside the short sidebar's scrolling clip. */
+  position: fixed;
+  left: calc(var(--sidebar-width) - 14px);
 
   top: 72px;
   z-index: 2;
@@ -94,6 +95,7 @@
 
   color: var(--sidebar-muted);
   border-radius: 50%;
+  transition: left 180ms ease;
 }
 .sidebar-collapse:hover:not(:disabled) {
   background: #3b3d35;

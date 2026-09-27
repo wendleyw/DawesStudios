@@ -97,6 +97,7 @@ export async function POST(request: Request) {
         })
       : await admin.auth.admin.inviteUserByEmail(input.email, {
           redirectTo: redirectTo.toString(),
+          ...(input.displayName ? { data: { display_name: input.displayName } } : {}),
         });
     if (error) throw error;
     return Response.json({ id: invitation.id, delivered: true });

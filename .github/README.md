@@ -10,6 +10,9 @@ regressions for Playground files/boards and client preferences. Its final read-o
 audit detects orphan records even when table counts still match; trigger-disabled fixture cleanup
 must explicitly remove dependent rows.
 
+The designer invitation journey uses the runner's local mail capture to verify the entered name,
+password setup, acceptance and fresh sign-in. It never sends email to an external mailbox.
+
 The acceptance job pins Supabase CLI 2.98.2, matching the validated local CLI version. It starts
 the CLI stack with the repository's migrations and seed, applies the local PostgreSQL permission
 hint compatibility setting, starts the real media worker, and provisions the fixture Auth accounts

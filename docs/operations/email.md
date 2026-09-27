@@ -4,6 +4,19 @@ Supabase Auth sends invitations and password recovery email through Resend SMTP.
 continues to call Supabase Auth; it does not use a Resend SDK or send email directly. The
 [production deployment guide](production.md) remains the release checklist.
 
+## Local invitation testing
+
+The local CLI stack captures Auth mail in [its local inbox](http://127.0.0.1:55424). It does not
+deliver to external mailboxes, including Gmail, until real SMTP is configured. A successful
+invitation response means Auth accepted the message for its configured mail service, not that an
+external inbox received it. Open the captured invitation in a separate browser profile/private
+window, set the password when requested, and accept it; an existing agency session cannot accept
+an invitation addressed to a different email. Do not paste verification tokens into logs or docs.
+
+Team → Invite someone accepts an optional full name for a new account. Existing accounts keep
+their profile name. A pending invitation can already have an Auth identity without studio access;
+its designer role is granted only after the intended recipient accepts it.
+
 ## Configure the target host
 
 1. Add a sending domain or subdomain in Resend, publish the DNS records Resend provides, and wait

@@ -87,6 +87,7 @@ jobs:
           npm --prefix apps/web run test:e2e -- --project=chromium
           tests/e2e/workspace.spec.ts
           tests/e2e/fixture-cleanup.spec.ts
+          tests/e2e/designer-invitation.spec.ts
           tests/e2e/workspace-actions.spec.ts
           tests/e2e/miro-workspace.spec.ts
           tests/e2e/miro-version-links.spec.ts

@@ -47,11 +47,11 @@ function setupInvitation(existing: boolean, removed = false) {
   return { rpc, updateUserById, signInWithOtp, inviteUserByEmail };
 }
 
-function request(email = "person@fixture.local") {
+function request(email = "person@fixture.local", displayName?: string) {
   return new Request("http://localhost:3003/api/invitations", {
     method: "POST",
     headers: { authorization: "Bearer agency-token", "content-type": "application/json" },
-    body: JSON.stringify({ email, role: "client", clientId }),
+    body: JSON.stringify({ email, displayName, role: "client", clientId }),
   });
 }
 
@@ -70,7 +70,7 @@ describe("POST /api/invitations", () => {
   it("sends an existing client a sign-in link without creating another Auth identity", async () => {
     const { signInWithOtp, inviteUserByEmail, updateUserById } = setupInvitation(true);
 
-    const response = await POST(request());
+    const response = await POST(request("person@fixture.local", "  New Name  "));
 
     expect(response.status).toBe(200);
     expect(signInWithOtp).toHaveBeenCalledWith({
@@ -119,5 +119,28 @@ describe("POST /api/invitations", () => {
     expect(inviteUserByEmail).toHaveBeenCalledWith("person@fixture.local", {
       redirectTo: `http://localhost:3003/auth/invite?token=${invitationToken}`,
     });
+  });
+
+  it("sets a trimmed Auth display name only for a new identity", async () => {
+    const { inviteUserByEmail } = setupInvitation(false);
+
+    const response = await POST(request("person@fixture.local", "  Ana Lima  "));
+
+    expect(response.status).toBe(200);
+    expect(inviteUserByEmail).toHaveBeenCalledWith("person@fixture.local", {
+      redirectTo: `http://localhost:3003/auth/invite?token=${invitationToken}`,
+      data: { display_name: "Ana Lima" },
+    });
+  });
+
+  it("rejects an overlong name before creating an invitation", async () => {
+    const { rpc, inviteUserByEmail } = setupInvitation(false);
+
+    const response = await POST(request("person@fixture.local", "A".repeat(121)));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Full name must be 120 characters or fewer." });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 });

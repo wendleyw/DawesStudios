@@ -3,6 +3,12 @@ import { z } from "@/lib/zod";
 export const invitationRequestSchema = z
   .object({
     email: z.string().trim().email().toLowerCase(),
+    displayName: z
+      .string()
+      .trim()
+      .max(120, "Full name must be 120 characters or fewer.")
+      .transform((value) => value || undefined)
+      .optional(),
     role: z.enum(["agency", "client", "designer"]),
     // A workspace id is UUID-shaped rather than RFC 4122 version 4; the seeded workspaces derive
     // theirs from a hash, and `z.uuid()` would refuse an invitation to any of them.

@@ -94,7 +94,9 @@ focus; on mobile it leaves the containing navigation drawer open until the next 
 The selected route determines client context, including directly opened project links. The sidebar
 retains client switching, Overview/My work, studio controls, support and account/sign out.
 It uses tighter spacing in short client-workspace windows so those global actions fit without
-scrolling. Client links stay in the top navigation when the sidebar is collapsed or opened as a
+scrolling. The desktop collapse/expand button is fixed at the sidebar edge so short-window
+scrolling cannot clip its outer half; its left position follows the sidebar width transition.
+Client links stay in the top navigation when the sidebar is collapsed or opened as a
 mobile drawer. Inside a client workspace the sidebar's first item is that client's **Overview** (the top
 navigation has no Overview); elsewhere it is the viewer's home (`/home`, also behind the studio
 logo). The client switcher shows the selected client's logo (`ClientMark`) on a light plate. A page can fold the sidebar while it needs the width with `useFoldSidebarWhile(active)`

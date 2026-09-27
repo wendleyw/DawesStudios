@@ -13,6 +13,10 @@ route no longer goes through `settings-page.tsx`.
   asks for confirmation first, mirroring the pattern `projects/project-details.tsx` already uses for
   revoking a single project assignment. A designer's row shows their active-project count instead of
   a bare role badge.
+- `InvitePerson` offers an optional full name for studio and client invitations. The form and API
+  trim it, omit blank input, and reject names longer than 120 characters. For a new Auth identity,
+  the API passes it as `display_name` metadata so the existing profile-creation trigger saves the
+  name. An existing account keeps its own profile name; the invitation never overwrites it.
 - `team-data.ts` owns every Supabase query this feature issues, as
   [the data-access contract](../../../../docs/architecture/data-access.md) requires.
 
@@ -136,6 +140,7 @@ From `apps/web`:
 
 ```sh
 npm run test -- features/team/team-data.test.ts
+npx vitest run features/team/team-page.test.tsx features/settings/settings-model.test.ts features/settings/invitation-route.test.ts
 npx vitest run features/shared/stylesheet-boundary --root apps/web
 npm run check
 ```

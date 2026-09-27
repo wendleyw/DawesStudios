@@ -135,6 +135,12 @@ class, which is the resting `neutral` tone.) No file was moved or split for this
 
 ## Invitation delivery
 
+The shared Team invitation form accepts an optional full name (trimmed, at most 120 characters).
+For a new Auth identity, the server passes it as `display_name` metadata and the existing profile
+trigger persists it. Existing users keep their chosen profile name. Local Auth mail is captured
+in the test inbox; see the [email runbook](../../../../docs/operations/email.md) for local testing
+and Resend production setup.
+
 Invitation and recovery screens render the studio logo in the theme's foreground color, retaining
 the original image's accessible name and aspect ratio so the white source remains legible in light mode.
 

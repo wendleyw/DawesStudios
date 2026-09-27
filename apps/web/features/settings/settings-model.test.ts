@@ -37,6 +37,25 @@ describe("invitation scope validation", () => {
       invitationRequestSchema.safeParse({ email: "not-an-email", role: "designer" }).success,
     ).toBe(false);
   });
+  it("trims a supplied name and omits whitespace-only names", () => {
+    const input = { email: "person@example.test", role: "designer" };
+    expect(
+      invitationRequestSchema.parse({ ...input, displayName: "  Ana Lima  " }).displayName,
+    ).toBe("Ana Lima");
+    expect(
+      invitationRequestSchema.parse({ ...input, displayName: "  " }).displayName,
+    ).toBeUndefined();
+    expect(invitationRequestSchema.parse(input).displayName).toBeUndefined();
+  });
+  it("accepts the profile name limit and rejects a longer supplied name", () => {
+    const input = { email: "person@example.test", role: "designer" };
+    expect(
+      invitationRequestSchema.safeParse({ ...input, displayName: "A".repeat(120) }).success,
+    ).toBe(true);
+    expect(
+      invitationRequestSchema.safeParse({ ...input, displayName: "A".repeat(121) }).success,
+    ).toBe(false);
+  });
 });
 
 describe("account password validation", () => {

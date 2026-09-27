@@ -1,14 +1,17 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; desktop board toolbar restored, no active delegated writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex; sidebar and named invitations integrated, no active delegated writers**.
 
 ## Objective and accepted decisions
 
 - Continue production preparation and preserve role-specific workflow notifications.
 - Latest correction: keep List/Canvas/Timeline/Kanban/Calendar tools on the desktop left rail;
   only viewport width up to 900 px moves them below. Height alone no longer changes orientation.
-- Compact project-header preview with campaign above the title and a due-date
-  badge beside it. Keep the preview opt-in via `?layout=compact-header`, pending visual approval.
+- User approved the compact campaign/title/due header for project pages only. `44dba3b` makes it
+  the default for all roles; the preview flag and old layout branch are removed.
+- Latest task: fix the clipped sidebar control, add a designer invitation name, and test delivery.
+  Resend remains unconfigured; local Auth captures mail. User's existing Gmail invitation remains
+  pending and requires password setup. Do not consume its verification link in automation.
 - Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
 - Resend is the selected production email provider, through Supabase Auth SMTP. No direct SDK.
 - Server, public domain, verified sender and credentials remain unknown. No push/deployment or
@@ -20,8 +23,10 @@ Updated: 2026-09-27 EDT. Owner: **Codex; desktop board toolbar restored, no acti
 
 - Prior `695a7e2`: production proxy and CI gates; `6340e66`: actionable role notifications.
   [Prior checkpoint](history/handoff-2026-09-27-before-recovery.md) retains their detailed evidence.
-- Separate UI thread committed `f845a5d`, opt-in compact project header preview. Preserve it;
-  its own [report](handoffs/2026-09-27-compact-project-header.md) owns the visual evidence.
+- UI thread promoted the project header in `44dba3b`;
+  [current report](handoffs/2026-09-27-project-header-default.md) owns its visual evidence.
+  Follow-up `45439d2` sets title weight to700; its owner verified both fonts/phone and desktop
+  plus81targeted tests. Other uncommitted project CSS belongs to separate work.
 - Preview follow-up: campaign via the existing authorized hook and role-specific due badge;
   no duplicated project date below. Opened the shared browser at its native size after a fixed
   test viewport clipped the user's window. Future size matrices run in isolated browsers.
@@ -60,6 +65,15 @@ Updated: 2026-09-27 EDT. Owner: **Codex; desktop board toolbar restored, no acti
 
 ## Environment and next concrete work
 
+- Current task: sidebar control remains fully clickable when expanded/collapsed at1512px wide
+  and900/696/600px tall. Optional full name reaches new Auth profiles; existing names stay intact.
+- Web gate:128files/1259tests, types/lint/format pass. New Chromium designer invite→local mail→
+  password→acceptance→fresh sign-in passes; no projects visible before assignment. Dialog Axe0.
+  All118FK pass; live10/68/50 preserved; disposable designer removed.
+- [Invitation/sidebar evidence](../verification/team-invitation-and-sidebar-2026-09-27.md).
+  User tests the existing invitation from local inbox55424 in a separate/private browser session.
+  External Gmail delivery requires Resend credentials and a verified sender on the host.
+
 - Current toolbar checks: web gate127files/1249tests and Chromium search/filter/focus/Axe across
   five sizes, including1512×696 and1440×600, pass. Desktop captures inspected; live10/68/50 and
   all118FK preserved. [Toolbar evidence](../verification/board-left-toolbar-2026-09-27.md).
@@ -72,7 +86,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex; desktop board toolbar restored, no acti
 - Filesystem staging remains stopped with data/volumes retained. When resumed:
   API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.
 - Recovery/Resend is verified in `a7b35e5`; its owner released this checkpoint before UI integration.
-  The unrelated `login.png` deletion is preserved. Next UI action: user reviews the restored desktop toolbar and the separate header preview.
+  The unrelated `login.png` deletion is preserved. Next UI action: user tests the pending local designer invitation.
 - Then obtain target server/domain/sender configuration and use the [production runbook](../operations/production.md)
   when deployment is explicitly requested. Verify Resend delivery with controlled recipients.
 - Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,

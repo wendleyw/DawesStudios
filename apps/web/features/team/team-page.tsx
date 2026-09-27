@@ -278,6 +278,7 @@ export function InvitePerson({
   const invalidateTeam = useInvalidateTeam();
   const clients = useClients();
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"agency" | "client" | "designer">(
     clientId ? "client" : "designer",
   );
@@ -286,6 +287,7 @@ export function InvitePerson({
     mutationFn: async () => {
       const parsed = invitationRequestSchema.safeParse({
         email: email.trim(),
+        displayName,
         role,
         ...(role === "client" ? { clientId: selectedClient } : {}),
       });
@@ -314,7 +316,7 @@ export function InvitePerson({
       open
       onClose={onClose}
       title={clientId ? "Invite a client" : "Invite someone"}
-      description="They will receive a secure email to create their account."
+      description="They will receive a secure invitation email."
     >
       <form
         className="settings-form"
@@ -333,6 +335,19 @@ export function InvitePerson({
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
+        <label>
+          Full name (optional)
+          <input
+            type="text"
+            autoComplete="name"
+            maxLength={120}
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+          />
+        </label>
+        <p className="settings-note">
+          Used for a new account. Someone with an account keeps their existing name.
+        </p>
         {!clientId && (
           <label>
             Role
