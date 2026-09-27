@@ -1,6 +1,99 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { credentials, localAdmin, localCaller, screenshotDirectory, signIn } from "./test-support";
+import { cleanupTestProject, createProductionFixture } from "./project-fixture";
+import {
+  credentials,
+  localAdmin,
+  localAgency,
+  localCaller,
+  screenshotDirectory,
+  signIn,
+} from "./test-support";
+
+/**
+ * The canonical seed holds no SABRE files (its one delivery belongs to another client), so this file
+ * brings its own: four disposable SABRE projects across SABRE's three campaigns — two in the first,
+ * so a campaign groups files under more than one project — each with delivery files, and working
+ * files in the first. The projects are marked delivered, which is when a client reads delivery files
+ * (`private.delivery_released`). Every expectation is still counted from each role's own reads, so
+ * the SABRE overlay's files are counted alongside these.
+ */
+test.describe.configure({ mode: "serial" });
+
+const png = fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url));
+const fixtureProjects: string[] = [];
+
+async function storeFile(
+  bucket: "delivery-files" | "internal-assets",
+  projectId: string,
+  name: string,
+) {
+  const bytes = readFileSync(png);
+  const storagePath = `${projectId}/${crypto.randomUUID()}.png`;
+  const uploaded = await localAdmin.storage
+    .from(bucket)
+    .upload(storagePath, bytes, { contentType: "image/png" });
+  if (uploaded.error) throw new Error(uploaded.error.message);
+  const row = {
+    project_id: projectId,
+    name,
+    storage_path: storagePath,
+    mime_type: "image/png",
+    file_size: bytes.byteLength,
+  };
+  const recorded =
+    bucket === "delivery-files"
+      ? await localAdmin.from("delivery_files").insert(row)
+      : await localAdmin.from("project_assets").insert(row);
+  if (recorded.error) throw new Error(recorded.error.message);
+}
+
+test.beforeAll(async () => {
+  test.setTimeout(120_000);
+  const agency = await localAgency();
+  const campaigns = await localAdmin
+    .from("campaigns")
+    .select("id")
+    .eq("client_id", await sabreId())
+    .order("title");
+  expect(campaigns.error).toBeNull();
+  expect(campaigns.data!.length).toBeGreaterThanOrEqual(3);
+  // Two projects in the first campaign, one in each of the next two; the file counts differ, so
+  // the first campaign is unambiguously the busiest for the agency and for the client.
+  const plan = [
+    { campaign: 0, deliveries: 2, working: 2 },
+    { campaign: 0, deliveries: 1, working: 0 },
+    { campaign: 1, deliveries: 1, working: 0 },
+    { campaign: 2, deliveries: 1, working: 0 },
+  ];
+  for (const [index, entry] of plan.entries()) {
+    const { projectId } = await createProductionFixture(agency);
+    fixtureProjects.push(projectId);
+    const moved = await localAdmin
+      .from("projects")
+      .update({ campaign_id: campaigns.data![entry.campaign].id, status: "delivered" })
+      .eq("id", projectId);
+    if (moved.error) throw new Error(moved.error.message);
+    for (let file = 1; file <= entry.deliveries; file += 1)
+      await storeFile(
+        "delivery-files",
+        projectId,
+        `Files fixture ${index + 1} delivery ${file}.png`,
+      );
+    for (let file = 1; file <= entry.working; file += 1)
+      await storeFile(
+        "internal-assets",
+        projectId,
+        `Files fixture ${index + 1} working ${file}.png`,
+      );
+  }
+});
+
+test.afterAll(async () => {
+  for (const projectId of fixtureProjects.splice(0)) await cleanupTestProject(projectId);
+});
 
 /**
  * Files per campaign as the signed-in role's own reads return them (the page reads working files
