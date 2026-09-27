@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { CreditBalanceChip } from "@/features/credits/credit-balance-chip";
+import { AccountMenu } from "./account-menu";
 import { NotificationsPopover } from "./notifications-popover";
 import type { ReactNode } from "react";
 import { ClientMark } from "./client-mark";
@@ -20,13 +20,6 @@ export function CanvasHeader({
   context?: ReactNode;
   heading?: boolean;
 }) {
-  const name = viewer?.display_name || "Your account";
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("");
   const logo = (
     <Link
       className="board-identity-logo"
@@ -48,25 +41,8 @@ export function CanvasHeader({
         {viewer && <ClientNavigation client={client} role={viewer.role} />}
       </div>
       <div className="board-account">
-        <CreditBalanceChip clientId={client.id} viewer={viewer} />
         <NotificationsPopover />
-        <Link
-          href="/settings/account"
-          className="board-profile"
-          aria-label={`Your profile: ${name}`}
-          title={`Your profile: ${name}`}
-        >
-          <span className="board-profile-avatar" aria-hidden="true">
-            {viewer?.avatar_url ? (
-              // The signed-in viewer's avatar can be a private URL; avoid the shared image cache.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={viewer.avatar_url} alt="" />
-            ) : (
-              initials
-            )}
-          </span>
-          <span className="board-profile-name">{name}</span>
-        </Link>
+        <AccountMenu clientId={client.id} viewer={viewer} />
       </div>
     </header>
   );

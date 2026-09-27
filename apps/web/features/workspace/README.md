@@ -35,10 +35,13 @@ multi-workspace options and `home-page.tsx`'s workspace cards both link to `/cli
 for that role, and to `/clients/:id/board` for the studio and designers.
 
 All client routes share `canvas-header.tsx`: floating client identity/navigation on the left
-and the signed-in viewer’s profile with a notification bell on its left in one account card. A
-compact credit balance chip (`features/credits/credit-balance-chip.tsx`) sits directly left of that
-bell, linking to the client's Credits page; it renders nothing for a designer viewer, since credits
-stay out of that role's view everywhere else. Only the board supplies the quarter control.
+and, in one account card, the notification bell and the signed-in viewer’s avatar and name. The
+avatar is the trigger of `account-menu.tsx`, a native nonmodal popover that opens on mouse hover
+(a click pins it open; tap, Enter and Space open it too; Escape and outside clicks close it). For
+clients and the studio a ring around the avatar shows how much of the client's latest top-up is
+left, and the menu holds the Credits block from `features/credits/credit-meter.tsx` (amount left,
+dot bar, Request or Adjust credits); then Account settings and Sign out. Designers get the same
+menu without the ring or the Credits block, since credits stay out of that role's view everywhere else. Only the board supplies the quarter control.
 Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
 Reviews, Brand Hub and Credits receive the same header from the shell, positioned sticky
 inside the main scrolling region. Their white title/action cards and contextual tools sit below it

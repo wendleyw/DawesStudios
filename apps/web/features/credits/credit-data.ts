@@ -69,6 +69,34 @@ export function useProjectCreditUse(projectId: string) {
   });
 }
 
+/**
+ * The balance right after the client's most recent top-up, the "full" mark for the account menu's
+ * ring. A top-up is any positive entry: the initial `allocation` or a positive `adjustment` (agency
+ * allocations and fulfilled requests are both recorded as adjustments). Null when the client has
+ * never received credits. Keyed under `credit-ledger`, so every write that refreshes the ledger
+ * refreshes this too.
+ */
+export function useLatestTopUp(clientId: string) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: ["credit-ledger", session?.user.id, clientId, "latest-top-up"],
+    enabled: !!session && !!profile && profile.role !== "designer",
+    queryFn: async () => {
+      const rows = assertResult(
+        await database
+          .from("credit_ledger")
+          .select("balance_after")
+          .eq("client_id", clientId)
+          .in("kind", ["allocation", "adjustment"])
+          .gt("amount", 0)
+          .order("created_at", { ascending: false })
+          .limit(1),
+      ) as Pick<CreditEntry, "balance_after">[];
+      return rows[0]?.balance_after ?? null;
+    },
+  });
+}
+
 export function useCreditRequests(clientId: string) {
   const { database, session, profile } = useAuth();
   return useQuery({

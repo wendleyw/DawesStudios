@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   creditCsv,
+  creditRemainingRatio,
   csvCell,
   filterCreditEntries,
   formatCredits,
@@ -190,5 +191,22 @@ describe("projectCreditsUsed", () => {
   it("is null when the project has no debit", () => {
     expect(projectCreditsUsed([])).toBeNull();
     expect(projectCreditsUsed([{ amount: 100, kind: "allocation" }])).toBeNull();
+  });
+});
+
+describe("creditRemainingRatio", () => {
+  it("is the balance as a share of the balance after the latest top-up", () => {
+    expect(creditRemainingRatio(25, 100)).toBe(0.25);
+    expect(creditRemainingRatio(100, 100)).toBe(1);
+  });
+
+  it("stays within 0 and 1", () => {
+    expect(creditRemainingRatio(150, 100)).toBe(1);
+    expect(creditRemainingRatio(-5, 100)).toBe(0);
+  });
+
+  it("is null without a positive top-up balance to measure against", () => {
+    expect(creditRemainingRatio(40, null)).toBeNull();
+    expect(creditRemainingRatio(40, 0)).toBeNull();
   });
 });

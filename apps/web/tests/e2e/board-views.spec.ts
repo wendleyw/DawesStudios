@@ -119,6 +119,7 @@ test("the floating header filters quarters across views and links to the signed-
     await chooseView(page, "list");
     await expect(page.locator(".project-row")).toHaveCount(2);
     await page.locator(".board-profile").click();
+    await page.getByRole("link", { name: "Account settings" }).click();
     await expect(page).toHaveURL("/settings/account");
   } finally {
     await fixture.cleanup();

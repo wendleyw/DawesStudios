@@ -76,7 +76,7 @@
   --overlay-scrim: light-dark(rgb(20 23 29 / 36%), rgb(0 0 0 / 60%));
   /*
    * The status badge's three colored tones (`neutral` stays grey). Each pairs a soft tinted
-   * background with a darker foreground and a mid-strength border; the credit balance chip reuses
+   * background with a darker foreground and a mid-strength border; the credit ring reuses
    * `--tone-attention-*`. Foreground-on-background contrast is 6:1 or better for 12px text.
    */
   --tone-active-fg: light-dark(#1d4e89, #9cc3f2);
@@ -1616,7 +1616,7 @@ img.board-identity-mark {
   background: var(--border);
 }
 .board-account {
-  /* Room for the credit balance chip, the bell and the avatar before the name truncates. */
+  /* Room for the bell and the ringed avatar before the name truncates. */
   max-width: 360px;
   flex-shrink: 0;
   gap: 8px;
@@ -1631,6 +1631,13 @@ img.board-identity-mark {
   min-width: 0;
   align-items: center;
   gap: 10px;
+  padding: 0 4px 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 .board-profile-avatar {
   display: grid;

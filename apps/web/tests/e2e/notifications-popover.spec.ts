@@ -43,7 +43,9 @@ test("account notifications open below the profile, persist read state and dismi
         await page.locator(".board-account").evaluate((element) => {
           const bell = element.querySelector(".notifications-bell")!.getBoundingClientRect();
           const profile = element.querySelector(".board-profile")!.getBoundingClientRect();
-          return bell.right <= profile.left && Math.abs(bell.top - profile.top) < 3;
+          // Same row: the ringed avatar is taller than the bell, so compare vertical centres.
+          const centre = (rect: DOMRect) => rect.top + rect.height / 2;
+          return bell.right <= profile.left && Math.abs(centre(bell) - centre(profile)) < 3;
         }),
       ).toBe(true);
       await bell.click();

@@ -52,7 +52,7 @@ for (const role of ["agency", "client"] as const) {
         await expect(page.locator(".client-page-heading")).toBeVisible();
         // Sections are documents, not canvases: the canvas grid stays off their surface.
         await expect(page.locator(".main-content")).toHaveCSS("background-image", "none");
-        await expect(page.getByRole("link", { name: /^Your profile:/ })).toBeVisible();
+        await expect(page.getByRole("button", { name: /^Account menu:/ })).toBeVisible();
         await expect
           .poll(() =>
             page.locator(".client-page-heading").evaluate((element) => {

@@ -1,7 +1,6 @@
 /*
- * The look both credit chips share: the account card's balance (`credit-balance-chip`) and a
- * project's own credits in its title card (`project-credits-chip`). Each chip imports this before
- * its own stylesheet, so its own rules win where they differ.
+ * The credit chip's base look, used by a project's own credits in its title card
+ * (`project-credits-chip`), which imports this before its own stylesheet.
  */
 .credit-chip {
   display: flex;

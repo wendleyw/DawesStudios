@@ -890,7 +890,87 @@ img.client-switcher-mark {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notifications-popover:popover-open {
+  .notifications-popover:popover-open,
+  .account-menu-popover:popover-open {
     animation: none;
   }
+}
+
+/* The viewer's account menu, opened from the ringed avatar in the header's account card. */
+.account-menu {
+  display: flex;
+  min-width: 0;
+}
+.account-menu-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 12%);
+  overflow-y: auto;
+}
+.account-menu-popover:popover-open {
+  display: grid;
+  gap: 8px;
+  animation: notifications-enter 180ms ease-out;
+}
+.account-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 4px;
+}
+.account-menu-identity > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.account-menu-identity strong {
+  overflow: hidden;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu-identity span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.account-menu-avatar {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+}
+.account-menu-links {
+  display: grid;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.account-menu-links > a,
+.account-menu-links > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--control-height-small);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-base);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.account-menu-links > a:hover,
+.account-menu-links > button:hover {
+  background: var(--surface-subtle);
+}
+.account-menu-links svg {
+  color: var(--muted);
 }

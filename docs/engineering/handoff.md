@@ -32,10 +32,9 @@ the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/
 
 **Two-row Miro bar** (channel row tinted amber/blue); no "Miro workspace" button: Add/Earlier in More.
 **Board due dates** (`202609270002`): internal, on or before the project's; designers see the earlier.
+**Account menu:** the credit chip became a ring around the avatar (share of the latest top-up left) and a hover menu with Credits, Request/Adjust, Account settings, Sign out.
 
-## In progress
-
-- Nothing. **J10 on staging:** 68 of 72 scenarios pass on the canonical dataset; only SMTP remains.
+## In progress — nothing. **J10 on staging:** 68 of 72 pass on the canonical dataset; only SMTP remains.
 
 ## Accepted decisions
 

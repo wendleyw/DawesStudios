@@ -62,12 +62,23 @@ const creditCountFormatter = new Intl.NumberFormat("en-US");
 
 /**
  * A credit count worded the one way the product shows it: the grouped number (`"1,234"`) and its
- * unit, singular only for exactly one. `credit-balance-chip.tsx`, `project-credits-chip.tsx` and the
+ * unit, singular only for exactly one. `credit-account-menu.tsx`, `project-credits-chip.tsx` and the
  * client Overview's per-project credit line all share this rule instead of each declaring its own
  * `Intl.NumberFormat` and `count === 1 ? "credit" : "credits"` ternary.
  */
 export function formatCredits(count: number): { amount: string; word: "credit" | "credits" } {
   return { amount: creditCountFormatter.format(count), word: count === 1 ? "credit" : "credits" };
+}
+
+/**
+ * How much of the balance after the most recent top-up is still left, from 0 to 1, for the account
+ * menu's ring and dot bar. A client has no plan allowance, so a fresh top-up reads as full and each
+ * accepted project empties it. Null when there is no positive top-up balance to measure against, so
+ * the menu shows the number alone instead of a guessed proportion.
+ */
+export function creditRemainingRatio(balance: number, fullBalance: number | null): number | null {
+  if (fullBalance == null || fullBalance <= 0) return null;
+  return Math.min(1, Math.max(0, balance / fullBalance));
 }
 
 export function filterCreditEntries(
