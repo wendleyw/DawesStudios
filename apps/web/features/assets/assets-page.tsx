@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { downloadPrivateFile } from "./file-download";
+import { DriveIcon } from "@/features/shared/drive-icon";
 import { Modal } from "@/features/shared/modal";
 import { useClients, useInvalidateWorkspace } from "@/features/workspace/workspace-data";
 import {
@@ -302,6 +303,18 @@ export function AssetsPage({ clientId }: { clientId: string }) {
               <h2>
                 <Link href={`/projects/${group.projectId}`}>{group.projectTitle}</Link>{" "}
                 <span>{countLabel(group.files.length, "file")}</span>
+                {group.driveUrl && (
+                  <a
+                    className="icon-button"
+                    href={group.driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Google Drive backup"
+                    title="Open Google Drive backup"
+                  >
+                    <DriveIcon size={14} />
+                  </a>
+                )}
               </h2>
               <div className="file-grid">
                 {group.files.map((file) => (

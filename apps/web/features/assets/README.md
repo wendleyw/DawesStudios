@@ -36,7 +36,10 @@ icon and its real type from `fileTypeLabel` ("PDF", "MP4", "Word", or "File"). D
 Miro, so the list has no design copies: the former shared-designs source (`published_designs`) is
 no longer read. Cards in a row share a height and their footers line up.
 `FileCard` does not render its own project link — the campaign view's project group heading, which
-every `.file-grid` of cards sits under, carries that link instead.
+every `.file-grid` of cards sits under, carries that link instead, plus an **Open Google Drive
+backup** icon link (`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener
+noreferrer"`) once the agency has set one in that project's own Details, visible to every role that
+can see the group at all.
 
 `file-download.ts` moved here from `features/shared/` in the small-features migration: it had
 exactly one consumer, `assets-page.tsx`, and the shared layer's own rule is that a primitive belongs
@@ -54,7 +57,10 @@ these functions take (`GroupableFile`, `GroupableProject`); nothing here imports
   counts and its cover (the newest file that has a signed preview, or `null`).
 - `groupFilesByProject` — a campaign's matching files grouped by project, newest file first within a
   group and across groups; a project with no matching file simply has no group; a `projectId` absent
-  from the given project list resolves to an empty title rather than throwing.
+  from the given project list resolves to an empty title rather than throwing. Each group also
+  carries that project's `driveUrl` (null when it is unknown or has none), read from
+  `asset-data.ts`'s `AssetProject.driveUrl` (an explicit `projects.drive_url` column read, mapped
+  like every other field on that type).
 - `campaignIdForProject` / `fileCounts` — the small pieces the two functions above share: which
   folder a project's files fall into (its own campaign, or "No campaign" when `campaign_id` is null
   _or_ the campaign did not come back readable), and a file list's counts.

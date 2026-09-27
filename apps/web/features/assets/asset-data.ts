@@ -91,6 +91,8 @@ export type AssetProject = {
   status: string;
   campaignId: string | null;
   campaignTitle: string | null;
+  /** The project's Google Drive backup link, if any; the icon beside its file group opens it. */
+  driveUrl: string | null;
 };
 
 export function useProjectAssets(clientId: string) {
@@ -102,7 +104,7 @@ export function useProjectAssets(clientId: string) {
       const projectRows = assertResult(
         await database
           .from("projects")
-          .select("id,title,status,campaign_id,campaigns(id,title)")
+          .select("id,title,status,campaign_id,drive_url,campaigns(id,title)")
           .eq("client_id", clientId),
       );
       const projects: AssetProject[] = projectRows.map((row) => ({
@@ -111,6 +113,7 @@ export function useProjectAssets(clientId: string) {
         status: row.status,
         campaignId: row.campaign_id,
         campaignTitle: row.campaigns?.title ?? null,
+        driveUrl: row.drive_url,
       }));
       if (!projects.length) return { assets: [] as ProjectAsset[], projects };
       const ids = projects.map((project) => project.id);

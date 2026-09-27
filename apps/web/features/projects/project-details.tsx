@@ -14,15 +14,18 @@ import {
   type CreditMonthSummary,
 } from "@/features/credits/credit-model";
 import { CopyButton } from "@/features/shared/copy-button";
+import { DriveIcon } from "@/features/shared/drive-icon";
 import { Modal } from "@/features/shared/modal";
 import { personName, reviewDecisionLabel } from "@/features/team/client-people";
 import { useClientPeople } from "@/features/team/team-data";
 import { useDateFormat, versionStatusLabel } from "@/features/workspace/workspace-data";
+import { driveUrlHint, parseDriveUrl } from "./drive-link";
 import {
   assignDesigner,
   moveProjectMonth,
   MonthShortfallError,
   revokeDesignAssignment,
+  setProjectDriveLink,
   settleProjectCredits,
   updateProjectDetails,
   useInvalidateProject,
@@ -60,6 +63,7 @@ export function ProjectDetails({
   const [assigning, setAssigning] = useState(false);
   const [revoking, setRevoking] = useState<{ id: string; name: string } | null>(null);
   const [creditDialog, setCreditDialog] = useState<"move" | "settle" | null>(null);
+  const [editingDriveLink, setEditingDriveLink] = useState(false);
   const assignments = useProjectAssignments(project.id);
   // Billing is for the studio and the client; the read is off for a designer.
   const credits = useProjectCredits(project.id, project.credit_month);
@@ -120,6 +124,17 @@ export function ProjectDetails({
     onSuccess: async () => {
       await assignments.refetch();
       setRevoking(null);
+    },
+  });
+  const driveLink = useMutation({
+    mutationFn: async (url: string) => {
+      const parsed = parseDriveUrl(url);
+      if (parsed === false) throw new Error(driveUrlHint);
+      await setProjectDriveLink(database, { projectId: project.id, url: parsed });
+    },
+    onSuccess: async () => {
+      await invalidate();
+      setEditingDriveLink(false);
     },
   });
   const shareLink =
@@ -230,6 +245,33 @@ export function ProjectDetails({
                 Settle final credits
               </button>
             )}
+          </div>
+        )}
+        {profile?.role === "agency" && (
+          <div className="assignment-section">
+            <h3>Google Drive backup</h3>
+            {project.drive_url ? (
+              <a
+                className="button quiet"
+                href={project.drive_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <DriveIcon size={14} />
+                Open Google Drive backup
+              </a>
+            ) : (
+              <p>No backup link yet.</p>
+            )}
+            <button
+              className="button quiet"
+              onClick={() => {
+                driveLink.reset();
+                setEditingDriveLink(true);
+              }}
+            >
+              {project.drive_url ? "Edit Drive link" : "Add Drive link"}
+            </button>
           </div>
         )}
         {project.briefing_id && (
@@ -354,6 +396,46 @@ export function ProjectDetails({
           </button>
         </div>
         {revoke.error && <FormError>{revoke.error.message}</FormError>}
+      </Modal>
+      <Modal
+        open={editingDriveLink}
+        title={project.drive_url ? "Edit Drive link" : "Add Drive link"}
+        onClose={() => {
+          if (!driveLink.isPending) setEditingDriveLink(false);
+        }}
+      >
+        <form
+          className="stack-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            driveLink.mutate(String(new FormData(event.currentTarget).get("url")));
+          }}
+        >
+          <label>
+            Drive link
+            <input
+              name="url"
+              type="url"
+              defaultValue={project.drive_url ?? ""}
+              placeholder="https://drive.google.com/…"
+            />
+          </label>
+          <small>Leave this blank to remove the backup link.</small>
+          {driveLink.error && <FormError>{driveLink.error.message}</FormError>}
+          <div className="form-actions">
+            <button
+              className="button"
+              type="button"
+              disabled={driveLink.isPending}
+              onClick={() => setEditingDriveLink(false)}
+            >
+              Cancel
+            </button>
+            <button className="button primary" type="submit" disabled={driveLink.isPending}>
+              {driveLink.isPending ? "Saving…" : "Save link"}
+            </button>
+          </div>
+        </form>
       </Modal>
       <Modal
         open={assigning}

@@ -147,6 +147,14 @@ describe("groupFilesByProject", () => {
     const groups = groupFilesByProject([{ projectId: "missing", date: f1.date }], []);
     expect(groups[0].projectTitle).toBe("");
   });
+
+  it("carries the project's Drive link onto its group, or null when it has none", () => {
+    const withDrive = { ...p1, driveUrl: "https://drive.google.com/drive/folders/1" };
+    expect(groupFilesByProject([f1], [withDrive])[0].driveUrl).toBe(
+      "https://drive.google.com/drive/folders/1",
+    );
+    expect(groupFilesByProject([f1], [p1])[0].driveUrl).toBeNull();
+  });
 });
 
 describe("resolveAssetsView", () => {

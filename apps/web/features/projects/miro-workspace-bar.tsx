@@ -2,6 +2,7 @@
 
 import { Plus, Send, Share2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { DriveIcon } from "@/features/shared/drive-icon";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import { MiroBarShell, miroBarTone } from "./miro-view";
 import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
@@ -33,6 +34,8 @@ export type MiroWorkspaceBarProps = {
   /** The channel, from `ProjectChannelLead`. */
   lead: ReactNode;
   menu: ReactNode;
+  /** The project's Google Drive backup link, if any; shown to the agency and the client. */
+  driveUrl: string | null;
 };
 
 /**
@@ -91,6 +94,18 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
             >
               Edit Miro link
             </button>
+          )}
+          {props.driveUrl && (
+            <a
+              className="button quiet"
+              href={props.driveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={close}
+            >
+              <DriveIcon size={14} />
+              Open Google Drive backup
+            </a>
           )}
           {props.menu}
         </>

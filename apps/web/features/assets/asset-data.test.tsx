@@ -111,6 +111,7 @@ describe("useProjectAssets", () => {
           status: "approved",
           campaign_id: null,
           campaigns: null,
+          drive_url: "https://drive.google.com/drive/folders/1",
         },
       ],
       delivery_files: [file("final")],
@@ -142,5 +143,8 @@ describe("useProjectAssets", () => {
       "project_assets",
       "projects",
     ]);
+    expect(result.current.data?.projects[0].driveUrl).toBe(
+      "https://drive.google.com/drive/folders/1",
+    );
   });
 });

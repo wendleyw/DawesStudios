@@ -364,3 +364,44 @@ describe("ProjectDetails credits", () => {
     expect(screen.queryByRole("button", { name: /Move to another month|Settle/ })).toBeNull();
   });
 });
+
+describe("ProjectDetails Drive link", () => {
+  it("offers Add Drive link to the agency when none is set", () => {
+    renderDetails();
+    expect(screen.getByText("Google Drive backup")).toBeInTheDocument();
+    expect(screen.getByText("No backup link yet.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Drive link" })).toBeInTheDocument();
+  });
+
+  it("offers Edit Drive link, and the open link, once one is set", () => {
+    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
+    expect(screen.getByRole("button", { name: "Edit Drive link" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Open Google Drive backup" });
+    expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("hides the control from a client and a designer", () => {
+    state.role = "client";
+    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
+    expect(screen.queryByText("Google Drive backup")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Open Google Drive backup" }),
+    ).not.toBeInTheDocument();
+    state.role = "designer";
+    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
+    expect(screen.queryByText("Google Drive backup")).not.toBeInTheDocument();
+  });
+
+  it("refuses an invalid link before it is ever sent", async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole("button", { name: "Add Drive link" }));
+    const input = screen.getByLabelText("Drive link");
+    await user.type(input, "http://drive.google.com/drive/folders/1");
+    await user.click(screen.getByRole("button", { name: "Save link" }));
+    expect(
+      await screen.findByText("Paste a Google Drive link (https://drive.google.com/…)."),
+    ).toBeInTheDocument();
+  });
+});

@@ -409,6 +409,23 @@ export async function setProjectCoverVisibility(
 }
 
 /**
+ * Sets or clears the project's Google Drive backup link. The database validates the URL again
+ * (`public.set_project_drive_link`) and is the authority; `drive-link.ts`'s `parseDriveUrl` only
+ * lets the dialog refuse a bad link before this call. Pass `null` to clear it.
+ */
+export async function setProjectDriveLink(
+  database: SupabaseDatabase,
+  input: { projectId: string; url: string | null },
+) {
+  assertResult(
+    await database.rpc("set_project_drive_link", {
+      p_project_id: input.projectId,
+      p_url: input.url ?? "",
+    }),
+  );
+}
+
+/**
  * The keys every project write invalidates.
  *
  * `assignments` and `asset-url` are deliberately absent. Assignments are refetched by the panel

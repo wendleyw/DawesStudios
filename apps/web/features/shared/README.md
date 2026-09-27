@@ -38,6 +38,13 @@ and carries its own `.brand-mark` class; each consumer sizes and screens it. Con
 `workspace/app-shell` (the sidebar lockup) and `projects/project-tool-bar` (a tile in the menu
 colour beside the first tool).
 
+### `DriveIcon` — `drive-icon.tsx`
+
+A small triangular mark in Google's Drive palette (green, yellow, blue), sized like the lucide
+icons beside it (`size`, default `16`). Decorative and `aria-hidden`; the link or button around it
+carries the accessible name ("Open Google Drive backup"). Consumers: `projects/miro-workspace-bar`
+(the More menu) and `assets/file-groups` (the icon beside a project with a Drive link).
+
 ### Canvas background and controls
 
 `CanvasBackground` (`canvas-background.tsx`) renders a 24-unit dot grid (1.5-unit dots, after the

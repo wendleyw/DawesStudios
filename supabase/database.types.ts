@@ -1532,6 +1532,7 @@ export type Database = {
           credit_month: string | null
           delivered_at: string | null
           description: string
+          drive_url: string | null
           due_date: string | null
           id: string
           service_type: string
@@ -1549,6 +1550,7 @@ export type Database = {
           credit_month?: string | null
           delivered_at?: string | null
           description?: string
+          drive_url?: string | null
           due_date?: string | null
           id?: string
           service_type: string
@@ -1566,6 +1568,7 @@ export type Database = {
           credit_month?: string | null
           delivered_at?: string | null
           description?: string
+          drive_url?: string | null
           due_date?: string | null
           id?: string
           service_type?: string
@@ -2240,6 +2243,10 @@ export type Database = {
       }
       set_project_cover_visibility: {
         Args: { p_client_visible: boolean; p_project_id: string }
+        Returns: undefined
+      }
+      set_project_drive_link: {
+        Args: { p_project_id: string; p_url: string }
         Returns: undefined
       }
       set_publication_miro_link: {

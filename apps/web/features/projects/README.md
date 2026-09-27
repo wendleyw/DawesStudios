@@ -21,7 +21,10 @@ two-row bar. The first row says where you are: back (`ProjectBackLink`, `project
 project title, its due date, **Open in Miro** for the shown link (`miroBoardUrl`,
 `target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions) and a
 **More** menu holding the credits the project used (`credits/project-credits-chip.tsx`; designers
-never see it). Escape on **More** returns focus to it. The second row holds the channel
+never see it) and, once the agency has set one, **Open Google Drive backup**
+(`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener noreferrer"`, visible to the
+agency and the client) linking to `projects.drive_url`. Escape on **More** returns focus to it. The
+second row holds the channel
 (`ProjectChannelLead`: the agency's **Working files / Shared with client** tabs, the designer's
 **Internal** label, nothing for the client), the channel's controls and its primary action.
 `miroBarTone` tints that row by channel for the agency and the designer (amber with a hatch for
@@ -129,6 +132,15 @@ preview once a cover exists. `prepareProjectCover`/`clearProjectCover` (`media-c
 visibility forward, and toggling it goes through `set_project_cover_visibility`
 (`setProjectCoverVisibility`).
 
+**Drive link.** Details shows the agency an **Add Drive link** / **Edit Drive link** button (once
+one exists, also **Open Google Drive backup**) beside a **Google Drive backup** heading; a client or
+designer never sees this control. The dialog validates with `drive-link.ts`'s `parseDriveUrl`
+(`https://drive.google.com/...` only, blank clears it) before calling
+`setProjectDriveLink`/`set_project_drive_link` — the database repeats the same host check and is the
+authority. The link is only a link; nothing syncs with Google Drive. It also shows as an icon link
+in the Miro bar's More menu (above) and beside the project's file group in
+[Files](../assets/README.md), visible to the agency and the client.
+
 **Board due dates.** A board's internal due date (`design_boards.due_date`) lets the agency ask its
 designer to deliver before the date the client sees. `create_design_board`/`update_design_board`
 reject one after the project's own due date (the dialog checks first; the field's `max` is the
@@ -148,7 +160,10 @@ designer to their own) and polls every 30 s, so a board reassigned away from a d
 their workspace without a reload; a **Send to studio** already in flight then shows "This board is
 no longer assigned to you." and refreshes the boards. `useProjectAssignments` feeds Details and the
 board dialog. `projectQueryKeys` lists the keys every project write invalidates;
-`useInvalidateComments` refreshes only `comments`.
+`useInvalidateComments` refreshes only `comments`. `setProjectDriveLink` calls
+`set_project_drive_link`; `drive_url` is part of `useProjectDetail`'s plain `select("*")` project
+row (and of `workspace-data.ts`'s `Project` type, and `assets/asset-data.ts`'s explicit column
+list), so no extra read or query key was needed for it.
 
 Miro links are kept per channel in their own tables under their own RLS:
 `publication_miro_links` (client) and `design_version_miro_links` (internal). `readMiroLinks` takes

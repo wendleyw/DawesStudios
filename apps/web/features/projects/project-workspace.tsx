@@ -195,6 +195,7 @@ export function ProjectWorkspace({
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           lead={channelLead}
           menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
+          driveUrl={project.drive_url}
         />
       </div>
       <div className="project-workspace">

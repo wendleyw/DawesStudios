@@ -14,6 +14,8 @@ export type GroupableProject = {
   title: string;
   campaignId: string | null;
   campaignTitle: string | null;
+  /** The project's Google Drive backup link, if any; carried onto its `ProjectFileGroup`. */
+  driveUrl?: string | null;
 };
 
 export type GroupableFile = {
@@ -106,6 +108,8 @@ export function buildCampaignFolders<F extends GroupableFile, P extends Groupabl
 export type ProjectFileGroup<F extends GroupableFile> = {
   projectId: string;
   projectTitle: string;
+  /** The project's Google Drive backup link, if any; null when the project is unknown. */
+  driveUrl: string | null;
   /** Newest first. */
   files: F[];
   newestDate: string;
@@ -132,6 +136,7 @@ export function groupFilesByProject<F extends GroupableFile, P extends Groupable
       return {
         projectId,
         projectTitle: byId.get(projectId)?.title ?? "",
+        driveUrl: byId.get(projectId)?.driveUrl ?? null,
         files: sorted,
         newestDate: sorted[0]?.date ?? "",
       };
