@@ -42,10 +42,8 @@ def chunk(kind, data):
     return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
 
 
-# The producer-identity marker a private working file carries and a sanitizer strips. Shared with
-# `demo_artwork.py`, which stamps the same marker onto photographs it substitutes for these cards, so
-# the two sources of internal artwork carry identical bytes for the same claim rather than two
-# literals that could drift apart.
+# The producer-identity marker a private working file carries and a sanitizer strips, so fixtures can
+# prove the sanitized copy no longer names its producer.
 AUTHOR_TEXT_CHUNK = chunk(b'tEXt', b'Author\x00Private production designer')
 
 
