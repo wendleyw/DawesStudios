@@ -226,7 +226,12 @@ test("client links stay visible at the top across pages without duplicating side
       });
     });
     expect(geometry).toBe(true);
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    // The project may carry a live Miro board (the SABRE demo overlay's do); that embed is
+    // third-party content the product does not author, so the audit leaves it out, as
+    // design-audit.spec.ts does.
+    expect(
+      (await new AxeBuilder({ page }).exclude("iframe.miro-view-frame").analyze()).violations,
+    ).toEqual([]);
     await page.screenshot({
       path: `${screenshotDirectory}/project-client-navigation-${width}.png`,
     });
