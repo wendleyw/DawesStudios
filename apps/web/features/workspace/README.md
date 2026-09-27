@@ -168,7 +168,7 @@ project list, which nothing did before this migration.
 
 `board/board-data.ts` carries a comment above `moveProjectPosition` recording that board owns no
 invalidation key of its own because its single write invalidates `projects`, a key `workspace` owns,
-and that the call site (`board-page.tsx`'s `moveProject` mutation) should call workspace's
+and that the call site (the `moveProject` mutation, now in `board/use-board-card-positions.ts`) should call workspace's
 invalidation helper once one exists, rather than adding a board-owned key set to describe a cache
 entry board does not own.
 
@@ -177,7 +177,7 @@ entry board does not own.
 `settings-data.ts` owns `clientQueryKeys`/`useInvalidateClients()` for the `clients` key even though
 the read hook (`useClients()`) lives here: ownership of a key's invalidation follows whichever module
 is the key's canonical source of truth, not which module happens to read or write it in a given call
-site. `board-page.tsx`'s `moveProject` mutation now calls `useInvalidateWorkspace()` for that reason
+site. The `moveProject` mutation (`board/use-board-card-positions.ts`) now calls `useInvalidateWorkspace()` for that reason
 instead of its former inline `queryClient.invalidateQueries({ queryKey: ["projects"] })`.
 
 **Naming note for the next reader:** `features/settings/settings-data.ts` used to also export a

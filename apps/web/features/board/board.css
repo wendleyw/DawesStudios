@@ -94,7 +94,7 @@
   font-variant-numeric: tabular-nums;
 }
 .board-work-area {
-  /* The gap under the floating header; board-page.tsx adds it to the measured header height. */
+  /* The gap under the floating header; use-board-measurements.ts adds it to the measured header height. */
   --board-header-gap: 16px;
   --board-header-space: 88px;
   position: relative;

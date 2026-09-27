@@ -178,7 +178,7 @@ export function useProjectArtwork(projectIds: string[]) {
  * Moves a project card to a stored canvas position.
  *
  * No `boardQueryKeys`/`useInvalidateBoard()` here: this write invalidates `projects`, a key
- * `workspace` owns, not one of board's own. The call site (`board-page.tsx`) uses `workspace`'s
+ * `workspace` owns, not one of board's own. The call site (`use-board-card-positions.ts`) uses `workspace`'s
  * `useInvalidateWorkspace()` for that reason, rather than adding a board-owned key set to describe
  * someone else's cache entry.
  */

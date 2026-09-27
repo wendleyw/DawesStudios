@@ -57,7 +57,7 @@ which places it at the bottom left of a wide board and below the rail's bottom b
 screens; a null target waits for the dock to mount, and omitting it keeps the in-canvas position
 for the other consumers.
 
-Consumers: `board/board-page` and `board/board-canvas-controls`,
+Consumers: `board/board-canvas-view` and `board/board-canvas-controls`,
 `projects/project-versions-canvas`, `projects/design-viewer`, `playground/playground-board`.
 
 These canvases also use `canvasNavigation` (`canvas-navigation.ts`): two-axis
@@ -114,7 +114,7 @@ paragraph used by forms, dialogs and data-loading failures. It pairs the
 | `children` | `ReactNode` | —       |
 
 Consumers include: `assets/assets-page`,
-`assets/upload-file-dialog`, `auth/login-page`, `board/board-page`,
+`assets/upload-file-dialog`, `auth/login-page`, `board/board-notices`,
 `brand/brand-asset-upload`, `brand/brand-assets`, `brand/brand-folder-dialog`,
 `brand/brand-asset-folder-picker`,
 `brand/draft-editor`,

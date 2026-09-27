@@ -18,7 +18,7 @@ At viewport widths up to 900 px or heights up to 700 px, the cards become center
 
 ## Views and sizing
 
-The work area fills the viewport below the shared mobile topbar. Canvas extends behind the floating identity/profile cards, while structured views reserve space above their content. That space, `--board-header-space`, is measured: `board-page.tsx` observes the floating header and sets it to the header's bottom edge plus `--board-header-gap` (16 px, the gap other client pages leave under their header card; 12 px on screens up to 650 px tall, where Kanban needs the height), so wrapping at any width or client name never lets a view touch or drift from the header. The stylesheet's per-breakpoint values are only the first-paint fallback. The first canvas fit leaves space for the header; errors and retry actions appear below it. Canvas pans within its work area; List, Timeline, Kanban and Calendar scroll within their own surfaces. Wide Kanban boards fit all seven columns; narrower boards retain readable columns with horizontal scrolling inside the board. The Kanban scrolls as one board rather than column by column: every column is as tall as the busiest one, one vertical scroll moves through all of them, and each stage heading stays pinned at the top (offset by the board's own padding, `--kanban-pad`). It never changes workflow status by dragging.
+The work area fills the viewport below the shared mobile topbar. Canvas extends behind the floating identity/profile cards, while structured views reserve space above their content. That space, `--board-header-space`, is measured: `use-board-measurements.ts` observes the floating header and sets it to the header's bottom edge plus `--board-header-gap` (16 px, the gap other client pages leave under their header card; 12 px on screens up to 650 px tall, where Kanban needs the height), so wrapping at any width or client name never lets a view touch or drift from the header. The stylesheet's per-breakpoint values are only the first-paint fallback. The first canvas fit leaves space for the header; errors and retry actions appear below it. Canvas pans within its work area; List, Timeline, Kanban and Calendar scroll within their own surfaces. Wide Kanban boards fit all seven columns; narrower boards retain readable columns with horizontal scrolling inside the board. The Kanban scrolls as one board rather than column by column: every column is as tall as the busiest one, one vertical scroll moves through all of them, and each stage heading stays pinned at the top (offset by the board's own padding, `--kanban-pad`). It never changes workflow status by dragging.
 
 Timeline retains Fortnight/Month/Quarter scales and previous/next/Today controls. A project whose dates fall entirely before or after the visible window still keeps its lane: instead of a bare notice, the lane shows a quiet button naming the nearest known date (`← Due Aug 3`, `Starts Dec 4 →`), and clicking it jumps the window to the week of that project's first known date; work with no dates at all keeps plain text. Calendar shows project **due dates**, Monday-first calendar months, previous/next/Today controls and a separate **No due date** section. Start-only projects stay in that section; Timeline continues to show their start dates. Date calculations use UTC calendar days, including leap years and year boundaries. The monthly grid shares the available height among its weeks and shows every project on its day: a week with more projects grows to fit them, days never scroll, and the calendar scrolls as a whole when a busy month outgrows the viewport. Below 900 px of board width, a monthly agenda replaces the grid so project titles and actions remain readable. Calendar month and Timeline period/scale survive view switching.
 
@@ -53,6 +53,23 @@ Playground belongs to individual projects and roles; the client board has no Pla
 ## Data and verification
 
 All board Supabase queries and writes live in `board-data.ts`. Workspace hooks own project/client reads. The Calendar projects its existing scoped metadata and fetches no assignments or private production data. Video artwork remains a lightweight **Video** tile until a design opens.
+
+`board-page.tsx` composes five colocated hook files for its cross-cutting concerns rather than
+holding them inline: `use-board-view.ts` (the active view, its per-viewer persistence and the retry state
+for a failed load or save), `use-board-measurements.ts` (the floating header's measured
+`--board-header-space` and the Canvas surface's element, zoom-dock portal target, viewport size
+and fit key), `use-board-competitor-widget.ts` (the studio-only widget read, the Competitor ads
+fetch and the add/remove toggle, already shaped as the objects `useBoardCanvasNodes` and
+`BoardToolbar` need), `use-board-card-positions.ts` (drag state, the optimistic position override
+and `moveProjectPosition`'s write/rollback), and `use-board-filters.ts` (search/campaign/status,
+the quarter filter, and the calendar month/timeline period/scale a chosen quarter also opens).
+Selection (`selectedProjectId`, the authorized `scope` it resolves against, and `openProject`) stays
+in the page because every view reads it, and the List sort (`listSort`) stays there so it survives
+view switches. Three presentation-only sub-components render the
+board's non-trivial view branches from that state: `board-canvas-view.tsx` (the xyflow surface),
+`board-list-view.tsx` (the sortable table and its phone "Sort by" select) and
+`board-planning-panel.tsx` (Timeline/Kanban's shared header and scale control); `board-notices.tsx`
+renders the selection live-region and the position/preferences/save error banners.
 
 From the repository root:
 

@@ -156,7 +156,7 @@ describe("query key ownership", () => {
     // `useInvalidateWorkspace()` routes through a single constant. If someone adds a key here,
     // every call site that uses that helper silently invalidates more than it did before, without
     // test coverage. This pins the set so a change is caught and each affected call site
-    // (`board/board-page.tsx`) can be checked for intent.
+    // (`board/use-board-card-positions.ts`) can be checked for intent.
     expect(workspaceQueryKeys).toEqual(["projects"]);
   });
 
