@@ -52,6 +52,7 @@ const board: DesignBoard = {
   projectId: "p",
   name: "Alpha",
   designerId: "d1",
+  dueDate: null,
   miro: link,
 };
 const round = {

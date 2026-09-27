@@ -363,5 +363,39 @@ select lives_ok($$select public.set_version_miro_link(pg_temp.k('round-a1'),'htt
   'The agency can still relink a round after delivery');
 reset role;
 
+-- Board due dates: internal, on or before the project's own date, readable by the board's designer.
+update public.projects set due_date='2026-10-10' where id=pg_temp.k('project');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select pg_temp.remember('board-dated',public.create_design_board(pg_temp.k('project'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'),'2026-10-06'))$$,
+  'The agency sets a board due date before the project''s');
+select is((select due_date from public.design_boards where id=pg_temp.k('board-dated')),'2026-10-06'::date,'The board due date is stored');
+select throws_ok($$select public.create_design_board(pg_temp.k('project'),'Too late','https://miro.com/app/board/uXjVLate002=/',pg_temp.k('designer-a'),'2026-10-11')$$,
+  '22023',null,'A board cannot be due after its project');
+select throws_ok($$select public.update_design_board(pg_temp.k('board-dated'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'),'2026-10-11')$$,
+  '22023',null,'An update cannot move a board past its project''s due date');
+select lives_ok($$select public.update_design_board(pg_temp.k('board-dated'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'),'2026-10-10')$$,
+  'A board may be due on the project''s own date');
+select lives_ok($$select public.update_design_board(pg_temp.k('board-dated'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'))$$,
+  'Leaving the date out clears it');
+select is((select due_date from public.design_boards where id=pg_temp.k('board-dated')),null::date,'The board has no due date again');
+select lives_ok($$select public.update_design_board(pg_temp.k('board-dated'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'),'2026-10-03')$$,
+  'The agency sets the date again');
+reset role;
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select is((select due_date from public.design_boards where id=pg_temp.k('board-dated')),'2026-10-03'::date,'The board''s designer reads its due date');
+reset role;
+select pg_temp.act_as('client');
+set local role authenticated;
+select is((select count(*)::int from public.design_boards where due_date is not null),0,'The client never reads a board due date');
+reset role;
+update public.projects set due_date=null where id=pg_temp.k('project');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select public.update_design_board(pg_temp.k('board-dated'),'Dated board','https://miro.com/app/board/uXjVDated01=/',pg_temp.k('designer-a'),'2027-01-15')$$,
+  'A project without a due date accepts any board date');
+reset role;
+
 select * from finish();
 rollback;

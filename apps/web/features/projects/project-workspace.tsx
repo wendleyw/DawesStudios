@@ -3,7 +3,7 @@
 import { Lightbulb } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
+import { designerDueDate, useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { useFoldSidebarWhile } from "@/features/workspace/app-shell";
 import { CanvasHeader } from "@/features/workspace/canvas-header";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
@@ -99,6 +99,12 @@ export function ProjectWorkspace({
   const sharePrefill = latestShared.data ?? latestSharedLink(shared);
   const internal = channel === "internal";
   const client = clients.data?.find((item) => item.id === project.client_id);
+  // A designer works to their board's internal date; everyone else sees the project's own date.
+  const dueDate =
+    role === "designer"
+      ? designerDueDate(project.due_date, board?.dueDate ?? null)
+      : project.due_date;
+  const shownProject = dueDate === project.due_date ? project : { ...project, due_date: dueDate };
   const shownLink = internal ? (round?.miro ?? board?.miro ?? null) : (version?.miro ?? null);
   const feedbackTarget = internal ? round : version;
   // Feedback belongs to the round or version on screen; once none is (back to the board, another
@@ -133,7 +139,7 @@ export function ProjectWorkspace({
       ? {
           text: "No design board yet.",
           action: "Add a design board",
-          onClick: () => setAction({ kind: "board", projectId }),
+          onClick: () => setAction({ kind: "board", projectId, projectDueDate: project.due_date }),
         }
       : { text: "The studio has not set up your board yet." }
     : role === "agency"
@@ -158,7 +164,12 @@ export function ProjectWorkspace({
           channel={channel}
           role={role}
           viewerId={profile?.id ?? ""}
-          dueLabel={project.due_date ? `Due ${formatDate(project.due_date)}` : "No due date"}
+          dueLabel={dueDate ? `Due ${formatDate(dueDate)}` : "No due date"}
+          boardDueLabel={
+            role === "agency" && board?.dueDate
+              ? `Board due ${formatDate(board.dueDate)}`
+              : undefined
+          }
           boards={boards}
           board={board}
           rounds={rounds}
@@ -171,8 +182,13 @@ export function ProjectWorkspace({
           }}
           onRound={setRoundId}
           onVersion={setVersionId}
-          onAddBoard={() => setAction({ kind: "board", projectId })}
-          onEditBoard={() => board && setAction({ kind: "board", projectId, board })}
+          onAddBoard={() =>
+            setAction({ kind: "board", projectId, projectDueDate: project.due_date })
+          }
+          onEditBoard={() =>
+            board &&
+            setAction({ kind: "board", projectId, board, projectDueDate: project.due_date })
+          }
           onSendRound={() => board && setAction({ kind: "round", board })}
           onShareRound={() =>
             round && setAction({ kind: "share", projectId, round, prefill: sharePrefill })
@@ -279,7 +295,7 @@ export function ProjectWorkspace({
             )}
             {panel === "details" && (
               <ProjectDetails
-                project={project}
+                project={shownProject}
                 deliverables={deliverables}
                 versions={versions}
                 onClose={closePanel}

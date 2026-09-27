@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -66,6 +66,7 @@ const board = {
   projectId: "p",
   name: "Alpha",
   designerId: "d1",
+  dueDate: null,
   miro: { boardId: "uXjVAlpha01=", widgetId: null },
 };
 
@@ -105,9 +106,60 @@ describe("board dialog", () => {
           name: "Alpha",
           url: "https://miro.com/app/board/uXjVAlpha01=/",
           designerId: "d1",
+          dueDate: null,
         },
       ),
     );
+  });
+  it("sends an internal due date on or before the project's", async () => {
+    const user = userEvent.setup();
+    wrap(
+      <ProjectActionDialog
+        action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const due = screen.getByLabelText(/^Board due date/);
+    expect(due).toHaveAttribute("max", "2026-10-10");
+    await user.type(screen.getByLabelText("Board name"), "Alpha");
+    await user.type(
+      screen.getByLabelText("Miro board"),
+      "https://miro.com/app/board/uXjVAlpha01=/",
+    );
+    fireEvent.change(due, { target: { value: "2026-10-06" } });
+    await user.click(screen.getByRole("button", { name: "Add board" }));
+    await waitFor(() =>
+      expect(writes.createDesignBoard).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({ dueDate: "2026-10-06" }),
+      ),
+    );
+  });
+  it("refuses a board date after the project's before calling the server", async () => {
+    const user = userEvent.setup();
+    const { container } = wrap(
+      <ProjectActionDialog
+        action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByLabelText("Board name"), "Alpha");
+    await user.type(
+      screen.getByLabelText("Miro board"),
+      "https://miro.com/app/board/uXjVAlpha01=/",
+    );
+    fireEvent.change(screen.getByLabelText(/^Board due date/), {
+      target: { value: "2026-10-11" },
+    });
+    fireEvent.submit(container.ownerDocument.querySelector("form")!);
+    expect(await screen.findByText(/on or before/)).toBeInTheDocument();
+    expect(writes.createDesignBoard).not.toHaveBeenCalled();
   });
   it("says why it cannot add a board when the designers fail to load", () => {
     assignments.error = new Error("Designers could not load");

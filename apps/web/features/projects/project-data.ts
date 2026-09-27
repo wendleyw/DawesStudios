@@ -446,6 +446,8 @@ export type DesignBoard = {
   name: string;
   designerId: string;
   miro: MiroLink;
+  /** The internal due date the agency set for this board's designer (`2026-10-03`), if any. */
+  dueDate: string | null;
 };
 
 /**
@@ -465,7 +467,7 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
       assertResult(
         await database
           .from("design_boards")
-          .select("id,project_id,name,designer_id,board_id,widget_id")
+          .select("id,project_id,name,designer_id,board_id,widget_id,due_date")
           .eq("project_id", projectId)
           .order("created_at"),
       ).map((row) => ({
@@ -474,6 +476,7 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
         name: row.name,
         designerId: row.designer_id,
         miro: { boardId: row.board_id, widgetId: row.widget_id },
+        dueDate: row.due_date,
       })),
     refetchInterval: 30_000,
   });
@@ -925,7 +928,13 @@ export async function clearMiroLink(
 
 export async function createDesignBoard(
   database: SupabaseDatabase,
-  input: { projectId: string; name: string; url: string; designerId: string },
+  input: {
+    projectId: string;
+    name: string;
+    url: string;
+    designerId: string;
+    dueDate: string | null;
+  },
 ) {
   return assertResult(
     await database.rpc("create_design_board", {
@@ -933,13 +942,14 @@ export async function createDesignBoard(
       p_name: input.name,
       p_url: input.url,
       p_designer_id: input.designerId,
+      p_due_date: input.dueDate ?? undefined,
     }),
   );
 }
 
 export async function updateDesignBoard(
   database: SupabaseDatabase,
-  input: { boardId: string; name: string; url: string; designerId: string },
+  input: { boardId: string; name: string; url: string; designerId: string; dueDate: string | null },
 ) {
   assertResult(
     await database.rpc("update_design_board", {
@@ -947,6 +957,8 @@ export async function updateDesignBoard(
       p_name: input.name,
       p_url: input.url,
       p_designer_id: input.designerId,
+      // Left out, the board's date is cleared.
+      p_due_date: input.dueDate ?? undefined,
     }),
   );
 }

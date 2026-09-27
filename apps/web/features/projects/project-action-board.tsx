@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
   createDesignBoard,
   updateDesignBoard,
@@ -15,9 +16,19 @@ import {
   useProjectActionClose,
 } from "./project-action-shell";
 
-export type BoardAction = { kind: "board"; projectId: string; board?: DesignBoard };
+export type BoardAction = {
+  kind: "board";
+  projectId: string;
+  board?: DesignBoard;
+  /** The project's own due date, the latest the board's date may be. */
+  projectDueDate?: string | null;
+};
 
-/** Adds or edits a design board: its name, its Miro link and the one designer who works on it. */
+/**
+ * Adds or edits a design board: its name, its Miro link, the one designer who works on it and an
+ * optional internal due date, which the client never sees and which may not fall after the
+ * project's own due date.
+ */
 export function ProjectActionBoard({
   action,
   suspended,
@@ -28,6 +39,8 @@ export function ProjectActionBoard({
   onClose: () => void;
 }) {
   const { database } = useAuth();
+  const { formatDate } = useDateFormat();
+  const latest = action.projectDueDate ?? undefined;
   const assignments = useProjectAssignments(action.projectId);
   const designers = (assignments.data?.members ?? []).filter((member) =>
     assignments.data?.assigned.includes(member.id),
@@ -36,8 +49,16 @@ export function ProjectActionBoard({
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       const value = (name: string) => String(form.get(name) ?? "").trim();
-      const input = { name: value("name"), url: value("miro"), designerId: value("designer") };
+      const input = {
+        name: value("name"),
+        url: value("miro"),
+        designerId: value("designer"),
+        dueDate: value("due") || null,
+      };
       if (!parseMiroBoardUrl(input.url)) throw new Error(miroUrlHint);
+      // Same rule the server enforces; checked here so the dialog explains it before a round trip.
+      if (latest && input.dueDate && input.dueDate > latest)
+        throw new Error(`Set the board's due date on or before ${formatDate(latest)}.`);
       if (action.board) await updateDesignBoard(database, { boardId: action.board.id, ...input });
       else await createDesignBoard(database, { projectId: action.projectId, ...input });
     },
@@ -97,6 +118,20 @@ export function ProjectActionBoard({
             </option>
           ))}
         </select>
+      </label>
+      <label>
+        Board due date
+        <input
+          type="date"
+          name="due"
+          max={latest}
+          defaultValue={action.board?.dueDate ?? ""}
+          aria-describedby="board-due-hint"
+        />
+        <small id="board-due-hint">
+          Internal: only you and the designer see it.{" "}
+          {latest ? `The client's date is ${formatDate(latest)}.` : "The project has no due date."}
+        </small>
       </label>
     </ProjectActionShell>
   );

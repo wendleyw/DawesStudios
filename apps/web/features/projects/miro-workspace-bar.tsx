@@ -13,6 +13,8 @@ export type MiroWorkspaceBarProps = {
   role: "agency" | "designer" | "client";
   viewerId: string;
   dueLabel: string;
+  /** The agency's view of the shown board's internal due date, e.g. "Board due Oct 3". */
+  boardDueLabel?: string;
   boards: DesignBoard[];
   board: DesignBoard | null;
   rounds: CanvasVersion[];
@@ -147,6 +149,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
           {props.round && (
             <span className="miro-bar-status">{versionStatusLabel(props.round.status)}</span>
           )}
+          {props.boardDueLabel && <span className="miro-bar-due">{props.boardDueLabel}</span>}
         </>
       ) : props.shared.length === 0 ? null : (
         <>

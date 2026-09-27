@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { markNotificationsRead, unreadNotificationCount } from "./workspace-data";
+import {
+  designerDueDate,
+  markNotificationsRead,
+  unreadNotificationCount,
+  withDesignerDueDates,
+  type Project,
+} from "./workspace-data";
 
 type Result = { data: unknown; error: { message: string } | null };
 type Call = { method: string; args: unknown[] };
@@ -91,5 +97,28 @@ describe("unreadNotificationCount", () => {
       }),
     };
     await expect(unreadNotificationCount(database as never)).rejects.toThrow("offline");
+  });
+});
+
+describe("a designer's due date", () => {
+  it("takes the earlier of the project's date and the board's", () => {
+    expect(designerDueDate("2026-10-10", "2026-10-06")).toBe("2026-10-06");
+    expect(designerDueDate("2026-10-01", "2026-10-06")).toBe("2026-10-01");
+    expect(designerDueDate(null, "2026-10-06")).toBe("2026-10-06");
+    expect(designerDueDate("2026-10-10", null)).toBe("2026-10-10");
+    expect(designerDueDate(null, null)).toBeNull();
+  });
+
+  it("uses the earliest of the designer's boards on each project", () => {
+    const project = (id: string, due_date: string | null) => ({ id, due_date }) as Project;
+    const projects = [project("a", "2026-10-10"), project("b", null), project("c", "2026-10-10")];
+    const result = withDesignerDueDates(projects, [
+      { project_id: "a", due_date: "2026-10-08" },
+      { project_id: "a", due_date: "2026-10-04" },
+      { project_id: "b", due_date: "2026-11-01" },
+    ]);
+    expect(result.map((item) => item.due_date)).toEqual(["2026-10-04", "2026-11-01", "2026-10-10"]);
+    // A project without a board date keeps its own object.
+    expect(result[2]).toBe(projects[2]);
   });
 });

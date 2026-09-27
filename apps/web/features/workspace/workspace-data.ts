@@ -104,14 +104,58 @@ export type Project = {
   updated_at: string;
 };
 
+/**
+ * The date a designer works to: the earlier of the project's own due date and a board's internal
+ * one. The agency sets the board's date on or before the project's, but the project's date can move
+ * earlier later, so the earlier of the two always wins.
+ */
+export function designerDueDate(projectDue: string | null, boardDue: string | null) {
+  if (!boardDue) return projectDue;
+  if (!projectDue) return boardDue;
+  return boardDue < projectDue ? boardDue : projectDue;
+}
+
+/** Each project's due date as a designer sees it, from the dates on their own boards. */
+export function withDesignerDueDates(
+  projects: Project[],
+  boards: { project_id: string; due_date: string | null }[],
+): Project[] {
+  const earliest = new Map<string, string>();
+  for (const board of boards)
+    earliest.set(
+      board.project_id,
+      designerDueDate(earliest.get(board.project_id) ?? null, board.due_date) ?? "",
+    );
+  return projects.map((project) => {
+    const due = designerDueDate(project.due_date, earliest.get(project.id) || null);
+    return due === project.due_date ? project : { ...project, due_date: due };
+  });
+}
+
+/**
+ * The viewer's projects. A designer's copy carries the internal date of their own boards in
+ * `due_date` (RLS returns only their boards), so every list, calendar and timeline shows the date
+ * they work to; the agency and the client read the project's own date.
+ */
 export function useProjects(clientId?: string) {
-  const { database, session } = useAuth();
+  const { database, session, profile } = useAuth();
+  const designer = profile?.role === "designer";
   return useQuery({
-    queryKey: ["projects", session?.user.id, clientId ?? "all"],
+    queryKey: ["projects", session?.user.id, clientId ?? "all", designer ? "designer" : "all"],
     enabled: !!session,
     queryFn: async () => {
       const query = database.from("projects").select("*").order("created_at", { ascending: false });
-      return assertResult(await (clientId ? query.eq("client_id", clientId) : query)) as Project[];
+      const projects = assertResult(
+        await (clientId ? query.eq("client_id", clientId) : query),
+      ) as Project[];
+      if (!designer) return projects;
+      const boards = assertResult(
+        await database
+          .from("design_boards")
+          .select("project_id,due_date")
+          .not("due_date", "is", null),
+      );
+      return withDesignerDueDates(projects, boards);
     },
   });
 }

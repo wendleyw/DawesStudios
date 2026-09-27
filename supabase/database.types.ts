@@ -857,6 +857,7 @@ export type Database = {
           created_at: string
           created_by: string
           designer_id: string
+          due_date: string | null
           id: string
           name: string
           project_id: string
@@ -868,6 +869,7 @@ export type Database = {
           created_at?: string
           created_by: string
           designer_id: string
+          due_date?: string | null
           id?: string
           name: string
           project_id: string
@@ -879,6 +881,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           designer_id?: string
+          due_date?: string | null
           id?: string
           name?: string
           project_id?: string
@@ -2011,6 +2014,7 @@ export type Database = {
       create_design_board: {
         Args: {
           p_designer_id: string
+          p_due_date?: string
           p_name: string
           p_project_id: string
           p_url: string
@@ -2324,6 +2328,7 @@ export type Database = {
         Args: {
           p_board_id: string
           p_designer_id: string
+          p_due_date?: string
           p_name: string
           p_url: string
         }

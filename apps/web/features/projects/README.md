@@ -403,8 +403,9 @@ read for the agency alone, so it works from Working files too). An action opened
 finished carries no prefill; `ProjectActionShare` then reads the link itself and remounts its field
 when it arrives, as `MiroField` does. Once a board exists, the bar's
 **+** icon (**Add design board**) adds another, and the agency's **More** menu holds **Edit board**
-(`project-action-board.tsx`, `kind: "board"`, name, Miro link and one designer chosen from the
-project's assignments; if the designers fail to load, the dialog shows that error) and, on a shown
+(`project-action-board.tsx`, `kind: "board"`, name, Miro link, one designer chosen from the
+project's assignments — if the designers fail to load, the dialog shows that error — and an optional
+**Board due date**) and, on a shown
 client version, **Edit Miro link** (the `kind: "miro"` dialog, where a shared version's link is
 required). `MiroWorkspaceBar` is built on `MiroBarShell`/`MiroBarMenu` from `miro-view.tsx`, and the
 workspace reuses `ProjectBackLink` and `ProjectChannelLead` from `project-header.tsx`. No board name, round or client version ever names a
@@ -412,6 +413,17 @@ designer to anyone but the agency and that designer, matching the client-privacy
 bar's own markup carries no designer identity at all. An empty board or channel shows an inline
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
 message to everyone else.
+
+**Board due dates.** A board's internal due date (`design_boards.due_date`, migration
+`202609270002`) lets the agency ask its designer to deliver before the date the client sees.
+`create_design_board`/`update_design_board` take it as `p_due_date` and reject one after the
+project's own due date (the dialog checks the same rule first, and its date field's `max` is the
+project's date); leaving it out clears it. The client never reads boards, so the date stays
+internal. The designer works to `designerDueDate` (`workspace-data.ts`): the earlier of the
+project's date and their board's. Their bar's due date uses it, the Details panel is handed the same
+date, and `useProjects` applies it to every project a designer lists (overview, kanban, list,
+calendar, timeline), taking the earliest of their boards per project. The agency keeps the
+project's date on the first row and sees **Board due …** beside the board's rounds on the second.
 
 `project-page.tsx` calls `usePanelFocusReturn` and owns the deliverable filter (`format`) itself,
 above its own early returns, and passes the panel state down as one `panels` prop to both

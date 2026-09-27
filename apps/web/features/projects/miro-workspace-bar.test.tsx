@@ -5,8 +5,22 @@ import type { CanvasVersion } from "./project-data";
 import { MiroWorkspaceBar, type MiroWorkspaceBarProps } from "./miro-workspace-bar";
 
 const link = { boardId: "uXjVBoard01=", widgetId: null };
-const boardA = { id: "a", projectId: "p", name: "Alpha", designerId: "d1", miro: link };
-const boardB = { id: "b", projectId: "p", name: "Beta", designerId: "d2", miro: link };
+const boardA = {
+  id: "a",
+  projectId: "p",
+  name: "Alpha",
+  designerId: "d1",
+  dueDate: null,
+  miro: link,
+};
+const boardB = {
+  id: "b",
+  projectId: "p",
+  name: "Beta",
+  designerId: "d2",
+  dueDate: null,
+  miro: link,
+};
 const round = {
   id: "r1",
   number: 1,
@@ -79,6 +93,12 @@ describe("MiroWorkspaceBar in Working files", () => {
   it("leaves adding the first board to the empty state", () => {
     render(<MiroWorkspaceBar {...props({ boards: [], board: null, rounds: [] })} />);
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
+  });
+  it("shows the agency the board's internal due date on the board's row", () => {
+    const { container } = render(
+      <MiroWorkspaceBar {...props({ boardDueLabel: "Board due Oct 3" })} />,
+    );
+    expect(container.querySelector(".miro-bar-context")).toHaveTextContent("Board due Oct 3");
   });
   it("hides Share with client until a round is shown", () => {
     render(<MiroWorkspaceBar {...props({ round: null })} />);
