@@ -16,8 +16,7 @@ history only when a task needs earlier evidence.
 
 ## Done (2026-09-26)
 
-**Miro workspace** (branch `feat/miro-workspace`, **not merged**; `5ecabde..dc8c05d` plus this docs
-commit, [spec](../superpowers/specs/2026-09-26-miro-workspace-design.md)): named design boards (one
+**Miro workspace** (merged into local `main` by fast-forward; `5ecabde..a028f94`, [spec](../superpowers/specs/2026-09-26-miro-workspace-design.md)): named design boards (one
 designer each) replace Versions in Working files, and per-project client versions replace it in
 Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 `review_publication` for project-level versions, and designer-to-designer privacy on
@@ -66,7 +65,7 @@ rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
   2026-09-26 after the incident above); media on 55430. Do not reset or re-provision.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
-- `main` has local commits only; `feat/miro-workspace` is checked out and not merged.
+- `main` has local commits only (not pushed); `feat/miro-workspace` is fully merged into it.
 
 ## Open gaps
 
@@ -93,7 +92,7 @@ rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
 **Production setup (user-deferred on 2026-09-23):** follow the
 [production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
-1. Merge `feat/miro-workspace` on the user's approval.
+1. The user's hands-on look at the Miro workspace (boards, Send to studio, Share with client).
 2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
 3. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
