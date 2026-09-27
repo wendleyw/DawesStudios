@@ -40,7 +40,8 @@ select is((select count(*)::int from public.design_boards where project_id=md5('
 select is((select count(*)::int from public.briefings),0,'Designers cannot query raw financial briefing rows');
 select ok(exists(select 1 from public.get_assigned_briefings()),'Designers retain a safe briefing projection for remaining assigned work');
 select ok(not exists(select 1 from public.get_assigned_briefings() b where to_jsonb(b) ? 'confirmed_credits' or to_jsonb(b) ? 'estimated_credits' or to_jsonb(b) ? 'created_by'),'Designer briefing projection contains no budget or author fields');
-select is((select count(*)::int from public.get_assigned_briefings(md5('dawes:client-org-2')::uuid)),0,'Safe briefing projection respects assignment revocation');
+-- Harbor & Pine keeps project 3 (shared with designer-2) after project 4 is revoked.
+select is(array(select id from public.get_assigned_briefings(md5('dawes:client-org-2')::uuid)),array[md5('dawes:briefing-3')::uuid],'Safe briefing projection respects assignment revocation');
 reset role;
 select set_config('request.jwt.claim.sub',md5('dawes:agency')::uuid::text,true);
 set local role authenticated;

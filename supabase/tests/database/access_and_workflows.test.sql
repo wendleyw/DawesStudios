@@ -43,14 +43,15 @@ select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-
 reset role;
 select set_config('request.jwt.claim.sub',md5('dawes:designer-1')::uuid::text,true);
 set local role authenticated;
-select is((select count(*)::int from public.projects),12,'Designer sees exactly its assigned projects');
+-- designer-1 leads 10 projects and shares projects 3, 8 and 10 with designer-2 (one board each).
+select is((select count(*)::int from public.projects),13,'Designer sees exactly its assigned projects');
 select is((select count(*)::int from public.credit_accounts),0,'Designer cannot read balances');
 select is((select count(*)::int from public.credit_ledger),0,'Designer cannot read credit transactions');
 select is((select count(*)::int from public.client_comments),0,'Designer cannot read client conversations');
 select is((select count(*)::int from public.published_versions),0,'Designer cannot enumerate client publication records');
 select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Attack')$$,'42501','Client channel access required','Designer cannot post in client channel');
 select throws_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAttack1=/')$$,'42501','Agency access required','Designer cannot share a client version');
-select throws_ok($$select public.post_comment(md5('dawes:project-3')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Designer cannot comment on another assignment');
+select throws_ok($$select public.post_comment(md5('dawes:project-1')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Designer cannot comment on another assignment');
 select lives_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'internal','Ready for studio review.')$$,'Assigned designer can comment internally');
 
 reset role;
