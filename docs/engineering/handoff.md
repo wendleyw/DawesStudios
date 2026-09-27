@@ -22,10 +22,12 @@ designer each) replace Versions in Working files, and per-project client version
 Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 `review_publication` for project-level versions, and designer-to-designer privacy on
 `internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
-`npm run check` 121/1258 passes; `supabase test db` locally fails `access_and_workflows`
-1-2,4,9,18,32,41,54 and `published_asset_attestation_invariant` 1 — wider than the previously
-recorded 2,4,9,18,32,54, unconfirmed whether any is a new regression; `playground.spec`
-focus-return and `workspace-actions`:14/`design-audit`:18 fail on `main` too (all SABRE-overlay).
+`npm run check` 121/1258 passes; `supabase test db` locally fails only `access_and_workflows`
+2,4,9,18,32,54 — the confirmed SABRE-overlay count baseline. An interrupted Playground e2e run can
+leave an "Acceptance Playground …" client behind (unattested published designs), which briefly also
+failed 1, 41 and `published_asset_attestation_invariant` 1; remove it with the fixture's own cleanup
+rather than editing the assertions. `playground.spec` focus-return and
+`workspace-actions`:14/`design-audit`:18 fail on `main` too (all SABRE-overlay).
 **Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden,
 AGENTS.md/CLAUDE.md); rebuilt via `local_stack.py reset` + the SABRE `apply`; the prior checkpoint
 is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earlier:
@@ -91,8 +93,7 @@ is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earl
 **Production setup (user-deferred on 2026-09-23):** follow the
 [production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
-1. Run the full all-roles Playwright pass on `feat/miro-workspace`, then merge it on the user's
-   explicit approval; the two wider pgTAP failures above need a look first.
+1. Run the full all-roles Playwright pass on `feat/miro-workspace`, then merge on approval.
 2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
 3. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
