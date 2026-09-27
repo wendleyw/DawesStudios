@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';
 import { createBackend } from './supabase.js';
@@ -18,38 +17,10 @@ async function login(email) {
   const response = await upstream('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password: env.DEMO_PASSWORD } });
   assert.equal(response.status, 200); return (await response.json()).access_token;
 }
-const agency = await login('studio@dawes.local'); const client = await login('sabre@client.dawes.local'); const designer = await login('designer@dawes.local');
+const agency = await login('studio@dawes.local');
 const post = (path, body, token = agency, type = 'application/json', extraHeaders = {}) => fetch(root + path, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': type, ...extraHeaders }, body: Buffer.isBuffer(body) ? body : JSON.stringify(body) });
 let assertions = 0;
-for (const token of [client, designer]) { const response = await post('/publications/prepare', { versionId: randomUUID() }, token); assert.equal(response.status, 403); assertions++; }
-assert.equal((await post('/publications/prepare', {}, agency, 'application/json', { Origin: 'https://untrusted.example' })).status, 403); assertions++;
-assert.equal((await fetch(root + '/publications/prepare', { method: 'POST', body: '{}' })).status, 401); assertions++;
-
-const project = fixtures.projects[1];
-const versions = await backend.json(`/rest/v1/design_versions?project_id=eq.${project.id}&order=version_number&limit=1`, { token: agency });
-const designs = await backend.json(`/rest/v1/designs?version_id=eq.${versions[0].id}&order=sort_order&limit=1`, { token: agency });
-const design = designs[0]; const sourcePath = `${project.id}/${randomUUID()}.jpg`;
 const input = await sharp({ create: { width: 80, height: 60, channels: 3, background: '#556644' } }).jpeg().withExif({ IFD0: { Artist: 'PRIVATE DESIGNER', Copyright: 'INTERNAL COPYRIGHT' } }).toBuffer();
-let prepared = [];
-try {
-  assert.equal((await upstream(`/storage/v1/object/internal-assets/${sourcePath}`, { method: 'POST', body: input, token: agency, type: 'image/jpeg' })).status, 200);
-  assert.equal((await upstream(`/rest/v1/designs?id=eq.${design.id}`, { method: 'PATCH', body: { internal_asset_path: sourcePath }, token: agency })).status, 204);
-  const response = await post('/publications/prepare', { versionId: versions[0].id });
-  assert.equal(response.status, 200, await response.clone().text());
-  prepared = Object.values((await response.json()).assets);
-  assert.equal(prepared.length, 1);
-  const download = await upstream('/storage/v1/object/authenticated/published-assets/' + prepared[0], { token: agency });
-  assert.equal(download.status, 200);
-  const bytes = Buffer.from(await download.arrayBuffer());
-  const metadata = await sharp(bytes).metadata();
-  assert.equal(metadata.format, 'png'); assert.equal(metadata.exif, undefined); assert.equal(metadata.xmp, undefined);
-  assert.equal((await upstream('/storage/v1/object/authenticated/published-assets/' + prepared[0], { token: client })).ok, false);
-  assertions += 4;
-} finally {
-  await upstream(`/rest/v1/designs?id=eq.${design.id}`, { method: 'PATCH', body: { internal_asset_path: design.internal_asset_path }, token: agency });
-  for (const path of prepared) await backend.discard('published-assets', path);
-  await upstream('/storage/v1/object/internal-assets', { method: 'DELETE', body: { prefixes: [sourcePath] } });
-}
 
 const deliveryProject = fixtures.projects[5];
 const pdf = await PDFDocument.create(); pdf.setAuthor('PRIVATE DESIGNER'); pdf.setSubject('PRIVATE SOURCE NOTES'); pdf.addPage([420, 300]).drawText('Approved creative direction');

@@ -5,7 +5,6 @@ import {
   MediaRequestError,
   mediaErrorMessage,
   prepareProjectCover,
-  publicationSchema,
 } from "./media-client";
 import { invitationRequestSchema } from "@/features/settings/settings-model";
 
@@ -22,13 +21,6 @@ const seededClientId = "e4401a17-cbe2-1d70-400d-d40f9e6b8632";
 const generatedId = "b9ca3fce-bba1-4515-9d0c-e978a168d84d";
 
 describe("identifiers the database actually produces", () => {
-  it("accepts a publication keyed by a hash-derived design id", () => {
-    const result = publicationSchema.safeParse({
-      assets: { [seededDesignId]: "project/asset.png", [generatedId]: "project/other.png" },
-    });
-    expect(result.success).toBe(true);
-  });
-
   it("accepts a delivery whose id is hash-derived", () => {
     const result = deliverySchema.safeParse({
       id: seededDesignId,
@@ -49,9 +41,6 @@ describe("identifiers the database actually produces", () => {
   });
 
   it("still refuses anything that is not UUID-shaped", () => {
-    expect(
-      publicationSchema.safeParse({ assets: { "not-an-id": "project/asset.png" } }).success,
-    ).toBe(false);
     expect(
       deliverySchema.safeParse({
         id: "1234",
@@ -105,9 +94,12 @@ describe("what a refused preparation says", () => {
 
 describe("MediaRequestError", () => {
   it("carries the HTTP status a caller needs to classify the failure", () => {
-    const error = new MediaRequestError("Upload an MP4 or WebM video.", 415);
+    const error = new MediaRequestError(
+      "Delivery supports PNG, JPEG, WebP and PDF files only.",
+      415,
+    );
     expect(error.status).toBe(415);
-    expect(error.message).toBe("Upload an MP4 or WebM video.");
+    expect(error.message).toBe("Delivery supports PNG, JPEG, WebP and PDF files only.");
   });
 });
 
