@@ -12,7 +12,7 @@ import subprocess
 import urllib.error
 import urllib.request
 import uuid
-from fixture_media import png_card, monogram_svg, monogram_png, monogram_pdf, simple_pdf
+from fixture_media import png_card, brand_asset_bytes, delivery_pdf
 from fixture_provisioning import ensure_fixture_object
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -73,14 +73,7 @@ brand_count=0
 for asset in fixtures.get('brand_assets',[]):
     # A normal start on an older active dataset must not create unregistered new fixture objects.
     if not request('/rest/v1/brand_assets?id=eq.'+asset['id'],method='GET'):continue
-    if asset['kind']=='mark':content=monogram_svg(asset['client_name'])
-    elif asset['kind']=='mark-png':content=monogram_png(asset['client_name'])
-    elif asset['kind']=='mark-pdf':content=monogram_pdf(asset['client_name'])
-    elif asset['kind']=='guidelines':content=simple_pdf(asset['client_name']+' / Sample brand guidelines')
-    # The manifest carries the pixel canvas of every rendered fixture image, so provisioning renders
-    # each one at the size the generator decided instead of guessing one here.
-    else:content=png_card(asset['index']+int(asset['kind'][-1]),asset['width'],asset['height'])
-    fixture_object('brand-assets',asset['storage_path'],content,asset['mime_type']);brand_count+=1
+    fixture_object('brand-assets',asset['storage_path'],brand_asset_bytes(asset),asset['mime_type']);brand_count+=1
 # Project covers. A cover must be sanitized and attested by the media worker before
 # `set_project_cover` accepts it, so the bytes are posted to `/covers/prepare` under the agency's own
 # session rather than written to Storage here. A project that already has a cover keeps it, and a
@@ -111,12 +104,7 @@ for cover in fixtures.get('covers',[]) if workdir==ROOT else []:
 project=fixtures['delivery_project_id']
 current=request('/rest/v1/delivery_files?project_id=eq.'+project, method='GET', token=agency_token)
 if not current:
-    # A real, minimal PDF that contains only safe fixture copy and no producer identity.
-    stream=b'BT /F1 24 Tf 72 720 Td (Creative Canvas - approved delivery) Tj ET'
-    objects=[b'<< /Type /Catalog /Pages 2 0 R >>',b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',b'<< /Length '+str(len(stream)).encode()+b' >>\nstream\n'+stream+b'\nendstream']
-    pdf=b'%PDF-1.4\n'; offsets=[0]
-    for i,obj in enumerate(objects,1): offsets.append(len(pdf));pdf+=str(i).encode()+b' 0 obj\n'+obj+b'\nendobj\n'
-    start=len(pdf);pdf+=b'xref\n0 6\n0000000000 65535 f \n'+b''.join(f'{offset:010d} 00000 n \n'.encode() for offset in offsets[1:])+b'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+str(start).encode()+b'\n%%EOF\n'
+    pdf=delivery_pdf()
     path=project+'/'+str(uuid.uuid4())+'.pdf'
     request('/storage/v1/object/delivery-files/'+path,pdf,content_type='application/pdf')
     request('/rest/v1/rpc/register_sanitized_asset',{'p_project_id':project,'p_bucket_id':'delivery-files','p_storage_path':path,'p_sha256':hashlib.sha256(pdf).hexdigest(),'p_mime_type':'application/pdf','p_file_size':len(pdf),'p_prepared_by':agency['id']})

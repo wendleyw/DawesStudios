@@ -110,6 +110,12 @@ schedules={
 #                          added after provisioning attaches the final file.
 # A project with two designers stays before client review, so its client versions never have to
 # pick one designer's board over the other's.
+# Row ids: the RPCs take no id argument and insert with the tables' `gen_random_uuid()` default, so
+# boards, rounds, client versions, Miro links, reviews, comments and notifications get new ids on
+# every load. Rewriting them afterwards would break the foreign keys the same RPCs create. Each row
+# has a stable natural key instead, which is how this file and `verify_seed.py` refer to them: a
+# board by (project, name), a round by (board, number) and its `request_key`, a client version by
+# (project, number) and its share request key, and a comment by its idempotency key.
 TWO_DESIGNER_STATUSES = ('planned','in_progress','internal_review')
 
 def miro_history(status, second_round):

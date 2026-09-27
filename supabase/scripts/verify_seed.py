@@ -10,18 +10,20 @@ import json
 import urllib.error
 import re
 import urllib.request
-from fixture_media import FORMAT_FREE_SIZE, png_card, png_pixel_size, monogram_svg, monogram_png, monogram_pdf, simple_pdf
+from fixture_media import FORMAT_FREE_SIZE, brand_asset_bytes, format_pixel_size, png_pixel_size
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--workdir', type=Path, default=ROOT)
+    parser.add_argument('--workdir', type=Path)
     parser.add_argument('--staging', action='store_true', help='verify the disposable staging rehearsal instead')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
-    workdir = args.workdir.resolve()
+    if args.staging and args.workdir:
+        parser.error('--staging verifies the staging rehearsal; it cannot be combined with --workdir')
+    workdir = (args.workdir or ROOT).resolve()
     if args.staging:
         env_file = ROOT / 'deploy/staging/.work/fixtures.env'
         expected = 'http://127.0.0.1:56010'
@@ -173,12 +175,17 @@ def main():
     # so a term that drifts fails where it is defined rather than as an unexplained total.
     brand_files = 70            # seven brand files for each of the ten clients
     cover_files = 25            # one sanitized cover per project, downloaded by the agency
-    visible_cover_files = sum(1 for row in fixture['covers'] if row['client_visible'])  # and by the client
+    visible_cover_files = sum(1 for row in covers.values() if row['client_visible'])  # and by the client
     delivery_files = 1          # the single approved delivery PDF
     assert len(fixture['brand_assets']) == brand_files, 'Brand fixture count moved'
     assert len(fixture['covers']) == cover_files, 'Cover fixture count moved'
     agency_session = request('/auth/v1/token?grant_type=password', payload={'email': 'studio@dawes.local', 'password': env['DEMO_PASSWORD']})
-    cover_size = {row['project_id']: (row['width'], row['height']) for row in fixture['covers']}
+    # A cover is drawn at the canvas of its project's leading deliverable, derived here from the
+    # format catalog rather than read back from the manifest that asked for it.
+    leading = {}
+    for row in sorted(deliverables, key=lambda row: row['sort_order']):
+        leading.setdefault(row['project_id'], row)
+    cover_size = {pid: format_pixel_size(formats[leading[pid]['format']]) for pid in covers}
     cover_bytes = {}
     for pid, cover in covers.items():
         content = request('/storage/v1/object/authenticated/project-covers/' + cover['storage_path'], agency_session['access_token'])
@@ -195,11 +202,7 @@ def main():
         for table, column in (('design_boards', 'id'), ('design_versions', 'id'), ('design_version_miro_links', 'version_id'), ('project_assignments', 'project_id'), ('internal_comments', 'id')):
             assert rows(table, 'select=' + column, token=token) == [], 'Client read leaked internal rows: ' + table
         for asset in [row for row in fixture['brand_assets'] if row['client_id'] == client['id']]:
-            if asset['kind'] == 'mark': expected_bytes = monogram_svg(asset['client_name'])
-            elif asset['kind'] == 'mark-png': expected_bytes = monogram_png(asset['client_name'])
-            elif asset['kind'] == 'mark-pdf': expected_bytes = monogram_pdf(asset['client_name'])
-            elif asset['kind'] == 'guidelines': expected_bytes = simple_pdf(asset['client_name'] + ' / Sample brand guidelines')
-            else: expected_bytes = png_card(asset['index'] + int(asset['kind'][-1]), asset['width'], asset['height'])
+            expected_bytes = brand_asset_bytes(asset)
             actual = request('/storage/v1/object/authenticated/brand-assets/' + asset['storage_path'], token)
             assert actual == expected_bytes, 'Brand fixture bytes differ'
             # A brand product reference belongs to no deliverable, so it holds the documented

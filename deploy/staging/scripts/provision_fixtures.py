@@ -35,7 +35,7 @@ FIXTURES_ENV = STAGING_DIR / ".work" / "fixtures.env"
 FIXTURES_JSON = REPO_ROOT / "supabase" / "fixtures.json"
 
 sys.path.insert(0, str(REPO_ROOT / "supabase" / "scripts"))
-from fixture_media import png_card, monogram_svg, monogram_png, monogram_pdf, simple_pdf  # noqa: E402
+from fixture_media import png_card, brand_asset_bytes, delivery_pdf  # noqa: E402
 from fixture_provisioning import ensure_fixture_object  # noqa: E402
 
 
@@ -141,17 +141,7 @@ for asset in fixtures.get("brand_assets", []):
     # A normal re-run on an already-provisioned dataset must not create unregistered new objects.
     if not request("/rest/v1/brand_assets?id=eq." + asset["id"], method="GET"):
         continue
-    if asset["kind"] == "mark":
-        content = monogram_svg(asset["client_name"])
-    elif asset["kind"] == "mark-png":
-        content = monogram_png(asset["client_name"])
-    elif asset["kind"] == "mark-pdf":
-        content = monogram_pdf(asset["client_name"])
-    elif asset["kind"] == "guidelines":
-        content = simple_pdf(asset["client_name"] + " / Sample brand guidelines")
-    else:
-        content = png_card(asset["index"] + int(asset["kind"][-1]), asset["width"], asset["height"])
-    fixture_object("brand-assets", asset["storage_path"], content, asset["mime_type"])
+    fixture_object("brand-assets", asset["storage_path"], brand_asset_bytes(asset), asset["mime_type"])
     brand_count += 1
 
 # --- Project covers, through the media worker -----------------------------------------------
@@ -193,19 +183,11 @@ print(f"PASS brand assets provisioned/confirmed: {brand_count}")
 print(f"PASS project covers: {cover_count} prepared through the media worker, {kept_cover_count} kept")
 
 # --- Delivery fixture ------------------------------------------------------------------------
-# The same minimal PDF provision_local_auth.py attaches to the approved delivery project, after
+# The same minimal PDF (fixture_media.delivery_pdf) provision_local_auth.py attaches to the approved delivery project, after
 # which the project is marked delivered. A project that already has its file is left alone.
 delivery_project = fixtures["delivery_project_id"]
 if not request("/rest/v1/delivery_files?project_id=eq." + delivery_project, method="GET", token=agency_token):
-    stream = b"BT /F1 24 Tf 72 720 Td (Creative Canvas - approved delivery) Tj ET"
-    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>", b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"]
-    pdf = b"%PDF-1.4\n"
-    offsets = [0]
-    for number, body in enumerate(objects, 1):
-        offsets.append(len(pdf))
-        pdf += str(number).encode() + b" 0 obj\n" + body + b"\nendobj\n"
-    start = len(pdf)
-    pdf += b"xref\n0 6\n0000000000 65535 f \n" + b"".join(f"{offset:010d} 00000 n \n".encode() for offset in offsets[1:]) + b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" + str(start).encode() + b"\n%%EOF\n"
+    pdf = delivery_pdf()
     path = delivery_project + "/" + str(uuid.uuid4()) + ".pdf"
     request("/storage/v1/object/delivery-files/" + path, pdf, content_type="application/pdf")
     request("/rest/v1/rpc/register_sanitized_asset", {"p_project_id": delivery_project, "p_bucket_id": "delivery-files", "p_storage_path": path, "p_sha256": hashlib.sha256(pdf).hexdigest(), "p_mime_type": "application/pdf", "p_file_size": len(pdf), "p_prepared_by": agency["id"]})
@@ -220,3 +202,5 @@ clients = request("/rest/v1/clients?select=id", method="GET")
 projects = request("/rest/v1/projects?select=id", method="GET")
 status = "PASS" if len(clients) == 10 and len(projects) == 25 else "FAIL"
 print(f"{status} canonical counts: clients={len(clients)} projects={len(projects)} (expected 10 / 25)")
+if status == "FAIL":
+    raise SystemExit(1)

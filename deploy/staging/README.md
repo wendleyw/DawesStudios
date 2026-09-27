@@ -181,8 +181,16 @@ comments for the exact evidence):
 
 ```bash
 docker exec -i dawes-staging-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 -1 -f /dev/stdin < supabase/seed.sql
+./scripts/stage.sh app-up                  # the media worker must be running for the covers
 ./scripts/stage.sh provision-fixtures
+python3 supabase/scripts/verify_seed.py --staging
 ```
+
+The seed writes its design boards, rounds, client versions and comments through the real RPCs
+under each fixture user's identity, so it needs the current migrations (`migrate`) first and an
+empty dataset: it is not re-applied over itself. Re-seeding this rehearsal means clearing its
+application tables and fixture Auth users first, which is acceptable only because the rehearsal is
+disposable.
 
 `provision_fixtures.py` is a thin wrapper, not a copy: it imports `ensure_fixture_object`
 (`supabase/scripts/fixture_provisioning.py`) and the content generators
@@ -191,8 +199,13 @@ docker exec -i dawes-staging-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 
 CLI-tracked local project only) and hard-refuses any URL other than the local stack or its
 restore-drill copy, neither of which is this staging rehearsal. The one secret it mints (the
 fixture password) is written to `.work/fixtures.env` (mode 0600, gitignored) *before* it is PUT to
-any user, so an interrupted run is always safely resumable. Verified: 10 clients / 25 projects,
-13 fixture Auth passwords, 70 brand assets, 27 working assets (18 published).
+any user, so an interrupted run is always safely resumable, and every run re-applies it to every
+fixture user. Besides the passwords and the 70 brand files it posts one cover per project to the
+staging media worker (`MEDIA_PORT`, 56014) under the agency session, so each cover is sanitized and
+attested, and it attaches the delivery PDF (`fixture_media.delivery_pdf`) and marks that project
+delivered, as the local provisioning does. It exits non-zero unless the counts are 10 / 25.
+Verified 2026-09-27 on the Miro-model seed: `verify_seed.py --staging` PASS with 29 boards, 30
+rounds, 22 client versions, 25 covers (14 client-visible) and 110 file downloads.
 
 **Pointing the browser suite at staging.** `apps/web/tests/e2e/test-support.ts` uses
 `supabase/.env.local` only for the local stack. When `ACCEPTANCE_SUPABASE_URL` declares another

@@ -15,7 +15,7 @@
     "db:reset": "python3 supabase/scripts/local_stack.py reset",
     "db:test": "supabase test db",
     "db:types": "supabase gen types typescript --local > supabase/database.types.ts",
-    "db:artwork:photos": "python3 supabase/scripts/demo_artwork.py",
+    "db:covers:photos": "python3 supabase/scripts/demo_artwork.py",
     "hooks": "node apps/web/node_modules/husky/bin.js"
   }
 }

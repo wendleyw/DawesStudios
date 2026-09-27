@@ -149,3 +149,27 @@ def simple_pdf(text):
     for i,obj in enumerate(objects,1):offsets.append(len(pdf));pdf+=str(i).encode()+b' 0 obj\n'+obj+b'\nendobj\n'
     start=len(pdf);pdf+=b'xref\n0 6\n0000000000 65535 f \n'+b''.join(f'{offset:010d} 00000 n \n'.encode() for offset in offsets)+b'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+str(start).encode()+b'\n%%EOF\n'
     return pdf
+
+
+def delivery_pdf():
+    """The minimal delivery PDF provisioning attaches to the approved delivery project.
+
+    It holds only safe fixture copy and no producer identity. Shared by the local provisioning and
+    the staging wrapper so both attach the same file.
+    """
+    stream=b'BT /F1 24 Tf 72 720 Td (Creative Canvas - approved delivery) Tj ET'
+    objects=[b'<< /Type /Catalog /Pages 2 0 R >>',b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',b'<< /Length '+str(len(stream)).encode()+b' >>\nstream\n'+stream+b'\nendstream']
+    pdf=b'%PDF-1.4\n';offsets=[]
+    for i,obj in enumerate(objects,1):offsets.append(len(pdf));pdf+=str(i).encode()+b' 0 obj\n'+obj+b'\nendobj\n'
+    start=len(pdf);pdf+=b'xref\n0 6\n0000000000 65535 f \n'+b''.join(f'{offset:010d} 00000 n \n'.encode() for offset in offsets)+b'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+str(start).encode()+b'\n%%EOF\n'
+    return pdf
+
+
+def brand_asset_bytes(asset):
+    """The canonical bytes of one `brand_assets` entry of the fixture manifest."""
+    if asset['kind']=='mark':return monogram_svg(asset['client_name'])
+    if asset['kind']=='mark-png':return monogram_png(asset['client_name'])
+    if asset['kind']=='mark-pdf':return monogram_pdf(asset['client_name'])
+    if asset['kind']=='guidelines':return simple_pdf(asset['client_name']+' / Sample brand guidelines')
+    # A product reference is rendered at the pixel canvas the manifest records for it.
+    return png_card(asset['index']+int(asset['kind'][-1]),asset['width'],asset['height'])

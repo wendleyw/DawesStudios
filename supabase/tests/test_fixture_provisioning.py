@@ -3,6 +3,7 @@
 from io import BytesIO
 from contextlib import ExitStack
 import json
+import os
 from pathlib import Path
 import runpy
 import sys
@@ -156,33 +157,36 @@ class FixtureProvisioningTests(unittest.TestCase):
         self.assertNotIn("test-public-key", str(raised.exception))
 
 
-class PublicationProvisioningTests(unittest.TestCase):
-    """Run the caller with isolated REST, Storage, credentials and file writes."""
+class CoverProvisioningTests(unittest.TestCase):
+    """Run provision_local_auth.py with isolated REST, media worker, credentials and file writes."""
 
-    def run_provisioning(self, stored_publication, created=False):
+    def run_provisioning(self, *, in_dataset=True, has_cover=False, has_version=False):
         root = Path(__file__).resolve().parents[2]
         fixture = {
             "users": [{"role": "agency", "id": "agency", "email": "agency@example.invalid"}],
-            "delivery_project_id": "project",
-            "working_assets": [{
-                "design_id": "design", "project_id": "project", "source_path": "project/source.png",
-                "published_path": "project/published.png", "index": 1, "width": 2, "height": 2,
-            }],
+            "delivery_project_id": "delivered-project",
+            "covers": [{"project_id": "project", "index": 1, "width": 2, "height": 3, "client_visible": False}],
         }
-        registrations = []
+        prepared = []
 
         def respond(request, timeout):
-            path = request.full_url.removeprefix("http://127.0.0.1:55421")
+            url = request.full_url
+            if url.startswith("http://127.0.0.1:55430/"):
+                prepared.append({"url": url, "body": request.data, "auth": request.get_header("Authorization"),
+                                 "type": request.get_header("Content-type")})
+                return BytesIO(json.dumps({"path": "project/cover.png"}).encode())
+            path = url.removeprefix("http://127.0.0.1:55421")
             if path.startswith("/auth/v1/token"):
-                response = {"access_token": "test-session"}
-            elif path.startswith("/rest/v1/designs?"):
-                response = [{"internal_asset_path": "project/source.png"}]
-            elif path == "/rest/v1/rpc/register_sanitized_asset":
-                registrations.append(json.loads(request.data))
-                response = None
+                response = {"access_token": "agency-session"}
+            elif path.startswith("/rest/v1/projects?select=id&id=eq.project"):
+                response = [{"id": "project"}] if in_dataset else []
+            elif path.startswith("/rest/v1/project_covers?"):
+                response = [{"project_id": "project"}] if has_cover else []
+            elif path.startswith("/rest/v1/published_versions?"):
+                response = [{"id": "version"}] if has_version else []
             elif path.startswith("/rest/v1/delivery_files?"):
                 response = [{"id": "existing-delivery"}]
-            elif path.startswith("/rest/v1/projects?"):
+            elif path.startswith("/rest/v1/projects?id=eq.delivered-project"):
                 response = [{"status": "delivered"}]
             else:
                 self.fail("Unexpected provisioning request: " + path)
@@ -198,39 +202,40 @@ class PublicationProvisioningTests(unittest.TestCase):
         status = {"API_URL": "http://127.0.0.1:55421", "ANON_KEY": "test-public-key", "SERVICE_ROLE_KEY": "test-service-key"}
         with ExitStack() as patches:
             patches.enter_context(patch.object(sys, "argv", ["provision_local_auth.py", "--files-only"]))
+            # The default local media worker, whatever MEDIA_URL the calling shell exports.
+            patches.enter_context(patch.dict("os.environ", {k: v for k, v in os.environ.items() if k != "MEDIA_URL"}, clear=True))
             patches.enter_context(patch("subprocess.run", return_value=Mock(stdout=json.dumps(status))))
             patches.enter_context(patch.object(Path, "read_text", read_text))
             patches.enter_context(patch.object(Path, "exists", return_value=True))
             patches.enter_context(patch("urllib.request.urlopen", side_effect=respond))
-            patches.enter_context(patch("fixture_media.png_card", return_value=b"canonical image"))
-            patches.enter_context(patch("fixture_provisioning.ensure_fixture_object", side_effect=[
-                FixtureObject(b"internal photograph", created=False),
-                FixtureObject(stored_publication, created=created),
-            ]))
+            patches.enter_context(patch("fixture_media.png_card", return_value=b"cover card"))
             patches.enter_context(patch("os.open", return_value=99))
             patches.enter_context(patch("os.fdopen"))
             patches.enter_context(patch("os.chmod"))
             patches.enter_context(patch("builtins.print"))
             runpy.run_path(str(root / "supabase/scripts/provision_local_auth.py"), run_name="__main__")
-        return registrations
+        return prepared
 
-    def test_does_not_attest_to_divergent_preserved_publication(self):
-        registrations = self.run_provisioning(b"existing publication")
+    def test_prepares_a_hidden_cover_through_the_media_worker(self):
+        prepared = self.run_provisioning()
 
-        self.assertEqual(registrations, [])
+        self.assertEqual(len(prepared), 1)
+        self.assertEqual(prepared[0]["url"], "http://127.0.0.1:55430/covers/prepare?projectId=project&visible=false")
+        self.assertEqual(prepared[0]["body"], b"cover card")
+        self.assertEqual(prepared[0]["auth"], "Bearer agency-session")
+        self.assertEqual(prepared[0]["type"], "image/png")
 
-    def test_attests_to_a_new_canonical_publication(self):
-        registrations = self.run_provisioning(b"canonical image", created=True)
+    def test_shows_the_cover_to_the_client_once_it_has_a_client_version(self):
+        prepared = self.run_provisioning(has_version=True)
 
-        self.assertEqual(len(registrations), 1)
-        self.assertEqual(registrations[0]["p_storage_path"], "project/published.png")
-        self.assertEqual(registrations[0]["p_file_size"], len(b"canonical image"))
+        self.assertEqual(len(prepared), 1)
+        self.assertTrue(prepared[0]["url"].endswith("&visible=true"))
 
-    def test_retries_attestation_after_an_interrupted_canonical_upload(self):
-        registrations = self.run_provisioning(b"canonical image", created=False)
+    def test_keeps_an_existing_cover(self):
+        self.assertEqual(self.run_provisioning(has_cover=True), [])
 
-        self.assertEqual(len(registrations), 1)
-        self.assertEqual(registrations[0]["p_storage_path"], "project/published.png")
+    def test_skips_a_project_the_dataset_no_longer_holds(self):
+        self.assertEqual(self.run_provisioning(in_dataset=False), [])
 
 
 if __name__ == "__main__":
