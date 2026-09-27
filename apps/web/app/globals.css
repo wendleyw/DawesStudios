@@ -280,16 +280,10 @@ h3 {
 
   background: var(--ink-hover);
 }
-.button.secondary {
-  background: var(--surface-subtle);
-  border-color: transparent;
-}
-.button.ghost,
 .button.quiet {
   background: transparent;
   border-color: transparent;
 }
-.button.ghost:hover:not(:disabled),
 .button.quiet:hover:not(:disabled),
 .button.selected {
   background: var(--surface-subtle);
@@ -333,7 +327,7 @@ h3 {
 /*
  * The eyebrow: the single treatment for the small label that sits above a heading, a value or a
  * column. Size, weight, tracking and casing are declared here once; the rules that cannot carry
- * this class (`.nav-section-label`, `.board-identity p`) consume the same tokens instead of
+ * this class (`.board-identity p`) consume the same tokens instead of
  * restating their own numbers. Casing is the stylesheet's job, so the copy is
  * written in sentence case and no call site upper-cases a string in JavaScript.
  */
@@ -411,14 +405,9 @@ h3 {
   font-size: var(--text-base);
   white-space: nowrap;
 }
-.muted,
-.text-muted {
+.muted {
   color: var(--muted);
 }
-.text-small {
-  font-size: var(--text-base);
-}
-.sr-only,
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -524,12 +513,6 @@ select {
   font-weight: 400;
   line-height: 1.65;
 }
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-
-  gap: var(--space-lg);
-}
 .form-stack {
   display: flex;
   flex-direction: column;
@@ -542,13 +525,6 @@ select {
   justify-content: flex-end;
   gap: 10px;
   padding-top: 8px;
-}
-.field-full {
-  grid-column: 1 / -1;
-}
-.checkbox-field {
-  flex-direction: row;
-  align-items: center;
 }
 .centered-state {
   display: flex;
@@ -608,17 +584,6 @@ select {
 
   color: var(--sidebar-text);
   font-weight: 500;
-}
-.nav-section-label {
-  margin: var(--space-lg) var(--space-sm) var(--space-sm);
-
-  color: var(--sidebar-muted);
-
-  font-size: var(--text-sm);
-  font-weight: 500;
-  letter-spacing: var(--eyebrow-tracking);
-
-  text-transform: var(--eyebrow-case);
 }
 /*
  * Client pages use this bar for their shared navigation; the board owns a floating equivalent.
@@ -1085,11 +1050,6 @@ img.client-mark {
   margin-bottom: var(--space-lg);
   flex-wrap: wrap;
 }
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 /* Folder tiles: the one directory look shared by Files campaigns and Brand Hub Assets. */
 .folder-tiles {
   display: grid;
@@ -1264,45 +1224,6 @@ img.client-mark {
   }
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  overflow-y: auto;
-  background: var(--overlay-scrim);
-  backdrop-filter: blur(3px);
-}
-.modal {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  max-height: calc(100dvh - 48px);
-  padding: 32px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--overlay-shadow);
-}
-.modal h2 {
-  padding-right: 28px;
-  margin-bottom: 16px;
-  font-size: 23px;
-  letter-spacing: -0.75px;
-}
-.modal > p {
-  margin-bottom: 16px;
-  color: var(--muted);
-  font-size: var(--text-lg);
-  line-height: 1.7;
-}
-.modal > .button {
-  margin-top: 8px;
-}
 .modal-close {
   position: absolute;
   top: 20px;
@@ -1550,14 +1471,8 @@ img.client-mark {
     align-items: stretch;
     flex-direction: column;
   }
-  .toolbar-group {
-    flex-wrap: wrap;
-  }
   .search-field {
     flex: 1;
-  }
-  .form-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
   .panel {
     padding: 20px;
@@ -1565,17 +1480,6 @@ img.client-mark {
   .empty-state {
     min-height: 200px;
     padding: 28px 20px;
-  }
-  .modal-backdrop {
-    padding: 16px;
-  }
-  .modal {
-    max-height: calc(100dvh - 32px);
-    padding: 26px 24px;
-    border-radius: var(--radius-lg);
-  }
-  .modal h2 {
-    font-size: 21px;
   }
   .modal-close {
     top: 14px;
