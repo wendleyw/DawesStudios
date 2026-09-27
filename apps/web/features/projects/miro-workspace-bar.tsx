@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowUpRight, MoreHorizontal, Plus, Send, Share2 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
-import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outside-click";
+import { Plus, Send, Share2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
-import { miroBoardUrl } from "./miro-links";
+import { MiroBarShell } from "./miro-view";
 import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
 
 export type MiroWorkspaceBarProps = {
@@ -40,19 +39,70 @@ export type MiroWorkspaceBarProps = {
  * designer: a designer only ever receives their own boards.
  */
 export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRoot = useRef<HTMLDivElement>(null);
-  useDismissOnOutsideClick(menuRoot, menuOpen, () => setMenuOpen(false));
   const agency = props.role === "agency";
   const internal = props.channel === "internal";
   const shown = internal ? (props.round?.miro ?? props.board?.miro) : props.version?.miro;
   const ownBoard = props.board?.designerId === props.viewerId;
   return (
-    <div className="project-header miro-bar">
-      {props.back}
-      <h1 className="miro-bar-title" title={props.title}>
-        <span>{props.title}</span>
-      </h1>
+    <MiroBarShell
+      back={props.back}
+      title={props.title}
+      link={shown}
+      actions={
+        <>
+          {props.viewControl}
+          {internal && props.board && props.role === "designer" && ownBoard && (
+            <button className="button" onClick={props.onSendRound}>
+              <Send size={13} aria-hidden="true" />
+              Send to studio
+            </button>
+          )}
+          {internal && agency && props.round && (
+            <button className="button" onClick={props.onShareRound}>
+              <Share2 size={13} aria-hidden="true" />
+              Share with client
+            </button>
+          )}
+          {internal && agency && props.boards.length > 0 && (
+            <button
+              className="icon-button"
+              aria-label="Add design board"
+              title="Add design board"
+              onClick={props.onAddBoard}
+            >
+              <Plus size={16} />
+            </button>
+          )}
+        </>
+      }
+      menu={(close) => (
+        <>
+          {agency && internal && props.board && (
+            <button
+              className="button quiet"
+              onClick={() => {
+                close();
+                props.onEditBoard();
+              }}
+            >
+              Edit board
+            </button>
+          )}
+          {agency && !internal && props.version && (
+            <button
+              className="button quiet"
+              onClick={() => {
+                close();
+                props.onEditLink();
+              }}
+            >
+              Edit Miro link
+            </button>
+          )}
+          {props.menu}
+        </>
+      )}
+    >
       {internal ? (
         <>
           {props.boards.length > 1 && (
@@ -128,86 +178,6 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
           <span className="miro-bar-due">{props.dueLabel}</span>
         </>
       )}
-      <div className="miro-bar-actions">
-        {props.viewControl}
-        {internal && props.board && props.role === "designer" && ownBoard && (
-          <button className="button" onClick={props.onSendRound}>
-            <Send size={13} aria-hidden="true" />
-            Send to studio
-          </button>
-        )}
-        {internal && agency && props.round && (
-          <button className="button" onClick={props.onShareRound}>
-            <Share2 size={13} aria-hidden="true" />
-            Share with client
-          </button>
-        )}
-        {internal && agency && props.boards.length > 0 && (
-          <button
-            className="icon-button"
-            aria-label="Add design board"
-            title="Add design board"
-            onClick={props.onAddBoard}
-          >
-            <Plus size={16} />
-          </button>
-        )}
-        {shown && (
-          <a
-            className="button"
-            href={miroBoardUrl(shown)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open in Miro
-            <ArrowUpRight size={13} aria-hidden="true" />
-          </a>
-        )}
-        <div
-          className="miro-bar-menu"
-          ref={menuRoot}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setMenuOpen(false);
-          }}
-        >
-          <button
-            className="icon-button"
-            aria-label="More"
-            title="More"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <MoreHorizontal size={16} />
-          </button>
-          {menuOpen && (
-            <div className="miro-bar-popover">
-              {agency && internal && props.board && (
-                <button
-                  className="button quiet"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    props.onEditBoard();
-                  }}
-                >
-                  Edit board
-                </button>
-              )}
-              {agency && !internal && props.version && (
-                <button
-                  className="button quiet"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    props.onEditLink();
-                  }}
-                >
-                  Edit Miro link
-                </button>
-              )}
-              {props.menu}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </MiroBarShell>
   );
 }

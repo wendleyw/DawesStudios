@@ -17,6 +17,56 @@ import type { CanvasVersion, ProjectChannel, TableRow } from "./project-data";
 import type { ProjectView } from "./miro-mode";
 import { MiroBar, type MiroFrame } from "./miro-view";
 
+/** The way back from a project to its client's board. */
+export function ProjectBackLink({ clientId }: { clientId: string }) {
+  return (
+    <Link
+      className="icon-button"
+      href={`/clients/${clientId}/board`}
+      aria-label="Back to board"
+      title="Back to board"
+    >
+      <ArrowLeft size={17} />
+    </Link>
+  );
+}
+
+/**
+ * The agency's Working files | Shared with client switch; anyone else sees the name of the one
+ * channel they have. The Miro workspace renders it for the agency alone.
+ */
+export function ProjectChannelControl({
+  agency,
+  channel,
+  onChannel,
+  disabled = false,
+}: {
+  agency: boolean;
+  channel: ProjectChannel;
+  onChannel: (channel: ProjectChannel) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="segmented-control" role="group" aria-label="Project channel">
+      {agency ? (
+        (["internal", "client"] as const).map((option) => (
+          <button
+            key={option}
+            className={channel === option ? "active" : ""}
+            aria-pressed={channel === option}
+            disabled={disabled}
+            onClick={() => onChannel(option)}
+          >
+            {option === "internal" ? "Working files" : "Shared with client"}
+          </button>
+        ))
+      ) : (
+        <span>{channel === "client" ? "Shared designs" : "Working files"}</span>
+      )}
+    </div>
+  );
+}
+
 export function ProjectHeader({
   client,
   viewer,
@@ -60,41 +110,14 @@ export function ProjectHeader({
   workspaceControl?: ReactNode;
 }) {
   const { formatDate } = useDateFormat();
-  const back = (
-    <Link
-      className="icon-button"
-      href={`/clients/${project.client_id}/board`}
-      aria-label="Back to board"
-      title="Back to board"
-    >
-      <ArrowLeft size={17} />
-    </Link>
-  );
+  const back = <ProjectBackLink clientId={project.client_id} />;
   const channelControl = (
-    <div className="segmented-control" role="group" aria-label="Project channel">
-      {viewer?.role === "agency" ? (
-        <>
-          <button
-            className={channel === "internal" ? "active" : ""}
-            aria-pressed={channel === "internal"}
-            disabled={playgroundOpen}
-            onClick={() => onChannel("internal")}
-          >
-            Working files
-          </button>
-          <button
-            className={channel === "client" ? "active" : ""}
-            aria-pressed={channel === "client"}
-            disabled={playgroundOpen}
-            onClick={() => onChannel("client")}
-          >
-            Shared with client
-          </button>
-        </>
-      ) : (
-        <span>{channel === "client" ? "Shared designs" : "Working files"}</span>
-      )}
-    </div>
+    <ProjectChannelControl
+      agency={viewer?.role === "agency"}
+      channel={channel}
+      onChannel={onChannel}
+      disabled={playgroundOpen}
+    />
   );
   const viewControl = miroAvailable && (
     <div className="segmented-control" role="group" aria-label="Project view">

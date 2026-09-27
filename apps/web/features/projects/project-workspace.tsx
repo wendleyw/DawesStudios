@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Lightbulb } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
@@ -12,6 +11,7 @@ import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-str
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
+import { ProjectBackLink, ProjectChannelControl } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar } from "./project-tool-bar";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
@@ -107,33 +107,17 @@ export function ProjectWorkspace({
   }
   useFoldSidebarWhile(!!shownLink);
 
-  const back = (
-    <Link
-      className="icon-button"
-      href={`/clients/${project.client_id}/board`}
-      aria-label="Back to board"
-      title="Back to board"
-    >
-      <ArrowLeft size={17} />
-    </Link>
-  );
+  // Designers and clients have one channel each, and the workspace does not name it.
   const channelControl = role === "agency" && (
-    <div className="segmented-control" role="group" aria-label="Project channel">
-      {(["internal", "client"] as const).map((option) => (
-        <button
-          key={option}
-          className={channel === option ? "active" : ""}
-          aria-pressed={channel === option}
-          onClick={() => {
-            setPanel(null);
-            setAssetStripOpen(false);
-            onChannel(option);
-          }}
-        >
-          {option === "internal" ? "Working files" : "Shared with client"}
-        </button>
-      ))}
-    </div>
+    <ProjectChannelControl
+      agency
+      channel={channel}
+      onChannel={(option) => {
+        setPanel(null);
+        setAssetStripOpen(false);
+        onChannel(option);
+      }}
+    />
   );
   const empty = internal
     ? role === "agency"
@@ -160,7 +144,7 @@ export function ProjectWorkspace({
       <div className="project-chrome" ref={setChrome}>
         {client && <CanvasHeader client={client} viewer={profile} />}
         <MiroWorkspaceBar
-          back={back}
+          back={<ProjectBackLink clientId={project.client_id} />}
           title={project.title}
           channel={channel}
           role={role}

@@ -100,6 +100,15 @@ describe("MiroBar", () => {
     fireEvent.keyDown(screen.getByText("menu content"), { key: "Escape" });
     expect(screen.queryByText("menu content")).not.toBeInTheDocument();
   });
+
+  it("returns focus to More when Escape closes the menu", () => {
+    renderBar();
+    const more = screen.getByRole("button", { name: "More" });
+    fireEvent.click(more);
+    fireEvent.keyDown(screen.getByText("menu content"), { key: "Escape" });
+    expect(more).toHaveFocus();
+    expect(more).toHaveAttribute("aria-expanded", "false");
+  });
 });
 
 describe("MiroReviewBar", () => {
