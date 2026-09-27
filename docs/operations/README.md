@@ -126,7 +126,7 @@ The checked-in [restore evidence](restore-evidence.json) records a successful is
 
 ## Production deployment requirements
 
-The production target, configuration mapping, R2 Storage backend, container release, proxy, backups and release checklist are in the [production deployment guide](production.md). Production uses the official self-hosted Supabase distribution with fresh secrets, real SMTP and only the versioned migrations. The seed, demonstration overlay, provisioning and reset scripts stay local.
+The production target, configuration mapping, persistent filesystem Storage, container release, proxy, backups and release checklist are in the [production deployment guide](production.md). Creative work lives in Miro; R2 is no longer required (user decision, 2026-09-27). Remaining application uploads use Supabase Storage. Production uses the official self-hosted Supabase distribution with fresh secrets, real SMTP and only the versioned migrations. The seed, demonstration overlay, provisioning and reset scripts stay local.
 
 The dedicated Realtime publication broadcasts inserts/updates only because deleted-row events do not enforce the same SELECT RLS filtering. Maintenance deletions therefore require list refresh rather than a delete event. Normal application operations use durable status changes and scoped insert/update events.
 

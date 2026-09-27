@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Orchestrates the local staging rehearsal described in deploy/staging/README.md: the official
 # self-hosted Supabase Docker distribution (docker-compose.yml + docker-compose.s3.yml, MinIO
-# standing in for Cloudflare R2), plus this repo's web/media images, under a distinct compose
+# retained as a historical S3 rehearsal), plus this repo's web/media images, under a distinct compose
 # project name and a reserved 56000-56999 host port range.
 #
 # Subcommands run in this order for a full rehearsal:
@@ -197,7 +197,7 @@ cmd_prepare() {
     echo "POSTGRES_HOST=db"
     echo "POSTGRES_DB=postgres"
     echo
-    echo "### MinIO (stands in for Cloudflare R2 as the S3 Storage backend)"
+    echo "### MinIO (historical S3 rehearsal; production now uses filesystem Storage)"
     echo "MINIO_ROOT_USER=dawes-staging-minio"
     echo "MINIO_ROOT_PASSWORD=$(gen_hex 16)"
     echo "GLOBAL_S3_BUCKET=dawes-staging-storage"
@@ -512,7 +512,7 @@ cmd_storage_test() {
     "mc alias set staging http://minio:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}' >/dev/null && mc ls --recursive staging/${GLOBAL_S3_BUCKET}")"
   echo "$mc_out" | grep -q "$big_name" && echo "PASS big object present in MinIO" || echo "FAIL big object not found in MinIO listing"
   echo "$mc_out" | grep -q "$small_name" && echo "PASS small object present in MinIO" || echo "FAIL small object not found in MinIO listing"
-  echo "MinIO supports S3 object tagging (unlike R2, which rejects it): TUS_ALLOW_S3_TAGS=false above only proves the setting is accepted, not that a tagging call would fail the way it does on R2."
+  echo "This checks the historical MinIO/S3 rehearsal only. Production now uses filesystem Storage; its persistence and restore checks remain a separate release gate."
 
   log "Confirming an anonymous request cannot read the objects"
   local anon_code

@@ -1,15 +1,22 @@
 # Local staging rehearsal
 
-A reproducible, disposable rehearsal of the [production topology](../../docs/operations/production.md):
-the official self-hosted Supabase Docker distribution, with MinIO standing in for Cloudflare R2 as
-the S3 Storage backend, plus this repo's `web` and `media` images. It runs under its own compose
+A reproducible, disposable rehearsal of the earlier production topology: the official self-hosted
+Supabase Docker distribution, with MinIO as the S3 Storage backend, plus this repo's `web` and
+`media` images. It runs under its own compose
 project names, its own image tags, and a reserved host port range, alongside the existing local
 dev stack (`dawes-studios*`, `supabase_*_dawes-studios*`) without touching it. Authorized
 2026-09-23; see the root `CLAUDE.md` "Product and Delivery Requirements".
 
 This directory is **not** part of the application. Nothing here is imported by `apps/web` or
 `apps/media`, and nothing under it is ever a deploy target — it only rehearses the topology
-described in `docs/operations/production.md` before that guide is followed for real.
+recorded here.
+
+**Production decision, 2026-09-27:** creative work lives in Miro and R2 is no longer required.
+The [current production target](../../docs/operations/production.md) uses persistent filesystem
+Storage for remaining application uploads. This existing MinIO rehearsal and its retained volumes
+have not been migrated; its S3 checks remain historical compatibility evidence. A filesystem
+Storage rehearsal with TLS, SMTP, restart persistence and a restore drill is still required before
+release. Do not treat this script's existing S3 result as verification of the new production target.
 
 ## Layout
 

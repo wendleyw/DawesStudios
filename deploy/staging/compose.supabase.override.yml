@@ -63,8 +63,8 @@ services:
       # raise it here to the production 1 GiB video ceiling (docs/operations/production.md).
       FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
       # Not wired into any upstream compose file at all (grepped the full docker/ tree — absent).
-      # MinIO supports S3 object tagging (unlike R2), so this rehearsal cannot observe a tagging
-      # failure either way; it only proves the setting is accepted and the upload still succeeds.
+      # Kept for this historical S3 rehearsal; production now uses the filesystem backend.
+      # MinIO accepts tagging, so this only proves the setting is accepted and uploads succeed.
       TUS_ALLOW_S3_TAGS: "${TUS_ALLOW_S3_TAGS}"
 
   # Supavisor (the pooler). Reaching it needs a tenant-qualified username this rehearsal doesn't

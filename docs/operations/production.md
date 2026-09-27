@@ -5,6 +5,11 @@ Rehearse every step on a staging installation with the same topology before serv
 The local CLI stack described in the [operations runbook](README.md) is a fixture environment
 and is never promoted to production.
 
+**Decision, 2026-09-27:** creative work lives in Miro; Cloudflare R2 is no longer a production
+dependency or release gate. Existing application uploads still use Supabase Storage, backed by
+persistent server storage. This decision does not remove covers, briefing attachments, Brand Hub,
+Playground uploads or working/delivery files from the application.
+
 ## Topology
 
 ```text
@@ -15,20 +20,18 @@ Browser ── HTTPS ──► reverse proxy (TLS)
 
 Self-hosted Supabase (official Docker distribution)
   Postgres · Auth · PostgREST · Realtime · Storage API · gateway   (Studio stays private)
-  Storage API ── S3 protocol ──► Cloudflare R2 bucket (private)
+  Storage API ── filesystem ──► persistent private server storage
 ```
 
-**Why R2 sits behind Supabase Storage.** All authorization for files lives in Supabase Storage:
+**Application files remain behind Supabase Storage.** All authorization for files lives there:
 RLS on `storage.objects`, the per-bucket limits in the migrations, and short-lived signed URLs.
-That authorization keeps unpublished and internal artifacts away from clients. With R2 as the
-Storage *backend*, the bytes live in a durable, off-host bucket with no egress fees, while the
-application code, policies and signed-URL behaviour stay exactly as tested. The application
-never talks to R2 directly and must not get an R2 SDK or public R2 URLs. Cloudflare R2 is a
-documented backend in the [Supabase S3 storage guide](https://supabase.com/docs/guides/self-hosting/self-hosted-s3).
+That authorization keeps unpublished and internal artifacts away from clients. The filesystem
+backend stores their bytes on the server; keep that directory private, persistent and backed up
+off-host. The application continues to use the Storage API, policies and signed URLs. Miro hosts
+the creative boards; it does not replace storage for the application's remaining upload features.
 
 Managed Supabase Cloud is the alternative. It removes Postgres operations, and the application
-runs against it unchanged, but its Storage cannot use R2. If you choose it, skip the R2 section
-and apply everything else.
+runs against it unchanged with managed Storage. The rest of this guide targets self-hosting.
 
 ## 1. Supabase
 
@@ -60,31 +63,31 @@ or as a network alias. The gateway routes WebSocket traffic to that host, and Re
 tenant (`realtime-dev`) from it. The staging rehearsal renamed the container without an alias, and
 every Realtime handshake failed with 503.
 
-### R2 as the Storage backend
+### Persistent filesystem Storage
 
-Create a **private** R2 bucket. Do not enable `r2.dev` or public custom-domain access. Create an R2
-API token with object read and write access to that bucket only. Then set these in the `storage`
-service's `environment` through a Compose override file. The upstream `.env` does not expose
-`FILE_SIZE_LIMIT` (the upstream compose hardcodes 50 MB) or `TUS_ALLOW_S3_TAGS`, so editing `.env`
-alone is not enough. [`deploy/staging/compose.supabase.override.yml`](../../deploy/staging/compose.supabase.override.yml)
-is a tested example:
+Use the official distribution's default filesystem backend; do not add `docker-compose.s3.yml`
+or an external object-storage service. The pinned upstream distribution used by the
+[local rehearsal](../../deploy/staging/README.md) defines these settings on `storage`:
 
 ```yaml
-STORAGE_BACKEND: s3
-GLOBAL_S3_BUCKET: dawes-studios-storage
-GLOBAL_S3_ENDPOINT: https://<account-id>.r2.cloudflarestorage.com
-GLOBAL_S3_PROTOCOL: https
-GLOBAL_S3_FORCE_PATH_STYLE: "true"
-AWS_ACCESS_KEY_ID: <r2-access-key-id>
-AWS_SECRET_ACCESS_KEY: <r2-secret-access-key>
-REGION: auto
-TUS_ALLOW_S3_TAGS: "false"   # Storage's resumable-upload protocol is TUS-based; R2 rejects S3 object tagging
-FILE_SIZE_LIMIT: 1073741824
+STORAGE_BACKEND: file
+FILE_STORAGE_BACKEND_PATH: /var/lib/storage
 ```
 
-The application does not use Storage image transformations, so `imgproxy` may stay disabled. Add
-an R2 lifecycle rule that aborts incomplete multipart uploads after one day; abandoned or cancelled
-resumable uploads leave those parts behind, and Storage does not always terminate them itself.
+Upstream mounts `./volumes/storage:/var/lib/storage:z`. Keep that host directory on persistent
+disk, outside disposable release directories, and preserve it across container replacement.
+Keep `GLOBAL_S3_BUCKET` stable too: despite its name, upstream also uses it as a directory name
+with the file backend. No external S3 credentials, object-tagging workaround or bucket lifecycle
+rule is required. The distribution's `S3_PROTOCOL_ACCESS_KEY_*` values configure its own protocol
+endpoint and are separate from external storage-provider credentials.
+
+Set `FILE_SIZE_LIMIT: 1073741824` on `storage` through a Compose override. Upstream hardcodes
+50 MiB, so adding a value only to `.env` does not change the service. The existing staging
+override demonstrates that limit override, but its MinIO/S3 topology is historical and must not
+be copied as the new production storage configuration. Verify actual uploads, restart persistence
+and restoration on the filesystem-backed server before release.
+
+The application does not use Storage image transformations, so `imgproxy` may stay disabled.
 
 ### Migrations
 
@@ -183,15 +186,19 @@ the public interface, and reach them through an SSH tunnel.
 
 - **Database:** take a nightly `pg_dump -Fc` of the `public`, `private`, `auth`, `storage` and
   `supabase_migrations` schemas (the same scope as `supabase/scripts/backup_local.py`). Encrypt it
-  and store it off-host, with credentials separate from the production bucket.
-- **Files:** after each dump, copy the R2 bucket to a second bucket or provider, for example with
-  `rclone sync --backup-dir` so deletions stay recoverable. Copying *after* the dump means every
-  object the dump references exists in the copy. Newer objects are harmless orphans on restore.
-- **Drill:** restore the dump and the bucket copy into staging, then repeat the role checks
-  (agency and client login, a forbidden private-design read, an authorized download with a
-  matching SHA-256). The local `restore_drill.py` covers only the local filesystem backend.
+  and store it off-host with separate backup credentials.
+- **Files and consistency:** pause writes for the database dump and Storage directory archive,
+  or use coordinated snapshots, so the database and stored bytes share a recoverable point.
+  Archive the persistent Storage directory with GNU tar, preserving extended attributes, ACLs
+  and numeric owners, as the [local backup procedure](README.md#database-auth-and-storage-backup) does.
+  Encrypt and retain versioned copies off-host; a database dump alone does not contain files.
+- **Drill:** restore the dump and the filesystem archive into isolated staging, then repeat the
+  role checks (agency and client login, a forbidden internal-board read, an authorized download
+  with a matching SHA-256). The local `restore_drill.py` is local-only evidence, not a production
+  restore command or proof that the server's volumes, permissions and backups are correct.
 - **Monitoring:** watch container health (web `/login`, media `/health`), host disk (Postgres
-  volume and `media-scratch`), Postgres, Auth and SMTP errors, and the media 4xx/5xx rates.
+  volume, Storage directory and `media-scratch`), Postgres, Auth and SMTP errors, and the media
+  4xx/5xx rates. Miro-hosted board content is outside the application's database/file backups.
 
 ## 5. Release checklist
 
@@ -200,10 +207,11 @@ Record the results in `docs/verification/` before serving clients. This is the J
 
 1. `npm run check`, `npm --prefix apps/media test` and `npm run db:test` pass on the release commit.
 2. `npm run build` and `docker compose build` succeed. Both containers report healthy.
-3. Staging uses this exact topology: self-hosted Supabase, R2 backend, and the proxy. The
-   [local rehearsal](../../deploy/staging/README.md) proves everything except R2 itself, the TLS
-   proxy and email delivery. MinIO accepts object tagging, so only a real R2 bucket proves
-   `TUS_ALLOW_S3_TAGS`.
+3. Staging uses the production topology: self-hosted Supabase with persistent filesystem Storage,
+   the web/media containers and the TLS proxy. The existing [local rehearsal](../../deploy/staging/README.md)
+   uses MinIO/S3 and records historical evidence; it does not yet verify this revised topology.
+   Verify upload/download authorization, persistence across container replacement and off-host
+   restoration on the filesystem backend. R2 and S3 object-tagging checks are not release gates.
 4. The browser suite runs against staging with `ACCEPTANCE_SUPABASE_URL` plus
    `ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY`, `ACCEPTANCE_SUPABASE_ANON_KEY` and
    `ACCEPTANCE_DEMO_PASSWORD` set, because the tests refuse an undeclared backend and never mix it

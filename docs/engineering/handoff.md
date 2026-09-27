@@ -8,7 +8,7 @@ history only when a task needs earlier evidence.
 
 ## Ownership
 
-- Claude Code took over when the previous run hit its usage limit; Codex is not running.
+- Claude Code owns implementation; Codex recorded the [no-R2 decision](handoffs/2026-09-27-production-without-r2.md).
 - Several sessions share `main` in this tree; agree file ownership by session message first.
   Stage explicit paths only; give Playwright a private `--output`.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
@@ -41,9 +41,9 @@ overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py re
 
 ## Accepted decisions
 
-- **Production target:** the official self-hosted Supabase Docker distribution, with Cloudflare R2
-  as its S3 Storage backend, plus the hardened `web` and `media` containers behind a TLS proxy.
-  R2 stays inside Supabase Storage configuration. Keep the upstream Realtime hostname.
+- **Production target (user update, 2026-09-27):** creative work lives in Miro; R2 is not required.
+  Use official self-hosted Supabase with persistent filesystem Storage for remaining app uploads,
+  plus `web`/`media` behind TLS and off-host backups. Keep the upstream Realtime hostname.
 - **SABRE demonstration overlay stays active:** 10 clients, 68 projects, 50 of them SABRE. The
   canonical seed remains 10 clients / 25 projects. Use only the guarded removal in the
   [demo guide](../../supabase/demo/sabre/README.md).
@@ -72,8 +72,8 @@ overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py re
 
 ## Open gaps
 
-- Real server items: an R2 bucket (object tagging), the TLS proxy, SMTP delivery, a restore
-  drill, and rate limiting at the proxy.
+- Real server items: filesystem Storage persistence, the TLS proxy, SMTP delivery, a restore
+  drill, and rate limiting at the proxy. The existing MinIO staging rehearsal is historical.
 - The notification feed shows only the latest 100 items, with no pagination (product decision).
 - tus termination on Supabase is unverified (a cancelled partial upload relies on the 24-hour window);
   a missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
@@ -91,7 +91,7 @@ overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py re
 ## Next actions
 
 **Production setup (user-deferred on 2026-09-23):** follow the
-[production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
+[production guide](../operations/production.md) on a real server (persistent Storage, TLS, SMTP, backups).
 
 1. The user's hands-on look at the Miro workspace (boards, Send to studio, Share with client).
 2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
