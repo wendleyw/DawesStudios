@@ -2,7 +2,18 @@
 
 Updated: 2026-09-27 EDT. Owner: **Codex**. No delegated writer remains active.
 
-## Current result
+## Current result — preproduction review
+
+- The user asked what remains to analyze/refactor before production. The read-only review is
+  [recorded here](../verification/preproduction-review-2026-09-27.md); proposed fixes are not applied.
+- Fresh checks: web/media dependency audit 0 advisories; gitleaks 547 commits with no detected leaks;
+  read-only SQL confirmed the legacy 1 GiB internal-assets bucket versus the 50 MiB upload UI.
+- Priorities: backend upload budgets, production-shaped filesystem/TLS/SMTP staging, backup/restore,
+  explicit release-image selection, proxy limits/alerts, real Miro permissions and pagination.
+- Targeted refactor: extract project-details dialogs while preserving the data-access boundary.
+  CI lacks database/browser/build gates; large-dataset behavior and actual host operation remain unverified.
+
+## Previous completed work — extension/action audit
 
 - Completed the requested Playwright MCP extension connection and fresh role-action audit.
 - The initial relay WebSocket error cleared after a fresh connection. Actual Chrome actions ran
@@ -32,7 +43,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex**. No delegated writer remains active.
 - Monthly credits retain atomic acceptance and current plus 11 future month rules.
 - Canonical baseline stays 10 clients / 25 projects; live SABRE overlay stays 10 / 68 / 50 SABRE.
 
-## Checks executed in this session
+## Prior checks — extension/action audit
 
 - Final source gate: types, lint, formatting; 124 Vitest files / 1,206 tests pass.
 - 113 distinct Chromium cases have passing executions across runs/reruns. This was not one clean
@@ -62,6 +73,6 @@ Updated: 2026-09-27 EDT. Owner: **Codex**. No delegated writer remains active.
 
 ## Next concrete action
 
-The requested extension/action pass is integrated. Use the browser guide if relay attachment
-fails again; a new session may be needed to expose personal MCP tools natively. The next separate
-release task is J10 operational verification when requested. No push or release is authorized.
+The review is complete; its prioritized changes await an implementation request. Start with the
+backend upload budget and a production-shaped staging/release configuration, preserving SABRE.
+No implementation, push or release was authorized by the review question.
