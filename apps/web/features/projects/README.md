@@ -388,7 +388,10 @@ canvas uses, scoped to whichever round or client version is shown (`feedbackTarg
 closes itself, during render, once nothing is shown to scope it to — the same reconciliation pattern
 `project-page.tsx` uses for Miro mode's phantom-state guard. `usePanelFocusReturn`
 (`use-panel-focus-return.ts`) is the shared hook behind both the legacy canvas's and the workspace's
-side panel, so Escape/close returns focus to whichever control opened it either way. The Playground
+side panel, so Escape/close returns focus to whichever control opened it either way. Its
+`useFocusReturn` also returns focus to the Playground button on both pages; it focuses after the
+closing render commits, because the button stays disabled until then and a frame callback could
+run first and silently fail. The Playground
 button opens the full Playground when nothing is on Miro yet, or the asset strip over the embed once
 a board or version has a link, exactly as in Miro mode.
 

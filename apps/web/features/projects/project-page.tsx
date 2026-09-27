@@ -49,7 +49,7 @@ import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
 import { offersWorkspace, usesWorkspace } from "./miro-workspace";
 import { ProjectWorkspace } from "./project-workspace";
-import { usePanelFocusReturn } from "./use-panel-focus-return";
+import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
 
@@ -193,14 +193,12 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const [playgroundOrigin, setPlaygroundOrigin] = useState<"project" | "upload" | null>(null);
   const playgroundOpen = playgroundOrigin !== null;
   const playgroundTrigger = useRef<HTMLButtonElement>(null);
+  const returnFocus = useFocusReturn();
   function closePlayground() {
     const returnToProject = playgroundOrigin === "project";
     setPlaygroundOrigin(null);
-    if (returnToProject)
-      requestAnimationFrame(() => {
-        if (document.activeElement === document.body)
-          playgroundTrigger.current?.focus({ preventScroll: true });
-      });
+    // The button is disabled until this close commits; a suspended upload restores its own focus.
+    if (returnToProject) returnFocus(playgroundTrigger, { onlyFromBody: true });
   }
   // The canvas pane's own size, which is all the opening view needs; the frames supply the rest.
   const [pane, setPane] = useState<HTMLDivElement | null>(null);

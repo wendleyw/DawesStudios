@@ -14,7 +14,7 @@ import { ProjectDetails } from "./project-details";
 import { ProjectBackLink, ProjectChannelControl } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar } from "./project-tool-bar";
-import { usePanelFocusReturn } from "./use-panel-focus-return";
+import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { MiroEmbed, MiroReviewBar } from "./miro-view";
 import { MiroWorkspaceBar } from "./miro-workspace-bar";
@@ -72,6 +72,7 @@ export function ProjectWorkspace({
   const [chrome, setChrome] = useState<HTMLDivElement | null>(null);
   const [chromeHeight, setChromeHeight] = useState(0);
   const playgroundTrigger = useRef<HTMLButtonElement>(null);
+  const returnFocus = useFocusReturn();
   useEffect(() => {
     if (!chrome) return;
     const observer = new ResizeObserver(() =>
@@ -100,10 +101,8 @@ export function ProjectWorkspace({
   if (panel === "feedback" && !feedbackTarget) setPanel(null);
   function closePlayground() {
     setPlaygroundOpen(false);
-    requestAnimationFrame(() => {
-      if (document.activeElement === document.body)
-        playgroundTrigger.current?.focus({ preventScroll: true });
-    });
+    // The button is disabled until this close commits.
+    returnFocus(playgroundTrigger, { onlyFromBody: true });
   }
   useFoldSidebarWhile(!!shownLink);
 
