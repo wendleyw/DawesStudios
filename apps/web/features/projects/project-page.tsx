@@ -86,6 +86,7 @@ function ProjectPageContent({ projectId }: { projectId: string }) {
       data={data.data}
       boards={boards.data ?? []}
       panels={panels}
+      compactHeader={parameters.get("layout") === "compact-header"}
       initialSelection={{
         board: parameters.get("board"),
         round: parameters.get("round"),

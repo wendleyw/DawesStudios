@@ -14,6 +14,14 @@ channel, with Supabase policies rather than the interface deciding what each one
 
 ## Page and chrome
 
+**Temporary layout preview (2026-09-27):** add `?layout=compact-header` to a project URL
+(or `&layout=compact-header` when it already has parameters). The title occupies a separate card
+between client navigation and the account card. Back, channels, rounds/versions, dates and actions
+share the full-width bar immediately below. At work-area widths of 1100 px or less, the title
+gets its own row and the controls wrap. This URL-only preview saves no preference and makes no
+data changes; remove the parameter to restore the normal layout. See the
+[visual verification](../../../../docs/verification/compact-project-header-2026-09-27.md).
+
 The client logo/name, client navigation and signed-in profile use the same floating
 `workspace/canvas-header.tsx` as every client section. Below it, `MiroWorkspaceBar`
 (`miro-workspace-bar.tsx`, built on `MiroBarShell`/`MiroBarMenu` from `miro-view.tsx`) is the

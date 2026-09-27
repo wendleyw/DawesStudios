@@ -21,6 +21,52 @@
 .project-chrome > .board-header {
   position: static;
 }
+/* Temporary layout preview, enabled only by ?layout=compact-header on a project. */
+.project-chrome.is-compact > .board-header {
+  display: grid;
+  grid-template-columns: max-content minmax(160px, 1fr) max-content;
+  align-items: stretch;
+}
+.project-chrome.is-compact .board-identity {
+  max-width: 100%;
+}
+.project-title-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 10px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.project-title-preview > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@container board (max-width: 1100px) {
+  .project-chrome.is-compact > .board-header {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+  .project-chrome.is-compact .board-account {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .project-title-preview {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-inline: 14px;
+    font-size: 16px;
+  }
+}
 .project-header {
   pointer-events: auto;
   padding: 14px 20px;
@@ -68,6 +114,20 @@
 .miro-bar.is-client .miro-bar-context {
   border-top-color: var(--tone-active-border);
   background: var(--tone-active-bg);
+}
+.miro-bar.is-compact .miro-bar-context {
+  border-top: 0;
+  border-radius: 11px;
+  padding-left: 8px;
+}
+.miro-bar.is-compact.is-internal {
+  border-color: var(--tone-attention-border);
+}
+.miro-bar.is-compact.is-client {
+  border-color: var(--tone-active-border);
+}
+.miro-bar.is-compact .miro-bar-primary {
+  margin-left: 0;
 }
 .miro-bar:is(.is-internal, .is-client) .miro-bar-context :is(.segmented-control, .miro-bar-board) {
   background: var(--surface);

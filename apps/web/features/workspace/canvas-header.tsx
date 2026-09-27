@@ -13,11 +13,13 @@ export function CanvasHeader({
   client,
   viewer,
   context,
+  center,
   heading = false,
 }: {
   client: Client;
   viewer: Profile | null;
   context?: ReactNode;
+  center?: ReactNode;
   heading?: boolean;
 }) {
   const logo = (
@@ -40,6 +42,7 @@ export function CanvasHeader({
         </div>
         {viewer && <ClientNavigation client={client} role={viewer.role} />}
       </div>
+      {center}
       <div className="board-account">
         <NotificationsPopover />
         <AccountMenu clientId={client.id} viewer={viewer} />

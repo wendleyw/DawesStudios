@@ -63,6 +63,7 @@ export function miroBarTone(role: string | undefined, channel: ProjectChannel): 
  * action; its tint marks Working files apart from what the client sees.
  */
 export function MiroBarShell({
+  compact = false,
   back,
   title,
   due,
@@ -73,6 +74,8 @@ export function MiroBarShell({
   link,
   menu,
 }: {
+  /** The title is supplied by the header above; combine the remaining controls into one row. */
+  compact?: boolean;
   back: ReactNode;
   title: string;
   /** The project's due date, already formatted ("Due Nov 29" or "No due date"). */
@@ -88,34 +91,39 @@ export function MiroBarShell({
   link?: MiroLink | null;
   menu: (close: () => void) => ReactNode;
 }) {
+  const actions = (
+    <div className="miro-bar-actions">
+      {compact && <span className="miro-bar-due">{due}</span>}
+      {link && (
+        <a className="button" href={miroBoardUrl(link)} target="_blank" rel="noopener noreferrer">
+          Open in Miro
+          <ArrowUpRight size={13} aria-hidden="true" />
+        </a>
+      )}
+      <MiroBarMenu>{menu}</MiroBarMenu>
+    </div>
+  );
   return (
-    <div className={`project-header miro-bar${tone ? ` is-${tone}` : ""}`}>
-      <div className="miro-bar-row">
-        {back}
-        <h1 className="miro-bar-title" title={title}>
-          <span>{title}</span>
-        </h1>
-        <span className="miro-bar-due">{due}</span>
-        <div className="miro-bar-actions">
-          {link && (
-            <a
-              className="button"
-              href={miroBoardUrl(link)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open in Miro
-              <ArrowUpRight size={13} aria-hidden="true" />
-            </a>
-          )}
-          <MiroBarMenu>{menu}</MiroBarMenu>
+    <div
+      className={`project-header miro-bar${tone ? ` is-${tone}` : ""}${compact ? " is-compact" : ""}`}
+    >
+      {!compact && (
+        <div className="miro-bar-row">
+          {back}
+          <h1 className="miro-bar-title" title={title}>
+            <span>{title}</span>
+          </h1>
+          <span className="miro-bar-due">{due}</span>
+          {actions}
         </div>
-      </div>
-      {(lead || children || primary) && (
+      )}
+      {(compact || lead || children || primary) && (
         <div className="miro-bar-context">
+          {compact && back}
           {lead}
           {children}
           {primary && <div className="miro-bar-primary">{primary}</div>}
+          {compact && actions}
         </div>
       )}
     </div>

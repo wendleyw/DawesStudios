@@ -8,6 +8,8 @@ import { MiroBarShell, miroBarTone } from "./miro-view";
 import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
 
 export type MiroWorkspaceBarProps = {
+  /** The preview places the project title in the client header above this bar. */
+  compact?: boolean;
   back: ReactNode;
   title: string;
   channel: ProjectChannel;
@@ -73,6 +75,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
     ) : null;
   return (
     <MiroBarShell
+      compact={props.compact}
       back={props.back}
       title={props.title}
       due={props.dueLabel}
