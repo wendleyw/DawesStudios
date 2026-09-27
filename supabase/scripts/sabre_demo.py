@@ -248,7 +248,10 @@ class Demo:
             # Acceptance starts projects today. Historical demo dates are backfilled only after
             # the real atomic acceptance/debit workflow has completed successfully.
             self.once('accept-date:' + key, lambda: sql(f"update public.briefings set due_date=greatest(due_date,current_date) where id='{uuid.UUID(briefing)}' and client_id='{CLIENT_ID}' and status='budget_confirmed';"))
-            project = self.once('accept:' + key, lambda: self.rpc('accept_briefing', {'p_briefing_id': briefing}))
+            # Credits are held per month and the demonstration allocation lands in the current
+            # month, so every acceptance debits that month rather than the due date's (empty) one.
+            month = datetime.now(timezone.utc).date().replace(day=1).isoformat()
+            project = self.once('accept:' + key, lambda: self.rpc('accept_briefing', {'p_briefing_id': briefing, 'p_month': month}))
             if project not in self.state['new_projects']:
                 self.state['new_projects'].append(project)
                 save(self.state)
@@ -262,8 +265,13 @@ class Demo:
             if index % 10 == 3:
                 url = drive_url(key)
                 self.once('drive-link:' + key, lambda: self.rpc('set_project_drive_link', {'p_project_id': project, 'p_url': url}) or url)
-        producer = 'designer' if index % 2 == 0 else 'designer2'
-        self.once('assign:' + key, lambda: self.rpc('assign_designer', {'p_project_id': project, 'p_designer_id': self.users[producer]}))
+        # The seed already staffs its SABRE projects (one design board per designer, matching round
+        # cycles), so an existing project keeps its designers; only a new project gets one assigned.
+        staffed = [r['designer_id'] for r in self.rows('project_assignments', f'project_id=eq.{project}&select=designer_id&order=designer_id')] if p.get('existing') else []
+        roles_by_user = {user: role for role, user in self.users.items()}
+        producer = roles_by_user.get(staffed[0], 'designer') if staffed else ('designer' if index % 2 == 0 else 'designer2')
+        if not staffed:
+            self.once('assign:' + key, lambda: self.rpc('assign_designer', {'p_project_id': project, 'p_designer_id': self.users[producer]}))
         deliverables = self.rows('deliverables', 'project_id=eq.' + project + '&order=sort_order')
         self.comment(key + ':internal', project, 'Demo production note: keep the headline hierarchy consistent across formats and check the safe area before the studio review.', producer, 'internal')
         # Existing projects keep their status; new projects move through the real workflow to their stage.

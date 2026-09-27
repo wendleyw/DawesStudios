@@ -54,7 +54,10 @@ def main():
     # (its plan is empty), so only the decision its status names is asserted for it.
     steps = demo.state['steps']
     plan_of = {(p['id'] if p.get('existing') else steps.get('accept:' + p['key'])): steps.get('miro-plan:' + p['key']) for p in demo.state['project_plan']}
-    kept = {pid for pid, plan in plan_of.items() if plan == []} - {p['id'] for p in projects if p['status'] in ('planned', 'in_progress')}
+    # A project the canonical seed created keeps the seed's history, which follows the same
+    # `miro_history`, so it gets the full check; only a hand-edited project can be exempt.
+    seeded = {p['id'] for p in demo.state['project_plan'] if p.get('existing')}
+    kept = {pid for pid, plan in plan_of.items() if plan == []} - seeded - {p['id'] for p in projects if p['status'] in ('planned', 'in_progress')}
     for project in projects:
         pid, status = project['id'], project['status']
         own_boards = [b for b in boards if b['project_id'] == pid]
@@ -91,11 +94,12 @@ def main():
 
     # Drive backup links: only a fresh `apply` sets them, and it records each one it set.
     recorded = {demo.state['steps'].get('accept:' + name.split(':', 1)[1]): url for name, url in demo.state['steps'].items() if name.startswith('drive-link:')}
-    check({p['id']: p.get('drive_url') for p in projects if p.get('drive_url')} == recorded, 'Drive links are exactly the ones the fresh apply recorded (%d)' % len(recorded))
+    # Seeded SABRE projects keep the canonical seed's own Drive links; the rest come from the apply.
+    check({p['id']: p.get('drive_url') for p in projects if p.get('drive_url') and p['id'] not in seeded} == recorded, 'Drive links are exactly the ones the fresh apply recorded (%d)' % len(recorded))
 
     client_projects = demo.rows('projects', 'client_id=eq.' + CLIENT_ID, 'client')
     check({p['id'] for p in client_projects} == project_ids, 'Client can open all fifty SABRE projects')
-    check({p['id']: p.get('drive_url') for p in client_projects if p.get('drive_url')} == recorded, 'Client reads the same Drive links')
+    check({p['id']: p.get('drive_url') for p in client_projects if p.get('drive_url') and p['id'] not in seeded} == recorded, 'Client reads the same Drive links')
     for table in ('design_boards', 'design_versions', 'design_version_miro_links', 'project_assignments', 'internal_comments', 'project_assets'):
         # Narrow selects: a whole-row read of design_versions is refused outright (author column).
         check(demo.rows(table, in_projects + '&select=project_id', 'client') == [], 'Client cannot read ' + table)
