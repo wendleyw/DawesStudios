@@ -96,8 +96,6 @@ export type Project = {
   status: ProjectStatus;
   service_type: string;
   due_date: string | null;
-  /** The Google Drive backup link the agency set, if any; visible to the client too. */
-  drive_url?: string | null;
   /** When the studio marked the project delivered; null until then. */
   delivered_at: string | null;
   start_date: string | null;

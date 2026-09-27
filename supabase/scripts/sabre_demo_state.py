@@ -45,6 +45,7 @@ SCOPES = {
     'public.client_comments': f'project_id in ({PROJECTS})',
     'public.project_assets': f'project_id in ({PROJECTS})',
     'public.project_covers': f'project_id in ({PROJECTS})',
+    'public.project_drive_links': f'project_id in ({PROJECTS})',
     'public.delivery_files': f'project_id in ({PROJECTS})',
     'public.briefing_attachments': f'briefing_id in ({BRIEFINGS})',
     'public.brand_sections': f"client_id='{CLIENT_ID}'",

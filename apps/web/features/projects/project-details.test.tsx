@@ -24,6 +24,13 @@ const state = vi.hoisted(() => ({
   move: vi.fn(),
   settle: vi.fn(),
   setDriveLink: vi.fn(),
+  driveLinks: { internal: null, client: null } as {
+    internal: string | null;
+    client: string | null;
+  },
+  drivePending: false,
+  driveError: null as Error | null,
+  driveRefetch: vi.fn(),
   invalidateProject: vi.fn(),
   invalidateAssets: vi.fn(),
 }));
@@ -44,6 +51,12 @@ vi.mock("./project-data", async (importOriginal) => ({
   useInvalidateProject: () => state.invalidateProject,
   useInvalidateProjectCredits: () => vi.fn(),
   useProjectCredits: () => ({ data: state.role === "designer" ? undefined : state.credits }),
+  useProjectDriveLinks: () => ({
+    data: state.drivePending || state.driveError ? undefined : state.driveLinks,
+    isPending: state.drivePending,
+    error: state.driveError,
+    refetch: state.driveRefetch,
+  }),
   moveProjectMonth: state.move,
   settleProjectCredits: state.settle,
   setProjectDriveLink: state.setDriveLink,
@@ -130,6 +143,9 @@ beforeEach(() => {
   state.move.mockResolvedValue("entry-1");
   state.settle.mockResolvedValue({});
   state.setDriveLink.mockResolvedValue(undefined);
+  state.driveLinks = { internal: null, client: null };
+  state.drivePending = false;
+  state.driveError = null;
   state.invalidateProject.mockResolvedValue(undefined);
   state.invalidateAssets.mockResolvedValue(undefined);
 });
@@ -375,62 +391,120 @@ describe("ProjectDetails credits", () => {
   });
 });
 
-describe("ProjectDetails Drive link", () => {
-  it("offers Add Drive link to the agency when none is set", () => {
+describe("ProjectDetails Drive links", () => {
+  it("does not offer an empty editor while the links are loading", () => {
+    state.drivePending = true;
     renderDetails();
-    expect(screen.getByText("Google Drive backup")).toBeInTheDocument();
-    expect(screen.getByText("No backup link yet.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add Drive link" })).toBeInTheDocument();
+    expect(screen.getByText("Loading Drive links…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Drive link/ })).toBeNull();
   });
 
-  it("offers Edit Drive link, and the open link, once one is set", () => {
-    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
-    expect(screen.getByRole("button", { name: "Edit Drive link" })).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "Open Google Drive backup" });
+  it("shows a retry action when the Drive links cannot be read", async () => {
+    const user = userEvent.setup();
+    state.driveError = new Error("Read failed");
+    renderDetails();
+    expect(screen.getByText("Could not load Drive links. Try again.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Drive link/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(state.driveRefetch).toHaveBeenCalledOnce();
+  });
+
+  it("offers an Add button for each channel to the agency when neither is set", () => {
+    renderDetails();
+    expect(screen.getByText("Internal Drive link")).toBeInTheDocument();
+    expect(screen.getByText("Client Drive link")).toBeInTheDocument();
+    expect(screen.getAllByText("No link yet.")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Add Internal Drive link" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Client Drive link" })).toBeInTheDocument();
+  });
+
+  it("offers Edit and the open link once a channel is set, independently of the other", () => {
+    state.driveLinks = { internal: "https://drive.google.com/drive/folders/1", client: null };
+    renderDetails();
+    expect(screen.getByRole("button", { name: "Edit Internal Drive link" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Client Drive link" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Open internal Drive folder" });
     expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1");
     expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("link", { name: "Open client Drive folder" })).toBeNull();
   });
 
-  it("hides the control from a client and a designer", () => {
+  it("hides both controls from a client and a designer", () => {
+    state.driveLinks = {
+      internal: "https://drive.google.com/drive/folders/1",
+      client: "https://drive.google.com/drive/folders/2",
+    };
     state.role = "client";
-    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
-    expect(screen.queryByText("Google Drive backup")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Open Google Drive backup" }),
-    ).not.toBeInTheDocument();
+    renderDetails();
+    expect(screen.queryByText("Internal Drive link")).not.toBeInTheDocument();
+    expect(screen.queryByText("Client Drive link")).not.toBeInTheDocument();
+    // A client never sees the internal link, even by way of the agency-only control.
+    expect(screen.queryByRole("link", { name: "Open internal Drive folder" })).toBeNull();
     state.role = "designer";
-    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
-    expect(screen.queryByText("Google Drive backup")).not.toBeInTheDocument();
+    renderDetails();
+    expect(screen.queryByText("Internal Drive link")).not.toBeInTheDocument();
+    expect(screen.queryByText("Client Drive link")).not.toBeInTheDocument();
+    // A designer never sees the client link either.
+    expect(screen.queryByRole("link", { name: "Open client Drive folder" })).toBeNull();
   });
 
   it("refuses an invalid link before it is ever sent", async () => {
     const user = userEvent.setup();
     renderDetails();
-    await user.click(screen.getByRole("button", { name: "Add Drive link" }));
-    const input = screen.getByLabelText("Drive link");
-    await user.type(input, "http://drive.google.com/drive/folders/1");
-    await user.click(screen.getByRole("button", { name: "Save link" }));
+    await user.click(screen.getByRole("button", { name: "Add Internal Drive link" }));
+    const dialog = screen.getByRole("dialog", { name: "Add Internal Drive link" });
+    await user.type(
+      within(dialog).getByLabelText("Drive link"),
+      "http://drive.google.com/drive/folders/1",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Save link" }));
     expect(
       await screen.findByText("Paste a Google Drive link (https://drive.google.com/…)."),
     ).toBeInTheDocument();
     expect(state.setDriveLink).not.toHaveBeenCalled();
   });
 
-  it("sends the trimmed URL and refreshes both the project and Files caches", async () => {
+  it("sends the trimmed URL on the internal channel without touching the Files cache", async () => {
     const user = userEvent.setup();
     renderDetails();
-    await user.click(screen.getByRole("button", { name: "Add Drive link" }));
+    await user.click(screen.getByRole("button", { name: "Add Internal Drive link" }));
+    const dialog = screen.getByRole("dialog", { name: "Add Internal Drive link" });
     await user.type(
-      screen.getByLabelText("Drive link"),
+      within(dialog).getByLabelText("Drive link"),
       "  https://drive.google.com/drive/folders/1  ",
     );
-    await user.click(screen.getByRole("button", { name: "Save link" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save link" }));
     await waitFor(() =>
       expect(state.setDriveLink).toHaveBeenCalledWith(
         {},
         expect.objectContaining({
           projectId: "p1",
+          channel: "internal",
           url: "https://drive.google.com/drive/folders/1",
+        }),
+      ),
+    );
+    await waitFor(() => expect(state.invalidateProject).toHaveBeenCalled());
+    expect(state.invalidateAssets).not.toHaveBeenCalled();
+  });
+
+  it("sends the client channel and refreshes both the project and Files caches", async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole("button", { name: "Add Client Drive link" }));
+    const dialog = screen.getByRole("dialog", { name: "Add Client Drive link" });
+    await user.type(
+      within(dialog).getByLabelText("Drive link"),
+      "https://drive.google.com/drive/folders/2",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Save link" }));
+    await waitFor(() =>
+      expect(state.setDriveLink).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({
+          projectId: "p1",
+          channel: "client",
+          url: "https://drive.google.com/drive/folders/2",
         }),
       ),
     );
@@ -438,18 +512,19 @@ describe("ProjectDetails Drive link", () => {
     expect(state.invalidateAssets).toHaveBeenCalled();
   });
 
-  it("clears the link by sending url: null for a blank value", async () => {
+  it("clears a channel's link by sending url: null for a blank value", async () => {
     const user = userEvent.setup();
-    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
-    await user.click(screen.getByRole("button", { name: "Edit Drive link" }));
-    await user.clear(screen.getByLabelText("Drive link"));
-    await user.click(screen.getByRole("button", { name: "Save link" }));
+    state.driveLinks = { internal: "https://drive.google.com/drive/folders/1", client: null };
+    renderDetails();
+    await user.click(screen.getByRole("button", { name: "Edit Internal Drive link" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit Internal Drive link" });
+    await user.clear(within(dialog).getByLabelText("Drive link"));
+    await user.click(within(dialog).getByRole("button", { name: "Save link" }));
     await waitFor(() =>
       expect(state.setDriveLink).toHaveBeenCalledWith(
         {},
-        expect.objectContaining({ projectId: "p1", url: null }),
+        expect.objectContaining({ projectId: "p1", channel: "internal", url: null }),
       ),
     );
-    await waitFor(() => expect(state.invalidateAssets).toHaveBeenCalled());
   });
 });

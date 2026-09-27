@@ -33,6 +33,8 @@ import {
   useInvalidateProjectCredits,
   useProjectAssignments,
   useProjectCredits,
+  useProjectDriveLinks,
+  type ProjectChannel,
   type TableRow,
   type CanvasVersion,
 } from "./project-data";
@@ -65,8 +67,10 @@ export function ProjectDetails({
   const [assigning, setAssigning] = useState(false);
   const [revoking, setRevoking] = useState<{ id: string; name: string } | null>(null);
   const [creditDialog, setCreditDialog] = useState<"move" | "settle" | null>(null);
-  const [editingDriveLink, setEditingDriveLink] = useState(false);
   const assignments = useProjectAssignments(project.id);
+  // Read for every role: RLS alone keeps a designer to `internal` and a client to `client`, and
+  // only the agency renders either control below.
+  const driveLinks = useProjectDriveLinks(project.id);
   // Billing is for the studio and the client; the read is off for a designer.
   const credits = useProjectCredits(project.id, project.credit_month);
   const creditState = profile?.role !== "designer" && project.credit_month ? credits.data : null;
@@ -128,20 +132,14 @@ export function ProjectDetails({
       setRevoking(null);
     },
   });
-  const driveLink = useMutation({
-    mutationFn: async (url: string) => {
-      const parsed = parseDriveUrl(url);
-      if (parsed === false) throw new Error(driveUrlHint);
-      await setProjectDriveLink(database, { projectId: project.id, url: parsed });
-    },
-    onSuccess: async () => {
-      // Files (`assets-page.tsx`) shows the same Drive icon beside a project's file group; without
-      // this, a save here would leave that icon stale there for up to the assets query's own cache
-      // time. Non-widening: `assets-page.tsx`'s own writes already invalidate this same key.
-      await Promise.all([invalidate(), invalidateAssets()]);
-      setEditingDriveLink(false);
-    },
-  });
+  // Files (`assets-page.tsx`) shows the same Drive icon beside a project's file group, reading only
+  // the `client` channel; a `client` save also refreshes that cache so the icon there never goes
+  // stale for up to the assets query's own cache time. Non-widening: `assets-page.tsx`'s own writes
+  // already invalidate this same key. An `internal` save never reaches Files, which no designer's
+  // channel does either.
+  const onDriveLinkSaved = async (channel: ProjectChannel) => {
+    await (channel === "client" ? Promise.all([invalidate(), invalidateAssets()]) : invalidate());
+  };
   const shareLink =
     typeof window === "undefined"
       ? `/projects/${project.id}?channel=client`
@@ -252,32 +250,32 @@ export function ProjectDetails({
             )}
           </div>
         )}
-        {profile?.role === "agency" && (
+        {profile?.role === "agency" && driveLinks.isPending && (
+          <p role="status">Loading Drive links…</p>
+        )}
+        {profile?.role === "agency" && driveLinks.error && (
           <div className="assignment-section">
-            <h3>Google Drive backup</h3>
-            {project.drive_url ? (
-              <a
-                className="button quiet"
-                href={project.drive_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <DriveIcon size={14} />
-                Open Google Drive backup
-              </a>
-            ) : (
-              <p>No backup link yet.</p>
-            )}
-            <button
-              className="button quiet"
-              onClick={() => {
-                driveLink.reset();
-                setEditingDriveLink(true);
-              }}
-            >
-              {project.drive_url ? "Edit Drive link" : "Add Drive link"}
+            <FormError>Could not load Drive links. Try again.</FormError>
+            <button className="button quiet" onClick={() => void driveLinks.refetch()}>
+              Try again
             </button>
           </div>
+        )}
+        {profile?.role === "agency" && !driveLinks.error && driveLinks.data && (
+          <>
+            <DriveLinkControl
+              projectId={project.id}
+              channel="internal"
+              url={driveLinks.data?.internal ?? null}
+              onSaved={() => onDriveLinkSaved("internal")}
+            />
+            <DriveLinkControl
+              projectId={project.id}
+              channel="client"
+              url={driveLinks.data?.client ?? null}
+              onSaved={() => onDriveLinkSaved("client")}
+            />
+          </>
         )}
         {project.briefing_id && (
           <Link
@@ -403,46 +401,6 @@ export function ProjectDetails({
         {revoke.error && <FormError>{revoke.error.message}</FormError>}
       </Modal>
       <Modal
-        open={editingDriveLink}
-        title={project.drive_url ? "Edit Drive link" : "Add Drive link"}
-        onClose={() => {
-          if (!driveLink.isPending) setEditingDriveLink(false);
-        }}
-      >
-        <form
-          className="stack-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            driveLink.mutate(String(new FormData(event.currentTarget).get("url")));
-          }}
-        >
-          <label>
-            Drive link
-            <input
-              name="url"
-              type="url"
-              defaultValue={project.drive_url ?? ""}
-              placeholder="https://drive.google.com/…"
-            />
-          </label>
-          <small>Leave this blank to remove the backup link.</small>
-          {driveLink.error && <FormError>{driveLink.error.message}</FormError>}
-          <div className="form-actions">
-            <button
-              className="button"
-              type="button"
-              disabled={driveLink.isPending}
-              onClick={() => setEditingDriveLink(false)}
-            >
-              Cancel
-            </button>
-            <button className="button primary" type="submit" disabled={driveLink.isPending}>
-              {driveLink.isPending ? "Saving…" : "Save link"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-      <Modal
         open={assigning}
         title="Assign a designer"
         description="This person will have access to the working files and studio conversation."
@@ -496,6 +454,121 @@ export function ProjectDetails({
         />
       )}
     </aside>
+  );
+}
+
+/** Copy that differs between the two Drive link channels; everything else about the control is shared. */
+const DRIVE_LINK_COPY: Record<
+  ProjectChannel,
+  { heading: string; visibility: string; openLabel: string }
+> = {
+  internal: {
+    heading: "Internal Drive link",
+    visibility: "Visible to the studio and the assigned designer.",
+    openLabel: "Open internal Drive folder",
+  },
+  client: {
+    heading: "Client Drive link",
+    visibility: "Visible to the studio and the client.",
+    openLabel: "Open client Drive folder",
+  },
+};
+
+/**
+ * One channel's Drive link, agency-only: an Add/Edit button opens a dialog validated by
+ * `drive-link.ts`'s `parseDriveUrl` before `setProjectDriveLink`/`set_project_drive_link` (the
+ * authority) runs. `project-details.tsx` renders one of these per channel rather than duplicating
+ * the heading, dialog and mutation twice.
+ */
+function DriveLinkControl({
+  projectId,
+  channel,
+  url,
+  onSaved,
+}: {
+  projectId: string;
+  channel: ProjectChannel;
+  url: string | null;
+  onSaved: () => Promise<void>;
+}) {
+  const { database } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const copy = DRIVE_LINK_COPY[channel];
+  const action = url ? "Edit" : "Add";
+  const save = useMutation({
+    mutationFn: async (raw: string) => {
+      const parsed = parseDriveUrl(raw);
+      if (parsed === false) throw new Error(driveUrlHint);
+      await setProjectDriveLink(database, { projectId, channel, url: parsed });
+    },
+    onSuccess: async () => {
+      await onSaved();
+      setEditing(false);
+    },
+  });
+  return (
+    <div className="assignment-section">
+      <h3>{copy.heading}</h3>
+      <p>{copy.visibility}</p>
+      {url ? (
+        <a className="button quiet" href={url} target="_blank" rel="noopener noreferrer">
+          <DriveIcon size={14} />
+          {copy.openLabel}
+        </a>
+      ) : (
+        <p>No link yet.</p>
+      )}
+      <button
+        className="button quiet"
+        aria-label={`${action} ${copy.heading}`}
+        onClick={() => {
+          save.reset();
+          setEditing(true);
+        }}
+      >
+        {action}
+      </button>
+      <Modal
+        open={editing}
+        title={`${action} ${copy.heading}`}
+        onClose={() => {
+          if (!save.isPending) setEditing(false);
+        }}
+      >
+        <form
+          className="stack-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate(String(new FormData(event.currentTarget).get("url")));
+          }}
+        >
+          <label>
+            Drive link
+            <input
+              name="url"
+              type="url"
+              defaultValue={url ?? ""}
+              placeholder="https://drive.google.com/…"
+            />
+          </label>
+          <small>Leave this blank to remove the link.</small>
+          {save.error && <FormError>{save.error.message}</FormError>}
+          <div className="form-actions">
+            <button
+              className="button"
+              type="button"
+              disabled={save.isPending}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </button>
+            <button className="button primary" type="submit" disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save link"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
   );
 }
 

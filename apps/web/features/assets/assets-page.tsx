@@ -309,8 +309,8 @@ export function AssetsPage({ clientId }: { clientId: string }) {
                     href={group.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Open Google Drive backup"
-                    title="Open Google Drive backup"
+                    aria-label="Open client Drive folder"
+                    title="Open client Drive folder"
                   >
                     <DriveIcon size={14} />
                   </a>

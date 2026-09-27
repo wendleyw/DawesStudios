@@ -95,11 +95,13 @@ def main():
     # Drive backup links: only a fresh `apply` sets them, and it records each one it set.
     recorded = {demo.state['steps'].get('accept:' + name.split(':', 1)[1]): url for name, url in demo.state['steps'].items() if name.startswith('drive-link:')}
     # Seeded SABRE projects keep the canonical seed's own Drive links; the rest come from the apply.
-    check({p['id']: p.get('drive_url') for p in projects if p.get('drive_url') and p['id'] not in seeded} == recorded, 'Drive links are exactly the ones the fresh apply recorded (%d)' % len(recorded))
+    drive_links = demo.rows('project_drive_links', in_projects + '&select=project_id,channel,url')
+    check({r['project_id']: r['url'] for r in drive_links if r['channel'] == 'client' and r['project_id'] not in seeded} == recorded, 'Client Drive links are exactly the ones the fresh apply recorded (%d)' % len(recorded))
 
     client_projects = demo.rows('projects', 'client_id=eq.' + CLIENT_ID, 'client')
     check({p['id'] for p in client_projects} == project_ids, 'Client can open all fifty SABRE projects')
-    check({p['id']: p.get('drive_url') for p in client_projects if p.get('drive_url') and p['id'] not in seeded} == recorded, 'Client reads the same Drive links')
+    client_drive = demo.rows('project_drive_links', in_projects + '&select=project_id,channel,url', 'client')
+    check({r['channel'] for r in client_drive} <= {'client'} and {r['project_id']: r['url'] for r in client_drive if r['project_id'] not in seeded} == recorded, 'Client reads the same client Drive links and no internal one')
     for table in ('design_boards', 'design_versions', 'design_version_miro_links', 'project_assignments', 'internal_comments', 'project_assets'):
         # Narrow selects: a whole-row read of design_versions is refused outright (author column).
         check(demo.rows(table, in_projects + '&select=project_id', 'client') == [], 'Client cannot read ' + table)
@@ -118,6 +120,7 @@ def main():
         check({b['id'] for b in demo.rows('design_boards', in_projects, role)} == own, role + ' reads only their own design boards')
         check({r['board_id'] for r in demo.rows('design_versions', in_projects + '&select=id,board_id', role)} <= own, role + ' reads only rounds on their own boards')
         check(demo.rows('client_comments', in_projects, role) == [] and demo.rows('publication_reviews', in_projects, role) == [], role + ' cannot read the client channel')
+        check(all(r['channel'] == 'internal' and r['project_id'] in assigned for r in demo.rows('project_drive_links', in_projects + '&select=project_id,channel', role)), role + ' reads only internal Drive links of assigned projects')
     check(all(r['owner_id'] == demo.users['client'] for r in demo.rows('template_drafts', 'client_id=eq.' + CLIENT_ID, 'client')), 'Client template drafts are private to their owner')
     for role in ('agency', 'client', 'designer2'):
         playground = demo.rows('playground_boards', 'client_id=eq.' + CLIENT_ID, role)

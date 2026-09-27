@@ -42,8 +42,11 @@ colour beside the first tool).
 
 A small triangular mark in Google's Drive palette (green, yellow, blue), sized like the lucide
 icons beside it (`size`, default `16`). Decorative and `aria-hidden`; the link or button around it
-carries the accessible name ("Open Google Drive backup"). Consumers: `projects/miro-workspace-bar`
-(the More menu) and `assets/file-groups` (the icon beside a project with a Drive link).
+carries the accessible name ("Open internal Drive folder" / "Open client Drive folder", one per
+channel — see [Projects](../projects/README.md#data-access)). Consumers: `projects/project-details`
+(the two agency-only channel controls), `projects/miro-workspace-bar` (the More menu, the one link
+of the channel on screen) and `assets/file-groups` (the icon beside a project's file group, the
+client-channel link only).
 
 ### Canvas background and controls
 

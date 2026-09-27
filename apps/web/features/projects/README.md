@@ -21,10 +21,12 @@ two-row bar. The first row says where you are: back (`ProjectBackLink`, `project
 project title, its due date, **Open in Miro** for the shown link (`miroBoardUrl`,
 `target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions) and a
 **More** menu holding the credits the project used (`credits/project-credits-chip.tsx`; designers
-never see it) and, once the agency has set one, **Open Google Drive backup**
-(`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener noreferrer"`, visible to the
-agency and the client) linking to `projects.drive_url`. Escape on **More** returns focus to it. The
-second row holds the channel
+never see it) and, once the agency has set one, the Drive link of the channel on screen only:
+**Open internal Drive folder** on Working files, **Open client Drive folder** on Shared with client
+(`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener noreferrer"`), read from
+`project_drive_links`. A designer is only ever on the internal channel and a client only ever on the
+client channel, so each reads only the one link RLS lets them; the agency sees whichever channel it
+is looking at. Escape on **More** returns focus to it. The second row holds the channel
 (`ProjectChannelLead`: the agency's **Working files / Shared with client** tabs, the designer's
 **Internal** label, nothing for the client), the channel's controls and its primary action.
 `miroBarTone` tints that row by channel for the agency and the designer (amber with a hatch for
@@ -132,14 +134,19 @@ preview once a cover exists. `prepareProjectCover`/`clearProjectCover` (`media-c
 visibility forward, and toggling it goes through `set_project_cover_visibility`
 (`setProjectCoverVisibility`).
 
-**Drive link.** Details shows the agency an **Add Drive link** / **Edit Drive link** button (once
-one exists, also **Open Google Drive backup**) beside a **Google Drive backup** heading; a client or
-designer never sees this control. The dialog validates with `drive-link.ts`'s `parseDriveUrl`
-(`https://drive.google.com/...` only, blank clears it) before calling
-`setProjectDriveLink`/`set_project_drive_link` — the database repeats the same host check and is the
-authority. The link is only a link; nothing syncs with Google Drive. It also shows as an icon link
-in the Miro bar's More menu (above) and beside the project's file group in
-[Files](../assets/README.md), visible to the agency and the client.
+**Drive links.** Nothing from design/internal may reach the client and nothing client-side may
+reach the designer, so a project keeps two separate Drive links in `project_drive_links`, one per
+channel, rather than the one link every role once shared. Details shows the agency two controls
+(`DriveLinkControl`, `project-details.tsx`), each an Add/Edit button and dialog: **Internal Drive
+link** ("Visible to the studio and the assigned designer") and **Client Drive link** ("Visible to
+the studio and the client"). A client or designer never sees either control. The dialog validates
+with `drive-link.ts`'s `parseDriveUrl` (`https://drive.google.com/...` only, blank clears it) before
+calling `setProjectDriveLink`/`set_project_drive_link(p_project_id, p_channel, p_url)` — the
+database repeats the same host check and is the authority. The link is only a link; nothing syncs
+with Google Drive. Each channel's link also shows as an icon link in the Miro bar's More menu
+(above), scoped to the channel on screen, and the client link alone shows beside the project's file
+group in [Files](../assets/README.md). Details waits for the link read before offering Add/Edit and
+shows a retry action if that read fails, so an unavailable link is not mistaken for an unset one.
 
 **Board due dates.** A board's internal due date (`design_boards.due_date`) lets the agency ask its
 designer to deliver before the date the client sees. `create_design_board`/`update_design_board`
@@ -159,15 +166,22 @@ one `CanvasVersion` shape. `useDesignBoards` reads the boards the viewer may see
 designer to their own) and polls every 30 s, so a board reassigned away from a designer drops out of
 their workspace without a reload; a **Send to studio** already in flight then shows "This board is
 no longer assigned to you." and refreshes the boards. `useProjectAssignments` feeds Details and the
-board dialog. `projectQueryKeys` lists the keys every project write invalidates;
-`useInvalidateComments` refreshes only `comments`. `setProjectDriveLink` calls
-`set_project_drive_link`; `drive_url` is part of `useProjectDetail`'s plain `select("*")` project
-row (and of `workspace-data.ts`'s `Project` type, and `assets/asset-data.ts`'s explicit column
-list), so no extra read was needed for it. The Drive-link mutation in `project-details.tsx` does
-call `assets/asset-data.ts`'s `useInvalidateAssets()` alongside `useInvalidateProject()`, though:
-Files (`assets-page.tsx`) shows the same icon beside a project's file group from its own `assets`
-query, and that call is non-widening because `assets-page.tsx`'s own writes already invalidate the
-same key (rule 5, [data-access.md](../../../../docs/architecture/data-access.md)).
+board dialog. `projectQueryKeys` lists the keys every project write invalidates, including
+`project-drive-links`; `useInvalidateComments` refreshes only `comments`.
+
+`useProjectDriveLinks(projectId)` reads both channels' rows from `project_drive_links` at once
+(`{ internal, client }`) rather than one query per channel; RLS, not this hook, is what keeps a
+designer to `internal` and a client to `client` — a missing row resolves to `null` rather than a
+role check here. `setProjectDriveLink(database, { projectId, channel, url })` calls
+`set_project_drive_link(p_project_id, p_channel, p_url)`, agency only; `projects.drive_url` no
+longer exists (dropped in favor of this table), so `useProjectDetail`'s `select("*")` project row,
+`workspace-data.ts`'s `Project` type and `assets/asset-data.ts`'s explicit column list all carry no
+Drive column anymore. A `client`-channel save in `project-details.tsx` also calls
+`assets/asset-data.ts`'s `useInvalidateAssets()` alongside `useInvalidateProject()`: Files
+(`assets-page.tsx`) shows the same icon beside a project's file group from its own `assets` query
+(client channel only), and that call is non-widening because `assets-page.tsx`'s own writes already
+invalidate the same key (rule 5, [data-access.md](../../../../docs/architecture/data-access.md)). An
+`internal`-channel save skips that call, since Files never reads the internal link.
 
 Miro links are kept per channel in their own tables under their own RLS:
 `publication_miro_links` (client) and `design_version_miro_links` (internal). `readMiroLinks` takes

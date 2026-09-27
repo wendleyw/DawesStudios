@@ -34,7 +34,11 @@ export type MiroWorkspaceBarProps = {
   /** The channel, from `ProjectChannelLead`. */
   lead: ReactNode;
   menu: ReactNode;
-  /** The project's Google Drive backup link, if any; shown to the agency and the client. */
+  /**
+   * The Drive link of the channel on screen, if the agency has set one: `internal` for Working
+   * files, `client` for Shared with client. A designer is only ever on `internal` and a client only
+   * ever on `client`, so this is always the one link either of them may see.
+   */
   driveUrl: string | null;
 };
 
@@ -104,7 +108,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               onClick={close}
             >
               <DriveIcon size={14} />
-              Open Google Drive backup
+              {internal ? "Open internal Drive folder" : "Open client Drive folder"}
             </a>
           )}
           {props.menu}

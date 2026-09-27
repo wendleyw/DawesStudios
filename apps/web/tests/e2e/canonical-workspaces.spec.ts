@@ -18,13 +18,12 @@ test("all ten clients and twenty-five projects render with matching records and 
   expect(clients).toHaveLength(10);
   expect(projects).toHaveLength(25);
   const shared = assertMiroModel(projects, await readMiroModel(agency));
-  // A few canonical projects keep a Google Drive backup link; every link is a drive.google.com one.
-  const drive = (await agency.from("projects").select("drive_url").not("drive_url", "is", null))
-    .data!;
+  // A few canonical projects keep a Drive link, on one channel or the other (or both); every link
+  // is a drive.google.com one and every row names a real channel.
+  const drive = (await agency.from("project_drive_links").select("channel,url")).data!;
   expect(drive.length).toBeGreaterThanOrEqual(3);
-  expect(drive.every((row) => /^https:\/\/drive\.google\.com\/\S*$/.test(row.drive_url!))).toBe(
-    true,
-  );
+  expect(drive.every((row) => /^https:\/\/drive\.google\.com\/\S*$/.test(row.url))).toBe(true);
+  expect(drive.every((row) => row.channel === "internal" || row.channel === "client")).toBe(true);
   const timings: { role: string; projectId: string; milliseconds: number }[] = [];
   const errors: string[] = [];
   const actors = [

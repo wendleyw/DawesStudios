@@ -101,6 +101,7 @@ delete from public.credit_plans where client_id=${id};
 delete from public.credit_accounts where client_id=${id};
 delete from public.project_assignments where project_id in(select id from public.projects where client_id=${id});
 delete from public.deliverables where project_id in(select id from public.projects where client_id=${id});
+delete from public.project_drive_links where project_id in(select id from public.projects where client_id=${id});
 delete from public.projects where client_id=${id};
 delete from public.briefings where client_id=${id};
 delete from public.campaigns where client_id=${id};

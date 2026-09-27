@@ -124,22 +124,43 @@ describe("MiroWorkspaceBar in Shared with client", () => {
 });
 
 describe("MiroWorkspaceBar's Drive link in the More menu", () => {
-  it("shows the icon link only when a Drive link exists, opening in a new tab", async () => {
+  it("shows the internal folder link on the internal channel, opening in a new tab", async () => {
     const user = userEvent.setup();
     render(
-      <MiroWorkspaceBar {...props({ driveUrl: "https://drive.google.com/drive/folders/1" })} />,
+      <MiroWorkspaceBar
+        {...props({ channel: "internal", driveUrl: "https://drive.google.com/drive/folders/1" })}
+      />,
     );
     await user.click(screen.getByRole("button", { name: "More" }));
-    const link = screen.getByRole("link", { name: "Open Google Drive backup" });
+    const link = screen.getByRole("link", { name: "Open internal Drive folder" });
     expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByRole("link", { name: "Open client Drive folder" })).toBeNull();
   });
-  it("hides the icon link when there is no Drive link", async () => {
+  it("shows the client folder link on the client channel, never the internal one", async () => {
+    const user = userEvent.setup();
+    render(
+      <MiroWorkspaceBar
+        {...props({
+          channel: "client",
+          role: "client",
+          viewerId: "c",
+          driveUrl: "https://drive.google.com/drive/folders/2",
+        })}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "More" }));
+    const link = screen.getByRole("link", { name: "Open client Drive folder" });
+    expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/2");
+    expect(screen.queryByRole("link", { name: "Open internal Drive folder" })).toBeNull();
+  });
+  it("hides the icon link when the channel on screen has no Drive link", async () => {
     const user = userEvent.setup();
     render(<MiroWorkspaceBar {...props({ driveUrl: null })} />);
     await user.click(screen.getByRole("button", { name: "More" }));
-    expect(screen.queryByRole("link", { name: "Open Google Drive backup" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open internal Drive folder" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open client Drive folder" })).toBeNull();
   });
 });
 

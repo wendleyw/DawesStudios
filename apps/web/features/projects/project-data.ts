@@ -408,18 +408,51 @@ export async function setProjectCoverVisibility(
   );
 }
 
+/** A project's two Drive links, one per channel; `null` when the agency has not set one. */
+export type ProjectDriveLinks = {
+  internal: string | null;
+  client: string | null;
+};
+
 /**
- * Sets or clears the project's Google Drive backup link. The database validates the URL again
+ * Reads both of a project's Drive links from `project_drive_links`. RLS keeps the two channels
+ * apart for anyone but the agency: an assigned designer's read only ever returns the `internal`
+ * row and a client member's only ever returns the `client` row, so a missing row (rather than a
+ * role check here) is what keeps a link off the wrong role's screen.
+ */
+export function useProjectDriveLinks(projectId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-drive-links", session?.user.id, projectId],
+    enabled: !!session,
+    queryFn: async (): Promise<ProjectDriveLinks> => {
+      const rows = assertResult(
+        await database
+          .from("project_drive_links")
+          .select("project_id,channel,url")
+          .eq("project_id", projectId),
+      );
+      return {
+        internal: rows.find((row) => row.channel === "internal")?.url ?? null,
+        client: rows.find((row) => row.channel === "client")?.url ?? null,
+      };
+    },
+  });
+}
+
+/**
+ * Sets or clears one channel of the project's Drive link. The database validates the URL again
  * (`public.set_project_drive_link`) and is the authority; `drive-link.ts`'s `parseDriveUrl` only
- * lets the dialog refuse a bad link before this call. Pass `null` to clear it.
+ * lets the dialog refuse a bad link before this call. Pass `null` to clear it. Agency only.
  */
 export async function setProjectDriveLink(
   database: SupabaseDatabase,
-  input: { projectId: string; url: string | null },
+  input: { projectId: string; channel: ProjectChannel; url: string | null },
 ) {
   assertResult(
     await database.rpc("set_project_drive_link", {
       p_project_id: input.projectId,
+      p_channel: input.channel,
       p_url: input.url ?? "",
     }),
   );
@@ -438,6 +471,7 @@ export const projectQueryKeys = [
   "projects",
   "comments",
   "notifications",
+  "project-drive-links",
 ] as const;
 
 export function useInvalidateProject() {

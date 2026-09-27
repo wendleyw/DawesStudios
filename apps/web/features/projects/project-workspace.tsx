@@ -27,6 +27,7 @@ import {
 } from "./miro-workspace";
 import {
   useLatestSharedMiroLink,
+  useProjectDriveLinks,
   type DesignBoard,
   type ProjectChannel,
   type useProjectDetail,
@@ -95,6 +96,13 @@ export function ProjectWorkspace({
   const latestShared = useLatestSharedMiroLink(projectId, role === "agency");
   const sharePrefill = latestShared.data ?? latestSharedLink(shared);
   const internal = channel === "internal";
+  // RLS keeps a designer to the `internal` row and a client to the `client` row, so this always
+  // resolves to the one link either of them may see; the agency gets whichever channel is on
+  // screen.
+  const driveLinks = useProjectDriveLinks(projectId);
+  const driveUrl = internal
+    ? (driveLinks.data?.internal ?? null)
+    : (driveLinks.data?.client ?? null);
   const client = clients.data?.find((item) => item.id === project.client_id);
   // A designer works to their board's internal date; everyone else sees the project's own date.
   const dueDate =
@@ -195,7 +203,7 @@ export function ProjectWorkspace({
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           lead={channelLead}
           menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
-          driveUrl={project.drive_url}
+          driveUrl={driveUrl}
         />
       </div>
       <div className="project-workspace">

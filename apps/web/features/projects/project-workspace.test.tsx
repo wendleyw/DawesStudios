@@ -37,6 +37,7 @@ vi.mock("./project-action-dialog", () => ({
 const sharedLink = vi.hoisted(() => ({ boardId: "uXjVClient1=", widgetId: "5" }));
 vi.mock("./project-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./project-data")>()),
+  useProjectDriveLinks: () => ({ data: { internal: null, client: null } }),
   useLatestSharedMiroLink: (_projectId: string, enabled: boolean) => ({
     data: enabled ? sharedLink : undefined,
   }),

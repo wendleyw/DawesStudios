@@ -67,13 +67,13 @@ class SchemaTolerance(unittest.TestCase):
         return value
 
     def test_added_null_column_and_dropped_column_match(self):
-        self.assertTrue(rows_match(self.saved, self.current(drive_url=None), SCOPES))
+        self.assertTrue(rows_match(self.saved, self.current(added_column=None), SCOPES))
 
     def test_added_column_with_a_value_does_not_match(self):
-        self.assertFalse(rows_match(self.saved, self.current(drive_url='https://drive.google.com/x'), SCOPES))
+        self.assertFalse(rows_match(self.saved, self.current(added_column='x'), SCOPES))
 
     def test_changed_shared_column_does_not_match(self):
-        current = self.current(drive_url=None)
+        current = self.current(added_column=None)
         current['rows']['public.projects'][0]['status'] = 'delivered'
         self.assertFalse(rows_match(self.saved, current, SCOPES))
 
@@ -83,11 +83,11 @@ class SchemaTolerance(unittest.TestCase):
         after['rows']['public.projects'][0]['status'] = 'delivered'
         current = copy.deepcopy(after)
         current['rows']['public.projects'][0].pop('legacy')
-        current['rows']['public.projects'][0]['drive_url'] = None
-        current['columns'] = {'public.projects': ['id', 'status', 'drive_url']}
+        current['rows']['public.projects'][0]['added_column'] = None
+        current['columns'] = {'public.projects': ['id', 'status', 'added_column']}
         restored = copy.deepcopy(before)
         restored['rows']['public.projects'][0].pop('legacy')
-        restored['rows']['public.projects'][0]['drive_url'] = None
+        restored['rows']['public.projects'][0]['added_column'] = None
         calls, _ = run_remove(demo({'phase': 'complete', 'canary': False, 'before': before, 'after': after}),
                               [current, current, restored])
         self.assertIn('set ("status")=(original."status")', calls[0])
@@ -146,6 +146,37 @@ class Layers(unittest.TestCase):
         state['backfill']['phase'] = 'applying'
         with self.assertRaisesRegex(RuntimeError, 'incomplete'):
             demo(state).remove(dry_run=True)
+
+    def test_new_populated_table_missing_from_all_layers_blocks_before_any_write(self):
+        state = self.state()
+        table = 'public.project_drive_links'
+        for layer in [state, state['backfill']]:
+            for name in ['before', 'after']:
+                layer[name]['rows'].pop(table, None)
+                layer[name]['keys'].pop(table, None)
+        current = copy.deepcopy(self.a1)
+        current['rows'][table] = [{'project_id': 'p1', 'channel': 'client', 'url': 'https://drive.google.com/folder'}]
+        for phase in ['complete', 'removing']:
+            for dry_run in [True, False]:
+                state['phase'] = phase
+                instance = demo(state)
+                with self.subTest(phase=phase, dry_run=dry_run), \
+                     patch('sabre_demo.snapshot', return_value=current), patch('sabre_demo.sql') as sql, \
+                     patch('sabre_demo.save') as save, patch.object(instance, 'request') as request:
+                    with self.assertRaisesRegex(RuntimeError, 'checkpoint does not cover.*project_drive_links'):
+                        instance.remove(dry_run=dry_run)
+                    sql.assert_not_called(); save.assert_not_called(); request.assert_not_called()
+
+    def test_new_empty_table_does_not_block_removal(self):
+        state = self.state()
+        for layer in [state, state['backfill']]:
+            for name in ['before', 'after']:
+                layer[name]['rows'].pop('public.project_drive_links', None)
+                layer[name]['keys'].pop('public.project_drive_links', None)
+        instance = demo(state)
+        with patch('sabre_demo.snapshot', return_value=copy.deepcopy(self.a1)), patch('sabre_demo.sql') as sql:
+            instance.remove(dry_run=True)
+            sql.assert_not_called()
 
 
 class MiroHistory(unittest.TestCase):

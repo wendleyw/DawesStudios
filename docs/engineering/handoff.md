@@ -1,100 +1,75 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Claude Code** (active orchestrator session).
+Updated: 2026-09-27 EDT. Owner: **Codex**, taking over both interrupted Claude tasks at the user's request.
 
-This file holds current state only and stays at or under 100 lines. When an entry is superseded,
-move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
-history only when a task needs earlier evidence.
+## Ownership and recovery
 
-## Ownership
+- The user asked Codex to recover and finish both Claude sessions after their weekly usage limit.
+- Recovered project-scoped session messages for `dawesstudios-9e` and `dawesstudios-f4`.
+  Their workers stopped with rate-limit errors; the process check found no remaining test/editor
+  commands, only idle tool servers and the existing `caffeinate` command. Do not resume competing writes.
+- Preserved the current diff and untracked files under ignored `outputs/recovery-2026-09-27/`.
+- Previous checkpoint: [pre-recovery history](history/handoff-2026-09-27-pre-recovery.md).
+- Base commit: `f111bf6`. Existing `login.png` deletion is unrelated and remains outside this task.
+- Codex owns integration, the checkpoint and acceptance evidence. Delegated paths must be disjoint.
 
-- Claude Code owns implementation; Codex recorded the [no-R2 decision](handoffs/2026-09-27-production-without-r2.md).
-- Several sessions share `main` in this tree; agree file ownership by session message first.
-  Stage explicit paths only; give Playwright a private `--output`.
-- To hand over: update this file, commit it, then start the other tool with the prompt in
-  [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
+## Completed task 1 — Drive links by channel
 
-## Done (2026-09-27)
+- Internal/client links are isolated by RLS and rendered per channel; agency edits both, Files reads client only.
+- Integrated Claude's migration 0011, generated types/seed and scripts with the completed frontend.
+- Forward migration 0012 rejects NULL channels; guarded SABRE removal blocks uncovered populated tables.
+- Current checks: source gate 1,195 tests; Drive pgTAP 40; Python 22; Drive journey 1;
+  navigation/Files journeys 8; canonical seed; canonical pgTAP 1,020; canonical browser 7; container build.
+- [Integration evidence](../verification/drive-links-recovery-2026-09-27.md) records corrections and limits.
 
-Earlier entries (Miro merge, Miro bar, board due dates, account ring): [history](history/handoff-2026-09-26.md).
-**Project covers** ([spec](../superpowers/specs/2026-09-27-project-cover-design.md)): agency upload,
-sanitized by the media worker, "Visible to the client" toggle; board cards show cover or placeholder.
-**Retire Versions, phase 1** ([spec](../superpowers/specs/2026-09-27-retire-versions-design.md),
-`5d89e64..cddfa48`): only the Miro workspace renders; legacy UI and media routes deleted.
-**Monthly credits** ([spec](../superpowers/specs/2026-09-27-monthly-credits-design.md),
-`6fe2291..4f867c9`, migrations `202609270003`–`0006`): per-client monthly plans, extras, transfers,
-lazy expiry; acceptance picks a month (current + 11); agency moves and settles a project's credits
-once with a reason; month switcher on Credits. Reviewed; `monthly-credits.spec.ts` 5/5.
+## Active task 2 — All-role functional and visual audit
 
-## In progress — Retire Versions, phase 5 acceptance (waiting for the user's reset approval)
-
-Phases 1–4 done and reviewed ([plans](../superpowers/plans/)): phase 2 dropped the legacy schema
-and data (`202609270007`) and 333 Storage objects, then `published-assets` (`0008`); phase 3 rebuilt
-the seed (staging-verified, 10 / 25) and SABRE on boards, rounds, client versions and covers, and
-backfilled the live overlay (50 covers, counts unchanged); phase 4 added the Drive link (`0009`,
-`0010`); phase 5 rewrote the rules, docs and tests (`7afacc2`, `3bf2527`, `43e6b2c`, `411a245`).
-The live overlay's rollback is superseded: `remove` refuses on it (legacy rows gone, manual boards);
-the approved fresh reset + SABRE apply makes a new checkpoint. Canonical-count specs fail on the
-overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py reset
---confirm-local-data-loss`, verify canonical, SABRE apply, `remove --dry-run`, full e2e, record in
-`docs/verification/`. Then the all-roles audit goal. (J10 staging: 68/72; only SMTP remains.)
+- Recovered directive: audit every role, action, text, badge, status and layout, then fix findings.
+- Claude's agency/client auditors stopped early; designers had not started. Working artifacts are
+  under ignored `outputs/audit/`; the recovered brief is `.superpowers/sdd/all-roles-audit/brief.md`.
+- Retire-Versions acceptance already ran after a reset approved in that Claude conversation:
+  [record](../verification/retire-versions-acceptance-2026-09-27.md). Do not repeat that reset.
+- Current canonical checks pass (seed, 1,020 pgTAP assertions and seven browser tests).
+  The remaining 98 browser tests are running on the live overlay with disposable fixtures.
+- Client/designer read-only audit completed 130 route visits and REST scope checks. Confirmed findings:
+  designers can open Send to studio on delivered projects; service labels show raw catalog codes.
+- Agency audit is finishing; collect its report, fix verified findings and repeat affected checks.
+- SABRE guarded removal currently refuses newer credit timestamps and a lazily created Playground
+  board. Diagnose and preserve genuine changes; do not weaken rollback guards or reset the overlay.
 
 ## Accepted decisions
 
-- **Production target (user update, 2026-09-27):** creative work lives in Miro; R2 is not required.
-  Use official self-hosted Supabase with persistent filesystem Storage for remaining app uploads,
-  plus `web`/`media` behind TLS and off-host backups. Keep the upstream Realtime hostname.
-- **SABRE demonstration overlay stays active:** 10 clients, 68 projects, 50 of them SABRE. The
-  canonical seed remains 10 clients / 25 projects. Use only the guarded removal in the
-  [demo guide](../../supabase/demo/sabre/README.md).
-- **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
-  a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
-- **Themes:** System by default, kept per browser (`dawes-theme`); the canvas follows the theme;
-  chrome stays monochrome except the Miro bar's channel row. With a panel open the project bar centres beside it (hidden < 800 px).
-- **Dashboards:** clients land on their Overview; the client Overview reads only client-visible data
-  for every viewer; designers see assigned work and no credits; relative days follow the studio zone.
-- **Client people:** one login each, managed only by the studio; everyone at a client has the same
-  permissions; designers see neither requester nor reviewer.
-- **Miro:** product → Miro only (no API, no sync); one link per version and channel; agency-only
-  writes; prefill never crosses channels; the raw URL is never stored or framed. Miro is a view
-  of the project page; assets reach it by copy and paste only.
+- Creative work lives in Miro. R2 is not required; remaining app uploads use persistent filesystem
+  Supabase Storage. [Production guide](../operations/production.md), [decision](handoffs/2026-09-27-production-without-r2.md).
+- Official self-hosted Supabase plus web/media containers behind TLS; keep the upstream Realtime hostname.
+- Miro is a project view with separate internal/client channels, immutable client versions and
+  agency-only sharing/link writes. No Miro API or sync; copy/paste assets into Miro.
+- Project covers are sanitized by media and visible to clients only when marked. Files delivers finals.
+- Monthly credits support plans, extras, transfers, current plus 11 future months, and agency
+  movement/one-time final settlement with a reason. Briefing submission is free; acceptance is atomic.
+- Canonical baseline: 10 clients / 25 projects. Preserve the active SABRE overlay: 10 / 68 / 50 SABRE.
+- Default theme is System per browser; designers see assigned work without credits or client identities.
+- Every client person has a separate login and the same client permissions; studio manages membership.
 
-## Environment (observed 2026-09-26)
+## Environment and constraints
 
-- Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
-  `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
-  (last done 2026-09-26 ~17:30, pid 91871). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609270010`; rebuilt
-  2026-09-26 after the incident in history); media on 55430. Never `db reset` / `migration down`.
-- Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
-  `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
-- `main` has local commits only (not pushed); `feat/miro-workspace` is fully merged into it.
+- Next.js dev server: `http://localhost:3003`; local Supabase ports 55421–55424; media port 55430.
+- No competing dev server. Never `supabase migration down` or `supabase db reset`.
+- Correct applied migrations forward. A fresh reset would need new explicit user approval.
+- Existing disposable MinIO staging is running at web 3103, gateway 56010, database 56011 and media 56014
+  for canonical checks; it does not verify the revised production filesystem Storage target.
+- No push, PR or deployment requested. Complete each integrated task with a gate and Conventional Commit.
 
-## Open gaps
+## Verification still required
 
-- Real server items: filesystem Storage persistence, the TLS proxy, SMTP delivery, a restore
-  drill, and rate limiting at the proxy. The existing MinIO staging rehearsal is historical.
-- The notification feed shows only the latest 100 items, with no pagination (product decision).
-- tus termination on Supabase is unverified (a cancelled partial upload relies on the 24-hour window);
-  a missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
-- Unknown URLs (now `/search` too) show "page unavailable" with HTTP 200, not 404 (pre-existing).
-  The root `login.png` deletion in the working tree is someone else's; left for the user.
-- The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
-  Two legacy local Playground boards without `project_id` are unreachable (local data only).
-- Safari and Firefox not run; zoom pill and project bar centres differ by 4–6 px (parked); What's
-  moving has no overdue cue; pgTAP does not call `mark_project_delivered` (a browser test does).
-- Miro: Escape is inert inside the cross-origin embed; the embed signs in only if Miro allows
-  third-party cookies (Open in Miro stays visible); copy needs a browser with image clipboard support.
-- Client people: a person in one client cannot accept an invitation to a second, nor a removed one be
-  re-invited (`accept_invitation`); the canvas version panel omits the reviewer's name (parked).
+- Finish all-role audit fixes and the 98-test overlay browser run; rerun SABRE HTTP/count checks
+  after disposable browser fixtures have been cleaned up, then record the final gate.
+- Real deployment remains deferred: persistent Storage/restore, TLS, SMTP and proxy rate limiting.
+- J10 remains open. Prior matrix rows describing retired designs/video/Versions are historical.
+- Existing known gaps include client re-invitation/multiple-client invitations, unknown-route HTTP 200,
+  Safari/Firefox coverage and browser CI. Reconcile against current behavior during the audit.
 
-## Next actions
+## Next concrete action
 
-**Production setup (user-deferred on 2026-09-23):** follow the
-[production guide](../operations/production.md) on a real server (persistent Storage, TLS, SMTP, backups).
-
-1. The user's hands-on look at the Miro workspace (boards, Send to studio, Share with client).
-2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
-3. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
-   [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
-   default is "Dawes Studio"). To preview Meta ads, set `META_AD_LIBRARY_ACCESS_TOKEN`.
+Commit the verified Drive integration, then fix the delivered-action/service-label audit findings and
+complete the all-role gate. Keep reconstructed Claude evidence separate from checks executed now.

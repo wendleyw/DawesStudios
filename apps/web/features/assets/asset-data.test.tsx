@@ -111,17 +111,42 @@ describe("useProjectAssets", () => {
           status: "approved",
           campaign_id: null,
           campaigns: null,
-          drive_url: "https://drive.google.com/drive/folders/1",
         },
       ],
       delivery_files: [file("final")],
       project_assets: [file("working")],
+      project_drive_links: [
+        {
+          project_id: "project-1",
+          channel: "internal",
+          url: "https://drive.google.com/drive/folders/internal",
+        },
+        {
+          project_id: "project-1",
+          channel: "client",
+          url: "https://drive.google.com/drive/folders/1",
+        },
+      ],
     };
     storage.table.mockImplementation((table: string) => {
-      const chain = {
+      let matchingRows = rows[table];
+      const chain: {
+        select: () => typeof chain;
+        eq: (column: string, value: string) => typeof chain;
+        in: () => typeof chain;
+        then: Promise<{ data: unknown[]; error: null }>["then"];
+      } = {
         select: () => chain,
-        eq: () => Promise.resolve({ data: rows[table], error: null }),
-        in: () => Promise.resolve({ data: rows[table], error: null }),
+        eq: (column, value) => {
+          if (table === "project_drive_links") {
+            matchingRows = matchingRows.filter(
+              (row) => (row as Record<string, unknown>)[column] === value,
+            );
+          }
+          return chain;
+        },
+        in: () => chain,
+        then: (...args) => Promise.resolve({ data: matchingRows, error: null }).then(...args),
       };
       return chain;
     });
@@ -141,6 +166,7 @@ describe("useProjectAssets", () => {
     expect(storage.table.mock.calls.map(([table]) => table).toSorted()).toEqual([
       "delivery_files",
       "project_assets",
+      "project_drive_links",
       "projects",
     ]);
     expect(result.current.data?.projects[0].driveUrl).toBe(

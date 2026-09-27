@@ -28,6 +28,8 @@ the ignored local environment; this package does not change passwords or send in
 - 58 briefings: 50 accepted, three drafts, three awaiting review and two confirmed budgets.
 - A reconciled credit ledger, 463 credits available at population, and pending, fulfilled and
   rejected credit-request examples.
+- Client-channel Drive folder links on selected projects. Internal Drive links are separate;
+  clients cannot read them and designers cannot read client-channel links.
 - Eight updated Brand Hub sections, 15 brand assets, 11 templates, four new owner-private drafts,
   three internal project references and three role-specific project Playgrounds with four items each.
 
@@ -169,6 +171,9 @@ columns both snapshots have: a column a later migration added matches while it i
 a dropped column is ignored and not restored. The overlay checkpoint covers the monthly credit
 tables, so removal restores `credit_months` together with `credit_accounts`. It refuses if newer
 work exists, including comments or read-state changes, so later testing is not silently discarded.
+It also refuses when a populated table in the current rollback scope is absent from every saved
+layer, including Drive links introduced by a later migration. This check runs before any database,
+Storage or checkpoint write, including when resuming removal. Missing empty tables are harmless.
 Stop mutations before removal. The local-only rollback removes added primary keys, restores
 modified original rows and then removes only added Storage paths; it never resets another client
 or replaces original bytes. An interrupted removal resumes only if database rows match the saved
@@ -176,22 +181,16 @@ before/after state. If a guard stops, preserve the checkpoint and review the dif
 deciding which newer work to keep. The original data returns to the pre-overlay state, which can
 contain earlier local test work beyond the deterministic seed.
 
-## Checkpoint compatibility after folder support
+## Current checkpoint and schema changes
 
-Migration `202609230009_brand_asset_folders.sql` adds nullable `brand_assets.folder_id` and a new
-folder table. The saved demo checkpoint predates that column; even unchanged existing assets now
-serialize with an additional null field. The strict rollback fingerprint therefore refuses the
-old checkpoint, in addition to protecting newer Playground work already recorded in the handoff.
-Do not rewrite the checkpoint, remove new content or bypass the guard to force removal. Reconcile
-schema and every newer asset/folder/Playground change explicitly before planning any future rollback.
+The September 23 overlay/checkpoint is historical. The user-approved September 27 reset and fresh
+apply replaced it; canonical verification and guarded canary/full removal passed in that session
+([acceptance record](../../../docs/verification/retire-versions-acceptance-2026-09-27.md)). Old
+checkpoint files remain in ignored `supabase/.local/sabre-demo/pre-reset-2026-09-27/`.
 
-**The current local overlay (applied 2026-09-23) cannot be removed with the guarded `remove`.**
-Its overlay layer no longer matches the backfill's starting point, for three reasons:
-`202609270007` deleted the legacy rows the checkpoint records, the schema gained columns and
-tables since then, and manual work was done between the layers (12 Playground boards and a test
-board with two client versions on Retail Partner Introduction). `remove --dry-run` stops before any
-write with "SABRE changed between population and the Miro backfill". Do not rebaseline this
-checkpoint. It is superseded by the approved Phase 5 fresh reset followed by `apply`, which writes
-a new, valid checkpoint. The old checkpoint files (`state.json`,
-`state.pre-miro-backfill-2026-09-27.json`, `state.pre-incident-2026-09-26.json`) are kept for
-reference.
+The new checkpoint predates migration `202609270011`, which moved `projects.drive_url` into
+`project_drive_links`. Its snapshots do not capture the new table. The current overlay also has
+later credit timestamps and an additional client Playground board. Guarded removal therefore
+refuses; it must not leave orphaned Drive rows or silently discard that newer work. Preserve the
+checkpoint and overlay. Reconcile migrated links and later edits explicitly before any future
+removal; do not reset, rebaseline the checkpoint or bypass guards to manufacture a passing dry run.

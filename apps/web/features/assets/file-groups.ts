@@ -14,7 +14,10 @@ export type GroupableProject = {
   title: string;
   campaignId: string | null;
   campaignTitle: string | null;
-  /** The project's Google Drive backup link, if any; carried onto its `ProjectFileGroup`. */
+  /**
+   * The project's client-channel Drive link, if any; carried onto its `ProjectFileGroup`. Files is
+   * a client-facing surface, so this is never the internal link.
+   */
   driveUrl?: string | null;
 };
 
@@ -108,7 +111,7 @@ export function buildCampaignFolders<F extends GroupableFile, P extends Groupabl
 export type ProjectFileGroup<F extends GroupableFile> = {
   projectId: string;
   projectTitle: string;
-  /** The project's Google Drive backup link, if any; null when the project is unknown. */
+  /** The project's client-channel Drive link, if any; null when the project is unknown. */
   driveUrl: string | null;
   /** Newest first. */
   files: F[];

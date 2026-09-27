@@ -70,12 +70,19 @@ def main():
             if question['id'] == 'pages': assert value.isdecimal() and int(value) > 0
         assert brief['requested_deliverables'] and all(row['format'] in service['formats'] for row in brief['requested_deliverables'])
         assert project['due_date'] >= project['start_date']
-    # Google Drive backup links: exactly the projects the manifest names, each set through
-    # `set_project_drive_link`, so each is an https://drive.google.com link the constraint accepts.
-    drive_links = {row['id']: row['drive_url'] for row in projects}
-    assert drive_links == {row['id']: row['drive_url'] for row in fixture['projects']}, 'Drive links differ from the manifest'
-    assert len([url for url in drive_links.values() if url]) >= 3, 'A few projects need a Drive backup link'
-    assert all(re.fullmatch(r'https://drive\.google\.com/\S*', url) for url in drive_links.values() if url), 'A Drive link is not a drive.google.com URL'
+    # Google Drive backup links, by channel: exactly the projects the manifest names, each set
+    # through `set_project_drive_link`, so each is an https://drive.google.com link the constraint
+    # accepts. `project_drive_links` is channel-isolated (RLS below re-checks that per role).
+    drive_link_rows = rows('project_drive_links')
+    drive_client = {row['project_id']: row['url'] for row in drive_link_rows if row['channel'] == 'client'}
+    drive_internal = {row['project_id']: row['url'] for row in drive_link_rows if row['channel'] == 'internal'}
+    fixture_drive_client = {row['id']: row['drive_links']['client'] for row in fixture['projects'] if row['drive_links'].get('client')}
+    fixture_drive_internal = {row['id']: row['drive_links']['internal'] for row in fixture['projects'] if row['drive_links'].get('internal')}
+    assert drive_client == fixture_drive_client, 'Client Drive links differ from the manifest'
+    assert drive_internal == fixture_drive_internal, 'Internal Drive links differ from the manifest'
+    assert len(drive_client) >= 3, 'A few projects need a Drive backup link'
+    assert len(drive_internal) >= 2, 'A couple of projects need an internal Drive link'
+    assert all(re.fullmatch(r'https://drive\.google\.com/\S*', url) for url in list(drive_client.values()) + list(drive_internal.values())), 'A Drive link is not a drive.google.com URL'
     assert {row['status'] for row in projects} == {'planned', 'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'}
     deliverables = rows('deliverables')
     multi = [project for project, count in Counter(row['project_id'] for row in deliverables).items() if count >= 2]
@@ -175,6 +182,12 @@ def main():
             own = {row['id'] for row in boards if row['designer_id'] == session['user']['id']}
             assert {row['id'] for row in rows('design_boards', token=token)} == own, 'A designer read another designer\'s board'
             assert {row['board_id'] for row in rows('design_versions', 'select=id,board_id', token=token)} <= own, 'A designer read another designer\'s round'
+            # A designer reads the internal Drive link only on an assigned project, never a client link.
+            own_projects = {row['project_id'] for row in assignments if row['designer_id'] == session['user']['id']}
+            designer_drive_rows = rows('project_drive_links', 'select=project_id,channel,url', token=token)
+            assert all(row['channel'] == 'internal' for row in designer_drive_rows), 'A designer read a client Drive link'
+            assert {row['project_id'] for row in designer_drive_rows} <= own_projects, 'A designer read a Drive link on an unassigned project'
+            assert {row['project_id']: row['url'] for row in designer_drive_rows} == {pid: url for pid, url in drive_internal.items() if pid in own_projects}, 'Designer internal Drive links differ from the manifest'
 
     # The file total below is an arithmetic statement about the dataset, not a magic number: each
     # term is the count of one kind of fixture file, and each is checked against the manifest first
@@ -205,8 +218,12 @@ def main():
         token = session['access_token']
         client_project_count = sum(1 for row in fixture['projects'] if row['client_id'] == client['id'])
         assert len(rows('clients', token=token)) == 1 and len(rows('projects', token=token)) == client_project_count
-        # A client reads the Drive link of its own projects, the same one the studio set.
-        assert {row['id']: row['drive_url'] for row in rows('projects', 'select=id,drive_url', token=token)} == {pid: url for pid, url in drive_links.items() if pid in {row['id'] for row in fixture['projects'] if row['client_id'] == client['id']}}, 'Client Drive links differ'
+        # A client reads the client-channel Drive link of its own projects only, the same one the
+        # studio set, and never an internal-channel row.
+        client_own_ids = {row['id'] for row in fixture['projects'] if row['client_id'] == client['id']}
+        client_drive_rows = rows('project_drive_links', 'select=project_id,channel,url', token=token)
+        assert all(row['channel'] == 'client' for row in client_drive_rows), 'A client read an internal Drive link'
+        assert {row['project_id']: row['url'] for row in client_drive_rows} == {pid: url for pid, url in drive_client.items() if pid in client_own_ids}, 'Client Drive links differ'
         for table, column in (('design_boards', 'id'), ('design_versions', 'id'), ('design_version_miro_links', 'version_id'), ('project_assignments', 'project_id'), ('internal_comments', 'id')):
             assert rows(table, 'select=' + column, token=token) == [], 'Client read leaked internal rows: ' + table
         for asset in [row for row in fixture['brand_assets'] if row['client_id'] == client['id']]:
@@ -238,7 +255,7 @@ def main():
             downloaded += 1
     downloaded += len(cover_bytes)
     assert downloaded == brand_files + cover_files + visible_cover_files + delivery_files, 'Downloaded file total does not match the fixture dataset'
-    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 25, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects': len(multi), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'design_boards': len(boards), 'rounds': len(rounds), 'client_versions': len(versions), 'rounds_by_status': dict(sorted(Counter(row['status'] for row in rounds).items())), 'client_versions_by_decision': dict(sorted(Counter(row['status'] for row in reviews.values()).items())), 'drive_links': sum(1 for url in drive_links.values() if url), 'covers': len(covers), 'client_visible_covers': sum(1 for row in covers.values() if row['client_visible']), 'verified_actual_file_downloads': downloaded, 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'designer_board_isolation': True, 'no_designer_names_in_client_rows': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
+    evidence = {'result': 'PASS', 'api_url': expected, 'clients': 10, 'projects': 25, 'service_types': 20, 'formats': 25, 'multiple_deliverable_projects': len(multi), 'product_records': sum(len(row['content']['items']) for row in products), 'brand_templates': 70, 'design_boards': len(boards), 'rounds': len(rounds), 'client_versions': len(versions), 'rounds_by_status': dict(sorted(Counter(row['status'] for row in rounds).items())), 'client_versions_by_decision': dict(sorted(Counter(row['status'] for row in reviews.values()).items())), 'drive_links_client': len(drive_client), 'drive_links_internal': len(drive_internal), 'covers': len(covers), 'client_visible_covers': sum(1 for row in covers.values() if row['client_visible']), 'verified_actual_file_downloads': downloaded, 'client_logins_and_tenant_checks': 10, 'agency_and_both_designer_project_scope': True, 'designer_board_isolation': True, 'no_designer_names_in_client_rows': True, 'credit_ledger_reconciled': True, 'all_project_briefings_and_questions_valid': True, 'fixture_manifest_sha256': hashlib.sha256((ROOT / 'supabase/fixtures.json').read_bytes()).hexdigest()}
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, indent=2) + '\n')

@@ -36,7 +36,7 @@ class SabreDemoTests(unittest.TestCase):
         self.assertEqual({p['stage'] for p in PLAN['projects']}, {'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'})
 
     def test_drive_links_are_valid_and_only_added_by_a_fresh_apply(self):
-        # The same pattern as the `project_drive_url_valid` constraint (migration 202609270009).
+        # The same pattern as `project_drive_links.url`'s check (migration 202609270011).
         pattern = re.compile(r'^https://drive\.google\.com(/\S*)?$')
         links = [drive_url(p['key']) for i, p in enumerate(PLAN['projects']) if i % 10 == 3]
         self.assertGreaterEqual(len(links), 3)

@@ -1474,6 +1474,45 @@ export type Database = {
           },
         ]
       }
+      project_drive_links: {
+        Row: {
+          channel: string
+          project_id: string
+          updated_at: string
+          updated_by: string | null
+          url: string
+        }
+        Insert: {
+          channel: string
+          project_id: string
+          updated_at?: string
+          updated_by?: string | null
+          url: string
+        }
+        Update: {
+          channel?: string
+          project_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_drive_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_drive_links_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_settlements: {
         Row: {
           charged_month: string | null
@@ -1532,7 +1571,6 @@ export type Database = {
           credit_month: string | null
           delivered_at: string | null
           description: string
-          drive_url: string | null
           due_date: string | null
           id: string
           service_type: string
@@ -1550,7 +1588,6 @@ export type Database = {
           credit_month?: string | null
           delivered_at?: string | null
           description?: string
-          drive_url?: string | null
           due_date?: string | null
           id?: string
           service_type: string
@@ -1568,7 +1605,6 @@ export type Database = {
           credit_month?: string | null
           delivered_at?: string | null
           description?: string
-          drive_url?: string | null
           due_date?: string | null
           id?: string
           service_type?: string
@@ -2246,7 +2282,7 @@ export type Database = {
         Returns: undefined
       }
       set_project_drive_link: {
-        Args: { p_project_id: string; p_url: string }
+        Args: { p_channel: string; p_project_id: string; p_url: string }
         Returns: undefined
       }
       set_publication_miro_link: {

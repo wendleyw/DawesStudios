@@ -44,6 +44,9 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Share an immutable client version (Miro link + note) | Agency only | No | No |
 | Read a version's Miro frame link | Both boards, scoped | Client board, own shared client versions only | Internal board, assigned work only |
 | Set/change/remove a Miro frame link | Agency only | No | No |
+| Read internal Drive folder link | Scoped | No | Assigned project only |
+| Read client Drive folder link | Scoped | Own client | No |
+| Set/change/remove either Drive folder link | Agency only | No | No |
 | Read a client version | Scoped | Own client | Assigned work if needed for production, without client messages |
 | Client-channel project comments | Read/write as Studio | Read/write own client | No |
 | Internal-channel project comments | Read/write | Never | Read/write assigned work |
@@ -83,6 +86,17 @@ The selected board view belongs to one viewer and client. `board_preferences` RL
 ## Miro frame links
 
 A version can point at a frame on a Miro board. The client board and the internal board are two tables under two read rules: `publication_miro_links` follows `private.can_client_channel` (agency and the client's people) and `design_version_miro_links` follows `private.can_produce` (agency and assigned designers). A client never receives an internal board and a designer never receives a client board. Only the agency writes, through RPCs that call `private.assert_agency()` and store only the parsed board and frame ids. A new client link prefills only from an earlier publication and an internal link only from an earlier internal version, so the two never cross in the dialog. The product does not control what a Miro board contains: the agency must keep designer identity, internal notes and unpublished work off the client board. See [backend contracts](backend.md).
+
+## Drive folder links
+
+Each project has independent `internal` and `client` links in `project_drive_links`. Row policies
+enforce the same production/client-channel boundary as Miro: assigned designers receive only the
+internal link, clients receive only their client link, and the agency receives both. Authenticated
+callers cannot read the link editor's identity. Only the agency writes through
+`set_project_drive_link`; an empty value removes only the selected channel. Files always selects
+the client channel. Link visibility does not grant access to the external Drive folder; the agency
+manages its Google permissions separately. See [backend contracts](backend.md) and
+[recovery verification](../verification/drive-links-recovery-2026-09-27.md).
 
 ## Comments
 

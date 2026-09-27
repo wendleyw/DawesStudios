@@ -15,10 +15,12 @@ ADAPTATION_PROJECTS = (4, 8, 12, 20)
 SECOND_ROUND_PROJECTS = (3, 4, 6, 12, 13, 14, 20)
 # Projects staffed by both designers, one design board each, so designer isolation has real data.
 TWO_DESIGNER_PROJECTS = (3, 8, 10)
-# Projects that keep a Google Drive backup link (`projects.drive_url`), set by the agency through
-# `set_project_drive_link` like the product does; the others show no Drive action. Keys match
-# `emit_project`: a number for the uniform pair, `sabre-<key>` for SABRE.
+# Projects that keep a Google Drive backup link (`public.project_drive_links`), set by the agency
+# through `set_project_drive_link` like the product does; the others show no Drive action. Keys
+# match `emit_project`: a number for the uniform pair, `sabre-<key>` for SABRE. A couple of these
+# also keep a distinct internal-channel link, so both channels have fixture data.
 DRIVE_LINK_PROJECTS = (2, 7, 14, 'sabre-email-banner')
+INTERNAL_DRIVE_LINK_PROJECTS = (2, 7)
 SABRE_SLUG = 'sabre'
 # SABRE is the workspace the reference package documents end to end — its agency board is the one
 # every `#/client/sabre/board` capture in `docs/ref` was taken from — so it is seeded from that
@@ -69,6 +71,11 @@ def miro_widget(label):
 def drive_url(key):
     """A placeholder Google Drive folder link, derived from the project key so builds stay identical."""
     return 'https://drive.google.com/drive/folders/1'+hashlib.md5(('drive-folder:'+str(key)).encode()).hexdigest()
+
+def internal_drive_url(key):
+    """A distinct placeholder Drive link for the internal channel, so a project with both channels
+    stores two different URLs (never the client's)."""
+    return 'https://drive.google.com/drive/folders/9'+hashlib.md5(('drive-folder-internal:'+str(key)).encode()).hexdigest()
 
 def miro_url(board, widget=None):
     return f'https://miro.com/app/board/{board}/'+(f'?moveToWidget={widget}' if widget else '')
@@ -171,7 +178,9 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
     for bi,designer,board_name,board in boards:
         call('create_design_board',project_sql,sql(board_name),sql(miro_url(board)),sql(designer),sql(board_due))
     drive=drive_url(key) if key in DRIVE_LINK_PROJECTS else None
-    if drive: call('set_project_drive_link',project_sql,sql(drive))
+    if drive: call('set_project_drive_link',project_sql,sql('client'),sql(drive))
+    drive_internal=internal_drive_url(key) if key in INTERNAL_DRIVE_LINK_PROJECTS else None
+    if drive_internal: call('set_project_drive_link',project_sql,sql('internal'),sql(drive_internal))
     as_user(customer)
     call('post_comment',project_sql,sql('client'),sql('The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.'),'null',sql(f'seed:{key}:context'))
     def board_ref(board_name):
@@ -222,7 +231,7 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
     format_spec=next(f for f in CATALOG['formats'] if f['id']==specs[0]['format'])
     width,height=format_pixel_size(format_spec)
     manifest['covers'].append({'project_id':project,'index':len(manifest['covers'])+1,'width':width,'height':height,'client_visible':versions>0})
-    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':status,'credits':credits,'designers':designers,'rounds_per_board':len(history),'client_versions':versions,'drive_url':drive})
+    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':status,'credits':credits,'designers':designers,'rounds_per_board':len(history),'client_versions':versions,'drive_links':{'client':drive,'internal':drive_internal}})
 
 manifest={'users':[{'id':uid(k),'email':e,'name':n,'role':r} for k,e,n,r in accounts],'clients':[],'projects':[],'delivery_project_id':uid('project-7'),'brand_assets':[],'covers':[]}
 for index,(name,slug,industry) in enumerate(CLIENTS):

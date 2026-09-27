@@ -117,6 +117,7 @@ delete from public.design_boards where project_id in (select id from acceptance_
 delete from public.delivery_files where project_id in (select id from acceptance_target);
 delete from public.project_assets where project_id in (select id from acceptance_target);
 delete from public.project_covers where project_id in (select id from acceptance_target);
+delete from public.project_drive_links where project_id in (select id from acceptance_target);
 delete from public.project_assignments where project_id in (select id from acceptance_target);
 delete from public.deliverables where project_id in (select id from acceptance_target);
 delete from public.project_settlements where project_id in (select id from acceptance_target);

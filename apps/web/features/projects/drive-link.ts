@@ -1,5 +1,6 @@
 /**
- * Google Drive backup links: the form's pre-check before it calls `setProjectDriveLink`.
+ * Channel-specific Google Drive folder links: the form's pre-check before it calls
+ * `setProjectDriveLink`.
  *
  * The database validates the pasted URL again (`public.set_project_drive_link`) and is the
  * authority; this copy only lets the dialog refuse a bad link before anything is sent. The scheme

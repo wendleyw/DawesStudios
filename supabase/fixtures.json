@@ -156,7 +156,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "e3347e2f-fd33-a8c0-800a-a4af0c224ff0",
@@ -172,7 +175,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": "https://drive.google.com/drive/folders/1a447cf5423f15538741988ef90cd91a0"
+      "drive_links": {
+        "client": "https://drive.google.com/drive/folders/1a447cf5423f15538741988ef90cd91a0",
+        "internal": "https://drive.google.com/drive/folders/925c2632efeea361be8e7ca80f2d10c48"
+      }
     },
     {
       "id": "cd179de9-0dd1-00da-89d1-74fab5225237",
@@ -189,7 +195,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "0b135ab6-c478-b933-f5b0-fd52d69be33e",
@@ -205,7 +214,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "438efff4-c04a-d623-d4ac-243072ddccc5",
@@ -221,7 +233,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "275d29ba-ec4a-69e8-c94c-3945d2e01ce4",
@@ -237,7 +252,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "0124c675-4357-beea-4c83-0870d323acda",
@@ -253,7 +271,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": "https://drive.google.com/drive/folders/1e9842a7457b14af4777c87f48189fc0c"
+      "drive_links": {
+        "client": "https://drive.google.com/drive/folders/1e9842a7457b14af4777c87f48189fc0c",
+        "internal": "https://drive.google.com/drive/folders/954f0254918c42df040e87c6ce1af5c4c"
+      }
     },
     {
       "id": "aa45813c-1ec2-3881-4753-5fd97dda3cf7",
@@ -270,7 +291,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "61afc339-e8f7-296f-c4a6-6ea9cb3a3613",
@@ -286,7 +310,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "9790601b-4480-3698-12a8-677157977a42",
@@ -303,7 +330,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "c04b37ec-9cce-f263-d042-31b7f5e0383b",
@@ -319,7 +349,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "1f578e0e-fd97-ebf0-b081-7bf87a9fcf0f",
@@ -335,7 +368,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "9972d8ba-a8e2-0fc4-6ff4-9ddb5651c0bf",
@@ -351,7 +387,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd",
@@ -367,7 +406,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": "https://drive.google.com/drive/folders/1c9b055a9c740705cbf2446fecc9e3c8a"
+      "drive_links": {
+        "client": "https://drive.google.com/drive/folders/1c9b055a9c740705cbf2446fecc9e3c8a",
+        "internal": null
+      }
     },
     {
       "id": "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19",
@@ -383,7 +425,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "15e2d399-e215-9707-9499-96b455c83adf",
@@ -399,7 +444,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b",
@@ -415,7 +463,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": "https://drive.google.com/drive/folders/1f01396f0f984c38e70a6750ee2501820"
+      "drive_links": {
+        "client": "https://drive.google.com/drive/folders/1f01396f0f984c38e70a6750ee2501820",
+        "internal": null
+      }
     },
     {
       "id": "c4737460-ac76-a16f-c89c-e192eb80ca4d",
@@ -431,7 +482,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "668c11ae-ec2e-903e-d3fc-53710f2bdab6",
@@ -447,7 +501,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "65ea09bf-830a-ebd8-c3e2-f1fe7f48ffb2",
@@ -464,7 +521,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "01302c49-3f1d-aa0c-6447-bc499fa7e995",
@@ -480,7 +540,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "d4518a68-870f-8eee-ac5f-5417b4a4f74b",
@@ -496,7 +559,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "6361cfa3-7996-579e-08ed-9106d5c394f0",
@@ -512,7 +578,10 @@
       ],
       "rounds_per_board": 1,
       "client_versions": 1,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "2575e09d-2066-b2aa-90d5-1ee3cb005c25",
@@ -528,7 +597,10 @@
       ],
       "rounds_per_board": 0,
       "client_versions": 0,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     },
     {
       "id": "83b5cc40-19c5-c3c7-8825-5a6464be2d01",
@@ -544,7 +616,10 @@
       ],
       "rounds_per_board": 2,
       "client_versions": 2,
-      "drive_url": null
+      "drive_links": {
+        "client": null,
+        "internal": null
+      }
     }
   ],
   "delivery_project_id": "0124c675-4357-beea-4c83-0870d323acda",

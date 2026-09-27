@@ -91,7 +91,12 @@ export type AssetProject = {
   status: string;
   campaignId: string | null;
   campaignTitle: string | null;
-  /** The project's Google Drive backup link, if any; the icon beside its file group opens it. */
+  /**
+   * The project's client-channel Drive link, if any; the icon beside its file group opens it.
+   * Files is the client-facing delivery surface, so only the `client` row of `project_drive_links`
+   * is ever read here — never `internal`. RLS keeps this null for a designer (whose read only ever
+   * returns their `internal` row) without any role branch here.
+   */
   driveUrl: string | null;
 };
 
@@ -104,7 +109,7 @@ export function useProjectAssets(clientId: string) {
       const projectRows = assertResult(
         await database
           .from("projects")
-          .select("id,title,status,campaign_id,drive_url,campaigns(id,title)")
+          .select("id,title,status,campaign_id,campaigns(id,title)")
           .eq("client_id", clientId),
       );
       const projects: AssetProject[] = projectRows.map((row) => ({
@@ -113,16 +118,21 @@ export function useProjectAssets(clientId: string) {
         status: row.status,
         campaignId: row.campaign_id,
         campaignTitle: row.campaigns?.title ?? null,
-        driveUrl: row.drive_url,
+        driveUrl: null,
       }));
       if (!projects.length) return { assets: [] as ProjectAsset[], projects };
       const ids = projects.map((project) => project.id);
       const assets: ProjectAsset[] = [];
-      const [deliveries, internal] = await Promise.all([
+      const [deliveries, internal, driveLinks] = await Promise.all([
         database.from("delivery_files").select("*").in("project_id", ids),
         profile?.role !== "client"
           ? database.from("project_assets").select("*").in("project_id", ids)
           : Promise.resolve({ data: [], error: null }),
+        database
+          .from("project_drive_links")
+          .select("project_id,url")
+          .eq("channel", "client")
+          .in("project_id", ids),
       ]);
       assets.push(
         ...assertResult(deliveries).map((file) =>
@@ -134,6 +144,12 @@ export function useProjectAssets(clientId: string) {
           fromStoredFile(file, "internal-assets", "Working file", false),
         ),
       );
+      const driveUrlByProject = new Map(
+        assertResult(driveLinks).map((row) => [row.project_id, row.url]),
+      );
+      for (const project of projects) {
+        project.driveUrl = driveUrlByProject.get(project.id) ?? null;
+      }
       return { assets: assets.toSorted((a, b) => b.date.localeCompare(a.date)), projects };
     },
   });

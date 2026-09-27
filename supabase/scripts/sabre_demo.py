@@ -264,7 +264,7 @@ class Demo:
             # RPC. Only a fresh `apply` adds them; `backfill` never does. The step records the URL.
             if index % 10 == 3:
                 url = drive_url(key)
-                self.once('drive-link:' + key, lambda: self.rpc('set_project_drive_link', {'p_project_id': project, 'p_url': url}) or url)
+                self.once('drive-link:' + key, lambda: self.rpc('set_project_drive_link', {'p_project_id': project, 'p_channel': 'client', 'p_url': url}) or url)
         # The seed already staffs its SABRE projects (one design board per designer, matching round
         # cycles), so an existing project keeps its designers; only a new project gets one assigned.
         staffed = [r['designer_id'] for r in self.rows('project_assignments', f'project_id=eq.{project}&select=designer_id&order=designer_id')] if p.get('existing') else []
@@ -496,7 +496,7 @@ class Demo:
             'design_boards': len(r['public.design_boards']), 'rounds': counts(r['public.design_versions'], 'status'),
             'client_versions': len(r['public.published_versions']), 'reviews': counts(r['public.publication_reviews'], 'status'),
             'miro_links': len(r['public.design_version_miro_links']) + len(r['public.publication_miro_links']),
-            'drive_links': sum(1 for row in r['public.projects'] if row.get('drive_url')),
+            'drive_links': sum(1 for row in r['public.project_drive_links'] if row['channel'] == 'client'),
             'covers': len(r['public.project_covers']), 'client_visible_covers': sum(row['client_visible'] for row in r['public.project_covers']),
             'projects_without': {'board': missing('public.design_boards'), 'cover': missing('public.project_covers'),
                 'round_after_in_progress': len({row['id'] for row in started} - {row['project_id'] for row in r['public.design_versions']})},
@@ -520,8 +520,13 @@ class Demo:
         if not self.state or self.state['phase'] not in ('complete', 'removing'):
             raise RuntimeError('A completed demo snapshot is required for guarded removal.')
         layers = self.layers()
+        current = snapshot()
+        covered = {table for before, after in layers for table in layer_tables(before, after)}
+        uncovered = [table for table in SCOPES if table not in covered and current['rows'].get(table)]
+        if uncovered:
+            raise RuntimeError('The demo checkpoint does not cover populated tables: ' + ', '.join(uncovered) +
+                               '. Removal stopped to preserve newer work; retain the checkpoint and reconcile the schema first.')
         if self.state['phase'] == 'complete':
-            current = snapshot()
             before, after = layers[-1]
             tables = layer_tables(before, after)
             if not snapshot_match(after, current, tables):
