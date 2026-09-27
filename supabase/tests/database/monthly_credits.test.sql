@@ -60,6 +60,7 @@ insert into public.credit_accounts(client_id) values (pg_temp.context('client-or
 -- Fixtures elsewhere insert a balance straight into credit_accounts; it lands in the current month.
 insert into public.credit_accounts(client_id,balance) values (pg_temp.context('direct-org'),30);
 select is(pg_temp.balance('direct-org',0),30,'A directly inserted account balance becomes the current month balance');
+select is((select kind||':'||amount||':'||month::text from public.credit_ledger where client_id=pg_temp.context('direct-org')),'allocation:30:'||pg_temp.m(0)::text,'A directly inserted balance is recorded as an opening allocation in the same month');
 
 insert into public.briefings(id,client_id,title,service_type,status,overview,goals,direction,requested_deliverables,due_date,estimated_credits,confirmed_credits,budget_note,created_by)
 select pg_temp.context(k),pg_temp.context('client-org'),'MC '||k,'social','budget_confirmed','Monthly credits fixture.','Prove monthly credits.',
@@ -88,7 +89,7 @@ select pg_temp.act_as('agency');
 set local role authenticated;
 select lives_ok($$select public.set_credit_plan(pg_temp.context('client-org'),40,pg_temp.m(1))$$,'The agency sets a plan from next month');
 select lives_ok($$select public.set_credit_plan(pg_temp.context('client-org'),60,pg_temp.m(2)+10)$$,'A plan start inside a month is normalized to its first day');
-select throws_ok($$select public.set_credit_plan(pg_temp.context('client-org'),5,pg_temp.m(-1))$$,'P0001','Choose the current month or a later one','A plan cannot start in a past month');
+select throws_ok($$select public.set_credit_plan(pg_temp.context('client-org'),5,pg_temp.m(-1))$$,'22023','Choose the current month or a later one','A plan cannot start in a past month');
 reset role;
 select is(private.plan_allowance(pg_temp.context('client-org'),pg_temp.m(0)),0,'No plan is in force before its start month');
 select is(private.plan_allowance(pg_temp.context('client-org'),pg_temp.m(1)),40,'The first plan is in force from its start month');
@@ -113,7 +114,7 @@ set local role authenticated;
 select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(1),15,'Launch extra','mc:extra-1') as extra_first \gset
 select is(public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(1),15,'Launch extra','mc:extra-1')::text,:'extra_first','A replayed extra returns the same entry');
 select throws_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(1),20,'Launch extra','mc:extra-1')$$,'P0001','Idempotency key conflicts with a different credit entry','A reused key with a different extra is refused');
-select throws_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(-1),5,'Late extra','mc:extra-past')$$,'P0001','Choose the current month or a later one','A past month refuses extras');
+select throws_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(-1),5,'Late extra','mc:extra-past')$$,'22023','Choose the current month or a later one','A past month refuses extras');
 select throws_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(1),0,'Nothing','mc:extra-zero')$$,'P0001','The amount must be positive','An extra must be positive');
 reset role;
 select is(pg_temp.balance('client-org',1),55,'The extra is added once');
@@ -128,10 +129,15 @@ select pg_temp.act_as('agency');
 set local role authenticated;
 select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(0),pg_temp.m(1),30,'Shift to next month','mc:transfer-1') as transfer_first \gset
 select is(public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(0),pg_temp.m(1),30,'Shift to next month','mc:transfer-1')::text,:'transfer_first','A replayed transfer returns the same entry');
-select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(-1),pg_temp.m(1),5,'From the past','mc:transfer-past')$$,'P0001','Choose the current month or a later one','A past month cannot send credits');
-select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(1),pg_temp.m(-1),5,'To the past','mc:transfer-past-2')$$,'P0001','Choose the current month or a later one','A past month cannot receive credits');
+select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(-1),pg_temp.m(1),5,'From the past','mc:transfer-past')$$,'22023','Choose the current month or a later one','A past month cannot send credits');
+select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(1),pg_temp.m(-1),5,'To the past','mc:transfer-past-2')$$,'22023','Choose the current month or a later one','A past month cannot receive credits');
 select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(0),pg_temp.m(1),1000,'Too much','mc:transfer-big')$$,'P0001','insufficient_month_credits','A transfer cannot overdraw the source month');
 select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(1),pg_temp.m(1),5,'Same month','mc:transfer-same')$$,'P0001','Choose two different months','A transfer needs two months');
+select throws_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(12),5,'Too far','mc:extra-far')$$,'22023','Choose a month within the next 11 months','Months beyond the next 11 refuse extras');
+select throws_ok($$select public.set_credit_plan(pg_temp.context('client-org'),5,pg_temp.m(12))$$,'22023','Choose a month within the next 11 months','A plan cannot start beyond the next 11 months');
+select lives_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(3),1,'Derived key probe','mc:derived:in')$$,'An entry takes a key a transfer would derive');
+select throws_ok($$select public.transfer_month_credits(pg_temp.context('client-org'),pg_temp.m(3),pg_temp.m(4),1,'Derived','mc:derived')$$,'P0001','Idempotency key conflicts with a different credit entry','A transfer whose derived key is taken reports a conflict');
+select lives_ok($$select public.add_month_extra(pg_temp.context('client-org'),pg_temp.m(3),1,'Derived key probe','mc:derived-move:refund')$$,'An entry takes a key a move would derive');
 reset role;
 select is(pg_temp.balance('client-org',0),70,'The transfer leaves the source month');
 select is(pg_temp.balance('client-org',1),85,'The transfer reaches the target month');
@@ -144,7 +150,8 @@ set local role authenticated;
 select lives_ok($$select public.accept_briefing(pg_temp.context('b-next'))$$,'A briefing due next month is accepted by default into that month');
 select lives_ok($$select public.accept_briefing(pg_temp.context('b-explicit'),pg_temp.m(2))$$,'The agency accepts a briefing into a chosen future month');
 select lives_ok($$select public.accept_briefing(pg_temp.context('b-nodue'))$$,'A briefing without a due date is accepted into the current month');
-select throws_ok($$select public.accept_briefing(pg_temp.context('b-past'),pg_temp.m(-1))$$,'P0001','Choose the current month or a later one','A past month refuses an acceptance');
+select throws_ok($$select public.accept_briefing(pg_temp.context('b-past'),pg_temp.m(12))$$,'22023','Choose a month within the next 11 months','A month beyond the next 11 refuses an acceptance');
+select throws_ok($$select public.accept_briefing(pg_temp.context('b-past'),pg_temp.m(-1))$$,'22023','Choose the current month or a later one','A past month refuses an acceptance');
 select throws_ok($$select public.accept_briefing(pg_temp.context('b-big'))$$,'P0001','Insufficient credit balance','An insufficient month balance refuses an acceptance');
 select is(public.accept_briefing(pg_temp.context('b-next'),pg_temp.m(2)),pg_temp.project_of('b-next'),'A repeated acceptance returns the same project');
 reset role;
@@ -168,7 +175,8 @@ select pg_temp.act_as('agency');
 set local role authenticated;
 select public.move_project_month(pg_temp.project_of('b-next'),pg_temp.m(2),'mc:move-1') as move_first \gset
 select is(public.move_project_month(pg_temp.project_of('b-next'),pg_temp.m(2),'mc:move-1')::text,:'move_first','A replayed move returns the same entry');
-select throws_ok($$select public.move_project_month(pg_temp.project_of('b-next'),pg_temp.m(-1),'mc:move-past')$$,'P0001','Choose the current month or a later one','A project cannot move to a past month');
+select throws_ok($$select public.move_project_month(pg_temp.project_of('b-next'),pg_temp.m(-1),'mc:move-past')$$,'22023','Choose the current month or a later one','A project cannot move to a past month');
+select throws_ok($$select public.move_project_month(pg_temp.project_of('b-explicit'),pg_temp.m(1),'mc:derived-move')$$,'P0001','Idempotency key conflicts with a different credit entry','A move whose derived key is taken reports a conflict');
 select throws_ok($$select public.move_project_month(pg_temp.project_of('b-next'),pg_temp.m(2),'mc:move-same')$$,'P0001','The project is already in this month','A move needs a different month');
 reset role;
 select is((select credit_month from public.projects where id=pg_temp.project_of('b-next')),pg_temp.m(2),'The project now belongs to the new month');
@@ -210,8 +218,10 @@ select is((public.settle_project_credits(pg_temp.project_of('b-nodue'),8,'Two ex
 select is((public.settle_project_credits(pg_temp.project_of('b-nodue'),8,'Two extra formats','mc:settle-1')).charged_month,pg_temp.m(0),'A replayed settlement returns the same result');
 select throws_ok($$select public.settle_project_credits(pg_temp.project_of('b-nodue'),9,'Again','mc:settle-again')$$,'P0001','This project is already settled','A project is settled once');
 select throws_ok($$select public.settle_project_credits(pg_temp.project_of('b-explicit'),10000,'Huge','mc:settle-big')$$,'P0001','insufficient_month_credits','A short month reports the shortfall');
-select throws_ok($$select public.settle_project_credits(pg_temp.context('p-old'),100,'Late','mc:settle-past',pg_temp.m(-1))$$,'P0001','Choose the current month or a later one','Extra cost cannot go to a past month');
+select throws_ok($$select public.settle_project_credits(pg_temp.context('p-old'),100,'Late','mc:settle-past',pg_temp.m(-1))$$,'22023','Choose the current month or a later one','Extra cost cannot go to a past month');
 select is((public.settle_project_credits(pg_temp.project_of('b-explicit'),14,'One more format','mc:settle-2',pg_temp.m(1))).charged_month,pg_temp.m(1),'Extra cost can be charged to a chosen future month');
+select throws_ok($$select public.settle_project_credits(pg_temp.project_of('b-explicit'),14,'One more format','mc:settle-2',pg_temp.m(2))$$,'P0001','Idempotency key conflicts with a different credit entry','A replay naming another charge month is refused');
+select is((public.settle_project_credits(pg_temp.context('p-old'),3,'Charged as moved','mc:settle-old')).difference,0,'A project moved out of an expired month is charged only in its current month');
 select is((public.settle_project_credits(pg_temp.project_of('b-next'),4,'Fewer formats delivered','mc:settle-3')).difference,-6,'A lower final total is a refund');
 reset role;
 select is(pg_temp.balance('client-org',0),65,'Extra cost and the refund both land in the current month');
@@ -219,6 +229,7 @@ select is(pg_temp.balance('client-org',1),81,'The chosen charge month pays the e
 select is((select charged_month from public.project_settlements where project_id=pg_temp.project_of('b-next')),pg_temp.m(0),'The refund goes to the current month, not the project month');
 select is((select count(*)::int from public.project_settlements where project_id in (pg_temp.project_of('b-explicit'))),1,'The refused settlement left no row behind');
 select is((select count(*)::int from public.credit_ledger where project_id=pg_temp.project_of('b-nodue') and kind='final_adjustment'),1,'A replayed settlement writes one adjustment');
+select is((select count(*)::int from public.credit_ledger where project_id=pg_temp.context('p-old') and kind='final_adjustment'),0,'Settling at the moved charge refunds nothing');
 
 -- 11. Existing credit functions keep working on the current month.
 insert into public.credit_requests(id,client_id,requested_by,amount,status) values
@@ -238,14 +249,25 @@ set local role authenticated;
 select is((select row(available,allowance,extras,used,transferred,expiring,expires_on)::text from public.credit_month_summary(pg_temp.context('client-org'),pg_temp.m(1))),
   row(81,40,15,4,30,81,pg_temp.m(2)-1)::text,'The client reads its month summary');
 select is((select row(available,expiring,status)::text from public.credit_month_summary(pg_temp.context('client-org'),pg_temp.m(-1))),row(0,0,'expired')::text,'An expired month has nothing left to expire');
+select is((select row(available,allowance,expiring)::text from public.credit_month_summary(pg_temp.context('client-org'),pg_temp.m(4))),row(60,60,60)::text,'An untouched future month shows its projected allowance');
+select is((select count(*)::int from public.credit_months where client_id=pg_temp.context('client-org') and month=pg_temp.m(4)),0,'Reading a summary writes no month');
+select throws_ok($$select * from public.credit_month_summary(pg_temp.context('client-org'),pg_temp.m(12))$$,'22023','Choose a month within the next 11 months','A summary beyond the next 11 months is refused');
 select throws_ok($$select * from public.credit_month_summary(pg_temp.context('other-org'),pg_temp.m(0))$$,'42501','Client access required','A client cannot read another client''s summary');
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select public.set_credit_plan(pg_temp.context('client-org'),70,pg_temp.m(4))$$,'The agency sets a plan for a month a client already viewed');
+reset role;
+select pg_temp.act_as('client');
+set local role authenticated;
+select is((select allowance from public.credit_month_summary(pg_temp.context('client-org'),pg_temp.m(4))),70,'A viewed month still takes the later plan');
 
 -- 13. Role access.
 select is((select count(*)::int from public.credit_months where client_id<>pg_temp.context('client-org')),0,'A client reads only its own months');
 select ok((select count(*)::int from public.credit_months)>0,'A client reads its months');
-select is((select count(*)::int from public.credit_plans),2,'A client reads its own plans');
+select is((select count(*)::int from public.credit_plans),3,'A client reads its own plans');
 select throws_ok($$select created_by from public.credit_plans$$,'42501',null,'A client cannot read who set a plan');
-select is((select count(*)::int from public.project_settlements),3,'A client reads its own settlements');
+select is((select count(*)::int from public.project_settlements),4,'A client reads its own settlements');
 select is((select count(*)::int from public.credit_ledger where client_id<>pg_temp.context('client-org')),0,'A client reads only its own ledger');
 select throws_ok($$insert into public.credit_months(client_id,month,balance) values (pg_temp.context('client-org'),pg_temp.m(5),999)$$,'42501',null,'A client cannot write month balances');
 select throws_ok($$update public.credit_plans set monthly_credits=999$$,'42501',null,'A client cannot change a plan');
@@ -272,8 +294,7 @@ reset role;
 
 -- 14. Migration and invariants.
 select ok(not exists(
-  select 1 from public.credit_months m where m.client_id<>pg_temp.context('direct-org')
-    and m.balance<>(select coalesce(sum(l.amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month)
+  select 1 from public.credit_months m where m.balance<>(select coalesce(sum(l.amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month)
 ),'Every month balance reconciles with its ledger entries');
 select ok(not exists(
   select 1 from public.credit_accounts a where exists(select 1 from public.credit_ledger l where l.client_id=a.client_id and l.created_at<'2026-09-28')
