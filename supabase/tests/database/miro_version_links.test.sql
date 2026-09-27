@@ -93,7 +93,8 @@ reset role;
 
 select pg_temp.act_as('outsider');
 set local role authenticated;
-select is((select count(*)::int from public.design_version_miro_links),0,'An unassigned designer reads no internal link');
+-- Scoped to this project: the designer may be assigned elsewhere, where internal links can exist.
+select is((select count(*)::int from public.design_version_miro_links where project_id=pg_temp.context('project')),0,'An unassigned designer reads no internal link');
 reset role;
 
 -- Clearing, and clearing twice.
