@@ -49,7 +49,7 @@ The shared shell styles are implemented in [globals.css](../../apps/web/app/glob
 | Playground canvas overrides     | `#e9e9e2` / `#bdbdb2`             | `#0f1012` / `#333438`          | Slightly darker background and dots, scoped to the Playground canvas                  |
 | `radius.small`                  | `8px`                             | —                              | `--radius`. Implemented controls; reference was approximately 4 px                    |
 | `radius.medium`                 | `12px`                            | —                              | `--radius-lg`. Implemented panels/cards; shared dialogs also use 12 px corners        |
-| `radius.round`                  | `999px`                           | —                              | Decision: only avatars, pins, and circular marks. No token; one call site             |
+| `radius.round`                  | `999px`                           | —                              | Decision: only avatars, channel labels, and circular marks. No token; one call site    |
 | `text.xs`                       | `11px`                            | —                              | `--text-xs`. Compact annotations                                                      |
 | `text.sm`                       | `12px`                            | —                              | `--text-sm`. Timestamps, counts, badges, table headers and secondary metadata         |
 | `text.base`                     | `13px`                            | —                              | `--text-base`. Navigation, supporting copy, small controls                            |
@@ -80,7 +80,7 @@ Type pairings follow the same pattern. [`features/workspace/font.ts`](../../apps
 
 `h3` and smaller text stay in the text family so dense UI remains legible. `--display-tracking` loosens the tight heading letter-spacing slightly for the serif. The Editorial fonts load with `preload: false`, so the default pairing downloads nothing extra. To add a pairing: add its value in `font.ts` (and the head script), load its families in `app/layout.tsx`, and write one token block keyed on its `data-font` value.
 
-The styling boundary extends to color: a color that only one feature uses is written `light-dark()` in that feature's own stylesheet, and a color shared by two or more features is a token in `globals.css`, the same rule as any other shared-versus-feature selector. A few surfaces are deliberately identical in both themes rather than tokenized: the dark sidebar (`.login-story`, `.sidebar-collapse`, `.profile-bar`, `.mobile-sidebar-close`) keeps its navigation color regardless of theme, comment pins (`.artwork-pin`, `.video-pin-marker`) keep one look over artwork in either theme, video letterboxing (`.artwork-video`) stays black, and `::selection` keeps its dark olive highlight. A whole surface that is dark in both themes uses the `.dark-surface` scope from `globals.css` instead of literal colors: it re-declares every token on its own element and fixes `color-scheme: dark` there, so everything inside resolves the dark palette (the Playground canvas and Miro mode's asset strip). Such a surface fills with `--menu-surface`, the sidebar colour as the page's theme resolves it, declared on `:root` alone so the scope does not re-resolve it — all four listed with their reason in `theme-colors.test.ts`'s `themeIndependent` map. A declaration whose property ends in `shadow` may also keep a literal black value, any opacity, outside `light-dark()` — the board and client identity cards' `0 3px 14px rgb(0 0 0 / 7%)` and the zoom pill's `--xy-controls-box-shadow: 0 4px 18px rgb(0 0 0 / 8%)` among them — because black reads as a shadow regardless of the surface under it. Uploaded client logos need their own fix rather than a token: they are often a dark mark on transparency, so `img.client-mark` seats them on a small light plate in dark mode — `background` and a 3px `box-shadow` ring, both `light-dark(transparent, #f4f4f5)` — while light mode leaves the plate transparent.
+The styling boundary extends to color: a color that only one feature uses is written `light-dark()` in that feature's own stylesheet, and a color shared by two or more features is a token in `globals.css`, the same rule as any other shared-versus-feature selector. A few surfaces are deliberately identical in both themes rather than tokenized: the dark sidebar (`.login-story`, `.sidebar-collapse`, `.profile-bar`, `.mobile-sidebar-close`) keeps its navigation color regardless of theme, and `::selection` keeps its dark olive highlight. A whole surface that is dark in both themes uses the `.dark-surface` scope from `globals.css` instead of literal colors: it re-declares every token on its own element and fixes `color-scheme: dark` there, so everything inside resolves the dark palette (the Playground canvas and Miro mode's asset strip). Such a surface fills with `--menu-surface`, the sidebar colour as the page's theme resolves it, declared on `:root` alone so the scope does not re-resolve it — all four listed with their reason in `theme-colors.test.ts`'s `themeIndependent` map. A declaration whose property ends in `shadow` may also keep a literal black value, any opacity, outside `light-dark()` — the board and client identity cards' `0 3px 14px rgb(0 0 0 / 7%)` and the zoom pill's `--xy-controls-box-shadow: 0 4px 18px rgb(0 0 0 / 8%)` among them — because black reads as a shadow regardless of the surface under it. Uploaded client logos need their own fix rather than a token: they are often a dark mark on transparency, so `img.client-mark` seats them on a small light plate in dark mode — `background` and a 3px `box-shadow` ring, both `light-dark(transparent, #f4f4f5)` — while light mode leaves the plate transparent.
 
 [`features/shared/theme-colors.test.ts`](../../apps/web/features/shared/theme-colors.test.ts) is the standing gate behind all of this, parallel to `stylesheet-boundary.test.ts` above: it parses `globals.css` and every feature stylesheet and fails on any literal color found outside `light-dark()` unless its selector is named in `themeIndependent` (each with a stated reason) or its property ends in `shadow` and holds only black. The same file measures WCAG AA contrast on both the light and dark side: 4.5:1 or better for the text-on-surface token pairs (`--foreground`, `--muted` and `--on-ink` against their surfaces, plus the sidebar and status-tone pairs), and, for the board timeline's eight bar variants (the default bar and its seven statuses), 4.5:1 or better for the bar's text against its fill and 3:1 or better for the bar's edge against the lane surface — so a dark value that passes the color gate but reads poorly still fails the suite.
 
@@ -151,22 +151,21 @@ Two compact cards float over the work area: the approved client logo alone (48px
 
 Canvas has the shared zoom pill (zoom out, zoom level, zoom in, fit) at the bottom left of the work area, under the rail's column. Manual zoom reaches 10%, while automatic fitting keeps a 40% readability floor. The grid fills the entire work area beneath both cards; it has no reserved side strip. List, Timeline, Kanban and Calendar reserve a gutter to keep their content clear of the toolbar. On viewports up to 900 px wide or 700 px tall, the cards become horizontal bars at the bottom, with zoom below the main bar and panels opening above it. Structured views reserve bottom space, while Canvas continues beneath the cards. The board fills the height below the shared mobile topbar. Its identity/profile cards overlay Canvas, while structured views leave their top edge clear. Each work surface contains its own scrolling. Canvas fits only after its current element is measured, leaves room below the identity card and refits when that viewport changes size. Save/load failures expose usable retry controls below the floating header.
 
-Project pages use a full-width floating title card below the client identity/account cards.
-The title is 28 px on desktop, with status and due date alongside and responsive wrapping. Channel
-controls sit below on the left and All deliverables on the right. Project details, Conversation and
-Playground sit in a floating tool bar at the bottom centre of the canvas: a 16 px-radius pill with
-40 px buttons, a divider before Playground and the open panel's button selected, after the
-Higgsfield canvas the user chose, in the product's monochrome palette. On phones it moves to the
-bottom right. While a side panel is open, the bar re-centres in the space between the zoom pill and
-the panel, and hides on a canvas narrower than 800 px until the panel closes. During design
-review, a compact deliverable toolbar replaces the channel row and the bar, and includes Playground.
-The artwork has its own space above the design/version navigation footer. Desktop double-click,
-keyboard activation, the explicit open arrow and a single touch tap enter feedback.
+Project pages use the shared floating client identity header, then the project's two-row Miro
+workspace bar (see the Decision above): the first row for navigation and the embedded board's
+controls, the second for the agency's Working files/Shared with client channel (or the designer's
+Internal label) and its rounds or client versions. Details, Conversation, Feedback (once a round or
+client version is open) and Playground sit in a floating tool bar at the bottom centre of the
+embed: a 16 px-radius pill with 40 px buttons, a divider before Playground and the open panel's
+button selected, in the product's monochrome palette. On phones it moves to the bottom right. While
+a side panel is open, the bar re-centres in the space between the toolbar and the panel. The
+embedded Miro board fills the remaining canvas; a channel with nothing shared yet shows a text
+prompt and, for the agency, its creation action in place of the embed.
 
-Conversation and details share a floating inspector with close/Escape and focus return. Design
-feedback uses a wider 310–380 px column, compact heading and scope controls, an independently
+Conversation, details and feedback share a floating inspector with close/Escape and focus return.
+Feedback uses a wider 310–380 px column, compact heading and scope controls, an independently
 scrolling history and a growing 60–120 px composer with adjacent send action. Show privacy context
-once. Preserve scoped drafts, image/video pins, read errors and full historical review notes.
+once. Preserve scoped drafts, read errors and full historical review notes.
 
 ### Welcome dashboards
 
@@ -199,11 +198,11 @@ the project's details; "Approved by <name> · <date>" or "Changes requested by <
 the Reviews note column and the project's version history. Someone who left reads "<name> (left)" to
 the studio and "Former member" to the client; designers see neither.
 
-## Board and project canvas
+## Board canvas and project Miro workspace
 
-The board and project canvases use XYFlow/React Flow. Use a shared canvas frame with a subtle dot-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
+The client board's Canvas view and Playground use XYFlow/React Flow; the project page has no xyflow canvas of its own — see below. Use a shared canvas frame with a subtle dot-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
 
-Every `ReactFlow` instance sets `proOptions={{ hideAttribution: true }}`, so the library's attribution badge does not sit over the bottom-right corner of the work surface. The package is MIT licensed and its licence carries no interface attribution clause, so hiding the badge is permitted; xyflow asks that projects removing it subscribe to React Flow Pro to support the library, which is a request rather than a condition. Restoring the badge means dropping the prop from the board, project, design viewer and Playground canvases.
+Every `ReactFlow` instance sets `proOptions={{ hideAttribution: true }}`, so the library's attribution badge does not sit over the bottom-right corner of the work surface. The package is MIT licensed and its licence carries no interface attribution clause, so hiding the badge is permitted; xyflow asks that projects removing it subscribe to React Flow Pro to support the library, which is a request rather than a condition. Restoring the badge means dropping the prop from the board and Playground canvases.
 
 Canvas, List, Timeline, Kanban and Calendar are mutually exclusive views selected by five icon buttons. Accessible names, native tooltips and `aria-pressed` identify each choice. A saved view is personal to the authenticated user and client. Pending changes appear immediately; failed saves restore the confirmed view and provide retry.
 
@@ -217,19 +216,11 @@ A project card selects on one click, with visual selection, `aria-current` and a
 
 The timeline shows an understandable date interval, previous/next interval navigation, Today, date columns, and project bars. Use the current application date; do not copy “Sample today.” The Kanban regroups the same scoped records by status and navigates only: `status` is absent from the single column grant on `public.projects` and no RPC accepts an arbitrary target status, so a drag-to-transition or status menu would fail against the database. Do not ship one until an authorized transition exists; when it does, dragging and the menu must both invoke it and a keyboard-accessible status action must accompany them. The workflow labels are Brief, Designing, Agency review, Client review, Revision, Approved, and Delivered; a visible label and shape accompany every status marker, and the status badge's tone hue (see the Decision above) is additive rather than the only cue. Reuse these semantic states across views without rendering every possible state as persistent chrome.
 
-Project canvases group **deliverable format → version → design**, with multiple designs in a version. Deliverables are stacked frames: a title bar with the deliverable name centred, then one border around all of its versions and its Add version row (user request, 2026-09-24). Each version is a horizontal row with a fixed metadata column on the left and artwork tiles to its right. Preview proportions follow the deliverable dimensions; five previews remain visible before a more-designs control. An editable row ends with a dashed **Add design** tile, and a full-width dashed **Add version** row sits below all versions of the deliverable. Empty editable rows show the same creation tile. Header plus buttons are removed. These cards follow the board’s briefing/campaign creation pattern and are included in `canvas-layout.ts` bounds to prevent overlap.
-
-The agency can start working content from either Working files or Shared with client. Creation cards in the shared tab identify their Working files destination and switch there before opening the existing dialog; Add design targets the latest internal version of that deliverable. They do not modify a publication. Client accounts retain published artwork/review controls and receive no production actions or internal reads. The canvas opens pinned to the top at a readable width fit; tall projects pan rather than shrinking every version to fit their total height. Formats, custom names, dimensions, quantities and Original/Adaptation scope remain deliverable metadata, not separate project charges.
-
-Opening a design presents the artwork on the canvas and comments to its right. The artwork preserves its real dimensions and aspect ratio, scales to available space, and can be zoomed. A bottom carousel moves between designs within the selected version; selecting another version is a separate action. Preserve the selected design and version when opening the inspector or switching comment channels.
-
-Pins are stored relative to the design's intrinsic coordinate space, not screen pixels. They must remain anchored after pan, zoom, resize, fit-to-view, reopening, and publication. Pin selection highlights its thread; selecting a thread highlights its pin. A pending pin is visibly distinct until its comment is saved. Moving between designs, versions, or channels must not show unrelated pins or retain an unsent draft on the wrong design.
-
-A video design plays in the same viewer slot an image occupies, with native controls in place of the click-to-zoom canvas interaction — the design still sits inside the same xyflow node, but the node hosts a `<video>` element instead of an `<img>`. Placing a pin on a still image needs only a point; placing one on video needs a point _and_ a moment, so the pin tool pauses playback on click and records the player's exact `currentTime` alongside the click coordinate as the pin's `pin_t`, in seconds from the start of the file. A pin with no time belongs to a still image and is always shown; a video's pins are windowed to the ones near the current playhead position so a long recording with many comments does not paint every pin over the same frame at once. Below the player, a marker track lays out every timed comment along the video's duration as a row of position-proportional buttons — the calendar-strip idiom applied to a timeline instead of a date range — and clicking one seeks the player to that pin's moment and selects its thread, the same cross-highlight relationship a spatial pin already has with its comment.
+The project page has no xyflow canvas of its own: it embeds the project's Miro board directly — a design board's rounds for the agency's Working files channel and the designer's Internal view, or a shared client version for the agency's Shared with client channel and the client's own view — framed by the product's own chrome: the two-row Miro workspace bar (see the Decision above), the Details/Conversation/Feedback/Playground tool bar, and, when a channel has nothing shared yet, a text prompt with the agency's own creation action in place of the embed. See [Project pages](#canvas-identity-header) above and the [projects feature README](../../apps/web/features/projects/README.md) for the current layout. The product does not control what the embedded Miro board itself contains; keeping designer identity and unpublished work off the client board is the agency's own responsibility (see [Miro frame links](permissions.md#miro-frame-links)).
 
 ## Playground canvas
 
-**Playground** is a project-only board that rises from the bottom over the entire viewport and slides back down on close. Its named native dialog enters the browser's top layer, covering the sidebar, mobile topbar, client/project headers and work area. Width is 100vw and height is 100dvh, with no rounded frame or project-header inset. A transparent backdrop preserves the slide's reveal of the project beneath it. Covered controls are inert and body scrolling is locked; the underlying project stays mounted to retain viewport and selection. Its compact single-row header contains title/team scope, icon tools, save status and the return icon. Reduced-motion users receive an immediate transition. Escape and native cancellation preserve unsaved/busy protections. Opening from the design-upload form temporarily closes its dialog while preserving mounted fields/file; **Back to upload** reopens the same form after exit. See the [current interaction contract](project-playground-and-video-optimization.md) and [feature README](../../apps/web/features/playground/README.md).
+**Playground** is a project-only board that rises from the bottom over the entire viewport and slides back down on close. Its named native dialog enters the browser's top layer, covering the sidebar, mobile topbar, client/project headers and work area. Width is 100vw and height is 100dvh, with no rounded frame or project-header inset. A transparent backdrop preserves the slide's reveal of the project beneath it. Covered controls are inert and body scrolling is locked; the underlying project stays mounted to retain viewport and selection. Its compact single-row header contains title/team scope, icon tools, save status and the return icon. Reduced-motion users receive an immediate transition. Escape and native cancellation preserve unsaved/busy protections. It opens from the project's own Playground toolbar button (or from the Miro embed's asset strip, when one is shown); **Back to project** returns there after exit. See the [feature README](../../apps/web/features/playground/README.md).
 
 Use the existing quiet typography, neutral surfaces and restrained borders. Notes, image previews and document cards share selection and editing controls. Drag/resize saves after the gesture; labeled position/size fields provide keyboard access to the same geometry. Multi-file selection/drop reports rejected files individually while valid files continue. Pan, zoom and fit operate within the canvas, and the editor remains reachable at mobile widths.
 
@@ -239,7 +230,7 @@ Saved content and geometry persist; unsaved local edits have explicit save/disca
 
 Role differences come from authenticated, server-enforced permissions, not a “Preview as” dropdown. Agency members can use two explicitly labeled channels: **Agency & designer** and **Agency & client**. The designer sees only the internal channel for assigned work; the client sees only the agency/client channel. Client-facing agency messages use the Studio identity. Client responses, notifications, file names, activity items, previews, and accessible labels must not reveal designer names, avatars, assignments, or internal authorship metadata.
 
-Agency publication creates an immutable snapshot of the selected version's designs for the client. Editing an internal design later must not silently mutate the shared client version. Only authorized agency actions publish; the designer submits to the agency, and the client requests changes or approves a shared publication. A comment belongs to its project, version/publication context, optional design, and channel. The design viewer holds a design's own comments and image/video pins; the version's studio note, review decision and unpinned discussion live in that version's panel on the board, and a pending client review is offered in both. Version cards retain status and a comment shortcut instead of truncated feedback blocks. Generic project Conversation retains its aggregate of unpinned messages. Existing review records are preserved; drafts and queries distinguish version, design and channel.
+The agency shares an immutable client version — a Miro link and a note — for the client to review. Internal work on a later round does not silently mutate an already-shared client version. Only the agency shares; the designer sends a round to the studio, and the client requests changes or approves the project's latest shared client version. A comment belongs to its project and, optionally, a round (internal channel) or a client version (client channel); there is no design or pin anchor. The Feedback panel holds a round's or client version's own studio note, review decision and comments; the generic project Conversation holds messages with no round/version scope. Existing review records are preserved; drafts and queries distinguish channel and, when relevant, round/version.
 
 Approvals, revision requests, assignments, delivery, uploads, and notifications need pending, success, and actionable failure states. Do not optimistically announce success when persistence has failed. A delivered state must resolve to real authorized files; a share link must resolve to the intended client perspective and access boundary.
 
@@ -292,15 +283,17 @@ One concept, one word. The interface uses these nouns and no synonym of them:
 | A client organisation                        | **Client**                                         | workspace, client workspace |
 | The studio's own account and settings        | **Studio**                                         | workspace                   |
 | The required output a briefing commissions   | **Deliverable**                                    | —                           |
-| The image produced inside a version          | **Design**                                         | artwork                     |
-| A downloadable file on `/clients/:id/assets` | **File**, and **Working file** for a source upload | asset                       |
+| A designer's named internal Miro board for a project | **Design board**                           | canvas                      |
+| A round of work a design board sends to the studio | **Round**                                    | version                     |
+| The immutable Miro link and note the agency shares with the client | **Client version**            | publication, snapshot       |
+| A downloadable file on `/clients/:id/brand/files` | **File**, and **Working file** for a source upload | asset                  |
 | A file in the Brand Hub library              | **Asset**                                          | file, resource              |
 | A brief document                             | **Briefing**                                       | brief                       |
 | A person a project is assigned to            | **Designer**                                       | creative partner            |
 | A record on `/notifications`                 | **Notification**                                   | update                      |
 | The billing unit                             | **credits**                                        | cr                          |
 
-Deliverable, asset, working file and design are four different things and are never merged.
+Deliverable, asset, working file, design board, round and client version are distinct things and are never merged.
 `features/workspace/` keeps its directory name because it is the application shell, not a client
 record; "workspace" survives in the shell's own chrome (the navigation landmark, the shell's loading
 and connection states) and nowhere else.
@@ -462,10 +455,10 @@ For each check, record application revision, environment, seed revision, authent
 - [ ] Board, implemented alternate views, search, filters, empty states, campaign creation, and project inspection work with the seeded portfolio.
 - [ ] All supported briefing types and fields have meaningful coverage, including draft recovery, attachments, submission, adjusted quotes, insufficient credits, and repeated acceptance.
 - [ ] Every project status and authorized transition is covered; invalid and unauthorized transitions fail with clear feedback.
-- [ ] Designs, multiple versions, multiple designs per version, publication snapshots, internal/client comments, pin placement, thread selection, carousel, zoom, and persistent reload are covered.
+- [ ] Design boards, rounds, client versions, internal/client comments, and persistent reload are covered.
 - [ ] Client isolation and designer confidentiality are verified in visible UI, accessible text, responses, storage access, search, notifications, and shared links.
 - [ ] Approval, revision, delivery, real uploads/downloads, credits, brand updates, global actions, and settings are exercised through their real persistence paths; any exposed reports, CSV, or personal drafts are also verified.
-- [ ] Desktop visual review covers the implemented agency workspace, board, project/design viewer, briefing, credits, brand resources, client review, and designer work at 1600 × 1000; intentional consolidation is documented rather than treated as a screenshot mismatch.
+- [ ] Desktop visual review covers the implemented agency workspace, board, project Miro workspace, briefing, credits, brand resources, client review, and designer work at 1600 × 1000; intentional consolidation is documented rather than treated as a screenshot mismatch.
 - [ ] Responsive checks cover every viewport above, 200% zoom, long-content fixtures, empty states, errors, and active dialogs/inspectors.
 - [ ] Alignment: headings, rows, toolbar baselines, panel edges, sidebar selection, and breadcrumbs follow shared geometry; no accidental one-off offsets remain.
 - [ ] Spacing: controls, cards, forms, comment threads, and section gaps use the documented scale; scroll areas and sticky controls do not obscure content.
@@ -475,12 +468,14 @@ For each check, record application revision, environment, seed revision, authent
 - [ ] Accessibility: contrast, focus, keyboard actions, target sizes, announcements, and image/field labels have measured/manual evidence rather than visual assumptions.
 - [ ] Every found defect has a severity, owner, correction, and retest; no unresolved blocking functional, permission, data-integrity, or layout defect is silently waived.
 
-Implementation verification and remaining gates are recorded in the [September 20 design audit](../verification/design-audit.md). Mobile project artwork and comments currently stack vertically in a bounded canvas followed by the feedback panel; this is the implemented responsive consolidation.
+Implementation verification and remaining gates are recorded in the [September 20 design audit](../verification/design-audit.md). On mobile the project's Miro embed and its side panel currently stack vertically in a bounded canvas followed by the feedback panel; this is the implemented responsive consolidation.
 
 ## Canvas grid and navigation
 
-All four xyflow surfaces use the shared `CanvasBackground`: the client board,
-project board, single-design viewer and Playground. The Playground's darker
+Both remaining xyflow surfaces — the client board's Canvas view and Playground —
+use the shared `CanvasBackground`. The project page has no xyflow canvas: production
+work happens on the embedded Miro board (see [Board canvas and project Miro
+workspace](#board-canvas-and-project-miro-workspace) above). The Playground's darker
 surface distinguishes the overlaid workspace; its toolbar and inspector retain
 their existing readable surfaces. SVG patterns have unique IDs when two canvases
 are mounted together.
@@ -488,12 +483,6 @@ are mounted together.
 Scroll and trackpad gestures pan freely in both axes at native delta speed;
 pinching zooms. Empty-space dragging remains immediate and follows the pointer.
 The shared zoom pill (zoom out, live zoom level, zoom in, fit) animates over 200 ms and honors reduced motion. The
-board keeps its custom readable fit; project, design and Playground retain their
-own zoom ranges and selection/pin behavior. No CSS transition is applied to the
-viewport transform, avoiding drag lag and pin drift.
-
-## Passive video tiles and playback
-
-Project-design previews and the client board show a quiet Video indicator instead of mounting a video decoder or attempting to render an MP4/WebM as an image. The existing design/project title and selected version identify the item. Opening the design loads one private player with native transport controls. A signed-URL renewal retains the same media element and restores playhead, speed and paused/playing state. Temporal pin actions remain unavailable until metadata and any restoring seek complete, preventing feedback against a temporary zero playhead. Image previews retain their existing behavior. Network-budget and playback checks are recorded in the [integration report](../verification/project-playground-video-2026-09-23.md).
-
-The single-design viewer refits artwork on actual canvas-size changes so desktop/mobile resizing and sidebar transitions keep it fully visible and readable. This fit can recover from an intermediate narrow size and caps zoom at 1. Playback, comments and ordinary rerenders preserve manual pan/zoom.
+board keeps its custom readable fit; Playground retains its own zoom range and
+selection behavior. No CSS transition is applied to the viewport transform,
+avoiding drag lag.

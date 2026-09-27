@@ -38,17 +38,16 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Grant/adjust credits | Agency administrator, audited | No | No |
 | Designer assignment and staff directory | Scoped agency capability | Never | Own assignment only |
 | Project properties/status | Valid agency transitions | Client review commands only | Valid production transitions on assigned work |
-| Read internal versions/designs | Scoped | No | Assigned work |
-| Upload design/create version | Scoped | No | Assigned work |
-| Submit design/version to agency | Scoped internal workflow | No | Assigned work |
-| Publish immutable client version | Agency only | No | No |
-| Read a version's Miro frame link | Both boards, scoped | Client board, published versions only | Internal board, assigned work only |
+| Read internal rounds (design board history) | Scoped | No | Assigned work |
+| Create a design board / send a round | Scoped | No | Assigned work (own board only) |
+| Send a round to the studio | Scoped internal workflow | No | Assigned work |
+| Share an immutable client version (Miro link + note) | Agency only | No | No |
+| Read a version's Miro frame link | Both boards, scoped | Client board, own shared client versions only | Internal board, assigned work only |
 | Set/change/remove a Miro frame link | Agency only | No | No |
-| Read published version | Scoped | Own client | Assigned work if needed for production, without client messages |
-| Client-channel project/design comments | Read/write as Studio | Read/write own client | No |
-| Internal-channel project/design comments | Read/write | Never | Read/write assigned work |
-| Pinned design comments | Authorized design and channel | Published design and client channel | Assigned design and internal channel |
-| Client approval/change request | Manage workflow; do not impersonate client | Published review only | No |
+| Read a client version | Scoped | Own client | Assigned work if needed for production, without client messages |
+| Client-channel project comments | Read/write as Studio | Read/write own client | No |
+| Internal-channel project comments | Read/write | Never | Read/write assigned work |
+| Client approval/change request | Manage workflow; do not impersonate client | Own shared client version only | No |
 | Agency internal approval/change request | Scoped | No | Receive internal result |
 | Attach and publish delivery files/mark delivered | Agency only | No | Prepare internal files only |
 | Download production files | Scoped | Published/delivered files only | Assigned production files |
@@ -65,13 +64,13 @@ The source [permissions guide](../ref/00-guia/PERFIS-E-PERMISSOES.md) and [contr
 
 ## Client-facing projection
 
-Client payloads contain only authorized public project metadata, approved briefing scope and credit information, published design snapshots, client-channel conversation, approved brand resources, client-safe activity, and the client's own role-scoped Playground content and personal board preferences. Agency messages are presented as **Studio**.
+Client payloads contain only authorized public project metadata, approved briefing scope and credit information, shared client versions (a Miro link and a note), client-channel conversation, approved brand resources, client-safe activity, and the client's own role-scoped Playground content and personal board preferences. Agency messages are presented as **Studio**.
 
-Never serialize designer names, avatars, emails, staff membership IDs, assignment relations, internal author metadata, internal comments, unpublished versions, internal notes, internal activity, internal notification counts, or storage paths containing private identity. Do not fetch these fields and hide them with CSS. Apply the restriction to nested relations, search results, reports, CSV, notifications, realtime events, error details, file names, downloadable file metadata, and browser caches.
+Never serialize designer names, avatars, emails, staff membership IDs, assignment relations, internal author metadata, internal comments, unshared rounds/client versions, internal notes, internal activity, internal notification counts, or storage paths containing private identity. Do not fetch these fields and hide them with CSS. Apply the restriction to nested relations, search results, reports, CSV, notifications, realtime events, error details, file names, downloadable file metadata, and browser caches.
 
-A published design uses immutable file content and sanitized customer-visible metadata. Internal editing does not replace its bytes or mutate its snapshot. Publishing a later revision creates a new publication and keeps review/comment history bound to the prior publication. Client summaries may show that work is in progress before anything is published, with an explicit **Not shared yet** state; they must not include production design payloads.
+A shared client version is immutable: it carries only its own Miro link and note. Internal work on a later round does not replace or mutate an already-shared client version. Sharing a later round creates a new client version and keeps review/comment history bound to the prior one. Client summaries may show that work is in progress before anything is shared, with an explicit **Not shared yet** state; they must not include internal round/board content.
 
-Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, assigned production versions, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
+Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, their assigned design board's rounds, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
 
 ## Playground and presentation preferences
 
@@ -85,13 +84,13 @@ The selected board view belongs to one viewer and client. `board_preferences` RL
 
 A version can point at a frame on a Miro board. The client board and the internal board are two tables under two read rules: `publication_miro_links` follows `private.can_client_channel` (agency and the client's people) and `design_version_miro_links` follows `private.can_produce` (agency and assigned designers). A client never receives an internal board and a designer never receives a client board. Only the agency writes, through RPCs that call `private.assert_agency()` and store only the parsed board and frame ids. A new client link prefills only from an earlier publication and an internal link only from an earlier internal version, so the two never cross in the dialog. The product does not control what a Miro board contains: the agency must keep designer identity, internal notes and unpublished work off the client board. See [backend contracts](backend.md).
 
-## Comments and pins
+## Comments
 
 Each conversation has an explicit channel: `client` for Client ↔ Studio, or `internal` for Designer ↔ Agency. The backend resolves the permissible channel from the caller and resource. An agency user explicitly chooses a channel; changing channels clears or restores only the matching channel's draft.
 
-A design thread identifies workspace, client, project, version or publication, design or published design, and channel. A project conversation omits the design anchor but retains project and channel. Every referenced parent must belong to the same authorized hierarchy. A pending pin becomes visible to others only when its comment is successfully persisted. Coordinates are normalized in the design's own bounds. A client comment references a published design, never an internal version by guessed ID.
+A comment thread identifies workspace, client, project, channel and, optionally, a round (`internal_comments.version_id`) or a client version (`client_comments.publication_id`); since `202609270007` neither table carries a design or pin anchor. A project conversation omits that round/version scope but retains project and channel. Every referenced parent must belong to the same authorized hierarchy. A client comment references a client version, never an internal round by guessed ID.
 
-Authors are set from the authenticated identity. Comments cannot carry a forged author, role, tenant, design, or channel. Client-safe author presentation is a server-controlled projection. Text and links are rendered safely; messages and uploaded metadata never become executable HTML.
+Authors are set from the authenticated identity. Comments cannot carry a forged author, role, tenant, round/version, or channel. Client-safe author presentation is a server-controlled projection. Text and links are rendered safely; messages never become executable HTML.
 
 ## Product decisions
 
@@ -125,7 +124,7 @@ writing until it expires on its own.
 
 **Measurement.** Acceptance family C signed a client in, called `logout?scope=global`, and then used
 the same access token: `/auth/v1/user` answered `403` and the refresh token was gone, while
-`/rest/v1/clients`, `projects`, `published_designs`, `client_comments`, `credit_accounts`,
+`/rest/v1/clients`, `projects`, `published_versions`, `client_comments`, `credit_accounts`,
 `notifications` and `brand_sections` all answered `200`, and `rpc/post_comment` created a row. The
 access token's expiry is therefore the entire post-sign-out exposure window.
 
@@ -167,7 +166,7 @@ knob.
 | Command | Authorization and invariant |
 |---|---|
 | Accept briefing | Agency; same-client campaign; submitted immutable scope; valid quote and explanation; sufficient balance; one transaction creates exactly one project and one debit. Duplicate or concurrent requests return the original result or fail without partial records. |
-| Publish version | Agency; version belongs to the project; snapshot contains only intended designs and immutable authorized files; no internal identities/channels; publication/review/event written consistently. |
+| Share client version | Agency; client version belongs to the project; contains only its Miro link and note, no internal identities/channels; version/review/event written consistently. |
 | Submit review | Authorized reviewer and pending review; targeted publication/version is current for that review; one terminal decision; change request includes actionable feedback. |
 | Mark delivered | Agency; required client approval exists for the delivered publication; all advertised files exist and are authorized; delivery is durable and idempotent. |
 | Allocate credits | Agency administrator or verified settlement worker; positive validated amount; immutable ledger reason/reference; idempotency key; no browser service secret. |

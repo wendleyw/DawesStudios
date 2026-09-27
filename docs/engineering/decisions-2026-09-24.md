@@ -5,6 +5,13 @@ plan kept a ledger; this file preserves every ruling (a decision where the plan,
 disagreed, with what it costs if wrong) and every minor review finding deferred rather than fixed, in
 the order they were made. The ledgers themselves were scratch files.
 
+**Superseded (2026-09-27).** The "Video upload lifecycle" and "Bulk image drop" sections below rule
+on the legacy per-deliverable Versions model — `design_versions`, `published_versions`, `designs`,
+`publish_version`, video-design uploads and their artwork/bulk-drop UI — which migrations
+`202609270007`/`202609270008` later retired in favor of the Miro workspace (design boards, rounds
+and project-level client versions; see `docs/architecture/backend.md`). Read both sections as a
+historical record of decisions made at the time, not as current behavior.
+
 ## Video upload lifecycle
 
 Plan: `docs/superpowers/plans/2026-09-23-video-upload-lifecycle.md`.

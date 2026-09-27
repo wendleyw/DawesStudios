@@ -4,11 +4,17 @@ Status: in progress. The current objective is a complete, tested production-orie
 
 ## Current continuation (2026-09-23)
 
+**Superseded.** This section and its dated integration runs predate the Miro workspace, monthly
+credits and the retirement of the legacy per-deliverable Versions model (migrations `202609270007`/
+`202609270008`); read them as historical milestones only. Current backend/permissions behavior is
+described in [backend.md](backend.md) and [permissions.md](permissions.md); current status is
+[handoff.md](../engineering/handoff.md).
+
 The original stage table and integration run below are historical milestones. The current checkpoint is [handoff.md](../engineering/handoff.md): the video branch is merged, Team management is implemented and verified, and the matrix currently records 110 Verified requirements of 111 (J10 open; I01 closed by the 2026-09-23 lifecycle preservation run). That count summarizes recorded evidence and is not production readiness. The local fixture is 10 clients/25 projects. See the [integration report](../verification/team-and-startup-2026-09-23.md) for completed changes, current evidence and remaining work, and the [reconciliation](../engineering/handoffs/2026-09-23-codex-continuity-reconciliation.md) for the original interrupted state.
 
 The preceding feature objective, [Playground and board widgets](playground-and-board-widgets.md), is implemented and verified: role-isolated brainstorm canvases above client/project/upload surfaces and the original independent Timeline/Kanban choices, now superseded by the [five-view board](../../apps/web/features/board/README.md). The [feature report](../verification/playground-and-widgets-2026-09-23.md) records the final 558 source tests, 316 database assertions, 49/49 browser tests, HTTP/media verification and manual desktop/mobile audit. The 111-row product matrix predates this request; all eight additional feature acceptance checks are verified separately. The broader J10/video follow-ups and production configuration remain open. Do not infer full-product release readiness from closing this feature.
 
-The [project-only Playground layer and video optimization revision](project-playground-and-video-optimization.md) is implemented and verified locally. Its [integration report](../verification/project-playground-video-2026-09-23.md) records project/role isolation, nonmodal down/up transitions, preserved upload state, zero passive video downloads, single-pass upload hashing and responsive playback. Final source tests pass 593 cases; the full browser suite passed 51, followed by seven focused checks after the last viewport correction. Preserve the four user Playground boards, 32 items and 149 stored files recorded in the current checkpoint; the former empty-feature baseline is historical. Next work is video attempt recovery/cancellation/staging cleanup, followed by the broader J10 release audit and production configuration.
+The project-only Playground layer and video optimization revision recorded here was implemented and verified locally at the time (historical [integration report](../verification/project-playground-video-2026-09-23.md)): project/role isolation, nonmodal down/up transitions, preserved upload state, zero passive video downloads, single-pass upload hashing and responsive playback. The video-design feature this evidence covers no longer exists: designs, pins and the design-upload dialog were retired along with the legacy per-deliverable Versions model (see [backend.md](backend.md)), and Playground now opens from the project's own toolbar button (see the [feature README](../../apps/web/features/playground/README.md)).
 
 ## Product direction
 
@@ -21,7 +27,7 @@ Build Creative Canvas for Brianna Dawes Studios with xyflow, a minimalist modern
 | 1. Architecture and orchestration | Orchestrator + architecture agent | Domain, routes, permissions, design principles, acceptance matrix and reporting protocol | In progress |
 | 2. Backend foundation | Backend agent | Supabase configuration, migrations, RLS, transactional RPCs, immutable publications, seeds and integration tests | In progress |
 | 3. App foundation | Orchestrator | Typed React app, auth/session, feature boundaries, shell, route handling, shared UI, tooling | In progress |
-| 4. Core collaboration | Orchestrator | Client board, projects, design/version canvas, pins, comments, agency publishing, review and delivery | In progress |
+| 4. Core collaboration | Orchestrator | Client board, projects, Miro design boards/rounds, client versions, comments, agency sharing, review and delivery | In progress |
 | 5. Intake and accounting | Product architecture agent | Service catalog, briefing wizard, explicit campaigns, budget review, idempotent acceptance, credits/report/CSV | In progress |
 | 6. Supporting domains | Product and design agents | Brand Hub asset folders, retained private draft editing, uploads, assets, settings, invitations, search and notifications | In progress |
 | 7. Functional and isolation audit | Independent reviewer + orchestrator | Exactly 10 clients and 25 seeded projects, complete flows, concurrency, failure cases, persistence, access boundaries | In progress |

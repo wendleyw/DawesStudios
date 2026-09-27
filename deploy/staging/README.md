@@ -205,7 +205,9 @@ staging media worker (`MEDIA_PORT`, 56014) under the agency session, so each cov
 attested, and it attaches the delivery PDF (`fixture_media.delivery_pdf`) and marks that project
 delivered, as the local provisioning does. It exits non-zero unless the counts are 10 / 25.
 Verified 2026-09-27 on the Miro-model seed: `verify_seed.py --staging` PASS with 29 boards, 30
-rounds, 22 client versions, 25 covers (14 client-visible) and 110 file downloads.
+rounds, 22 client versions, 4 Drive links, 25 covers (14 client-visible) and 110 file downloads;
+the four canonical Playwright specs (`canonical-workspaces`, `workspace`, `design-audit`,
+`workspace-actions`) passed 7/7 against this staging seed the same day.
 
 **Pointing the browser suite at staging.** `apps/web/tests/e2e/test-support.ts` uses
 `supabase/.env.local` only for the local stack. When `ACCEPTANCE_SUPABASE_URL` declares another

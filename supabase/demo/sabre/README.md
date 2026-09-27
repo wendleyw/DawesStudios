@@ -138,18 +138,23 @@ npx playwright test tests/e2e/sabre-demo.spec.ts --project=chromium
 ```
 
 The browser suite skips unless the optional overlay is complete. It restores board preferences.
-The HTTP audit downloads all published media and released finals, verifies role isolation,
-reconciles credits, checks all original file hashes and reconstructs all 35 original public-table
-digests around the intentional SABRE changes. Its exact-count/integrity assertions describe the
-initial demonstration; later user edits may require a new reviewed evidence checkpoint.
+The HTTP audit is rewritten for the Miro model: one design board per assigned designer, the
+`miro_history` status mapping, Miro links, covers, client/designer isolation, reconciled credits and
+the recorded Drive links, allowing at most one hand-edited exception (`Retail Partner Introduction`,
+kept as a "test" project by the backfill). It writes its report to
+`supabase/.local/sabre-demo/http-report.json`, not `docs/verification/`. The original 2026-09-23
+baseline's file-hash and 35-table-digest checks are dropped: they are unreproducible after the
+`202609270007`/`202609270008` retirement migrations deleted the legacy Versions rows and objects
+those digests covered.
 
 Canonical seed verification and browser tests that assert seven SABRE projects belong to the
 canonical baseline. Do not weaken those assertions or reset this demonstration to make them pass.
-See the [verification record](../../../docs/verification/sabre-demo-2026-09-23.md).
+See the [verification record](../../../docs/verification/sabre-demo-2026-09-23.md) for the original
+2026-09-23 evidence and the [Phase 5 task 2 report](../../../.superpowers/sdd/2026-09-27-retire-versions-phase-5/task-2-report.md)
+for the current Miro-model re-verification.
 
 `test_sabre_demo.py`, `sabre_demo_http_test.py` and `sabre-demo.spec.ts` are owned outside this
-package. The HTTP audit and browser suite still assert the retired designs and published designs
-and must be moved to the Miro model before they can pass again.
+package.
 
 To remove only this demonstration when it is no longer needed:
 

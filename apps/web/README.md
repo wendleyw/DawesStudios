@@ -26,7 +26,7 @@ Fill in the URL and keys for the local Supabase instance described in the [backe
 | `SUPABASE_SERVICE_ROLE_KEY`     | Server-only credential used by the agency invitation endpoint. Never expose it with a `NEXT_PUBLIC_` prefix.                                               |
 | `SUPABASE_INTERNAL_URL`         | Optional server-accessible Supabase API URL for invitations. Containers use `http://host.docker.internal:55421` locally; otherwise the public URL is used. |
 
-Start Supabase and provision local fixture accounts using the backend guide. Run the [trusted media service](../media/README.md) for publishing uploaded artwork and preparing delivery files.
+Start Supabase and provision local fixture accounts using the backend guide. Run the [trusted media service](../media/README.md) for preparing project covers and delivery files.
 
 ```bash
 npm run dev
@@ -123,7 +123,7 @@ The production image uses Next.js standalone output with the repository as the t
 - `tests/`: test setup and browser scenarios.
 - `public/brand/`: application branding.
 
-The [board feature](features/board/README.md) owns five mutually exclusive views and per-viewer/client preferences. The [Playground feature](features/playground/README.md) provides persistent, role-isolated brainstorming canvases inside each project, with a layer rising from the bottom over the entire viewport and a preserved return to the design upload form. Their focused browser checks run with `npm --prefix apps/web run test:e2e -- playground board-views` from the repository root against the running local stack.
+The [board feature](features/board/README.md) owns five mutually exclusive views and per-viewer/client preferences. The [Playground feature](features/playground/README.md) provides persistent, role-isolated brainstorming canvases inside each project, with a layer rising from the bottom over the entire viewport, opened from the project's own Playground toolbar button. Their focused browser checks run with `npm --prefix apps/web run test:e2e -- playground board-views` from the repository root against the running local stack.
 
 Vitest remains the unit test runner and uses Vite internally; the web application itself builds and runs through Next.js.
 
@@ -131,18 +131,16 @@ Next.js agent-rule generation is disabled in `next.config.ts`; shared project in
 
 See the [Next.js CLI reference](https://nextjs.org/docs/app/api-reference/cli/next) for the underlying development, build, production and type-generation commands.
 
-Video cards on project and client boards stay lightweight: they load playback only after opening a design. The viewer preserves position and playback state through signed-URL renewal; time-based pin actions wait for the restored frame. Run `npm --prefix apps/web run test:e2e -- video-loading video-designs` from the root for the loading budget, renewal and real three-role video workflow. See the [integrated verification](../../docs/verification/project-playground-video-2026-09-23.md) for measured scope and limits.
-
-Client destinations appear as visible text links beside the board’s quarter selector and at the top of all other client pages, with an underline on the active section. They wrap on small screens and never duplicate in the sidebar. Global navigation and client switching remain in the sidebar. Project canvases use Add design tiles beside artwork and Add version rows below versions; agency actions from the shared tab open Working files and preserve published snapshots. See the [project feature](features/projects/README.md).
+Client destinations appear as visible text links beside the board’s quarter selector and at the top of all other client pages, with an underline on the active section. They wrap on small screens and never duplicate in the sidebar. Global navigation and client switching remain in the sidebar. Each project page embeds its design board's rounds (Working files) or a shared client version (Shared with client) directly from Miro; agency actions from the shared tab share a new client version — a Miro link and a note — without mutating an earlier one. See the [project feature](features/projects/README.md).
 
 The client board replaces its full-width title with floating client identity/quarter and signed-in profile cards. Quarter filters start at All periods and keep undated work visible. It uses a floating left toolbar (bottom on small/short screens) for search, filters and five icon views: Canvas, List, Timeline, Kanban and Calendar. Each uses the same scoped projects and filters, fills the available work area, and saves the selected view per viewer/client. See the [board feature](features/board/README.md) for calendar date semantics, responsive sizing and verification commands.
 
 The Next.js development indicator is disabled in `next.config.ts` so its fixed overlay cannot cover mobile board controls. Framework diagnostics remain available in the development terminal.
 
 Client surfaces share a notification bell immediately left of the profile. It opens an animated
-popover below the account card, with recipient-scoped activity and explicit read controls. Project
-review uses desktop double-click (single touch/keyboard activation supported), a compact title with
-inline status/date, a deliverable toolbar with Playground, and a larger feedback history. Assets in
+popover below the account card, with recipient-scoped activity and explicit read controls. The
+project page's own floating tool bar carries Details, Conversation, Feedback (once a round or
+client version is open) and Playground, with a compact title showing inline status/date. Assets in
 Brand Hub now supports client-scoped folders; Templates is removed from navigation while existing
 data and direct private draft URLs are preserved. See the
 [current verification](../../docs/verification/client-polish-and-brand-folders-2026-09-23.md).

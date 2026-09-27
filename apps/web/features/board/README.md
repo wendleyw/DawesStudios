@@ -48,7 +48,7 @@ Migration `202609230008` adds the view column without rewriting project data or 
 
 ## Playground
 
-Playground belongs to individual projects and roles; the client board has no Playground entry. Open a project to use its brainstorming layer. See the [project Playground contract](../../../../docs/architecture/project-playground-and-video-optimization.md).
+Playground belongs to individual projects and roles; the client board has no Playground entry. Open a project to use its brainstorming layer. See the [Playground feature contract](../../../../docs/architecture/playground-and-board-widgets.md).
 
 ## Data and verification
 
