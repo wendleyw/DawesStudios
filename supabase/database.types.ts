@@ -1464,6 +1464,45 @@ export type Database = {
           },
         ]
       }
+      project_covers: {
+        Row: {
+          client_visible: boolean
+          project_id: string
+          storage_path: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          client_visible?: boolean
+          project_id: string
+          storage_path: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          client_visible?: boolean
+          project_id?: string
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_covers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_covers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           board_position: Json
@@ -1939,6 +1978,7 @@ export type Database = {
         Args: { p_designer_id: string; p_project_id: string }
         Returns: undefined
       }
+      clear_project_cover: { Args: { p_project_id: string }; Returns: string }
       clear_publication_miro_link: {
         Args: { p_publication_id: string }
         Returns: undefined
@@ -2236,6 +2276,18 @@ export type Database = {
       }
       set_client_notifications: {
         Args: { p_all: boolean; p_client_id: string }
+        Returns: undefined
+      }
+      set_project_cover: {
+        Args: {
+          p_client_visible?: boolean
+          p_project_id: string
+          p_storage_path: string
+        }
+        Returns: string
+      }
+      set_project_cover_visibility: {
+        Args: { p_client_visible: boolean; p_project_id: string }
         Returns: undefined
       }
       set_publication_miro_link: {
