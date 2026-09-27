@@ -49,6 +49,7 @@ import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
 import { usesWorkspace } from "./miro-workspace";
 import { ProjectWorkspace } from "./project-workspace";
+import { usePanelFocusReturn } from "./use-panel-focus-return";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
 import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-strip";
 
@@ -80,8 +81,18 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const data = useProjectDetail(projectId, channel);
   // RLS limits a designer to their own boards; the client channel never reads boards at all.
   const boards = useDesignBoards(projectId, profile?.role !== "client" && channel === "internal");
-  // The agency may step back to the Versions canvas on a project that still has legacy versions.
+  // The agency may step back to the Versions canvas on a project that still has legacy versions;
+  // the choice lasts until the channel changes.
   const [legacyChosen, setLegacyChosen] = useState(false);
+  // `?view=versions` asks for the legacy canvas for every role. Read once: the URL effect below
+  // drops `view` when no Miro link exists, and the request must outlive that.
+  const [legacyRequested, setLegacyRequested] = useState(
+    () => readProjectView(parameters).view === "versions",
+  );
+  function switchChannel(next: ProjectChannel) {
+    setLegacyChosen(false);
+    setAgencyChannel(next);
+  }
   const commentCounts = useVersionCommentCounts(projectId, channel);
   // Only the agency needs a working target while viewing published snapshots. Client sessions
   // never enable this read, and publication IDs are never used as production version IDs.
@@ -90,21 +101,15 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     "internal",
     profile?.role === "agency" && channel === "client",
   );
-  const [panel, setPanel] = useState<ProjectPanelKind | null>(null);
-  const panelTrigger = useRef<HTMLElement | null>(null);
-  function closePanel() {
-    setPanel(null);
-    requestAnimationFrame(() => panelTrigger.current?.focus({ preventScroll: true }));
-  }
+  const {
+    panel,
+    setPanel,
+    closePanel,
+    changePanel: switchPanel,
+  } = usePanelFocusReturn<ProjectPanelKind>();
   function changePanel(next: ProjectPanelKind | null) {
-    if (!next) {
-      closePanel();
-      return;
-    }
-    panelTrigger.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setAssetStripOpen(false);
-    setPanel(next);
+    if (next) setAssetStripOpen(false);
+    switchPanel(next);
   }
   const [selected, setSelected] = useState<{ designId?: string; versionId: string } | null>(null);
   const [format, setFormat] = useState("");
@@ -236,14 +241,26 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     (boards.fetchStatus !== "idle" && boards.isPending)
   )
     return <PageStatus>Loading the project…</PageStatus>;
-  if (data.error || !data.data)
+  // A failed board read is never taken for "no boards": that would show the wrong body.
+  if (data.error || !data.data || boards.error)
     return (
       <div className="page-content">
         <h1>Project unavailable.</h1>
         <p>This project is unavailable or you do not have access.</p>
-        <Link className="button" href="/home">
-          Back to your work
-        </Link>
+        <div className="form-actions">
+          <button
+            className="button"
+            onClick={() => {
+              void data.refetch();
+              if (boards.error) void boards.refetch();
+            }}
+          >
+            Try again
+          </button>
+          <Link className="button" href="/home">
+            Back to your work
+          </Link>
+        </div>
       </div>
     );
   const workspace = usesWorkspace(channel, {
@@ -251,12 +268,12 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     boards: boards.data ?? [],
   });
   const legacyAvailable = data.data.versions.some((version) => version.deliverableId !== null);
-  if (workspace && !legacyChosen)
+  if (workspace && !legacyChosen && !legacyRequested)
     return (
       <ProjectWorkspace
         projectId={projectId}
         channel={channel}
-        onChannel={setAgencyChannel}
+        onChannel={switchChannel}
         data={data.data}
         boards={boards.data ?? []}
         viewControl={
@@ -470,7 +487,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
           setSelected(null);
           setMiroVersionId(null);
           setAssetStripOpen(false);
-          setAgencyChannel(next);
+          switchChannel(next);
         }}
         onFormat={setFormat}
         playgroundOpen={playgroundOpen}
@@ -480,7 +497,13 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         miroAvailable={linked.length > 0}
         workspaceControl={
           profile?.role === "agency" && workspace ? (
-            <button className="button quiet" onClick={() => setLegacyChosen(false)}>
+            <button
+              className="button quiet"
+              onClick={() => {
+                setLegacyChosen(false);
+                setLegacyRequested(false);
+              }}
+            >
               Miro workspace
             </button>
           ) : undefined

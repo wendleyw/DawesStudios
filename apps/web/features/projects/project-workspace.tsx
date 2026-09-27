@@ -14,6 +14,7 @@ import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar } from "./project-tool-bar";
+import { usePanelFocusReturn } from "./use-panel-focus-return";
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { MiroEmbed, MiroReviewBar } from "./miro-view";
 import { MiroWorkspaceBar } from "./miro-workspace-bar";
@@ -59,7 +60,7 @@ export function ProjectWorkspace({
   const [boardId, setBoardId] = useState<string | null>(null);
   const [roundId, setRoundId] = useState<string | null>(null);
   const [versionId, setVersionId] = useState<string | null>(null);
-  const [panel, setPanel] = useState<ProjectPanelKind | null>(null);
+  const { panel, setPanel, closePanel, changePanel } = usePanelFocusReturn<ProjectPanelKind>();
   const [action, setAction] = useState<ProjectAction | null>(null);
   const [assetStripOpen, setAssetStripOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -81,8 +82,20 @@ export function ProjectWorkspace({
   const shared = sharedVersions(versions);
   const version = pickById(shared, versionId);
   const internal = channel === "internal";
+  const client = clients.data?.find((item) => item.id === project.client_id);
   const shownLink = internal ? (round?.miro ?? board?.miro ?? null) : (version?.miro ?? null);
   const feedbackTarget = internal ? round : version;
+  // Feedback belongs to the round or version on screen; once none is (back to the board, another
+  // board), the panel closes rather than holding feedback for something no longer shown. Adjusted
+  // during render, as `project-page.tsx` does for its own derived state.
+  if (panel === "feedback" && !feedbackTarget) setPanel(null);
+  function closePlayground() {
+    setPlaygroundOpen(false);
+    requestAnimationFrame(() => {
+      if (document.activeElement === document.body)
+        playgroundTrigger.current?.focus({ preventScroll: true });
+    });
+  }
   useFoldSidebarWhile(!!shownLink);
 
   const back = (
@@ -104,6 +117,7 @@ export function ProjectWorkspace({
           aria-pressed={channel === option}
           onClick={() => {
             setPanel(null);
+            setAssetStripOpen(false);
             onChannel(option);
           }}
         >
@@ -134,10 +148,7 @@ export function ProjectWorkspace({
       style={{ "--project-chrome-height": `${chromeHeight}px` } as CSSProperties}
     >
       <div className="project-chrome" ref={setChrome}>
-        {(() => {
-          const client = clients.data?.find((item) => item.id === project.client_id);
-          return client ? <CanvasHeader client={client} viewer={profile} /> : null;
-        })()}
+        {client && <CanvasHeader client={client} viewer={profile} />}
         <MiroWorkspaceBar
           back={back}
           title={project.title}
@@ -183,15 +194,15 @@ export function ProjectWorkspace({
               <ProjectToolBar
                 panel={panel}
                 onPanel={(next) => {
-                  setAssetStripOpen(false);
-                  setPanel(next);
+                  if (next) setAssetStripOpen(false);
+                  changePanel(next);
                 }}
                 disabled={playgroundOpen}
                 feedback={
                   feedbackTarget
                     ? {
                         open: panel === "feedback",
-                        onToggle: () => setPanel(panel === "feedback" ? null : "feedback"),
+                        onToggle: () => changePanel(panel === "feedback" ? null : "feedback"),
                       }
                     : undefined
                 }
@@ -201,11 +212,14 @@ export function ProjectWorkspace({
                   ref={playgroundTrigger}
                   title="Playground"
                   aria-label="Playground"
-                  aria-expanded={assetStripOpen}
+                  aria-expanded={shownLink ? assetStripOpen : playgroundOpen}
                   disabled={playgroundOpen}
                   onClick={() => {
+                    // The asset strip lives on the Miro embed; with nothing on Miro yet the
+                    // Playground opens directly, as on the legacy canvas.
                     setPanel(null);
-                    setAssetStripOpen((open) => !open);
+                    if (shownLink) setAssetStripOpen((open) => !open);
+                    else setPlaygroundOpen(true);
                   }}
                 >
                   <Lightbulb size={18} />
@@ -255,13 +269,13 @@ export function ProjectWorkspace({
           </div>
         </div>
         {!playgroundOpen && panel && (
-          <ProjectPanel key={panel} onClose={() => setPanel(null)}>
+          <ProjectPanel key={panel} onClose={closePanel}>
             {panel === "conversation" && (
               <CommentPanel
                 key={channel}
                 projectId={projectId}
                 channel={channel}
-                onClose={() => setPanel(null)}
+                onClose={closePanel}
               />
             )}
             {panel === "details" && (
@@ -269,7 +283,7 @@ export function ProjectWorkspace({
                 project={project}
                 deliverables={deliverables}
                 versions={versions}
-                onClose={() => setPanel(null)}
+                onClose={closePanel}
               />
             )}
             {panel === "feedback" && feedbackTarget && (
@@ -279,7 +293,7 @@ export function ProjectWorkspace({
                 channel={channel}
                 versionId={feedbackTarget.id}
                 heading="Feedback"
-                onClose={() => setPanel(null)}
+                onClose={closePanel}
               />
             )}
           </ProjectPanel>
@@ -288,7 +302,7 @@ export function ProjectWorkspace({
           <PlaygroundBoard
             clientId={project.client_id}
             projectId={projectId}
-            onClose={() => setPlaygroundOpen(false)}
+            onClose={closePlayground}
             returnLabel="Back to project"
           />
         )}
@@ -297,6 +311,8 @@ export function ProjectWorkspace({
         key={projectActionKey(action)}
         action={action}
         projectId={projectId}
+        // Only the design actions (legacy canvas only) suspend for or open the Playground; none
+        // is dispatched here, so these are inert placeholders for the shared dialog's props.
         suspended={false}
         onOpenPlayground={() => setPlaygroundOpen(true)}
         onClose={() => setAction(null)}

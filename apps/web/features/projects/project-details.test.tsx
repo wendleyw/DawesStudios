@@ -127,6 +127,17 @@ describe("ProjectDetails version history", () => {
     expect(screen.getByText("Sep 18 · Changes requested")).toBeInTheDocument();
   });
 
+  it("labels Miro-workspace rounds and shared versions without a deliverable name", () => {
+    renderDetails([
+      version({ id: "r3", deliverableId: null, boardId: "board-1", number: 3 }),
+      version({ id: "s1", deliverableId: null, number: 1, date: "2026-09-19T00:00:00Z" }),
+      version({ id: "v2", date: "2026-09-18T00:00:00Z" }),
+    ]);
+    expect(screen.getByText("Round 3")).toBeInTheDocument();
+    expect(screen.getByText("V1")).toBeInTheDocument();
+    expect(screen.getByText("Portrait Feed · V2")).toBeInTheDocument();
+  });
+
   it("tells the client a former member decided", () => {
     state.role = "client";
     renderDetails([

@@ -75,6 +75,10 @@ describe("MiroWorkspaceBar in Working files", () => {
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
   });
+  it("leaves adding the first board to the empty state", () => {
+    render(<MiroWorkspaceBar {...props({ boards: [], board: null, rounds: [] })} />);
+    expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
+  });
   it("hides Share with client until a round is shown", () => {
     render(<MiroWorkspaceBar {...props({ round: null })} />);
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
@@ -89,6 +93,10 @@ describe("MiroWorkspaceBar in Shared with client", () => {
     expect(screen.getByText("Due Sep 30")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New client version" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
+  });
+  it("leaves the first client version to the empty state", () => {
+    render(<MiroWorkspaceBar {...props({ channel: "client", shared: [], version: null })} />);
+    expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
   });
   it("gives the client no agency controls", () => {
     render(<MiroWorkspaceBar {...props({ channel: "client", role: "client", viewerId: "c" })} />);

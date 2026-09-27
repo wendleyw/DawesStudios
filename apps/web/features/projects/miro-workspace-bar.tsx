@@ -111,7 +111,8 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               ))}
             </div>
           )}
-          {agency && (
+          {/* With nothing shared yet, the empty state's own call to action is the one control. */}
+          {agency && props.shared.length > 0 && (
             <button
               className="icon-button"
               aria-label="New client version"
@@ -141,7 +142,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
             Share with client
           </button>
         )}
-        {internal && agency && (
+        {internal && agency && props.boards.length > 0 && (
           <button
             className="icon-button"
             aria-label="Add design board"
