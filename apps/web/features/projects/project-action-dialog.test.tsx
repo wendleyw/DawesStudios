@@ -464,6 +464,27 @@ describe("Miro links", () => {
     });
   });
 
+  it("never removes a shared version's link: a project-level client version needs one", async () => {
+    const { onClose } = renderDialog({
+      kind: "miro",
+      version: {
+        ...publishedVersion,
+        deliverableId: null,
+        boardId: null,
+        miro: { boardId: "uXjVKabc123=", widgetId: null },
+      },
+      channel: "client",
+    });
+    const field = screen.getByLabelText(/Miro frame/);
+    expect(field).toBeRequired();
+    expect(screen.queryByText(/Leave empty/)).toBeNull();
+    fireEvent.change(field, { target: { value: "" } });
+    fireEvent.submit(field.closest("form")!);
+    expect(await screen.findByText(/needs its Miro link/)).toBeInTheDocument();
+    expect(projectData.clearMiroLink).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("titles the miro dialog by whether the version already has a link", () => {
     renderDialog({ kind: "miro", version, channel: "internal" });
     expect(screen.getByRole("heading", { name: "Add a Miro link." })).toBeInTheDocument();

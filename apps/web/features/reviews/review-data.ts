@@ -175,7 +175,7 @@ export function useReviews(clientId: string) {
         const submitted = assertResult(
           await database
             .from("design_versions")
-            .select("*")
+            .select("id,project_id,deliverable_id,board_id,version_number,status,created_at,notes")
             .in("project_id", ids)
             .eq("status", "submitted"),
         );

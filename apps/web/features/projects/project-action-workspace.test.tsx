@@ -11,22 +11,27 @@ const writes = vi.hoisted(() => ({
   sendBoardRound: vi.fn(),
   shareMiroVersion: vi.fn(),
 }));
+const assignments = vi.hoisted(() => ({ error: null as Error | null }));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ database: {}, profile: { id: "agency", role: "agency" } }),
 }));
 vi.mock("./project-data", async (original) => ({
   ...(await original<typeof import("./project-data")>()),
   ...writes,
-  useProjectAssignments: () => ({
-    data: {
-      members: [
-        { id: "d1", display_name: "Alex Morgan" },
-        { id: "d2", display_name: "Sam Lee" },
-      ],
-      assigned: ["d1"],
-    },
-    isPending: false,
-  }),
+  useProjectAssignments: () =>
+    assignments.error
+      ? { data: undefined, error: assignments.error, isPending: false }
+      : {
+          data: {
+            members: [
+              { id: "d1", display_name: "Alex Morgan" },
+              { id: "d2", display_name: "Sam Lee" },
+            ],
+            assigned: ["d1"],
+          },
+          error: null,
+          isPending: false,
+        },
   useInvalidateProject: () => vi.fn(),
 }));
 // jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
@@ -54,9 +59,10 @@ const board = {
   miro: { boardId: "uXjVAlpha01=", widgetId: null },
 };
 
-beforeEach(() =>
-  Object.values(writes).forEach((write) => write.mockReset().mockResolvedValue("new-id")),
-);
+beforeEach(() => {
+  assignments.error = null;
+  Object.values(writes).forEach((write) => write.mockReset().mockResolvedValue("new-id"));
+});
 
 describe("board dialog", () => {
   it("creates a board for an assigned designer only", async () => {
@@ -89,6 +95,20 @@ describe("board dialog", () => {
         },
       ),
     );
+  });
+  it("says why it cannot add a board when the designers fail to load", () => {
+    assignments.error = new Error("Designers could not load");
+    wrap(
+      <ProjectActionDialog
+        action={{ kind: "board", projectId: "p" }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Designers could not load")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add board" })).toBeDisabled();
   });
   it("refuses a link that is not a Miro board before calling the server", async () => {
     const user = userEvent.setup();

@@ -244,10 +244,10 @@ test("a video design carries pinned time-coded feedback across all three roles, 
         .data,
     ).toEqual([]);
     expect(
-      (await clientApi.from("designs").select("*").eq("project_id", fixture.projectId)).data,
+      (await clientApi.from("designs").select("id").eq("project_id", fixture.projectId)).data,
     ).toEqual([]);
     expect(
-      (await clientApi.from("design_versions").select("*").eq("project_id", fixture.projectId))
+      (await clientApi.from("design_versions").select("id").eq("project_id", fixture.projectId))
         .data,
     ).toEqual([]);
     const publishedRows = await readRowsEventually(

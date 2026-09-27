@@ -25,7 +25,12 @@ import {
   pickById,
   sharedVersions,
 } from "./miro-workspace";
-import type { DesignBoard, ProjectChannel, useProjectDetail } from "./project-data";
+import {
+  useLatestSharedMiroLink,
+  type DesignBoard,
+  type ProjectChannel,
+  type useProjectDetail,
+} from "./project-data";
 
 type ProjectData = NonNullable<ReturnType<typeof useProjectDetail>["data"]>;
 
@@ -81,6 +86,10 @@ export function ProjectWorkspace({
   const round = roundId ? (rounds.find((item) => item.id === roundId) ?? null) : null;
   const shared = sharedVersions(versions);
   const version = pickById(shared, versionId);
+  // A new client version starts from the client board last shared, whichever channel it is shared
+  // from: Working files holds no client versions of its own to read it from.
+  const latestShared = useLatestSharedMiroLink(projectId, role === "agency");
+  const sharePrefill = latestShared.data ?? latestSharedLink(shared);
   const internal = channel === "internal";
   const client = clients.data?.find((item) => item.id === project.client_id);
   const shownLink = internal ? (round?.miro ?? board?.miro ?? null) : (version?.miro ?? null);
@@ -138,7 +147,8 @@ export function ProjectWorkspace({
       ? {
           text: "Nothing shared yet. Share a round or add a version.",
           action: "New client version",
-          onClick: () => setAction({ kind: "share", projectId, round: null, prefill: null }),
+          onClick: () =>
+            setAction({ kind: "share", projectId, round: null, prefill: sharePrefill }),
         }
       : { text: "Nothing shared yet. Your studio will share designs here." };
 
@@ -172,10 +182,10 @@ export function ProjectWorkspace({
           onEditBoard={() => board && setAction({ kind: "board", projectId, board })}
           onSendRound={() => board && setAction({ kind: "round", board })}
           onShareRound={() =>
-            round && setAction({ kind: "share", projectId, round, prefill: null })
+            round && setAction({ kind: "share", projectId, round, prefill: sharePrefill })
           }
           onAddVersion={() =>
-            setAction({ kind: "share", projectId, round: null, prefill: latestSharedLink(shared) })
+            setAction({ kind: "share", projectId, round: null, prefill: sharePrefill })
           }
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           viewControl={viewControl}

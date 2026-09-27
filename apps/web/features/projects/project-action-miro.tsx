@@ -25,7 +25,11 @@ function miroTitle(hasLink: boolean) {
   return hasLink ? "Change the Miro link." : "Add a Miro link.";
 }
 
-/** Sets or clears a single version's Miro link on whichever channel opened the dialog. */
+/**
+ * Sets or clears a single version's Miro link on whichever channel opened the dialog. A shared
+ * version (a project-level client version of the Miro workspace) is nothing but its link, so its
+ * link can be changed but never removed; the database refuses that too.
+ */
 export function ProjectActionMiro({
   action,
   suspended,
@@ -36,6 +40,10 @@ export function ProjectActionMiro({
   onClose: () => void;
 }) {
   const { database } = useAuth();
+  const linkRequired =
+    action.channel === "client" &&
+    action.version.deliverableId === null &&
+    action.version.boardId === null;
   // Prefills from the deliverable's newest earlier link on the same channel, unless this version
   // already has its own link. The hook runs unconditionally; `enabled` scopes it.
   const latestMiro = useLatestMiroLink(action.version.deliverableId ?? "", action.channel, {
@@ -52,6 +60,7 @@ export function ProjectActionMiro({
     mutationFn: async (form: FormData) => {
       const value = (name: string) => String(form.get(name) ?? "").trim();
       const miroUrl = value("miro");
+      if (!miroUrl && linkRequired) throw new Error("A shared version needs its Miro link.");
       if (!miroUrl)
         await clearMiroLink(database, { channel: action.channel, versionId: action.version.id });
       else {
@@ -94,7 +103,12 @@ export function ProjectActionMiro({
       <MiroField
         prefill={miroPrefill}
         loading={latestMiro.isPending && latestMiro.fetchStatus !== "idle"}
-        hint="Leave empty to remove the link."
+        required={linkRequired}
+        hint={
+          linkRequired
+            ? "The client opens this version from this link."
+            : "Leave empty to remove the link."
+        }
       />
     </ProjectActionShell>
   );
@@ -108,14 +122,17 @@ export function MiroField({
   prefill,
   loading,
   hint,
+  required = false,
 }: {
   prefill: string;
   loading: boolean;
   hint: string;
+  /** A shared version's link cannot be left empty; everywhere else the link is optional. */
+  required?: boolean;
 }) {
   return (
     <label>
-      Miro frame (optional)
+      {required ? "Miro frame" : "Miro frame (optional)"}
       <input
         key={loading ? "loading" : prefill}
         name="miro"
@@ -123,6 +140,7 @@ export function MiroField({
         inputMode="url"
         defaultValue={prefill}
         disabled={loading}
+        required={required}
         placeholder="https://miro.com/app/board/…/?moveToWidget=…"
       />
       <small>{hint}</small>

@@ -47,7 +47,7 @@ import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectHeader } from "./project-header";
 import { ProjectToolBar } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
-import { usesWorkspace } from "./miro-workspace";
+import { offersWorkspace, usesWorkspace } from "./miro-workspace";
 import { ProjectWorkspace } from "./project-workspace";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
@@ -84,6 +84,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   // The agency may step back to the Versions canvas on a project that still has legacy versions;
   // the choice lasts until the channel changes.
   const [legacyChosen, setLegacyChosen] = useState(false);
+  // The agency may also open the workspace of a project that has only legacy versions, to add its
+  // first design board; that choice too lasts until the channel changes.
+  const [workspaceChosen, setWorkspaceChosen] = useState(false);
   // `?view=versions` asks for the legacy canvas for every role. Read once: the URL effect below
   // drops `view` when no Miro link exists, and the request must outlive that.
   const [legacyRequested, setLegacyRequested] = useState(
@@ -91,6 +94,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   );
   function switchChannel(next: ProjectChannel) {
     setLegacyChosen(false);
+    setWorkspaceChosen(false);
     setAgencyChannel(next);
   }
   const commentCounts = useVersionCommentCounts(projectId, channel);
@@ -268,7 +272,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
     boards: boards.data ?? [],
   });
   const legacyAvailable = data.data.versions.some((version) => version.deliverableId !== null);
-  if (workspace && !legacyChosen && !legacyRequested)
+  if ((workspace || workspaceChosen) && !legacyChosen && !legacyRequested)
     return (
       <ProjectWorkspace
         projectId={projectId}
@@ -496,10 +500,11 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         view={miroActive ? "miro" : "versions"}
         miroAvailable={linked.length > 0}
         workspaceControl={
-          profile?.role === "agency" && workspace ? (
+          offersWorkspace(profile?.role, channel, workspace) ? (
             <button
               className="button quiet"
               onClick={() => {
+                setWorkspaceChosen(true);
                 setLegacyChosen(false);
                 setLegacyRequested(false);
               }}

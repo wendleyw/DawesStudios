@@ -26,9 +26,20 @@ vi.mock("./comment-panel", () => ({
   ),
 }));
 vi.mock("./project-details", () => ({ ProjectDetails: () => null }));
+const dialog = vi.hoisted(() => ({ action: null as unknown }));
 vi.mock("./project-action-dialog", () => ({
-  ProjectActionDialog: () => null,
+  ProjectActionDialog: ({ action }: { action: unknown }) => {
+    dialog.action = action;
+    return null;
+  },
   projectActionKey: () => "closed",
+}));
+const sharedLink = vi.hoisted(() => ({ boardId: "uXjVClient1=", widgetId: "5" }));
+vi.mock("./project-data", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./project-data")>()),
+  useLatestSharedMiroLink: (_projectId: string, enabled: boolean) => ({
+    data: enabled ? sharedLink : undefined,
+  }),
 }));
 
 import { ProjectWorkspace, type ProjectWorkspaceProps } from "./project-workspace";
@@ -79,6 +90,7 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
 
 beforeEach(() => {
   state.role = "agency";
+  dialog.action = null;
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -126,5 +138,35 @@ describe("ProjectWorkspace", () => {
     await user.click(within(rounds).getByRole("button", { name: "Board" }));
     expect(screen.queryByText("Feedback panel r1")).toBeNull();
     expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  });
+
+  it("prefills sharing a round with the latest client link, read from Working files", async () => {
+    const user = userEvent.setup();
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round],
+        designs: [],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    await user.click(
+      within(screen.getByRole("group", { name: "Rounds" })).getByRole("button", {
+        name: "Round 1",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Share with client" }));
+    expect(dialog.action).toMatchObject({
+      kind: "share",
+      round: { id: "r1" },
+      prefill: sharedLink,
+    });
+  });
+
+  it("prefills the first client version from the latest client link too", async () => {
+    renderWorkspace({ channel: "client" });
+    await userEvent.setup().click(screen.getByRole("button", { name: "New client version" }));
+    expect(dialog.action).toMatchObject({ kind: "share", round: null, prefill: sharedLink });
   });
 });

@@ -65,6 +65,7 @@ export function ProjectActionBoard({
       error={
         closeError ||
         mutation.error?.message ||
+        assignments.error?.message ||
         (assignments.data && designers.length === 0
           ? "Assign a designer to the project first."
           : undefined)

@@ -58,8 +58,19 @@ export type CanvasComment = {
   createdAt: string;
 };
 
+/**
+ * The columns the API grants on the internal tables: every column but the author's id, which no
+ * role reads (migration `202609260011_author_column_privileges.sql`), so a designer handed a board
+ * never learns who worked on it before. A `select("*")` on these tables is refused.
+ */
+const internalVersionColumns =
+  "id,project_id,deliverable_id,board_id,version_number,notes,status,created_at,request_key";
+const internalDesignColumns =
+  "id,project_id,version_id,title,content,internal_asset_path,sort_order,created_at";
+
 /** A canvas version row, from whichever of the two channel tables the canvas was read from. */
-type CanvasVersionRow = TableRow<"design_versions"> | TableRow<"published_versions">;
+type CanvasVersionRow =
+  Omit<TableRow<"design_versions">, "created_by"> | TableRow<"published_versions">;
 /** The columns of a publication review the canvas reads. */
 type CanvasReviewRow = Pick<
   TableRow<"publication_reviews">,
@@ -185,7 +196,7 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
               .order("version_number")
           : database
               .from("design_versions")
-              .select("*")
+              .select(internalVersionColumns)
               .eq("project_id", projectId)
               .order("version_number"),
         clientChannel
@@ -194,7 +205,11 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
               .select("*")
               .eq("project_id", projectId)
               .order("sort_order")
-          : database.from("designs").select("*").eq("project_id", projectId).order("sort_order"),
+          : database
+              .from("designs")
+              .select(internalDesignColumns)
+              .eq("project_id", projectId)
+              .order("sort_order"),
         database.from("publication_reviews").select("*").eq("project_id", projectId),
       ]);
       if (versionResult.error) throw new Error(versionResult.error.message);
@@ -223,6 +238,34 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
         designs,
         reviews: assertResult(reviewResult),
       };
+    },
+  });
+}
+
+/**
+ * The client board a new shared version prefills from: the newest project-level client version's
+ * link. The agency reads it from either channel — sharing a round starts on Working files, where
+ * the canvas holds no client versions. Only the agency reads client links from the internal side,
+ * so callers enable it for the agency alone. Keyed under `project-detail` so a share refreshes it.
+ */
+export function useLatestSharedMiroLink(projectId: string, enabled: boolean) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-detail", session?.user.id, "miro-latest-shared", projectId],
+    enabled: !!session && enabled,
+    queryFn: async () => {
+      const versions = assertResult(
+        await database
+          .from("published_versions")
+          .select("id, version_number")
+          .eq("project_id", projectId)
+          .is("deliverable_id", null),
+      ).map((row) => ({ id: row.id, number: row.version_number }));
+      if (!versions.length) return null;
+      const links = await readMiroLinks(database, "client", {
+        versionIds: versions.map((version) => version.id),
+      });
+      return latestMiroLink(versions, links);
     },
   });
 }

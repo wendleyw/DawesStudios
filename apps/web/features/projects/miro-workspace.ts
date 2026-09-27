@@ -21,6 +21,20 @@ export function usesWorkspace(
   return workspace || !legacy;
 }
 
+/**
+ * Whether the agency's legacy canvas offers the "Miro workspace" control: back to a workspace the
+ * channel already uses, or — on Working files — into the workspace of a project that has only
+ * per-deliverable versions, where the agency adds its first design board. Never for a designer or
+ * a client, who only ever see the body their channel uses.
+ */
+export function offersWorkspace(
+  role: string | undefined,
+  channel: ProjectChannel,
+  workspace: boolean,
+): boolean {
+  return role === "agency" && (workspace || channel === "internal");
+}
+
 export function boardRounds(versions: CanvasVersion[], boardId: string): CanvasVersion[] {
   return versions
     .filter((version) => version.boardId === boardId && !!version.miro)
