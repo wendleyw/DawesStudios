@@ -76,3 +76,12 @@ Updated: 2026-09-27 EDT. Owner: **Codex**. No delegated writer remains active.
 The review is complete; its prioritized changes await an implementation request. Start with the
 backend upload budget and a production-shaped staging/release configuration, preserving SABRE.
 No implementation, push or release was authorized by the review question.
+
+## Local test adjustment — Welcome Email Journey
+
+- User requested reopening SABRE's Welcome Email Journey on 2026-09-27. Its delivered project
+  is now `client_review`; existing V1 is `pending`. Previous rows are backed up and privately audited.
+- [Verification](../verification/welcome-email-review-reopen-2026-09-27.md): targeted API, preservation
+  and file-access checks pass. SABRE HTTP passes 41 checks; its final fixed 10-file assertion now
+  sees 9 because this project's file is hidden again. The assertion and original checkpoint remain.
+- Next: refresh the app and repeat client review. The preproduction task above remains in progress.
