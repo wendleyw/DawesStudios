@@ -15,9 +15,14 @@ the ignored local environment; this package does not change passwords or send in
 - Eight new campaigns across Q1-Q4, alongside four existing campaign records.
 - Fifty projects with 82 deliverables covering 24 formats: social, stories, reels, web, email,
   presentations, print, infographics, branding, guidelines, packaging and production planning.
-- 126 working versions / 176 working designs; 92 immutable publications / 131 published designs.
-- Six workflow stages, two-round review histories, 175 internal comments and 190 client comments,
-  including design pins and studio replies.
+- The Miro model on every project: one design board per assigned designer (due on or before the
+  project), rounds sent by that designer, client versions shared by the studio, placeholder Miro
+  links (`uXjV…`, so the embed shows Miro's own "not found") and a cover from the demo art. Rounds
+  and client versions follow the project status: in progress has a board and no round yet;
+  internal review has one or two unshared rounds; client review, changes requested, approved and
+  delivered end on a pending, changes-requested or approved client version. The cover is visible
+  to the client only on projects with a client version. Internal notes sit on rounds; client
+  comments and studio replies sit on client versions, without design or pin data.
 - 34 sanitized final files: ten released files across six delivered projects, plus 24 staged files
   on approved projects. Staged finals remain inaccessible to clients until delivery.
 - 58 briefings: 50 accepted, three drafts, three awaiting review and two confirmed budgets.
@@ -29,17 +34,19 @@ the ignored local environment; this package does not change passwords or send in
 Templates were subsequently removed from Brand Hub navigation; the template and private draft records remain. Assets now supports folder organization.
 
 Counts describe the initial populated checkpoint. They can change through normal product use.
-The original Stationery project retains its existing client review while a new private working
-round is available. Publishing a working round remains an explicit agency action.
+After the Miro backfill of 2026-09-27 the local overlay held 52 boards, 66 rounds (54 shared,
+12 studio-only), 56 client versions (16 pending, 25 changes requested, 15 approved) and 50 covers,
+37 of them client-visible. Retail Partner Introduction keeps the board and two client versions
+created by hand during local testing, so it has no generated rounds.
 
 ## Suggested demonstration
 
 1. Open Board, switch through the five views, and filter Q1-Q4. Historical completed work and
    upcoming campaigns populate different periods; All periods shows all 50 projects.
-2. Open **Campus Welcome Campaign** for three deliverables, multiple designs and V1/V2 feedback.
-3. Open **Trail Weekend Social Series** for changes requested, or **Saturday Run Motion Reel**
-   for playable 15-second motion previews. Working files and Shared with client demonstrate the
-   separate production and publication channels.
+2. Open a project in client review for two rounds, a changes-requested first client version and
+   a pending second one.
+3. Open **Trail Weekend Social Series** for changes requested. The studio's rounds and the
+   client versions demonstrate the separate production and client channels.
 4. Open **Everyday Essentials Launch** and Files for a delivered project with real downloads.
    Approved projects also have staged files that the agency can release using the existing flow.
 5. Explore Briefings, Reviews, Credits and Brand Hub. Open the **Campus Welcome Campaign**
@@ -57,8 +64,8 @@ The personal-alarm products are fictional concepts, not verified product photogr
 The renderer and source photos are reproducible; generated derivatives live in ignored
 `supabase/.local/sabre-demo/rendered/`. PDFs and motion are demonstration design previews, not
 production-ready print packages, website implementations or editable presentation source files.
-Every project has persisted working artwork. Client sessions receive only published artwork;
-unpublished projects deliberately keep their production assets private.
+The rendered art supplies covers, briefing references, reference assets and final files; motion
+previews are no longer uploaded, because Versions and the design-video pipeline were retired.
 
 ## Apply or resume locally
 
@@ -79,8 +86,8 @@ python3 supabase/tests/startup_preservation_test.py compare supabase/.local/sabr
 python3 supabase/scripts/sabre_demo.py apply
 ```
 
-The canary exercises one real briefing, acceptance/debit, publication, client approval and delivery
-before removal. A completed overlay can be inspected or safely re-invoked without adding projects:
+The canary exercises one real briefing, acceptance/debit, a board round, a shared client version,
+client approval and delivery before removal. A completed overlay can be inspected or safely re-invoked without adding projects:
 
 ```sh
 python3 supabase/scripts/sabre_demo.py status
@@ -92,10 +99,28 @@ integrity record. Most workflow operations use existing idempotency keys; a cras
 non-idempotent create response and its checkpoint requires inspecting saved steps and matching
 records before retrying. Do not run concurrent population/removal processes.
 
-New projects use actual client/agency/designer sessions, the application's RPCs, uploads and trusted
-media preparation. Historical scheduling is the one direct SQL fixture backfill: acceptance
+New projects use actual client/agency/designer sessions, the application's RPCs
+(`create_design_board`, `send_board_round`, `share_miro_version`, `review_publication`,
+`post_comment`), uploads and the media worker's `/covers/prepare`. Historical scheduling is the one direct SQL fixture backfill: acceptance
 initially uses a valid current date, then the briefing/project dates are aligned to the 2026 campaign.
 Original publication bytes are never replaced. No application schema or authorization rule changes.
+
+## Miro backfill for an overlay applied before Versions were retired
+
+Migration `202609270007_retire_versions_schema.sql` deleted the overlay's legacy versions, designs
+and publications. On an overlay applied before it, run:
+
+```sh
+python3 supabase/scripts/sabre_demo.py backfill
+```
+
+It adds only what is missing (a board per assigned designer, a round and client-version history
+when a project has neither, a cover) through the same RPCs as `apply`, then restores each project's
+status, `updated_at` and `delivered_at`, and marks the notifications those RPCs raised as read. It
+refuses to finish silently if clients, campaigns, briefings, projects, deliverables, assignments,
+credits, project assets or delivery files changed. Re-running resumes; a completed backfill only
+prints `status`. The backfill saves its own before/after snapshot in `state.json` as a second
+rollback layer, because the original checkpoint predates the Miro tables.
 
 ## Verification and removal
 
@@ -116,6 +141,10 @@ Canonical seed verification and browser tests that assert seven SABRE projects b
 canonical baseline. Do not weaken those assertions or reset this demonstration to make them pass.
 See the [verification record](../../../docs/verification/sabre-demo-2026-09-23.md).
 
+`test_sabre_demo.py`, `sabre_demo_http_test.py` and `sabre-demo.spec.ts` are owned outside this
+package. The HTTP audit and browser suite still assert the retired designs and published designs
+and must be moved to the Miro model before they can pass again.
+
 To remove only this demonstration when it is no longer needed:
 
 ```sh
@@ -123,7 +152,8 @@ python3 supabase/scripts/sabre_demo.py remove --dry-run
 python3 supabase/scripts/sabre_demo.py remove
 ```
 
-Removal requires the current SABRE snapshot to match the completed overlay. It refuses if newer
+Removal requires the current SABRE snapshot to match the completed overlay (and, after a backfill,
+the backfill's snapshot, which in turn must continue from the overlay's). It refuses if newer
 work exists, including comments or read-state changes, so later testing is not silently discarded.
 Stop mutations before removal. The local-only rollback removes added primary keys, restores
 modified original rows and then removes only added Storage paths; it never resets another client
@@ -140,3 +170,10 @@ serialize with an additional null field. The strict rollback fingerprint therefo
 old checkpoint, in addition to protecting newer Playground work already recorded in the handoff.
 Do not rewrite the checkpoint, remove new content or bypass the guard to force removal. Reconcile
 schema and every newer asset/folder/Playground change explicitly before planning any future rollback.
+
+The same applies after `202609270007`: the saved overlay snapshot still lists the dropped
+`public.designs` and `public.published_designs` and the legacy rows the migration deleted. Scope
+comparisons ignore tables that are no longer in scope, but the overlay layer no longer matches the
+backfill's starting point, so `remove --dry-run` stops with "SABRE changed between population and
+the Miro backfill" before any write. That refusal is expected. The pre-backfill checkpoint is kept
+as the ignored `state.pre-miro-backfill-2026-09-27.json`.

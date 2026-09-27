@@ -1,5 +1,6 @@
 """Prepare, populate, inspect and safely remove the local SABRE agency demonstration."""
 import argparse
+import base64
 from datetime import date, timedelta
 import hashlib
 import json
@@ -12,7 +13,8 @@ import urllib.request
 import uuid
 
 from sabre_demo_state import (ROOT, CLIENT_ID, STATE_PATH, STATE_DIR, SCOPES, assert_local,
-                             snapshot, save, fingerprint, difference, rollback_sql, sql)
+                             snapshot, save, fingerprint, difference, rollback_sql, sql,
+                             layer_tables, restrict)
 
 SOURCE = ROOT / 'supabase/demo/sabre'
 PLAN = json.loads((SOURCE / 'plan.json').read_text())
@@ -23,8 +25,39 @@ SERVICES = {row['id']: row for row in CATALOG['types']}
 DOC_FORMATS = {'a4', 'a5', 'letter', 'guidelines', 'brand-kit', 'direction', 'research', 'shot-list', 'dieline', 'slides', 'custom', 'custom-mm'}
 
 
+# Tables the Miro backfill must never change: it adds design data, not projects, briefs or credits.
+BACKFILL_PROTECTED = ['public.clients', 'public.campaigns', 'public.briefings', 'public.projects',
+    'public.credit_accounts', 'public.credit_plans', 'public.credit_months', 'public.credit_ledger',
+    'public.credit_requests', 'public.project_settlements', 'public.deliverables',
+    'public.project_assignments', 'public.project_assets', 'public.delivery_files']
+
+
 def uid(key):
     return str(uuid.uuid5(uuid.NAMESPACE_URL, RUN + ':' + key))
+
+
+def miro_url(board_key, frame_key=None):
+    """A deterministic placeholder Miro board or frame link (`uXjV…`); the embed shows Miro's own
+    "not found". One board key always gives the same board; a frame key picks a frame on it."""
+    board = 'uXjV' + base64.urlsafe_b64encode(hashlib.sha256((RUN + ':miro:' + board_key).encode()).digest()).decode()[:7] + '='
+    url = 'https://miro.com/app/board/' + board + '/'
+    if frame_key is None:
+        return url
+    widget = int.from_bytes(hashlib.sha256((RUN + ':frame:' + frame_key).encode()).digest()[:8], 'big') % 10**9
+    return url + '?moveToWidget=3458764' + str(widget).zfill(9)
+
+
+def miro_history(status, index):
+    """Rounds per board for a project status: None is a round kept inside the studio; any other
+    value is a round shared as a client version with that review. A project in progress has not
+    sent a round yet; later statuses end on the client version their status describes."""
+    two = index % 2 == 1
+    if status in ('planned', 'in_progress'):
+        return []
+    if status == 'internal_review':
+        return [None, None] if two else [None]
+    last = {'client_review': 'pending', 'changes_requested': 'changes_requested'}.get(status, 'approved')
+    return (['changes_requested'] if two else []) + [last]
 
 
 class Demo:
@@ -146,9 +179,8 @@ class Demo:
     def render(self):
         subprocess.run(['node', str(SOURCE / 'render.mjs'), str(self.write_jobs())], cwd=ROOT, check=True)
 
-    def comment(self, key, project, body, role, channel, version=None, design=None, pin=False, time=None):
-        payload = dict(p_project_id=project, p_channel=channel, p_body=body, p_version_id=version, p_design_id=design,
-                       p_pin_x=0.56 if pin else None, p_pin_y=0.29 if pin else None, p_pin_t=time,
+    def comment(self, key, project, body, role, channel, version=None):
+        payload = dict(p_project_id=project, p_channel=channel, p_body=body, p_version_id=version,
                        p_idempotency_key=RUN + ':' + key)
         return self.once('comment:' + key, lambda: self.rpc('post_comment', payload, role))
 
@@ -206,57 +238,96 @@ class Demo:
         self.once('assign:' + key, lambda: self.rpc('assign_designer', {'p_project_id': project, 'p_designer_id': self.users[producer]}))
         deliverables = self.rows('deliverables', 'project_id=eq.' + project + '&order=sort_order')
         self.comment(key + ':internal', project, 'Demo production note: keep the headline hierarchy consistent across formats and check the safe area before the studio review.', producer, 'internal')
-        final_publications = []
-        deliver_files = []
-        for di, deliverable in enumerate(deliverables):
-            for vi, keys in enumerate(p['artwork'][di]):
-                version_key = f'{key}:d{di}:v{vi}'
-                version = self.once('version:' + version_key, lambda: self.rpc('create_design_version', {
-                    'p_deliverable_id': deliverable['id'],
-                    'p_notes': f'Demo creative round {vi + 1}: ' + ('Refined spacing and a quieter supporting message.' if vi else 'Explore the campaign through photography, clear type and generous spacing.')}, producer))
-                first_design = None
-                for ai, artwork_key in enumerate(keys):
+        # Existing projects keep their status; new projects move through the real workflow to their stage.
+        self.populate_miro(p, project, index, preserve=bool(p.get('existing')))
+        if p['stage'] in ('approved', 'delivered') and self.project_row(project)['status'] == 'approved':
+            deliver_files = []
+            for di, deliverable in enumerate(deliverables):
+                for ai, artwork_key in enumerate(p['artwork'][di][-1]):
                     art = self.artworks[artwork_key]
-                    design_key = version_key + f':a{ai}'
-                    path = self.upload('internal-assets', project, design_key, art['png'], producer)
-                    design = self.once('design:' + design_key, lambda: self.rpc('add_design', {'p_version_id': version,
-                        'p_title': f'{deliverable["name"]} — Direction {chr(65 + ai)}',
-                        'p_content': {'headline': theme['headline'].replace('\n', ' '), 'body': theme['body'], 'background': '#f4f0e7', 'foreground': '#143b30', 'demoOverlay': RUN},
-                        'p_internal_asset_path': path}, producer))
-                    if first_design is None: first_design = design
-                    if art['video']:
-                        raw = self.upload('internal-assets', project, design_key + ':motion', art['video'], producer, 'video/mp4')
-                        video = self.once('sanitize:' + design_key, lambda: self.request('/designs/sanitize-video', {'projectId': project, 'rawPath': raw, 'mimeType': 'video/mp4'}, role=producer, media=True))
-                        self.once('video-design:' + design_key, lambda: self.rpc('add_design', {'p_version_id': version, 'p_title': 'Campaign motion — 15 second preview', 'p_internal_asset_path': video['path'], 'p_content': {'headline': theme['headline'].replace('\n', ' ')}}, producer))
-                    if vi == len(p['artwork'][di]) - 1:
-                        deliver_files.append((art['pdf'] or art['png'], deliverable['name'] + f' direction {chr(65 + ai)}'))
-                self.comment(version_key + ':pin', project, 'Demo studio feedback: keep this detail aligned with the visual grid in every adaptation.', 'agency', 'internal', version, first_design, True)
-                if p['stage'] == 'internal_review':
-                    self.once('submit-version:' + version_key, lambda: self.rpc('submit_design_version', {'p_version_id': version}, producer))
-                if p['stage'] in ('in_progress', 'internal_review'):
-                    continue
-                prepared = self.once('prepare:' + version_key, lambda: self.request('/publications/prepare', {'versionId': version}, media=True))
-                publication = self.once('publish:' + version_key, lambda: self.rpc('publish_version', {
-                    'p_version_id': version, 'p_release_note': f'Demo review: {p["title"]}. ' + ('Spacing refined after the first review.' if vi else 'Please review the composition and message across the requested formats.'),
-                    'p_assets': prepared['assets'], 'p_idempotency_key': uid(version_key + ':publication')}))
-                published = self.rows('published_designs', 'publication_id=eq.' + publication + '&order=sort_order')
-                self.comment(version_key + ':client-pin', project, 'Demo client feedback: the image feels right. Please check the headline spacing in the narrow format.', 'client', 'client', publication, published[0]['id'], True)
-                self.comment(version_key + ':reply', project, 'Demo studio reply: noted. We will carry the same spacing adjustment through the adaptations.', 'agency', 'client', publication)
-                if vi < len(p['artwork'][di]) - 1:
-                    self.once('review:' + version_key, lambda: self.rpc('review_publication', {'p_publication_id': publication, 'p_decision': 'changes_requested', 'p_feedback': 'Demo revision request: give the headline more breathing room and simplify the supporting copy.'}, 'client'))
-                else:
-                    final_publications.append(publication)
-        for i, publication in enumerate(final_publications):
-            decision = 'changes_requested' if p['stage'] == 'changes_requested' and i == 0 else 'approved'
-            if p['stage'] in ('approved', 'delivered', 'changes_requested'):
-                self.once('final-review:' + publication, lambda: self.rpc('review_publication', {'p_publication_id': publication, 'p_decision': decision, 'p_feedback': 'Demo approval: the message, composition and adaptations are ready.' if decision == 'approved' else 'Demo change request: increase spacing above the headline and retain the current image.'}, 'client'))
-        if p['stage'] in ('approved', 'delivered'):
+                    deliver_files.append((art['pdf'] or art['png'], deliverable['name'] + f' direction {chr(65 + ai)}'))
             for fi, (file, name) in enumerate(deliver_files):
                 self.once(f'delivery:{key}:{fi}', lambda: self.request('/deliveries/prepare?projectId=' + project, Path(file).read_bytes(), media=True,
                     mime='application/pdf' if file.endswith('.pdf') else 'image/png', headers={'X-File-Name': urllib.parse.quote(name)}))
             if p['stage'] == 'delivered':
                 self.once('complete:' + key, lambda: self.rpc('mark_project_delivered', {'p_project_id': project}))
         print(f'{index + 1:02}/{len(self.state["project_plan"])}  {p["title"]} — {p["stage"]}', flush=True)
+
+    def project_row(self, project):
+        return json.loads(sql(f"select row_to_json(t) from (select status, updated_at, delivered_at from public.projects where id='{uuid.UUID(project)}' and client_id='{CLIENT_ID}') t;"))
+
+    def set_project_row(self, project, row):
+        """Restore a project's own workflow fields after a backfill used the real round/share RPCs."""
+        delivered = 'null' if row['delivered_at'] is None else f"'{row['delivered_at']}'"
+        sql(f"begin; set local session_replication_role=replica; update public.projects set status='{row['status']}', "
+            f"updated_at='{row['updated_at']}', delivered_at={delivered} where id='{uuid.UUID(project)}' and client_id='{CLIENT_ID}'; commit;")
+
+    def project_id(self, p):
+        return p['id'] if p.get('existing') else self.state['steps'].get('accept:' + p['key'])
+
+    def populate_miro(self, p, project, index, preserve):
+        """Design boards, rounds, client versions, Miro links, comments and a cover for one project.
+
+        Only what is missing is added: a board for each assigned designer without one, a history only
+        when the project has neither rounds nor client versions, and a cover when it has none. With
+        `preserve`, the project's status, updated_at and delivered_at are restored afterwards, so an
+        existing project keeps the status the round and share RPCs would otherwise move."""
+        key = p['key']
+        theme = PLAN['campaigns'][p['campaign']]
+        original = self.once('miro-original:' + key, lambda: self.project_row(project)) if preserve else None
+        roles = {user: role for role, user in self.users.items()}
+        details = self.rows('projects', f'id=eq.{project}&select=start_date,due_date')[0]
+        for bi, assignment in enumerate(self.rows('project_assignments', f'project_id=eq.{project}&select=designer_id&order=designer_id')):
+            designer = assignment['designer_id']
+            if self.rows('design_boards', f'project_id=eq.{project}&designer_id=eq.{designer}&select=id'):
+                continue
+            due = details['due_date'] and date.fromisoformat(details['due_date']) - timedelta(days=2 + index % 5)
+            if due and details['start_date'] and due < date.fromisoformat(details['start_date']):
+                due = date.fromisoformat(details['due_date'])
+            self.once(f'miro-board:{key}:{designer}', lambda: self.rpc('create_design_board', {'p_project_id': project,
+                'p_name': ('Campaign board', 'Adaptations board', 'Motion board')[bi % 3], 'p_url': miro_url(f'{key}:board:{bi}'),
+                'p_designer_id': designer, 'p_due_date': str(due) if due else None}))
+        def plan():
+            existing = self.rows('design_versions', f'project_id=eq.{project}&select=id') or self.rows('published_versions', f'project_id=eq.{project}&select=id')
+            return [] if existing else miro_history(original['status'] if preserve else p['stage'], index)
+        history = self.once('miro-plan:' + key, plan)
+        boards = self.rows('design_boards', f'project_id=eq.{project}&select=id,designer_id&order=created_at,id')
+        history = history if boards else []
+        if history and preserve and self.project_row(project)['status'] == 'delivered':
+            # Delivered projects accept no new rounds; the delivered status is restored below.
+            sql(f"begin; set local session_replication_role=replica; update public.projects set status='approved' where id='{uuid.UUID(project)}' and client_id='{CLIENT_ID}'; commit;")
+        for cycle, decision in enumerate(history):
+            rounds = []
+            for bi, board in enumerate(boards):
+                round_key = f'{key}:c{cycle}:b{bi}'
+                role = roles.get(board['designer_id'], 'agency')
+                rounds.append(self.once('miro-round:' + round_key, lambda: self.rpc('send_board_round', {'p_board_id': board['id'],
+                    'p_note': f'Round {cycle + 1}: ' + ('Refined spacing and a quieter supporting message.' if cycle else 'Campaign photography, clear type and generous spacing across the requested formats.'),
+                    'p_frame_url': miro_url(f'{key}:board:{bi}', round_key) if cycle else None,
+                    'p_idempotency_key': uid('miro-round:' + round_key)}, role)))
+                self.comment('miro-round-note:' + round_key, project, 'Studio review: ' + (
+                    'ready to share with the client.' if decision else 'give the headline more room before the next round.'
+                    if cycle < len(history) - 1 else 'the studio is reviewing this round.'), 'agency', 'internal', rounds[-1])
+            if not decision:
+                continue
+            version_key = f'{key}:v{cycle}'
+            version = self.once('miro-share:' + version_key, lambda: self.rpc('share_miro_version', {'p_project_id': project,
+                'p_url': miro_url(f'{key}:board:0', version_key), 'p_source_round': rounds[cycle % len(rounds)],
+                'p_note': f'Version {cycle + 1} of {p["title"]}: ' + ('spacing refined after your review.' if cycle else 'please review the composition and message across the requested formats.'),
+                'p_idempotency_key': uid('miro-share:' + version_key)}))
+            self.comment('miro-client:' + version_key, project, 'Demo client feedback: the image feels right. Please check the headline spacing in the narrow format.', 'client', 'client', version)
+            self.comment('miro-reply:' + version_key, project, 'Demo studio reply: noted. We will carry the same spacing adjustment through the adaptations.', 'agency', 'client', version)
+            if decision != 'pending':
+                self.once('miro-review:' + version_key, lambda: self.rpc('review_publication', {'p_publication_id': version, 'p_decision': decision,
+                    'p_feedback': 'Demo approval: the message, composition and adaptations are ready.' if decision == 'approved'
+                    else 'Demo change request: increase spacing above the headline and retain the current image.'}, 'client'))
+        if preserve:
+            self.set_project_row(project, original)
+        if not self.rows('project_covers', f'project_id=eq.{project}&select=project_id'):
+            visible = bool(self.rows('published_versions', f'project_id=eq.{project}&select=id'))
+            art = self.artworks[p['artwork'][0][0][0]]['png']
+            self.once('miro-cover:' + key, lambda: self.request(f'/covers/prepare?projectId={project}&visible={str(visible).lower()}',
+                Path(art).read_bytes(), media=True, mime='image/png'))
 
     def apply(self, canary=False):
         self.prepare(canary)
@@ -278,18 +349,64 @@ class Demo:
         save(self.state)
         self.status()
 
+    def backfill(self):
+        """Fill in the Miro model for an overlay applied before 202609270007 retired Versions.
+
+        The overlay's working versions, designs and publications were deleted by that migration. This
+        adds boards, rounds, client versions, Miro links, comments and covers where they are missing,
+        through the same RPCs as `apply`, and restores each project's status afterwards. It records
+        its own before/after snapshot as a second rollback layer, because an older checkpoint does
+        not capture the Miro tables. Re-running it resumes; once complete it only reports status."""
+        if not self.state or self.state['phase'] != 'complete' or self.state['canary']:
+            raise RuntimeError('The Miro backfill needs the completed SABRE overlay.')
+        backfill = self.state.get('backfill')
+        if backfill and backfill['phase'] == 'complete':
+            self.status()
+            return
+        if not (STATE_DIR / 'rendered/index.json').exists():
+            self.render()
+        self.artworks = json.loads((STATE_DIR / 'rendered/index.json').read_text())
+        if not backfill:
+            backfill = self.state['backfill'] = {'phase': 'applying', 'started_at': sql('select now();'), 'before': snapshot()}
+            save(self.state)
+        for index, p in enumerate(self.state['project_plan']):
+            self.populate_miro(p, self.project_id(p), index, preserve=True)
+            print(f'{index + 1:02}/{len(self.state["project_plan"])}  {p["title"]} — Miro model ready', flush=True)
+        # The RPCs notify the client and studio as if the history happened today; it did not.
+        self.once('miro-notifications-read', lambda: int(sql(
+            f"with seen as (update public.notifications set read_at=created_at where client_id='{CLIENT_ID}' and read_at is null "
+            f"and created_at>='{backfill['started_at']}' returning 1) select count(*) from seen;")))
+        after = snapshot()
+        changed = [t for t in BACKFILL_PROTECTED if fingerprint(backfill['before']['rows'][t]) != fingerprint(after['rows'][t])]
+        backfill.update(after=after, phase='complete', protected_changes=changed)
+        save(self.state)
+        if changed:
+            raise RuntimeError('The backfill changed protected tables: ' + ', '.join(changed))
+        self.status()
+
     def status(self):
         current = snapshot()
         r = current['rows']
         def counts(rows, field):
             return {v: sum(row[field] == v for row in rows) for v in sorted({row[field] for row in rows})}
+        projects = {row['id'] for row in r['public.projects']}
+        def missing(table, rows=None):
+            return len(projects - {row['project_id'] for row in (rows if rows is not None else r[table])})
+        started = [row for row in r['public.projects'] if row['status'] not in ('planned', 'in_progress')]
+        totals = json.loads(sql("select json_build_object('clients',(select count(*) from public.clients),'projects',(select count(*) from public.projects));"))
         report = {'client': 'SABRE', 'id': RUN, 'phase': self.state['phase'] if self.state else 'not applied',
+            'miro_backfill': (self.state.get('backfill') or {}).get('phase', 'not run') if self.state else 'not run',
+            'all_clients': totals['clients'], 'all_projects': totals['projects'],
             'projects': len(r['public.projects']), 'campaigns': len(r['public.campaigns']),
             'project_statuses': counts(r['public.projects'], 'status'), 'briefing_statuses': counts(r['public.briefings'], 'status'),
             'deliverables': len(r['public.deliverables']), 'formats': counts(r['public.deliverables'], 'format'),
-            'working_versions': len(r['public.design_versions']), 'working_designs': len(r['public.designs']),
-            'published_versions': len(r['public.published_versions']), 'published_designs': len(r['public.published_designs']),
-            'reviews': counts(r['public.publication_reviews'], 'status'), 'internal_comments': len(r['public.internal_comments']),
+            'design_boards': len(r['public.design_boards']), 'rounds': counts(r['public.design_versions'], 'status'),
+            'client_versions': len(r['public.published_versions']), 'reviews': counts(r['public.publication_reviews'], 'status'),
+            'miro_links': len(r['public.design_version_miro_links']) + len(r['public.publication_miro_links']),
+            'covers': len(r['public.project_covers']), 'client_visible_covers': sum(row['client_visible'] for row in r['public.project_covers']),
+            'projects_without': {'board': missing('public.design_boards'), 'cover': missing('public.project_covers'),
+                'round_after_in_progress': len({row['id'] for row in started} - {row['project_id'] for row in r['public.design_versions']})},
+            'internal_comments': len(r['public.internal_comments']),
             'client_comments': len(r['public.client_comments']), 'delivery_files': len(r['public.delivery_files']),
             'brand_assets': len(r['public.brand_assets']), 'templates': len(r['public.brand_templates']),
             'stored_files': len(current['storage']), 'credit_balance': r['public.credit_accounts'][0]['balance']}
@@ -298,48 +415,71 @@ class Demo:
         print(json.dumps(report, indent=2))
         return report
 
+    def layers(self):
+        """The saved before/after pairs, oldest first: the overlay, then the Miro backfill if it ran."""
+        backfill = self.state.get('backfill')
+        if backfill and backfill.get('phase') != 'complete':
+            raise RuntimeError('The Miro backfill is incomplete; finish it before removal.')
+        return [(self.state['before'], self.state['after'])] + ([(backfill['before'], backfill['after'])] if backfill else [])
+
     def remove(self, dry_run=False):
         if not self.state or self.state['phase'] not in ('complete', 'removing'):
             raise RuntimeError('A completed demo snapshot is required for guarded removal.')
-        before, after = self.state['before'], self.state['after']
+        layers = self.layers()
         if self.state['phase'] == 'complete':
             current = snapshot()
-            if fingerprint(current) != fingerprint(after):
+            before, after = layers[-1]
+            tables = layer_tables(before, after)
+            if fingerprint(restrict(current, tables)) != fingerprint(restrict(after, tables)) or fingerprint(current['storage']) != fingerprint(after['storage']):
                 raise RuntimeError('SABRE changed after population. Removal stopped to preserve newer work; compare the saved before/after snapshots first.')
-            changes = difference(before, after)
-            print(json.dumps({table: {kind: len(rows) for kind, rows in change.items()} for table, change in changes.items() if any(change.values())}, indent=2))
+            for (lower_before, lower_after), (upper_before, _) in zip(layers, layers[1:]):
+                tables = layer_tables(lower_before, lower_after)
+                if fingerprint(restrict(upper_before, tables)) != fingerprint(restrict(lower_after, tables)) or fingerprint(upper_before['storage']) != fingerprint(lower_after['storage']):
+                    raise RuntimeError('SABRE changed between population and the Miro backfill. Removal stopped to preserve that work; compare the saved snapshots first.')
+            print(json.dumps([{table: {kind: len(rows) for kind, rows in change.items()} for table, change in difference(before, after).items() if any(change.values())}
+                              for before, after in layers], indent=2))
             if dry_run: return
             self.state['phase'] = 'removing'
             save(self.state)
         if dry_run:
             return
-        current_rows = snapshot()['rows']
-        if fingerprint(current_rows) == fingerprint(after['rows']):
-            sql(rollback_sql(before, after))
-        elif fingerprint(current_rows) != fingerprint(before['rows']):
-            raise RuntimeError('Removal found unexpected database changes; storage cleanup stopped.')
-        old_paths = {(o['bucket'], o['path']) for o in before['storage']}
-        added = [o for o in after['storage'] if (o['bucket'], o['path']) not in old_paths]
+        # Newest layer first; each layer is one transaction, so an interrupted removal resumes.
+        for before, after in reversed(layers):
+            tables = layer_tables(before, after)
+            current_rows = restrict(snapshot(), tables)
+            if fingerprint(current_rows) == fingerprint(restrict(after, tables)):
+                sql(rollback_sql(before, after))
+            elif fingerprint(current_rows) != fingerprint(restrict(before, tables)):
+                raise RuntimeError('Removal found unexpected database changes; storage cleanup stopped.')
+        original = layers[0][0]
+        old_paths = {(o['bucket'], o['path']) for o in original['storage']}
+        added = list({(o['bucket'], o['path']): o for _, after in layers for o in after['storage'] if (o['bucket'], o['path']) not in old_paths}.values())
         for bucket in sorted({o['bucket'] for o in added}):
             paths = [o['path'] for o in added if o['bucket'] == bucket]
             for i in range(0, len(paths), 100):
                 self.request('/storage/v1/object/' + bucket, {'prefixes': paths[i:i+100]}, role='service', method='DELETE')
-        if fingerprint(snapshot()) != fingerprint(before):
+        current, seen = snapshot(), set()
+        for before, after in layers:
+            tables = [t for t in layer_tables(before, after) if t not in seen]
+            seen.update(tables)
+            if fingerprint(restrict(current, tables)) != fingerprint(restrict(before, tables)):
+                raise RuntimeError('Removal did not match the original SABRE snapshot; retain the state file for recovery.')
+        if fingerprint(current['storage']) != fingerprint(original['storage']):
             raise RuntimeError('Removal did not match the original SABRE snapshot; retain the state file for recovery.')
         archive = STATE_PATH.with_name('completed-canary.json' if self.state['canary'] else 'removed-demo.json')
         STATE_PATH.replace(archive)
         print(f'Restored the original SABRE records and removed {len(added)} demo files. Snapshot: {archive.relative_to(ROOT)}')
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['prepare', 'apply', 'status', 'remove'])
+    parser.add_argument('action', choices=['prepare', 'apply', 'backfill', 'status', 'remove'])
     parser.add_argument('--canary', action='store_true', help='Exercise one new project before the complete overlay.')
     parser.add_argument('--dry-run', action='store_true', help='Inspect guarded removal without writing.')
     args = parser.parse_args()
     demo = Demo()
     if args.action == 'prepare': demo.prepare(args.canary)
     elif args.action == 'apply': demo.apply(args.canary)
+    elif args.action == 'backfill': demo.backfill()
     elif args.action == 'status': demo.status()
     else: demo.remove(args.dry_run)
 

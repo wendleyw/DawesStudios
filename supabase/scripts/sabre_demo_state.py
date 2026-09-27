@@ -12,27 +12,39 @@ STATE_PATH = STATE_DIR / 'state.json'
 PROJECTS = f"select id from public.projects where client_id='{CLIENT_ID}'"
 BRIEFINGS = f"select id from public.briefings where client_id='{CLIENT_ID}'"
 PUBLICATIONS = f"select id from public.published_versions where project_id in ({PROJECTS})"
+DESIGN_BOARDS = f"select id from public.design_boards where project_id in ({PROJECTS})"
+ROUNDS = f"select id from public.design_versions where project_id in ({PROJECTS})"
 COMMENTS = f"select id from public.client_comments where project_id in ({PROJECTS})"
 BOARDS = f"select id from public.playground_boards where client_id='{CLIENT_ID}'"
 # Parent-first ordering; rollback deletes additions in reverse before restoring changed rows.
+# The Miro model (design boards, rounds, client versions, their links and covers) and the monthly
+# credit tables are in scope. Cover bytes live under `project-covers/<project id>/`, which the
+# Storage snapshot below already covers through its project-id prefix. `public.designs` and
+# `public.published_designs` were dropped by 202609270007; a checkpoint that still lists them is
+# read with `layer_tables`, which ignores tables that are no longer in scope.
 SCOPES = {
     'public.clients': f"id='{CLIENT_ID}'",
     'public.campaigns': f"client_id='{CLIENT_ID}'",
     'public.briefings': f"client_id='{CLIENT_ID}'",
     'public.projects': f"client_id='{CLIENT_ID}'",
     'public.credit_accounts': f"client_id='{CLIENT_ID}'",
+    'public.credit_plans': f"client_id='{CLIENT_ID}'",
+    'public.credit_months': f"client_id='{CLIENT_ID}'",
     'public.credit_ledger': f"client_id='{CLIENT_ID}'",
     'public.credit_requests': f"client_id='{CLIENT_ID}'",
+    'public.project_settlements': f'project_id in ({PROJECTS})',
     'public.deliverables': f'project_id in ({PROJECTS})',
     'public.project_assignments': f'project_id in ({PROJECTS})',
+    'public.design_boards': f'project_id in ({PROJECTS})',
     'public.design_versions': f'project_id in ({PROJECTS})',
-    'public.designs': f'project_id in ({PROJECTS})',
+    'public.design_version_miro_links': f'project_id in ({PROJECTS})',
     'public.published_versions': f'project_id in ({PROJECTS})',
-    'public.published_designs': f'project_id in ({PROJECTS})',
+    'public.publication_miro_links': f'project_id in ({PROJECTS})',
     'public.publication_reviews': f'project_id in ({PROJECTS})',
     'public.internal_comments': f'project_id in ({PROJECTS})',
     'public.client_comments': f'project_id in ({PROJECTS})',
     'public.project_assets': f'project_id in ({PROJECTS})',
+    'public.project_covers': f'project_id in ({PROJECTS})',
     'public.delivery_files': f'project_id in ({PROJECTS})',
     'public.briefing_attachments': f'briefing_id in ({BRIEFINGS})',
     'public.brand_sections': f"client_id='{CLIENT_ID}'",
@@ -43,9 +55,10 @@ SCOPES = {
     'public.playground_items': f'board_id in ({BOARDS})',
     'public.notifications': f"client_id='{CLIENT_ID}'",
     'private.publication_sources': f'publication_id in ({PUBLICATIONS})',
+    'private.miro_share_requests': f'project_id in ({PROJECTS})',
     'private.client_comment_authors': f'comment_id in ({COMMENTS})',
     'private.sanitized_assets': f'project_id in ({PROJECTS})',
-    'private.audit_events': f"entity_id in ({PROJECTS} union {BRIEFINGS} union {PUBLICATIONS} union select '{CLIENT_ID}'::uuid)",
+    'private.audit_events': f"entity_id in ({PROJECTS} union {BRIEFINGS} union {PUBLICATIONS} union {DESIGN_BOARDS} union {ROUNDS} union select '{CLIENT_ID}'::uuid)",
 }
 
 
@@ -90,9 +103,23 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+def layer_tables(before, after):
+    """Tables a before/after pair can compare: in scope today and captured by both snapshots.
+
+    A checkpoint written before a scope change (an older overlay) still loads: tables it lacks are
+    covered by a later layer (see `Demo.backfill`), and tables since dropped are ignored.
+    """
+    return [table for table in SCOPES if table in before['rows'] and table in after['rows']]
+
+
+def restrict(value, tables):
+    """The snapshot rows of `tables`, the part of a snapshot that a layer's guards compare."""
+    return {table: value['rows'].get(table) for table in tables}
+
+
 def difference(before, after):
     changes = {}
-    for table in SCOPES:
+    for table in layer_tables(before, after):
         keys = before['keys'][table]
         def key(row): return tuple(row[k] for k in keys)
         old = {key(row): row for row in before['rows'][table]}
@@ -106,12 +133,12 @@ def difference(before, after):
 def rollback_sql(before, after):
     changes = difference(before, after)
     statements = ['begin;', 'set local session_replication_role=replica;']
-    for table in reversed(SCOPES):
+    for table in reversed(list(changes)):
         keys = before['keys'][table]
         for row in changes[table]['added']:
             where = ' and '.join(f'"{k}"={quote(row[k])}' for k in keys)
             statements.append(f'delete from {table} where {where};')
-    for table in SCOPES:
+    for table in changes:
         keys = before['keys'][table]
         for row in changes[table]['changed']:
             columns = [c for c in row if c not in keys]
