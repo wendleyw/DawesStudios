@@ -1,4 +1,4 @@
-/* Both canvas surfaces use the same floating workspace identity and profile. */
+/* The project page: the Miro workspace under a floating bar, with side panels over its edge. */
 .project-page {
   position: relative;
   display: flex;
@@ -29,7 +29,7 @@
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-/* Miro mode's bar: where you are on the first row; the channel and what it shows on the second.
+/* The workspace bar: where you are on the first row; the channel and what it shows on the second.
    No `overflow: hidden` here, or the More popover would be clipped; the second row rounds its own
    bottom corners instead. */
 .project-header.miro-bar {
@@ -152,18 +152,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* The project name is muted only when the deliverable's name follows it. */
-.miro-bar-title > span:first-child {
-  flex-shrink: 1000;
-}
-.miro-bar-title > span:first-child:not(:last-child) {
-  color: var(--muted);
-}
-.miro-bar-title > span:nth-child(2) {
-  flex-shrink: 0;
-  color: var(--muted);
-  font-weight: 400;
-}
 .miro-bar .segmented-control {
   flex-shrink: 0;
 }
@@ -244,10 +232,6 @@
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
 }
-.miro-bar-popover > select {
-  padding: 6px 28px 6px 10px;
-  font-size: var(--text-xs);
-}
 /* When the work area is too narrow for the first row, the title keeps its line beside the back
    arrow and the due date and actions wrap below it. */
 @container board (max-width: 1000px) {
@@ -263,83 +247,6 @@
     width: 100%;
     justify-content: flex-end;
   }
-}
-/* Equal flexible sides keep the title centred between the back arrow and the credits chip. */
-.project-title-row {
-  display: grid;
-  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
-  align-items: center;
-  gap: 14px;
-}
-.project-title-row > .icon-button {
-  justify-self: start;
-}
-.project-title-row > .project-credits-chip {
-  justify-self: end;
-}
-.project-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  min-width: 0;
-  text-align: center;
-}
-.project-heading h1 {
-  min-width: 0;
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.035em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.project-heading > div {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-.project-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-.project-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  padding: 5px;
-  max-width: 100%;
-  pointer-events: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
-}
-.project-header-actions > select {
-  min-width: 0;
-  width: 180px;
-  padding: 6px 28px 6px 10px;
-  font-size: var(--text-xs);
-}
-.project-toolbar > .segmented-control {
-  pointer-events: auto;
-  max-width: 100%;
-  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
-}
-.project-toolbar .segmented-control button {
-  padding: 7px 10px;
-  font-size: var(--text-xs);
 }
 .project-workspace {
   position: relative;
@@ -368,287 +275,6 @@
   min-width: 0;
   min-height: 0;
   background: var(--canvas-background);
-}
-.is-reviewing .project-workspace-content {
-  padding-top: calc(var(--project-chrome-height) + 12px);
-}
-/*
- * The deliverable frame sits behind its version lines (see `buildCanvas`): a title bar with the name
- * centred, then one border around every version. Its height is FRAME_BAR_H in canvas-layout.ts.
- * xyflow makes a non-selectable, non-draggable node transparent to the pointer, so the frame never
- * blocks panning; the lines drawn on top keep their own controls.
- */
-.deliverable-frame {
-  height: 100%;
-  /* The frame's fill is close to the canvas, so its edge carries the grouping. */
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--surface-subtle);
-}
-.deliverable-frame-bar {
-  display: flex;
-  min-width: 0;
-  height: 48px;
-  align-items: baseline;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 20px 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--surface);
-}
-.deliverable-frame-bar h2 {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: 16px;
-  line-height: 20px;
-  letter-spacing: -0.3px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.deliverable-frame-bar p {
-  flex-shrink: 0;
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  line-height: 17px;
-  white-space: nowrap;
-}
-/* One version reads as a single line: the label column on the left, the designs beside it. */
-.version-card {
-  display: flex;
-  align-items: stretch;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  overflow: hidden;
-  box-shadow: 0 3px 8px #00000003;
-}
-/* Fixed sizes here and below mirror canvas-layout.ts, which places the lines without
-   measuring them. Change the two together. */
-.version-label {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 200px;
-  width: 200px;
-  background: var(--surface-hover);
-  border-right: 1px solid var(--border);
-}
-.version-label > header {
-  display: flex;
-  align-items: center;
-  height: 56px;
-  padding: 0 14px;
-  gap: 8px;
-}
-.version-label > header > strong {
-  font-size: var(--text-base);
-}
-.version-state {
-  flex: 1;
-  min-width: 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.version-designs {
-  display: flex;
-  align-items: flex-start;
-  flex: 1;
-  min-width: 0;
-  padding: 12px;
-  gap: 8px;
-}
-/* One tile per design, all the same width, so the row reads as a row however many it holds. */
-.design-preview {
-  padding: 0;
-  border: 0;
-  background: var(--surface-subtle);
-  border-radius: 4px;
-  overflow: hidden;
-  flex: 0 0 200px;
-  min-width: 0;
-  text-align: left;
-}
-.design-preview:focus-within {
-  outline: 2px solid var(--ink);
-  outline-offset: -2px;
-}
-/* The image preserves its deliverable geometry; its footer stays outside the double-click target. */
-.design-preview-artwork {
-  display: block;
-  height: var(--artwork-height, 200px);
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.design-preview-artwork > * {
-  height: 100%;
-  width: 100%;
-  object-fit: contain;
-}
-.design-preview > footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 35px;
-  gap: 4px;
-  padding: 0 6px 0 9px;
-  font-size: var(--text-xs);
-  line-height: 15px;
-  color: var(--muted);
-}
-.design-preview > footer > span {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.design-preview > footer > .icon-button {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
-}
-/* The only feedback content on the canvas is this compact navigation shortcut. */
-.version-comments {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 36px;
-  flex-shrink: 0;
-  padding: 0 14px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--text-xs);
-  text-align: left;
-  cursor: pointer;
-}
-.version-comments:hover {
-  color: var(--foreground);
-}
-/* The label column's footer keeps its control on its own full-width line: the column is one tile
-   wide, which is not enough to set the count and the control side by side. */
-.version-label > footer {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 5px;
-  margin-top: auto;
-  height: 66px;
-  padding: 10px 14px 8px;
-}
-.version-label > footer > span {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 15px;
-}
-.version-label > footer .button {
-  padding: 5px 7px;
-  font-size: var(--text-xs);
-  min-height: 28px;
-}
-/* The rest of the row sits in a trailing slot rather than a row of its own, so the line stays one
-   line. Selector kept specific so the shared `.button` rules cannot re-shape it. */
-.version-designs > .more-designs {
-  flex: 0 0 112px;
-  align-self: stretch;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 0;
-  padding: 10px;
-  border-radius: 4px;
-  background: var(--surface-subtle);
-  font-size: var(--text-sm);
-  line-height: 15px;
-  text-align: center;
-  white-space: normal;
-}
-.version-empty {
-  flex: 0 0 408px;
-  align-self: stretch;
-  min-height: 144px;
-}
-.project-add-design,
-.project-add-version {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-.project-add-design {
-  flex: 0 0 200px;
-  height: calc(var(--artwork-height) + 35px);
-  flex-direction: column;
-}
-.project-add-version {
-  width: 100%;
-  height: 100%;
-}
-.project-add-design:hover,
-.project-add-version:hover {
-  border-color: var(--muted);
-  background: var(--surface-subtle);
-  color: var(--foreground);
-}
-.project-add-design small,
-.project-add-version small {
-  font-size: var(--text-xs);
-}
-.canvas-empty-hint {
-  position: absolute;
-  inset: auto 30px 35%;
-  text-align: center;
-  color: var(--muted);
-  font-size: var(--text-lg);
-  pointer-events: none;
-}
-.project-canvas.is-dragging-over {
-  outline: 2px dashed var(--border-strong);
-  outline-offset: -12px;
-  border-radius: var(--radius-lg);
-}
-.canvas-drop-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 5;
-}
-.canvas-drop-overlay span,
-.canvas-drop-hint {
-  background: var(--ink);
-  color: var(--surface);
-  border-radius: var(--radius);
-  pointer-events: none;
-}
-.canvas-drop-overlay span {
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--text-lg);
-  font-weight: 600;
-}
-.canvas-drop-hint {
-  position: absolute;
-  bottom: 35%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--text-base);
-  z-index: 6;
 }
 /*
  * Project tools float at the bottom of the canvas, centred in whatever width the side panel leaves.
@@ -883,311 +509,6 @@
   justify-content: space-between;
   margin-top: 8px;
 }
-.artwork {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  padding: 8%;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-.artwork-brand {
-  font-size: var(--text-base);
-  letter-spacing: 2px;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
-}
-.artwork-composition {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-.artwork-shape {
-  position: absolute;
-  width: 75%;
-  aspect-ratio: 1;
-  border-radius: 50% 50% 10% 50%;
-  right: -15%;
-  top: 15%;
-  transform: rotate(-22deg);
-  opacity: 0.9;
-}
-.artwork-title {
-  font-size: clamp(32px, 4vw, 62px);
-  line-height: 1.08;
-  font-weight: 500;
-  letter-spacing: -2.5px;
-  white-space: pre-line;
-  position: relative;
-  max-width: 95%;
-}
-.artwork-copy {
-  position: relative;
-  font-size: var(--text-xs);
-  line-height: 1.6;
-}
-.artwork-copy > span {
-  letter-spacing: 2px;
-  font-size: 9px;
-}
-.artwork-copy p {
-  max-width: 65%;
-  margin-top: 9px;
-}
-.artwork-mark {
-  position: absolute;
-  right: 8%;
-  bottom: 9%;
-  font-size: 28px;
-}
-.artwork-thumbnail {
-  padding: 10%;
-}
-.artwork-thumbnail .artwork-brand {
-  font-size: 7px;
-  letter-spacing: 1px;
-}
-.artwork-thumbnail .artwork-title {
-  font-size: 23px;
-  letter-spacing: -0.8px;
-}
-.artwork-thumbnail .artwork-copy {
-  font-size: 6px;
-}
-.artwork-thumbnail .artwork-copy > span {
-  font-size: 5px;
-  letter-spacing: 1px;
-}
-.artwork-thumbnail .artwork-mark {
-  font-size: 15px;
-}
-.uploaded-artwork {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-.artwork-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  background: #000;
-}
-.artwork-video-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--surface-subtle);
-  color: var(--muted);
-  font-size: var(--text-base);
-}
-.artwork-video-player {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-.artwork-video-feedback {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  margin: 0;
-  padding: 10px 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: var(--surface);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: var(--text-base);
-}
-.artwork-loading {
-  width: 100%;
-  height: 100%;
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: var(--text-base);
-}
-/*
- * The design's title bar and canvas on the left; the feedback column on the right runs the viewer's
- * full height, headed by the design tools (pinning acts on the artwork beside it). Phones stack.
- */
-.design-viewer {
-  flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas:
-    "toolbar tools"
-    "viewport feedback";
-  min-height: 0;
-}
-.design-viewer-toolbar {
-  grid-area: toolbar;
-  display: grid;
-  grid-template-columns: 1fr minmax(0, auto) 1fr;
-  gap: 16px;
-  align-items: center;
-  margin: 0 16px 12px;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
-}
-.design-viewer-heading {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 4px;
-  text-align: center;
-  font-size: var(--text-base);
-}
-.design-viewer-heading > :is(strong, span) {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.design-viewer-heading > span {
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-.design-viewer-toolbar > .button {
-  justify-self: start;
-}
-/* Bottom padding matches the title bar's own bottom margin, so both rows centre on one line. */
-.design-viewer-tools {
-  grid-area: tools;
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 10px 16px 22px;
-  border-left: 1px solid var(--border);
-  background: var(--surface);
-}
-.design-viewer-tools .icon-button {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-}
-.design-viewer > .comment-panel {
-  grid-area: feedback;
-}
-.design-viewport {
-  grid-area: viewport;
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--canvas-background);
-}
-/* Holds the canvas itself, separately from the video pin track below it, so the track gets a
-   fixed strip of its own height instead of being absolutely positioned over the artwork. */
-.design-canvas {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-}
-/* A miniature timeline beneath a video design: one marker per timed comment, so a reviewer can
-   see and reach every pin without scrubbing to find it first. */
-.video-pin-track {
-  position: relative;
-  flex: none;
-  height: 32px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-.video-pin-marker {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translate(-50%, -50%);
-  width: var(--space-xs);
-  height: var(--space-xs);
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: #252525;
-  box-shadow: 0 1px 4px #0003;
-  cursor: pointer;
-}
-.video-pin-marker.selected {
-  outline: 3px solid #ffffff80;
-}
-.artwork-stage {
-  position: relative;
-  width: 100%;
-  box-shadow: 0 12px 50px #0000000c;
-}
-.artwork-stage.pin-mode {
-  cursor: crosshair;
-}
-.artwork-stage > .artwork {
-  position: absolute;
-  inset: 0;
-}
-.artwork-pin {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-  width: 27px;
-  height: 27px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: #252525;
-  color: white;
-  font-size: var(--text-sm);
-  box-shadow: 0 2px 8px #0003;
-  z-index: 5;
-}
-.artwork-pin.selected {
-  outline: 4px solid #ffffff80;
-}
-.artwork-pin.pending {
-  background: #777;
-}
-.design-carousel {
-  align-self: center;
-  flex-shrink: 0;
-  margin: 12px;
-  background: var(--surface);
-  box-shadow: 0 3px 14px #0000000c;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  padding: 4px 8px;
-  font-size: var(--text-sm);
-  white-space: nowrap;
-}
-.canvas-hint {
-  position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--ink);
-  color: var(--on-ink);
-  padding: 10px 16px;
-  border-radius: 6px;
-  font-size: var(--text-base);
-}
 .comment-panel {
   display: flex;
   flex-direction: column;
@@ -1228,11 +549,6 @@
   padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
-.comment.selected {
-  border-radius: 5px;
-  background: var(--surface-subtle);
-  outline: 8px solid var(--surface-subtle);
-}
 .comment.resolved {
   color: var(--muted);
 }
@@ -1271,8 +587,7 @@
   overflow-wrap: anywhere;
   margin: 10px 0 6px;
 }
-.comment-resolve,
-.comment-pin-link {
+.comment-resolve {
   border: 0;
   background: none;
   color: var(--muted);
@@ -1283,44 +598,9 @@
   padding: 3px 0;
   margin-top: 9px;
 }
-/* The pin sits beside its author's name rather than on a line of its own. */
-.comment-author .comment-pin-link {
-  flex-shrink: 0;
-  margin-top: 0;
-  padding: 0;
-}
-.comment-pin-link:hover .comment-pin-time {
-  font-family: var(--font-data);
-  color: var(--ink);
-}
-/* A timed pin's moment. Tabular figures so a column of them does not shuffle horizontally as the
-   digits change, which is the whole reason a timecode is easier to scan than a label. */
-.comment-pin-time {
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
 .comment-panel > .project-panel-heading {
   align-items: center;
   padding: 12px 16px 8px;
-}
-/* A client's decision on the version, offered where they read its feedback. */
-.review-notice {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 16px 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--surface-subtle);
-  font-size: var(--text-sm);
-}
-.review-notice p {
-  margin: 0;
-}
-.review-notice .button {
-  flex-shrink: 0;
 }
 .comment-composer {
   display: grid;
@@ -1339,7 +619,6 @@
   max-height: 120px;
   padding: 10px 12px;
 }
-.comment-composer > .pending-pin,
 .comment-composer > .form-error {
   grid-column: 1 / -1;
 }
@@ -1355,101 +634,6 @@
 .send-comment:disabled {
   opacity: 0.3;
 }
-.pending-pin {
-  display: flex;
-  align-items: center;
-  font-size: var(--text-xs);
-  gap: 6px;
-  margin-bottom: 9px;
-  color: var(--muted);
-}
-.pending-pin button {
-  margin-left: auto;
-}
-.design-text-options {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-.design-text-options summary {
-  font-size: var(--text-base);
-  cursor: pointer;
-  color: var(--muted);
-}
-.design-text-options[open] {
-  display: grid;
-  gap: 14px;
-}
-.design-text-options label {
-  margin-top: 14px;
-}
-.bulk-drop-group {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md) var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.bulk-drop-group legend {
-  padding: 0 var(--space-xs);
-  font-size: var(--text-base);
-}
-.bulk-drop-group legend span,
-.bulk-drop-note,
-.bulk-drop-status {
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.bulk-drop-choice {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs) var(--space-md);
-}
-.bulk-drop-note {
-  margin: 0;
-}
-.bulk-drop-files {
-  display: grid;
-  gap: var(--space-xs);
-  margin: var(--space-sm) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.bulk-drop-files li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs) var(--space-sm);
-  min-width: 0;
-}
-.bulk-drop-files li > span:first-child {
-  flex: 1 1 12rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.bulk-drop-status.is-failed {
-  color: var(--ink);
-  font-weight: 600;
-}
-.bulk-drop-summary {
-  margin: 0;
-  font-weight: 600;
-}
-.upload-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: -6px 0 0;
-}
-.upload-progress progress {
-  flex: 1;
-  height: 6px;
-  accent-color: currentColor;
-}
-.upload-progress span {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  min-width: 3ch;
-  text-align: right;
-}
 @media (max-width: 1000px) {
   .comment-panel {
     width: 310px;
@@ -1464,42 +648,6 @@
     max-height: 640px;
     border-left: 0;
     border-top: 1px solid var(--border);
-  }
-  .design-viewer {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
-    grid-template-areas:
-      "toolbar"
-      "tools"
-      "viewport"
-      "feedback";
-  }
-  .design-viewer-tools {
-    margin: 0 12px 8px;
-    padding: 6px 8px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-  }
-  .design-viewport {
-    height: 530px;
-    min-height: 530px;
-    flex: none;
-  }
-  .design-viewer-toolbar {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 8px;
-    margin: 0 12px 8px;
-    gap: 8px;
-  }
-  .design-viewer-toolbar .button {
-    font-size: var(--text-xs);
-    padding: 6px;
-  }
-  .design-viewer-heading {
-    font-size: var(--text-xs);
-  }
-  .artwork-title {
-    font-size: 45px;
   }
 }
 
@@ -1591,37 +739,6 @@
   color: var(--muted);
 }
 
-/* Notes and decisions are preserved in the review panel without truncation. */
-.version-context {
-  padding: 0 0 20px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-  line-height: 1.6;
-}
-.version-context-heading {
-  margin: 0;
-  font-weight: 600;
-}
-.version-context-hint {
-  margin: 4px 0 16px;
-  color: var(--muted);
-}
-.version-context h3 {
-  margin: 12px 0 5px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-.version-context section p {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.version-context > button {
-  margin-top: 16px;
-  width: 100%;
-}
-
 @media (max-width: 720px) {
   .project-chrome {
     inset: 12px 12px auto;
@@ -1630,77 +747,12 @@
   .project-header {
     padding: 12px;
   }
-  .project-heading {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .project-heading h1 {
-    font-size: 20px;
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  .project-title-row {
-    gap: 6px;
-  }
-  .project-title-row > .icon-button {
-    width: 28px;
-    min-width: 28px;
-  }
-  .project-heading > div {
-    gap: 8px;
-    font-size: var(--text-xs);
-  }
-  .project-header-actions {
-    gap: 3px;
-  }
-  .project-header-actions > select {
-    width: 150px;
-  }
-  .design-viewer {
-    overflow-y: auto;
-  }
-  /* Stacked, the title bar and then the tools stay put while artwork and feedback scroll. */
-  .design-viewer > :is(.design-viewer-toolbar, .design-viewer-tools) {
-    position: sticky;
-    z-index: 2;
-  }
-  .design-viewer-toolbar {
-    top: 0;
-  }
-  .design-viewer-tools {
-    top: calc(var(--design-toolbar-height, 0px) + 8px);
-  }
-  .design-viewport {
-    height: 360px;
-    min-height: 360px;
-  }
 }
 
-/* Short windows keep the controls fixed while the artwork and feedback scroll underneath. */
-@media (max-height: 650px) {
-  .design-viewer {
-    overflow-y: auto;
-  }
-  .design-viewer > :is(.design-viewport, .comment-panel) {
-    min-height: 460px;
-  }
-}
+/* Short windows tighten the project bar. */
 @media (max-height: 650px) and (min-width: 721px) {
-  .design-viewer > :is(.design-viewer-toolbar, .design-viewer-tools) {
-    position: sticky;
-    z-index: 2;
-    top: 0;
-  }
   .project-header {
     padding: 10px 12px;
-  }
-  .project-heading h1 {
-    font-size: 21px;
-  }
-  .project-heading > div {
-    font-size: var(--text-xs);
   }
 }
 
@@ -1717,9 +769,6 @@
   border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 8%);
-}
-.is-reviewing .project-inspector {
-  top: calc(var(--project-chrome-height) + var(--design-toolbar-height) + 24px);
 }
 .project-inspector > aside {
   width: 100%;
@@ -1775,29 +824,6 @@
   .project-inspector > .project-details {
     min-height: 300px;
   }
-}
-.version-miro {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 8px 0 0;
-}
-.version-miro-open {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 7px;
-  height: 36px;
-  padding: 0 14px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--text-xs);
-  text-align: left;
-  cursor: pointer;
-}
-.version-miro-open:hover {
-  color: var(--foreground);
 }
 .miro-view {
   position: absolute;

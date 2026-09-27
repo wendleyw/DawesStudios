@@ -88,7 +88,6 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
         due_date: null,
       },
       versions: [],
-      designs: [],
       deliverables: [],
     } as unknown as ProjectWorkspaceProps["data"],
     boards: [],
@@ -128,16 +127,9 @@ describe("ProjectWorkspace", () => {
     expect(onChannel).toHaveBeenCalledWith("client");
   });
 
-  it("keeps earlier versions behind More, only when the project has them", async () => {
-    const user = userEvent.setup();
-    const onEarlierVersions = vi.fn();
-    const { unmount } = renderWorkspace({ onEarlierVersions });
-    await user.click(screen.getByRole("button", { name: "More" }));
-    await user.click(screen.getByRole("button", { name: "Earlier versions" }));
-    expect(onEarlierVersions).toHaveBeenCalled();
-    unmount();
+  it("offers no Earlier versions: the workspace is the whole project page", async () => {
     renderWorkspace();
-    await user.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "More" }));
     expect(screen.queryByRole("button", { name: "Earlier versions" })).toBeNull();
   });
 

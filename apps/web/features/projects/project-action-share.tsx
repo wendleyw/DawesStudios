@@ -56,7 +56,7 @@ export function ProjectActionShare({
     },
     onSuccess: closeOnSuccess,
   });
-  const { closeError, closeDisabled, close } = useProjectActionClose({
+  const { closeDisabled, close } = useProjectActionClose({
     onClose,
     pending: mutation.isPending,
   });
@@ -69,23 +69,23 @@ export function ProjectActionShare({
           : "A new client version."
       }
       closeDisabled={closeDisabled}
-      onModalClose={() => void close()}
+      onModalClose={close}
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate(new FormData(event.currentTarget));
       }}
-      onCancelClick={() => void close()}
+      onCancelClick={close}
       cancelDisabled={closeDisabled}
       submitLabel={mutation.isPending ? "Sharing…" : "Share with client"}
       submitDisabled={mutation.isPending}
-      error={closeError || mutation.error?.message}
+      error={mutation.error?.message}
     >
       <p>
         Copy the design into the client board in Miro first, then paste that board or frame here.
       </p>
       <label>
         Client Miro board
-        {/* Remounted once a late prefill arrives, so `defaultValue` takes it (as `MiroField`). */}
+        {/* Remounted once a late prefill arrives, so `defaultValue` takes it. */}
         <input
           key={loading ? "loading" : prefillUrl}
           name="miro"

@@ -7,7 +7,7 @@ import { nextCommentAttempt } from "./comment-panel";
  * proves only that `postComment` forwards whatever key it is given — a ref keyed on the component's
  * mount would pass that test too. What actually matters, and what a mount-keyed ref gets wrong, is
  * the *decision* of when to mint a new key: reuse across a retry of the same comment, mint fresh
- * when the person edits the text or moves the pin before resubmitting. These tests exercise that
+ * when the person edits the text before resubmitting. These tests exercise that
  * decision directly.
  */
 describe("nextCommentAttempt", () => {

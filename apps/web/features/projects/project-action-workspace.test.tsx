@@ -84,9 +84,7 @@ describe("board dialog", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p" }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -116,9 +114,7 @@ describe("board dialog", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -143,9 +139,7 @@ describe("board dialog", () => {
     const { container } = wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -166,9 +160,7 @@ describe("board dialog", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p" }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -180,9 +172,7 @@ describe("board dialog", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p" }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -199,13 +189,7 @@ describe("round dialog", () => {
     const user = userEvent.setup();
     writes.sendBoardRound.mockRejectedValueOnce(new Error("Network down"));
     wrap(
-      <ProjectActionDialog
-        action={{ kind: "round", board }}
-        projectId="p"
-        suspended={false}
-        onOpenPlayground={vi.fn()}
-        onClose={vi.fn()}
-      />,
+      <ProjectActionDialog action={{ kind: "round", board }} suspended={false} onClose={vi.fn()} />,
     );
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
@@ -221,13 +205,7 @@ describe("round dialog", () => {
     const user = userEvent.setup();
     writes.sendBoardRound.mockRejectedValueOnce(new Error('Board access required (42501): "b1"'));
     wrap(
-      <ProjectActionDialog
-        action={{ kind: "round", board }}
-        projectId="p"
-        suspended={false}
-        onOpenPlayground={vi.fn()}
-        onClose={vi.fn()}
-      />,
+      <ProjectActionDialog action={{ kind: "round", board }} suspended={false} onClose={vi.fn()} />,
     );
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
@@ -249,9 +227,7 @@ describe("share dialog", () => {
           round,
           prefill: { boardId: "uXjVClient1=", widgetId: "5" },
         }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -284,9 +260,7 @@ describe("share dialog prefill", () => {
           round: { id: "r1", number: 1 } as never,
           prefill: null,
         }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />
     );
@@ -310,9 +284,7 @@ describe("share dialog prefill", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "share", projectId: "p", round: null, prefill: null }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );
@@ -329,9 +301,7 @@ describe("share dialog prefill", () => {
           round: null,
           prefill: { boardId: "uXjVClient1=", widgetId: null },
         }}
-        projectId="p"
         suspended={false}
-        onOpenPlayground={vi.fn()}
         onClose={vi.fn()}
       />,
     );

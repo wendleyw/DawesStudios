@@ -44,19 +44,27 @@ type ClientVersionRow = {
   } | null;
 };
 
-/** Named columns: `created_by` on `design_versions` and `design_boards` is not readable. */
+/** Named columns: the API grants no role `design_versions.created_by`, so `select("*")` is refused. */
 const ROUND_COLUMNS = "id,project_id,board_id,version_number,status,created_at,notes";
 const CLIENT_VERSION_COLUMNS =
   "id,project_id,version_number,published_at,release_note,publication_reviews!publication_reviews_publication_id_fkey(status,reviewed_by,reviewed_at)";
 
-/** The newest row per group, by `version_number`. */
-function latestBy<T extends { version_number: number }>(rows: T[], key: (row: T) => string): T[] {
+/** The newest row per group, by `version_number`. Shared with the Overview's designer rounds. */
+export function latestBy<T extends { version_number: number }>(
+  rows: T[],
+  key: (row: T) => string,
+): T[] {
   const latest = new Map<string, T>();
   for (const row of rows) {
     const current = latest.get(key(row));
     if (!current || current.version_number < row.version_number) latest.set(key(row), row);
   }
   return [...latest.values()];
+}
+
+/** The label a round is listed under: its design board's name and its number on that board. */
+export function roundLabel(boardName: string | undefined, roundNumber: number): string {
+  return `${boardName ?? "Design board"} · Round ${roundNumber}`;
 }
 
 /**
@@ -156,7 +164,7 @@ export function useReviews(clientId: string) {
           id: round.id,
           projectId: round.project_id,
           title: project.title,
-          label: `${board?.name ?? "Design board"} · Round ${round.version_number}`,
+          label: roundLabel(board?.name, round.version_number),
           status: publishedVersionStatus(round.status, project.status),
           date: round.created_at,
           note: round.notes,

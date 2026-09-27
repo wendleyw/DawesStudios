@@ -267,7 +267,7 @@ export function ProjectDetails({
           {/*
             The compare-and-set conflict reads as a sentence because `updateProjectDetails` turns
             the PGRST116 result into one before it returns; there is no second copy of that message
-            here, as there is none beside `updateWorkingDesign`.
+            here.
           */}
           {save.error && <FormError>{save.error.message}</FormError>}
           <div className="form-actions">

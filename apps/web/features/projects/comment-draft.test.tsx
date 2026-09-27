@@ -21,7 +21,7 @@ const { useCommentDraft } = await import("./comment-draft");
  * keeps them independent.
  */
 function mountDraft(client: QueryClient) {
-  return renderHook(() => useCommentDraft("project-1", "internal", "design-1"), {
+  return renderHook(() => useCommentDraft("project-1", "internal", "version-1"), {
     wrapper: ({ children }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     ),
@@ -29,40 +29,25 @@ function mountDraft(client: QueryClient) {
 }
 
 describe("the comment draft survives its panel", () => {
-  it("isolates version discussion from project messages and pinned design drafts", () => {
+  it("isolates each version's feedback from the project conversation and other versions", () => {
     const client = new QueryClient();
-    function mount(designId?: string, versionId?: string) {
-      return renderHook(() => useCommentDraft("project-1", "client", designId, versionId), {
+    function mount(versionId?: string) {
+      return renderHook(() => useCommentDraft("project-1", "client", versionId), {
         wrapper: ({ children }) => (
           <QueryClientProvider client={client}>{children}</QueryClientProvider>
         ),
       });
     }
-    const firstVersion = mount(undefined, "version-1");
+    const firstVersion = mount("version-1");
     act(() => firstVersion.result.current.update({ body: "Apply this to both designs." }));
     firstVersion.unmount();
-    const image = mount("design-1", "version-1");
-    expect(image.result.current.draft.body).toBe("");
-    act(() =>
-      image.result.current.update({ body: "Move this headline.", pin: { x: 0.2, y: 0.3 } }),
-    );
-    image.unmount();
     for (const versionId of [undefined, "version-2"]) {
-      const separate = mount(undefined, versionId);
-      expect(separate.result.current.draft).toMatchObject({ body: "", pin: null });
+      const separate = mount(versionId);
+      expect(separate.result.current.draft.body).toBe("");
       separate.unmount();
     }
-    const restoredVersion = mount(undefined, "version-1");
-    expect(restoredVersion.result.current.draft).toMatchObject({
-      body: "Apply this to both designs.",
-      pin: null,
-    });
-    restoredVersion.unmount();
-    const restoredImage = mount("design-1", "version-1");
-    expect(restoredImage.result.current.draft).toMatchObject({
-      body: "Move this headline.",
-      pin: { x: 0.2, y: 0.3 },
-    });
+    const restoredVersion = mount("version-1");
+    expect(restoredVersion.result.current.draft.body).toBe("Apply this to both designs.");
   });
 
   it("carries the idempotency attempt across a remount", () => {

@@ -5,7 +5,6 @@ import { useAuth } from "@/features/auth/auth-provider";
 import {
   clearMiroLink,
   setMiroLink,
-  useLatestMiroLink,
   type CanvasVersion,
   type ProjectChannel,
 } from "./project-data";
@@ -44,17 +43,7 @@ export function ProjectActionMiro({
     action.channel === "client" &&
     action.version.deliverableId === null &&
     action.version.boardId === null;
-  // Prefills from the deliverable's newest earlier link on the same channel, unless this version
-  // already has its own link. The hook runs unconditionally; `enabled` scopes it.
-  const latestMiro = useLatestMiroLink(action.version.deliverableId ?? "", action.channel, {
-    excludeId: action.version.id,
-    enabled: !action.version.miro,
-  });
-  const miroPrefill = action.version.miro
-    ? miroBoardUrl(action.version.miro)
-    : latestMiro.data
-      ? miroBoardUrl(latestMiro.data)
-      : "";
+  const miroPrefill = action.version.miro ? miroBoardUrl(action.version.miro) : "";
   const { closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
@@ -74,7 +63,7 @@ export function ProjectActionMiro({
     },
     onSuccess: closeOnSuccess,
   });
-  const { closeError, closeDisabled, close } = useProjectActionClose({
+  const { closeDisabled, close } = useProjectActionClose({
     onClose,
     pending: mutation.isPending,
   });
@@ -84,16 +73,16 @@ export function ProjectActionMiro({
       open={!suspended}
       title={miroTitle(!!action.version.miro)}
       closeDisabled={closeDisabled}
-      onModalClose={() => void close()}
+      onModalClose={close}
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate(new FormData(event.currentTarget));
       }}
-      onCancelClick={() => void close()}
+      onCancelClick={close}
       cancelDisabled={closeDisabled}
       submitLabel={mutation.isPending ? "Saving…" : "Save link"}
       submitDisabled={mutation.isPending}
-      error={closeError || mutation.error?.message}
+      error={mutation.error?.message}
     >
       <p>
         {action.channel === "client"
@@ -102,7 +91,6 @@ export function ProjectActionMiro({
       </p>
       <MiroField
         prefill={miroPrefill}
-        loading={latestMiro.isPending && latestMiro.fetchStatus !== "idle"}
         required={linkRequired}
         hint={
           linkRequired
@@ -115,17 +103,15 @@ export function ProjectActionMiro({
 }
 
 /**
- * The Miro link input; remounted once its prefill arrives so `defaultValue` takes it. It is a text
- * input, not `type="url"`, so the dialog's own message (not the browser's) explains a bad link.
+ * The Miro link input, prefilled with the version's own link. It is a text input, not
+ * `type="url"`, so the dialog's own message (not the browser's) explains a bad link.
  */
-export function MiroField({
+function MiroField({
   prefill,
-  loading,
   hint,
   required = false,
 }: {
   prefill: string;
-  loading: boolean;
   hint: string;
   /** A shared version's link cannot be left empty; everywhere else the link is optional. */
   required?: boolean;
@@ -134,12 +120,10 @@ export function MiroField({
     <label>
       {required ? "Miro frame" : "Miro frame (optional)"}
       <input
-        key={loading ? "loading" : prefill}
         name="miro"
         type="text"
         inputMode="url"
         defaultValue={prefill}
-        disabled={loading}
         required={required}
         placeholder="https://miro.com/app/board/…/?moveToWidget=…"
       />

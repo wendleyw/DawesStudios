@@ -59,7 +59,7 @@ export function ProjectActionRound({
     },
     onSuccess: closeOnSuccess,
   });
-  const { closeError, closeDisabled, close } = useProjectActionClose({
+  const { closeDisabled, close } = useProjectActionClose({
     onClose,
     pending: mutation.isPending,
   });
@@ -68,16 +68,16 @@ export function ProjectActionRound({
       open={!suspended}
       title={`Send ${action.board.name} to the studio.`}
       closeDisabled={closeDisabled}
-      onModalClose={() => void close()}
+      onModalClose={close}
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate(new FormData(event.currentTarget));
       }}
-      onCancelClick={() => void close()}
+      onCancelClick={close}
       cancelDisabled={closeDisabled}
       submitLabel={mutation.isPending ? "Sending…" : "Send to studio"}
       submitDisabled={mutation.isPending}
-      error={closeError || mutation.error?.message}
+      error={mutation.error?.message}
     >
       <label>
         Note for the studio

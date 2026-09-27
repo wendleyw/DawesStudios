@@ -70,7 +70,7 @@ export function ProjectCover({ projectId }: { projectId: string }) {
       <div className="project-cover-preview">
         {cover.data?.url ? (
           // Private signed URLs must bypass the public image optimization cache, matching
-          // `client-mark.tsx` and `artwork.tsx`.
+          // `client-mark.tsx`.
           // eslint-disable-next-line @next/next/no-img-element
           <img src={cover.data.url} alt="Project cover" />
         ) : (

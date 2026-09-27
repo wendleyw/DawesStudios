@@ -111,7 +111,7 @@ describe("MediaRequestError", () => {
   });
 });
 
-/** Mirrors `artwork-files.test.ts`'s `stubSessionDatabase`: a session-only database double, since
+/** A session-only database double, since
  * `prepareProjectCover`/`clearProjectCover` never touch `.from(...)` or `.storage.from(...)`
  * themselves — the media service does that with its own service-role token. */
 function stubSessionDatabase(token: string | null = "token-abc", userId = "user-1") {

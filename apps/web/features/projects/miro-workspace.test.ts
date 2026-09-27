@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { CanvasVersion, DesignBoard } from "./project-data";
+import type { CanvasVersion } from "./project-data";
 import {
   boardRounds,
   canReviewShared,
   latestSharedLink,
   pickById,
   sharedVersions,
-  usesWorkspace,
 } from "./miro-workspace";
 
 const link = (widgetId: string) => ({ boardId: "uXjVBoard01=", widgetId });
@@ -22,53 +21,6 @@ function v(partial: Partial<CanvasVersion> & { id: string; number: number }): Ca
     ...partial,
   };
 }
-const board: DesignBoard = {
-  id: "b1",
-  projectId: "p",
-  name: "Alpha",
-  designerId: "d",
-  dueDate: null,
-  miro: link("0"),
-};
-
-describe("usesWorkspace", () => {
-  it("uses the workspace on a channel with workspace data or no legacy versions", () => {
-    expect(usesWorkspace("internal", { versions: [], boards: [] })).toBe(true);
-    expect(
-      usesWorkspace("internal", {
-        versions: [v({ id: "x", number: 1, deliverableId: "d" })],
-        boards: [],
-      }),
-    ).toBe(false);
-    expect(
-      usesWorkspace("internal", {
-        versions: [v({ id: "x", number: 1, deliverableId: "d" })],
-        boards: [board],
-      }),
-    ).toBe(true);
-    expect(
-      usesWorkspace("client", {
-        versions: [v({ id: "x", number: 1, deliverableId: "d" })],
-        boards: [],
-      }),
-    ).toBe(false);
-    expect(
-      usesWorkspace("client", {
-        versions: [v({ id: "x", number: 1, deliverableId: "d" }), v({ id: "s", number: 1 })],
-        boards: [],
-      }),
-    ).toBe(true);
-    expect(
-      usesWorkspace("client", {
-        versions: [
-          v({ id: "legacy", number: 1, deliverableId: "d" }),
-          v({ id: "boardRound", number: 2, boardId: "b1" }),
-        ],
-        boards: [],
-      }),
-    ).toBe(false);
-  });
-});
 
 describe("boardRounds and sharedVersions", () => {
   const versions = [

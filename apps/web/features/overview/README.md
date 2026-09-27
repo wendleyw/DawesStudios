@@ -74,8 +74,9 @@ designer's `/home` has no board-wide list route to point one at):
 the designer's own project ids, row-level security already scoping both to their own boards.
 Filtering on `board_id` also leaves out the legacy per-deliverable versions still stored until
 they are deleted. `designerRounds` (`overview-model.ts`) reduces that pair to each board's latest
-round, labels it with `roundLabel` ("Board name · Round N"; no deliverable label), and applies
-`publishedVersionStatus` (`features/reviews/review-data.ts`) — a round shared with the client
+round (`latestBy`), labels it with `roundLabel` ("Board name · Round N"; no deliverable label), and
+applies `publishedVersionStatus` — all three from `features/reviews/review-data.ts`, which lists
+Reviews' rows by the same rules — a round shared with the client
 (`status: "reviewed"`) takes its outcome from the project's own status, so a share the client sent
 back reads as `changes_requested` even though the designer cannot read the client's review row
 directly.
@@ -95,7 +96,7 @@ and this page redirects designers away before rendering the tiles regardless.
 ## Files
 
 - `overview-model.ts` — pure functions and types (`clientOverview`, `deliveredOn`, `relativeAge`,
-  `bySoonestDue`, `ROW_LIMIT`, plus the designer-only `designerOverview`/`designerRounds`/`roundLabel` used by
+  `bySoonestDue`, `ROW_LIMIT`, plus the designer-only `designerOverview`/`designerRounds` used by
   `/home`). No Supabase import; every input is a plain value the page already has.
 - `overview-data.ts` — `useDesignerRounds`, the one Supabase read this feature owns (rounds and
   design board names for a designer's own **active** (non-delivered) projects — nothing on a

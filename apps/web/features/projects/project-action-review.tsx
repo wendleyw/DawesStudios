@@ -36,7 +36,7 @@ export function ProjectActionReview({
     },
     onSuccess: closeOnSuccess,
   });
-  const { closeError, closeDisabled, close } = useProjectActionClose({
+  const { closeDisabled, close } = useProjectActionClose({
     onClose,
     pending: mutation.isPending,
   });
@@ -46,16 +46,16 @@ export function ProjectActionReview({
       open={!suspended}
       title="Your thoughts make it better."
       closeDisabled={closeDisabled}
-      onModalClose={() => void close()}
+      onModalClose={close}
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate(new FormData(event.currentTarget));
       }}
-      onCancelClick={() => void close()}
+      onCancelClick={close}
       cancelDisabled={closeDisabled}
       submitLabel={mutation.isPending ? "Saving…" : "Send review"}
       submitDisabled={mutation.isPending}
-      error={closeError || mutation.error?.message}
+      error={mutation.error?.message}
     >
       <label>
         Your decision

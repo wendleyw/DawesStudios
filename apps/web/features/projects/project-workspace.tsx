@@ -41,8 +41,6 @@ export type ProjectWorkspaceProps = {
   data: ProjectData;
   /** Exactly what `useDesignBoards` returns: RLS limits a designer to their own boards. */
   boards: DesignBoard[];
-  /** Opens the Versions canvas, for the agency on a project that also has earlier versions. */
-  onEarlierVersions?: () => void;
   /**
    * The open side panel, owned by `project-page.tsx` (above its early returns) so it survives the
    * remount `useProjectDetail` causes while the other channel's data loads.
@@ -52,8 +50,7 @@ export type ProjectWorkspaceProps = {
 
 /**
  * The project in the Miro workspace: the board, round or client version on Miro, with the
- * product's own controls around it. Replaces the Versions canvas for a channel that uses the
- * workspace (`usesWorkspace`); the legacy canvas stays in `project-versions-canvas.tsx`.
+ * product's own controls around it. This is the whole project page for every role and channel.
  */
 export function ProjectWorkspace({
   projectId,
@@ -61,7 +58,6 @@ export function ProjectWorkspace({
   onChannel,
   data,
   boards,
-  onEarlierVersions,
   panels,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
@@ -110,7 +106,7 @@ export function ProjectWorkspace({
   const feedbackTarget = internal ? round : version;
   // Feedback belongs to the round or version on screen; once none is (back to the board, another
   // board), the panel closes rather than holding feedback for something no longer shown. Adjusted
-  // during render, as `project-versions-canvas.tsx` does for its own derived state.
+  // during render rather than in an effect, so the stale panel never paints.
   if (panel === "feedback" && !feedbackTarget) setPanel(null);
   function closePlayground() {
     setPlaygroundOpen(false);
@@ -126,9 +122,8 @@ export function ProjectWorkspace({
       channel={channel}
       onChannel={(option) => {
         // Feedback is scoped to a round or a client version, which the other channel does not
-        // share, so it closes on a channel switch same as before; Conversation and Details carry
-        // no such scope and stay open, as they did on the legacy page before the channel switch
-        // could unmount this component.
+        // share, so it closes on a channel switch; Conversation and Details carry no such scope and
+        // stay open (`project-page.tsx` keeps them across the remount a channel switch causes).
         if (panel === "feedback") setPanel(null);
         setAssetStripOpen(false);
         onChannel(option);
@@ -199,16 +194,7 @@ export function ProjectWorkspace({
           }
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           lead={channelLead}
-          menu={
-            <>
-              <ProjectCreditsChip projectId={projectId} viewer={profile} />
-              {onEarlierVersions && (
-                <button className="button quiet" onClick={onEarlierVersions}>
-                  Earlier versions
-                </button>
-              )}
-            </>
-          }
+          menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
         />
       </div>
       <div className="project-workspace">
@@ -240,7 +226,7 @@ export function ProjectWorkspace({
                   disabled={playgroundOpen}
                   onClick={() => {
                     // The asset strip lives on the Miro embed; with nothing on Miro yet the
-                    // Playground opens directly, as on the legacy canvas.
+                    // Playground opens directly.
                     setPanel(null);
                     if (shownLink) setAssetStripOpen((open) => !open);
                     else setPlaygroundOpen(true);
@@ -334,11 +320,7 @@ export function ProjectWorkspace({
       <ProjectActionDialog
         key={projectActionKey(action)}
         action={action}
-        projectId={projectId}
-        // Only the design actions (legacy canvas only) suspend for or open the Playground; none
-        // is dispatched here, so these are inert placeholders for the shared dialog's props.
         suspended={false}
-        onOpenPlayground={() => setPlaygroundOpen(true)}
         onClose={() => setAction(null)}
       />
     </div>

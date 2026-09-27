@@ -4,25 +4,21 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { readProjectView } from "./miro-mode";
 import { useDesignBoards, useProjectDetail, type ProjectChannel } from "./project-data";
 import { useProjectEvents } from "./project-events";
 import "./projects.css";
 import { PageStatus } from "@/features/shared/page-status";
-import { usesWorkspace } from "./miro-workspace";
 import { ProjectWorkspace } from "./project-workspace";
-import { ProjectVersionsCanvas } from "./project-versions-canvas";
 import { type ProjectPanelKind } from "./project-panel";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
   useProjectEvents(projectId);
-  // Both bodies below share one panel and deliverable filter, kept here above the early returns
-  // that follow: `useProjectDetail` unmounts whichever body is showing while the other channel's
-  // data loads, and state that lived inside that body would be lost on every channel switch.
+  // The open panel is kept here, above the early returns that follow: `useProjectDetail` unmounts
+  // the workspace while the other channel's data loads, and state that lived inside it would be
+  // lost on every channel switch.
   const panels = usePanelFocusReturn<ProjectPanelKind>();
-  const [format, setFormat] = useState("");
   const parameters = useSearchParams();
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
     parameters.get("channel") === "client" ? "client" : "internal",
@@ -36,30 +32,8 @@ export function ProjectPage({ projectId }: { projectId: string }) {
   const data = useProjectDetail(projectId, channel);
   // RLS limits a designer to their own boards; the client channel never reads boards at all.
   const boards = useDesignBoards(projectId, profile?.role !== "client" && channel === "internal");
-  // The agency may step back to the Versions canvas ("Earlier versions") on a project that still
-  // has legacy versions; the choice lasts until the channel changes. A project with only legacy
-  // versions moves to the workspace on its own once the agency adds its first design board.
-  const [legacyChosen, setLegacyChosen] = useState(false);
-  // `?view=versions` asks for the legacy canvas for every role. Read once: the URL effect in
-  // `project-versions-canvas.tsx` drops `view` when no Miro link exists, and the request must
-  // outlive that.
-  const [legacyRequested, setLegacyRequested] = useState(
-    () => readProjectView(parameters).view === "versions",
-  );
-  function switchChannel(next: ProjectChannel) {
-    setLegacyChosen(false);
-    setAgencyChannel(next);
-  }
-  // Only the agency needs a working target while viewing published snapshots. Client sessions
-  // never enable this read, and publication IDs are never used as production version IDs.
-  const working = useProjectDetail(
-    projectId,
-    "internal",
-    profile?.role === "agency" && channel === "client",
-  );
-  // A file dropped anywhere else on the page must never make the browser open it and leave the
-  // workspace; only the canvas accepts a drop, and only in Working files. Runs for both bodies
-  // below, not only the legacy canvas that owns the canvas's own drop handling.
+  // A file dropped anywhere on the page must never make the browser open it and leave the
+  // workspace: nothing on the page accepts a dropped file.
   useEffect(() => {
     const swallow = (event: DragEvent) => {
       if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
@@ -71,13 +45,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       window.removeEventListener("drop", swallow);
     };
   }, []);
-  if (
-    data.isPending ||
-    (profile?.role === "agency" && channel === "client" && working.isPending) ||
-    (boards.fetchStatus !== "idle" && boards.isPending)
-  )
+  if (data.isPending || (boards.fetchStatus !== "idle" && boards.isPending))
     return <PageStatus>Loading the project…</PageStatus>;
-  // A failed board read is never taken for "no boards": that would show the wrong body.
+  // A failed board read is never taken for "no boards": that would show the wrong empty state.
   if (data.error || !data.data || boards.error)
     return (
       <div className="page-content">
@@ -99,45 +69,14 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         </div>
       </div>
     );
-  const workspace = usesWorkspace(channel, {
-    versions: data.data.versions,
-    boards: boards.data ?? [],
-  });
-  const legacyAvailable = data.data.versions.some((version) => version.deliverableId !== null);
-  if (workspace && !legacyChosen && !legacyRequested)
-    return (
-      <ProjectWorkspace
-        projectId={projectId}
-        channel={channel}
-        onChannel={switchChannel}
-        data={data.data}
-        boards={boards.data ?? []}
-        panels={panels}
-        onEarlierVersions={
-          profile?.role === "agency" && legacyAvailable ? () => setLegacyChosen(true) : undefined
-        }
-      />
-    );
   return (
-    <ProjectVersionsCanvas
+    <ProjectWorkspace
       projectId={projectId}
       channel={channel}
-      onChannel={switchChannel}
-      onWorkingFiles={() => setAgencyChannel("internal")}
+      onChannel={setAgencyChannel}
       data={data.data}
-      workingVersions={working.data?.versions}
-      workspace={workspace}
+      boards={boards.data ?? []}
       panels={panels}
-      format={format}
-      onFormat={setFormat}
-      onBackToBoards={
-        workspace
-          ? () => {
-              setLegacyChosen(false);
-              setLegacyRequested(false);
-            }
-          : undefined
-      }
     />
   );
 }

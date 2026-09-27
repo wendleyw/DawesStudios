@@ -29,8 +29,9 @@ async function readAllRows<T>(
  * `board_id` also leaves out the legacy per-deliverable versions still stored until they are
  * deleted. Row-level security already limits both reads to the designer's own boards; the client
  * Overview reuses the workspace, briefing, credit and review hooks instead. Both reads page past
- * PostgREST's row cap (`readAllRows` above) and name their columns, since `created_by` on either
- * table is not readable.
+ * PostgREST's row cap (`readAllRows` above) and name their columns: the API grants no role
+ * `design_versions.created_by`, so a `select("*")` there is refused (`design_boards` is read as
+ * `id,name`, all it needs).
  */
 export function useDesignerRounds(projectIds: string[] | undefined) {
   const { database, profile, session } = useAuth();

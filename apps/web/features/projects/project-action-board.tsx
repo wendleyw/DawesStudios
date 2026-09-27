@@ -64,7 +64,7 @@ export function ProjectActionBoard({
     },
     onSuccess: closeOnSuccess,
   });
-  const { closeError, closeDisabled, close } = useProjectActionClose({
+  const { closeDisabled, close } = useProjectActionClose({
     onClose,
     pending: mutation.isPending,
   });
@@ -74,17 +74,16 @@ export function ProjectActionBoard({
       open={!suspended}
       title={action.board ? "Edit the design board." : "A design board."}
       closeDisabled={closeDisabled}
-      onModalClose={() => void close()}
+      onModalClose={close}
       onSubmit={(event) => {
         event.preventDefault();
         mutation.mutate(new FormData(event.currentTarget));
       }}
-      onCancelClick={() => void close()}
+      onCancelClick={close}
       cancelDisabled={closeDisabled}
       submitLabel={mutation.isPending ? "Saving…" : submitLabel}
       submitDisabled={mutation.isPending || designers.length === 0}
       error={
-        closeError ||
         mutation.error?.message ||
         assignments.error?.message ||
         (assignments.data && designers.length === 0

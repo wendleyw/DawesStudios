@@ -19,14 +19,16 @@ still waiting on their decision; a version they sent back is waiting on the stud
 
 `review-data.ts` owns the feature's Supabase access, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useReviews` is
-the page's single read hook. Rounds are `design_versions` rows with a `board_id` (named columns;
-`created_by` is not readable), labelled through a `design_boards` read of `id,name`; client
+the page's single read hook. Rounds are `design_versions` rows with a `board_id` (named columns:
+the API grants no role `design_versions.created_by`), labelled with `roundLabel` through a
+`design_boards` read of `id,name`; client
 versions are `published_versions` rows with `deliverable_id is null`, embedding their
 `publication_reviews` decision (`status,reviewed_by,reviewed_at`). Both filters leave out the
 legacy per-deliverable versions still stored until they are deleted. A client session never reads
 `design_versions` or `design_boards`. `review-data.test.tsx` covers the three roles' reads.
 
 `isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,
+`roundLabel` and `latestBy` (which the Overview's designer rounds also use),
 rather than in `reviews-page.tsx`, so another feature can read the tab rule without importing the
 page component. `reviews-page.tsx` imports `inReviewTab` from there to filter its rows; the page
 still declares its own `versionStatusTones`, which is presentation (a `StatusTone` per status for

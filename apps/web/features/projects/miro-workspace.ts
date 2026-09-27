@@ -1,25 +1,12 @@
 import type { MiroLink } from "./miro-links";
-import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
+import type { CanvasVersion } from "./project-data";
 
 /**
  * The Miro workspace's rules. Rounds are internal versions with a design board; shared versions
- * are client versions with no deliverable. Per-deliverable versions belong to the legacy canvas.
+ * are client versions with no deliverable and no board. Legacy per-deliverable versions are never
+ * shown.
  */
 const newestFirst = (a: CanvasVersion, b: CanvasVersion) => b.number - a.number;
-
-/**
- * Which body a channel shows. The workspace, once the channel has workspace data or nothing
- * legacy; otherwise the legacy canvas, so existing projects keep working unchanged.
- */
-export function usesWorkspace(
-  channel: ProjectChannel,
-  input: { versions: CanvasVersion[]; boards: DesignBoard[] },
-): boolean {
-  const legacy = input.versions.some((version) => version.deliverableId !== null);
-  const workspace =
-    channel === "internal" ? input.boards.length > 0 : sharedVersions(input.versions).length > 0;
-  return workspace || !legacy;
-}
 
 export function boardRounds(versions: CanvasVersion[], boardId: string): CanvasVersion[] {
   return versions

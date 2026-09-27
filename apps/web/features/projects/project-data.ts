@@ -1,20 +1,16 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Database, Json } from "@database";
+import type { Database } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
-import { isVideoAsset } from "./video-pins";
 import type { MiroLink } from "./miro-links";
 
 /**
- * Supabase access for a project: the canvas the project page draws, its two comment channels, the
- * designers assigned to it, and every write the canvas and its dialogs perform.
- *
- * Signed artwork URLs are read here rather than in `artwork-files.ts`: that module is deliberately
- * free of React and of `useAuth`, and `board-data.ts` already keeps its own `createSignedUrls` read
- * beside the rows it signs. Only the upload and discard of an artwork file live in `artwork-files`.
+ * Supabase access for a project: the Miro workspace's versions, boards and links, its two comment
+ * channels, the designers assigned to it, its cover, and every write the workspace and its dialogs
+ * perform.
  */
 
 export type TableRow<Name extends keyof Database["public"]["Tables"]> =
@@ -37,23 +33,10 @@ export type CanvasVersion = {
   /** The Miro frame this version points at, on the viewer's channel; null when none is set. */
   miro?: MiroLink | null;
 };
-export type CanvasDesign = {
-  id: string;
-  versionId: string;
-  title: string;
-  content: Json;
-  assetPath: string | null;
-  order: number;
-};
 export type CanvasComment = {
   id: string;
   body: string;
   label: string;
-  pinX: number | null;
-  pinY: number | null;
-  /** Seconds from the start of the video the pin belongs to; null for a still design's pin. */
-  pinT: number | null;
-  designId: string | null;
   resolved: boolean;
   createdAt: string;
 };
@@ -65,8 +48,6 @@ export type CanvasComment = {
  */
 const internalVersionColumns =
   "id,project_id,deliverable_id,board_id,version_number,notes,status,created_at,request_key";
-const internalDesignColumns =
-  "id,project_id,version_id,title,content,internal_asset_path,sort_order,created_at";
 
 /** A canvas version row, from whichever of the two channel tables the canvas was read from. */
 type CanvasVersionRow =
@@ -178,14 +159,14 @@ async function readMiroLinks(
   }));
 }
 
-export function useProjectDetail(projectId: string, channel: ProjectChannel, enabled = true) {
+export function useProjectDetail(projectId: string, channel: ProjectChannel) {
   const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["project-detail", session?.user.id, projectId, channel],
-    enabled: !!session && enabled,
+    enabled: !!session,
     queryFn: async () => {
       const clientChannel = channel === "client" || profile?.role === "client";
-      const [project, deliverables, versionResult, designResult, reviewResult] = await Promise.all([
+      const [project, deliverables, versionResult, reviewResult] = await Promise.all([
         database.from("projects").select("*").eq("id", projectId).single(),
         database.from("deliverables").select("*").eq("project_id", projectId).order("sort_order"),
         clientChannel
@@ -199,21 +180,9 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
               .select(internalVersionColumns)
               .eq("project_id", projectId)
               .order("version_number"),
-        clientChannel
-          ? database
-              .from("published_designs")
-              .select("*")
-              .eq("project_id", projectId)
-              .order("sort_order")
-          : database
-              .from("designs")
-              .select(internalDesignColumns)
-              .eq("project_id", projectId)
-              .order("sort_order"),
         database.from("publication_reviews").select("*").eq("project_id", projectId),
       ]);
       if (versionResult.error) throw new Error(versionResult.error.message);
-      if (designResult.error) throw new Error(designResult.error.message);
       const miroLinks = await readMiroLinks(database, clientChannel ? "client" : "internal", {
         projectId,
       });
@@ -223,19 +192,10 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel, ena
         clientChannel,
         miroLinks,
       );
-      const designs: CanvasDesign[] = designResult.data.map((design) => ({
-        id: design.id,
-        versionId: "version_id" in design ? design.version_id : design.publication_id,
-        title: design.title,
-        content: design.content,
-        assetPath: "internal_asset_path" in design ? design.internal_asset_path : design.asset_path,
-        order: design.sort_order,
-      }));
       return {
         project: assertResult(project),
         deliverables: assertResult(deliverables),
         versions,
-        designs,
         reviews: assertResult(reviewResult),
       };
     },
@@ -271,41 +231,7 @@ export function useLatestSharedMiroLink(projectId: string, enabled: boolean) {
 }
 
 /**
- * The link a new Miro link prefills from: the newest earlier version of the same deliverable, on
- * the same channel. Keyed under `project-detail` so every project write refreshes it.
- */
-export function useLatestMiroLink(
-  deliverableId: string,
-  channel: ProjectChannel,
-  options: { excludeId?: string; enabled?: boolean } = {},
-) {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: [
-      "project-detail",
-      session?.user.id,
-      "miro-latest",
-      deliverableId,
-      channel,
-      options.excludeId,
-    ],
-    enabled: !!session && !!deliverableId && (options.enabled ?? true),
-    queryFn: async () => {
-      const table = channel === "client" ? "published_versions" : "design_versions";
-      const versions = assertResult(
-        await database.from(table).select("id, version_number").eq("deliverable_id", deliverableId),
-      ).map((row) => ({ id: row.id, number: row.version_number }));
-      if (!versions.length) return null;
-      const links = await readMiroLinks(database, channel, {
-        versionIds: versions.map((version) => version.id),
-      });
-      return latestMiroLink(versions, links, options.excludeId);
-    },
-  });
-}
-
-/**
- * The seven fields a comment has whichever channel it came from. The eighth, `label`, is the one
+ * The four fields a comment has whichever channel it came from. The fifth, `label`, is the one
  * thing the two channels must not share: a client comment carries the author label the client
  * wrote it under, while an internal comment resolves to the reader's own name or the anonymous
  * "Studio team" — never a designer's identity. It is passed in, so the two label rules stay
@@ -315,10 +241,6 @@ function toCanvasComment(
   comment: {
     id: string;
     body: string;
-    pin_x: number | null;
-    pin_y: number | null;
-    pin_t: number | null;
-    design_id: string | null;
     resolved: boolean;
     created_at: string;
   },
@@ -328,31 +250,15 @@ function toCanvasComment(
     id: comment.id,
     body: comment.body,
     label,
-    pinX: comment.pin_x,
-    pinY: comment.pin_y,
-    pinT: comment.pin_t,
-    designId: comment.design_id,
     resolved: comment.resolved,
     createdAt: comment.created_at,
   };
 }
 
-export function useProjectComments(
-  projectId: string,
-  channel: ProjectChannel,
-  designId?: string,
-  versionId?: string,
-) {
+export function useProjectComments(projectId: string, channel: ProjectChannel, versionId?: string) {
   const { database, session, profile } = useAuth();
   return useQuery({
-    queryKey: [
-      "comments",
-      session?.user.id,
-      projectId,
-      channel,
-      designId ?? "project",
-      versionId ?? "all",
-    ],
+    queryKey: ["comments", session?.user.id, projectId, channel, versionId ?? "all"],
     enabled: !!session,
     queryFn: async () => {
       if (channel === "client") {
@@ -361,7 +267,8 @@ export function useProjectComments(
           .select("*")
           .eq("project_id", projectId)
           .order("created_at");
-        const scoped = designId ? query.eq("design_id", designId) : query.is("design_id", null);
+        // Comments pinned to a legacy design are not part of any conversation shown today.
+        const scoped = query.is("design_id", null);
         const rows = assertResult(
           await (versionId ? scoped.eq("publication_id", versionId) : scoped),
         );
@@ -372,7 +279,7 @@ export function useProjectComments(
         .select("*")
         .eq("project_id", projectId)
         .order("created_at");
-      const scoped = designId ? query.eq("design_id", designId) : query.is("design_id", null);
+      const scoped = query.is("design_id", null);
       const rows = assertResult(await (versionId ? scoped.eq("version_id", versionId) : scoped));
       return rows.map((comment) =>
         toCanvasComment(
@@ -380,38 +287,6 @@ export function useProjectComments(
           comment.author_id === profile?.id ? profile.display_name : "Studio team",
         ),
       );
-    },
-    refetchInterval: 15_000,
-  });
-}
-
-/** Counts unresolved design and general comments without loading production author fields. */
-export function useVersionCommentCounts(projectId: string, channel: ProjectChannel) {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: ["comments", session?.user.id, projectId, channel, "version-counts"],
-    enabled: !!session,
-    queryFn: async () => {
-      const ids =
-        channel === "client"
-          ? assertResult(
-              await database
-                .from("client_comments")
-                .select("publication_id")
-                .eq("project_id", projectId)
-                .eq("resolved", false),
-            ).map((row) => row.publication_id)
-          : assertResult(
-              await database
-                .from("internal_comments")
-                .select("version_id")
-                .eq("project_id", projectId)
-                .eq("resolved", false),
-            ).map((row) => row.version_id);
-      return ids.reduce<Record<string, number>>((counts, id) => {
-        if (id) counts[id] = (counts[id] ?? 0) + 1;
-        return counts;
-      }, {});
     },
     refetchInterval: 15_000,
   });
@@ -482,46 +357,9 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
   });
 }
 
-/**
- * A short-lived signed URL for one design's uploaded artwork.
- *
- * The bucket is chosen by channel rather than by role, so a client channel never signs a path in
- * the internal bucket. The URL outlives a look at the artwork and is refreshed before it expires.
- */
-// An open video viewer renews before expiry; VideoPlayer preserves its playhead and playback
-// state across that source change. Passive video thumbnails disable this query entirely.
-const VIDEO_ASSET_URL_EXPIRES_IN_SECONDS = 3600;
-const VIDEO_ASSET_URL_REFRESH_MS = 55 * 60_000;
-
-export function useDesignAssetUrl(
-  assetPath: string | null,
-  channel: ProjectChannel,
-  enabled = true,
-) {
-  const { database, session } = useAuth();
-  const video = isVideoAsset(assetPath);
-  const expiresIn = video ? VIDEO_ASSET_URL_EXPIRES_IN_SECONDS : 300;
-  return useQuery({
-    queryKey: ["asset-url", session?.user.id, channel, assetPath, expiresIn],
-    enabled: enabled && !!assetPath,
-    staleTime: video ? VIDEO_ASSET_URL_REFRESH_MS : 120_000,
-    refetchInterval: enabled ? (video ? VIDEO_ASSET_URL_REFRESH_MS : 240_000) : false,
-    queryFn: async () =>
-      assertResult(
-        await database.storage
-          .from(channel === "internal" ? "internal-assets" : "published-assets")
-          .createSignedUrl(assetPath!, expiresIn),
-      ).signedUrl,
-  });
-}
-
 export type ProjectCover = { storagePath: string; clientVisible: boolean; url: string };
 
-/**
- * The signed URL follows the same 300-second expiry / 240-second refresh as `useDesignAssetUrl`'s
- * still-image branch above: a cover is always a still PNG, never a video, so there is no reason to
- * pick different numbers for it.
- */
+/** A cover is always a still PNG: a short-lived signed URL, renewed before it expires. */
 const COVER_URL_EXPIRES_IN_SECONDS = 300;
 const COVER_URL_REFRESH_MS = 240_000;
 
@@ -572,27 +410,6 @@ export async function setProjectCoverVisibility(
       p_project_id: input.projectId,
       p_client_visible: input.visible,
     }),
-  );
-}
-
-/**
- * The raw bytes behind a stored design's artwork, for the Playground albums' copy-into-board flow
- * (`features/playground/playground-albums.ts`).
- *
- * A plain function, not a `use<Thing>()` hook: it runs from the album drag/keyboard-add handler,
- * not on render — the same "read that cannot be a hook" shape as `findUnchangedDesign`/
- * `findDesignByAsset` (rule 2, `docs/architecture/data-access.md`). The bucket is chosen by
- * channel, exactly like `useDesignAssetUrl` above, so a client-channel copy can never reach into
- * `internal-assets`.
- */
-export async function downloadDesignAssetFile(
-  database: SupabaseDatabase,
-  input: { assetPath: string; channel: ProjectChannel },
-) {
-  return assertResult(
-    await database.storage
-      .from(input.channel === "internal" ? "internal-assets" : "published-assets")
-      .download(input.assetPath),
   );
 }
 
@@ -704,8 +521,6 @@ export async function postComment(
     channel: ProjectChannel;
     body: string;
     versionId?: string;
-    designId?: string;
-    pin?: { x: number; y: number; t?: number } | null;
     /** The attempt's replay key (`comment-panel.tsx` mints and reuses it across retries). */
     idempotencyKey?: string;
   },
@@ -716,12 +531,6 @@ export async function postComment(
       p_channel: input.channel,
       p_body: input.body,
       ...(input.versionId ? { p_version_id: input.versionId } : {}),
-      ...(input.designId ? { p_design_id: input.designId } : {}),
-      // `p_pin_t` is typed `number | undefined` (no `null`) by the generated RPC args, matching the
-      // Postgres default of `null` for an unpassed argument — `PendingPin.t` is already
-      // `number | undefined`, so passing it straight through has the same effect on the wire as
-      // omitting the key, since the client strips undefined properties before sending the request.
-      ...(input.pin ? { p_pin_x: input.pin.x, p_pin_y: input.pin.y, p_pin_t: input.pin.t } : {}),
       ...(input.idempotencyKey ? { p_idempotency_key: input.idempotencyKey } : {}),
     }),
   );
@@ -738,150 +547,6 @@ export async function resolveComment(
       p_resolved: input.resolved,
     }),
   );
-}
-
-/** Creates the deliverable's next design version and resolves to its id. */
-export async function createDesignVersion(
-  database: SupabaseDatabase,
-  input: { deliverableId: string; notes: string; copyVersionId?: string },
-) {
-  return assertResult(
-    await database.rpc("create_design_version", {
-      p_deliverable_id: input.deliverableId,
-      p_notes: input.notes,
-      ...(input.copyVersionId ? { p_copy_version_id: input.copyVersionId } : {}),
-    }),
-  );
-}
-
-/*
- * `findUnchangedDesign` and `findDesignByAsset` are plain functions rather than `use<Thing>()`
- * hooks. Both are called from inside `mutation.mutationFn` in `project-action-design.tsx`, where a
- * hook cannot be called at all, so the contract's read rule cannot apply — see the `Reads that
- * cannot be hooks` rule in `docs/architecture/data-access.md` and this feature's `README.md`.
- *
- * Each runs on the submit that needs it, to decide whether the write that follows is a repeat of
- * one already stored. A hook would read on render instead — the answer would be cached from before
- * the upload it is meant to judge, and there is no component that wants the row on screen.
- */
-
-/** The design row already holding exactly what this save would write, if there is one. */
-export async function findUnchangedDesign(
-  database: SupabaseDatabase,
-  input: { id: string; title: string; content: Json; assetPath: string | null },
-) {
-  const query = database
-    .from("designs")
-    .select("id")
-    .eq("id", input.id)
-    .eq("title", input.title)
-    .eq("content", JSON.stringify(input.content));
-  return assertResult(
-    await (input.assetPath
-      ? query.eq("internal_asset_path", input.assetPath)
-      : query.is("internal_asset_path", null)),
-  );
-}
-
-/** The design in this version already carrying an uploaded artwork, so a retry does not add a second. */
-export async function findDesignByAsset(
-  database: SupabaseDatabase,
-  input: { versionId: string; assetPath: string },
-) {
-  return assertResult(
-    await database
-      .from("designs")
-      .select("id")
-      .eq("version_id", input.versionId)
-      .eq("internal_asset_path", input.assetPath),
-  );
-}
-
-/** Saves an edited working design, refusing a save that would overwrite a concurrent edit. */
-export async function updateWorkingDesign(
-  database: SupabaseDatabase,
-  input: {
-    id: string;
-    title: string;
-    content: Json;
-    assetPath: string | null;
-    /** The values the form was opened on: the guard that makes the save a compare-and-set. */
-    previousTitle: string;
-    previousContent: Json;
-    previousAssetPath: string | null;
-  },
-) {
-  const query = database
-    .from("designs")
-    .update({ title: input.title, content: input.content, internal_asset_path: input.assetPath })
-    .eq("id", input.id)
-    .eq("title", input.previousTitle)
-    .eq("content", JSON.stringify(input.previousContent));
-  const result = await (
-    input.previousAssetPath
-      ? query.eq("internal_asset_path", input.previousAssetPath)
-      : query.is("internal_asset_path", null)
-  )
-    .select("id")
-    .single();
-  if (result.error?.code === "PGRST116")
-    throw new Error(
-      "This design changed while you were editing. Close and reopen it before saving.",
-    );
-  assertResult(result);
-}
-
-/** Rewrites the design a repeated upload resolved to, instead of adding another one beside it. */
-export async function updateDesignContent(
-  database: SupabaseDatabase,
-  input: { id: string; title: string; content: Json },
-) {
-  assertResult(
-    await database
-      .from("designs")
-      .update({ title: input.title, content: input.content })
-      .eq("id", input.id)
-      .select("id")
-      .single(),
-  );
-}
-
-export async function addDesign(
-  database: SupabaseDatabase,
-  input: { versionId: string; title: string; content: Json; internalAssetPath: string | null },
-) {
-  assertResult(
-    await database.rpc("add_design", {
-      p_version_id: input.versionId,
-      p_title: input.title,
-      p_content: input.content,
-      ...(input.internalAssetPath ? { p_internal_asset_path: input.internalAssetPath } : {}),
-    }),
-  );
-}
-
-export async function publishVersion(
-  database: SupabaseDatabase,
-  input: { versionId: string; releaseNote: string; assets: Record<string, string> },
-): Promise<string> {
-  return assertResult(
-    await database.rpc("publish_version", {
-      p_version_id: input.versionId,
-      p_release_note: input.releaseNote,
-      p_assets: input.assets,
-      // No submission key: publish_version then treats one internal version as mapping to
-      // exactly one client snapshot, so reopening this dialog and sharing an unchanged
-      // version returns the existing publication instead of minting a second one. A caller
-      // that genuinely wants a fresh snapshot of the same version still passes a key.
-    }),
-  );
-}
-
-export async function submitDesignVersion(
-  database: SupabaseDatabase,
-  input: { versionId: string },
-) {
-  assertResult(await database.rpc("submit_design_version", { p_version_id: input.versionId }));
 }
 
 export async function reviewPublication(

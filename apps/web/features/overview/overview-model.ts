@@ -1,7 +1,9 @@
 import type { CreditEntry } from "@/features/credits/credit-model";
 import {
   inReviewTab,
+  latestBy,
   publishedVersionStatus,
+  roundLabel,
   type ReviewRow,
 } from "@/features/reviews/review-data";
 import type { Project } from "@/features/workspace/workspace-data";
@@ -133,11 +135,6 @@ export type DesignerRound = {
   date: string;
 };
 
-/** The label a round is listed under: its design board's name and its number on that board. */
-export function roundLabel(boardName: string | undefined, roundNumber: number): string {
-  return `${boardName ?? "Design board"} · Round ${roundNumber}`;
-}
-
 /**
  * Each design board's latest round on the designer's projects. A round shared with the client
  * takes the client's decision from its project (`publishedVersionStatus`), so a share the client
@@ -148,14 +145,8 @@ export function designerRounds(
   boards: { id: string; name: string }[],
   projects: Project[],
 ): DesignerRound[] {
-  const latest = new Map<string, RawDesignerRound>();
-  for (const round of rounds) {
-    if (!round.board_id) continue;
-    const current = latest.get(round.board_id);
-    if (!current || current.version_number < round.version_number)
-      latest.set(round.board_id, round);
-  }
-  return [...latest.values()].flatMap((round) => {
+  const onBoards = rounds.filter((round) => round.board_id);
+  return latestBy(onBoards, (round) => round.board_id!).flatMap((round) => {
     const project = projects.find((item) => item.id === round.project_id);
     if (!project) return [];
     return [

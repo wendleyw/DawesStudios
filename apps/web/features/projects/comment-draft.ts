@@ -4,8 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
 import type { ProjectChannel } from "./project-data";
 
-/** A pin is a point on the artwork, and on video also a moment in it, in seconds. */
-export type PendingPin = { x: number; y: number; t?: number };
 /**
  * The idempotency key an in-flight comment is retrying under, paired with the payload it was
  * minted for. It lives with the draft rather than in the panel's own ref because the panel
@@ -15,15 +13,10 @@ export type PendingPin = { x: number; y: number; t?: number };
  * a genuinely new comment with identical text still mints a fresh key and still posts.
  */
 export type CommentAttempt = { payload: string; key: string };
-type CommentDraft = { body: string; pin: PendingPin | null; attempt: CommentAttempt | null };
-const emptyDraft: CommentDraft = { body: "", pin: null, attempt: null };
+type CommentDraft = { body: string; attempt: CommentAttempt | null };
+const emptyDraft: CommentDraft = { body: "", attempt: null };
 
-export function useCommentDraft(
-  projectId: string,
-  channel: ProjectChannel,
-  designId?: string,
-  versionId?: string,
-) {
+export function useCommentDraft(projectId: string, channel: ProjectChannel, versionId?: string) {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const key = [
@@ -31,7 +24,7 @@ export function useCommentDraft(
     session?.user.id,
     projectId,
     channel,
-    designId ?? (versionId ? `version:${versionId}` : "project"),
+    versionId ? `version:${versionId}` : "project",
   ];
   const { data } = useQuery({
     queryKey: key,

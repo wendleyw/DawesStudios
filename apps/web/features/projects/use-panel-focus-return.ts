@@ -31,8 +31,8 @@ export function useFocusReturn() {
 }
 
 /**
- * A project page's side panel, with focus returned on close to whatever opened it. Shared by the
- * legacy canvas (`project-versions-canvas.tsx`) and the Miro workspace (`project-workspace.tsx`).
+ * A project page's side panel, with focus returned on close to whatever opened it. Owned by
+ * `project-page.tsx` and used by the Miro workspace (`project-workspace.tsx`).
  */
 export function usePanelFocusReturn<Kind>() {
   const [panel, setPanel] = useState<Kind | null>(null);

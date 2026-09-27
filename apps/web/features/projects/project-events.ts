@@ -21,7 +21,7 @@ export function useProjectEvents(projectId: string) {
     );
     const tables =
       profile.role === "designer"
-        ? ["internal_comments", "design_versions", "designs", "design_boards"]
+        ? ["internal_comments", "design_versions", "design_boards"]
         : profile.role === "client"
           ? ["client_comments", "published_versions", "publication_reviews"]
           : [
@@ -30,7 +30,6 @@ export function useProjectEvents(projectId: string) {
               "published_versions",
               "publication_reviews",
               "design_versions",
-              "designs",
               "design_boards",
             ];
     for (const table of tables)
@@ -40,7 +39,7 @@ export function useProjectEvents(projectId: string) {
         refresh,
       );
     // A dropped socket used to fail silently: no reconnect, no fallback and nothing on screen, so
-    // the canvas simply stopped updating. Poll while the channel is down, and refresh once on
+    // the project simply stopped updating. Poll while the channel is down, and refresh once on
     // recovery to pick up whatever was missed.
     let polling: ReturnType<typeof setInterval> | undefined;
     const stopPolling = () => {
