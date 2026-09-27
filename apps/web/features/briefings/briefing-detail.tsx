@@ -13,6 +13,12 @@ import {
 import { Modal } from "@/features/shared/modal";
 import { personName, requesterLabel, type ClientPerson } from "@/features/team/client-people";
 import { useClientPeople } from "@/features/team/team-data";
+import { useCreditMonthSummaries } from "@/features/credits/credit-data";
+import {
+  creditMonthLabel,
+  creditMonthOf,
+  writableCreditMonths,
+} from "@/features/credits/credit-model";
 import {
   acceptBriefing,
   briefingQueryKeys,
@@ -21,16 +27,13 @@ import {
   useBriefingProject,
   useBriefings,
   useCampaigns,
-  useCreditMonthSummaries,
 } from "./briefing-data";
 import {
   briefingStatusLabels,
   briefingStatusTones,
-  creditMonthLabel,
   defaultAcceptanceMonth,
   initialDraft,
   initialRequester,
-  openCreditMonths,
   type Briefing,
 } from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
@@ -281,7 +284,7 @@ function BudgetReview({
   // The project is charged to one month's credits. The select opens on the month `accept_briefing`
   // defaults to (the due-date month, clamped to the open window) and always sends its choice, so
   // the figures shown are the figures the procedure checks.
-  const months = useMemo(() => openCreditMonths(), []);
+  const months = useMemo(() => writableCreditMonths(creditMonthOf(new Date())), []);
   const summaries = useCreditMonthSummaries(briefing.client_id, months);
   const balance = {
     isPending: summaries.isPending,

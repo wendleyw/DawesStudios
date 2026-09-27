@@ -122,7 +122,10 @@ export function CreditsPage({ clientId }: { clientId: string }) {
   const months = creditMonthRange(currentMonth, MONTH_REACH, MONTH_REACH);
   const monthIndex = months.indexOf(filters.month);
   const writable = writableCreditMonths(currentMonth).includes(cardMonth);
-  const month = summary.data;
+  // While the summary query still shows the previous month's figures (`keepPreviousData`, so the
+  // month switcher never blanks the card), the card must not present them under the new month's
+  // heading; showing nothing here falls through to this section's own "…" placeholders below.
+  const month = summary.isPlaceholderData ? undefined : summary.data;
   const plan = planForMonth(plans.data ?? [], cardMonth);
   const projectCount = new Set(
     entries
@@ -382,7 +385,12 @@ export function CreditsPage({ clientId }: { clientId: string }) {
         </div>
       )}
       {exportError && <FormError>{exportError}</FormError>}
-      {visible.length === 0 ? (
+      {ledger.isPlaceholderData ? (
+        // A month switch keeps the previous month's entries on screen (`keepPreviousData`) while
+        // this one loads; filtering those old rows by the new month's filter would otherwise show
+        // an empty result and flash "No activity in this view" before the real rows arrive.
+        <p role="status">Loading activity…</p>
+      ) : visible.length === 0 ? (
         <div className="empty-state">
           <h2>No activity in this view.</h2>
           <p>Try another month or clear your filters.</p>
@@ -469,7 +477,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           mode={monthAction}
           currentMonth={currentMonth}
           month={cardMonth}
-          monthlyCredits={planForMonth(plans.data ?? [], currentMonth)?.monthly_credits ?? null}
+          monthlyCredits={planForMonth(plans.data ?? [], cardMonth)?.monthly_credits ?? null}
           onClose={() => setMonthAction(null)}
         />
       )}

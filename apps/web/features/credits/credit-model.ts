@@ -1,5 +1,6 @@
 import type { StatusTone } from "@/features/shared/status-tone";
 import { formatSize, type Briefing } from "@/features/briefings/briefing-model";
+import { describeSupabaseError } from "@/lib/supabase";
 import type { Project } from "@/features/workspace/workspace-data";
 
 export type CreditEntry = {
@@ -79,10 +80,14 @@ export const projectCostKinds = [...PROJECT_COST_KINDS];
 
 /**
  * A credit month is the first day of a month in UTC, as `YYYY-MM-01` — the same boundary the
- * database's `private.month_of` uses, whatever the studio's display timezone.
+ * database's `private.month_of` uses, whatever the studio's display timezone. A string is read as a
+ * date (`briefings/briefing-model.ts`'s `defaultAcceptanceMonth` calls this with a due date, and
+ * `creditMonthLabel` below calls it with an existing `YYYY-MM-01`).
  */
-export function creditMonthOf(at: Date): string {
-  return `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, "0")}-01`;
+export function creditMonthOf(at: Date | string): string {
+  if (typeof at === "string" && /^\d{4}-\d{2}/.test(at)) return `${at.slice(0, 7)}-01`;
+  const date = typeof at === "string" ? new Date(at) : at;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
 /** The credit month `count` months after `month` (negative goes back). */
@@ -101,6 +106,15 @@ export function creditMonthRange(current: string, before: number, after: number)
 /** The months the agency can write to: the current month and the next 11. */
 export function writableCreditMonths(current: string): string[] {
   return creditMonthRange(current, 0, 11);
+}
+
+/** "October 2026" for `2026-10-01` (or any date-like string or `Date`, normalized through `creditMonthOf`). */
+export function creditMonthLabel(month: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${creditMonthOf(month)}T00:00:00Z`));
 }
 
 /** The plan in force for a month: the one with the latest start on or before it. */
@@ -142,6 +156,21 @@ export function monthCreditsReceived(
 }
 
 /**
+ * A Postgres error's JSON `details` payload, or null when it is missing or malformed — shared by
+ * `describeCreditError` below and `project-data.ts`'s `settleProjectCredits`, so a short or empty
+ * `details` string falls back to the caller's default instead of a raw `JSON.parse` throwing a
+ * `SyntaxError` that replaces the real error.
+ */
+export function parseErrorDetails<T>(details: string | null | undefined): T | null {
+  if (!details) return null;
+  try {
+    return JSON.parse(details) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * A credit write's error as the person should read it. A month outside the writable range (errcode
  * 22023) and a month that is short (`insufficient_month_credits`, with its figures in `details`)
  * get plain sentences; anything else keeps the backend's message.
@@ -156,15 +185,29 @@ export function describeCreditError(error: {
       ? "Choose a month."
       : "Choose the current month or one of the next 11 months.";
   if (error.message === "insufficient_month_credits") {
-    try {
-      const detail = JSON.parse(error.details ?? "") as { available: number; shortfall: number };
-      const available = formatCredits(detail.available);
-      return `That month has ${available.amount} ${available.word} available, ${formatCredits(detail.shortfall).amount} short.`;
-    } catch {
-      return "That month does not have enough credits.";
-    }
+    const detail = parseErrorDetails<{ available: number; shortfall: number }>(error.details);
+    if (!detail) return "That month does not have enough credits.";
+    const available = formatCredits(detail.available);
+    return `That month has ${available.amount} ${available.word} available, ${formatCredits(detail.shortfall).amount} short.`;
   }
   return error.message;
+}
+
+/**
+ * `assertResult` for the monthly-credit procedures: it keeps the error's code and details, so a
+ * month outside the writable range (errcode 22023) or a short month reads as a sentence
+ * (`describeCreditError`). Shared by `credit-data.ts`'s writes and `project-data.ts`'s
+ * `moveProjectMonth`, instead of each declaring its own copy of the same three lines.
+ */
+export function assertCreditResult<T>(result: {
+  data: T | null;
+  error: { message: string; code?: string; details?: string | null } | null;
+}): T {
+  if (result.error)
+    throw new Error(
+      describeCreditError({ ...result.error, message: describeSupabaseError(result.error) }),
+    );
+  return result.data as T;
 }
 
 /** The three states a credit request can hold, named here rather than at the one call site. */

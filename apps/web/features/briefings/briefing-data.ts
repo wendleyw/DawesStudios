@@ -18,8 +18,9 @@ import type { Database } from "@database";
  * make each of those call sites refetch caches it does not refetch today.
  *
  * `campaigns`, `credit-account`, `service-presets` and `briefing-project` are absent on purpose:
- * the first two are keys other features own and this file only reads (see `useCampaigns` and
- * `useCreditMonthSummaries` below), and no write here invalidates the last two.
+ * the first two are keys other features own — `campaigns` is read here through `useCampaigns`
+ * below, and `credit-account` through `features/credits/credit-data.ts`'s `useCreditMonthSummaries`
+ * (used from `briefing-detail.tsx`, not from this file) — and no write here invalidates the last two.
  */
 export const briefingQueryKeys = {
   /** `useBriefings` — the briefing list, which every briefing write changes. */
@@ -142,42 +143,6 @@ export function useBriefingRequester(briefingId: string | null) {
             .maybeSingle(),
         ) as { requested_by: string | null } | null
       )?.requested_by ?? null,
-  });
-}
-
-/** One row of `credit_month_summary`: a client's figures for one month. */
-export type CreditMonthSummary =
-  Database["public"]["Functions"]["credit_month_summary"]["Returns"][number];
-
-/**
- * A client's figures for each of `months` (normally `openCreditMonths()`), read through the
- * read-only `credit_month_summary` procedure, one call per month, returned in the same order. The
- * agency uses it to show every month's available credits when choosing where a project is charged:
- * the Month select at acceptance here, and the Move and Settle dialogs in
- * `projects/project-details.tsx`.
- *
- * Keyed under `credit-account` (which `features/credits` owns), so every write that already
- * refreshes the client's balance — accepting a briefing, moving or settling a project — refreshes
- * these figures too, without a key of its own to remember.
- */
-export function useCreditMonthSummaries(clientId: string, months: string[], enabled = true) {
-  const { database, session } = useAuth();
-  return useQuery({
-    queryKey: ["credit-account", session?.user.id, clientId, "months", months],
-    enabled: !!session && enabled && months.length > 0,
-    // These figures decide where credits are charged, and another tab or studio member may have
-    // changed them (an extra, a transfer), so every picker that opens reads them fresh.
-    staleTime: 0,
-    queryFn: async () =>
-      Promise.all(
-        months.map(async (month) => {
-          const rows = assertResult(
-            await database.rpc("credit_month_summary", { p_client_id: clientId, p_month: month }),
-          ) as CreditMonthSummary[];
-          if (!rows[0]) throw new Error(`No credit figures for ${month}.`);
-          return rows[0];
-        }),
-      ),
   });
 }
 

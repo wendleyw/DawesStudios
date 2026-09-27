@@ -5,12 +5,14 @@ import { ArrowUpRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { useBriefingRequester } from "@/features/briefings/briefing-data";
+import { useCreditMonthSummaries } from "@/features/credits/credit-data";
 import {
-  useBriefingRequester,
-  useCreditMonthSummaries,
+  creditMonthLabel,
+  creditMonthOf,
+  writableCreditMonths,
   type CreditMonthSummary,
-} from "@/features/briefings/briefing-data";
-import { creditMonthLabel, openCreditMonths } from "@/features/briefings/briefing-model";
+} from "@/features/credits/credit-model";
 import { CopyButton } from "@/features/shared/copy-button";
 import { Modal } from "@/features/shared/modal";
 import { personName, reviewDecisionLabel } from "@/features/team/client-people";
@@ -450,12 +452,15 @@ function MoveMonthDialog({
 }) {
   const { database } = useAuth();
   const invalidate = useInvalidateProjectCredits();
-  const months = useMemo(() => openCreditMonths(), []);
+  const months = useMemo(() => writableCreditMonths(creditMonthOf(new Date())), []);
   const choices = months.filter((month) => month !== fromMonth);
   const summaries = useCreditMonthSummaries(project.client_id, months);
   const [target, setTarget] = useState(choices[0]);
   const [chargeFull, setChargeFull] = useState(false);
-  // One attempt per dialog: a retry of the same month reuses its key, so it cannot move twice.
+  // One key for the whole dialog opening, not one per chosen target: if a first attempt's outcome
+  // is unknown (its response was lost) and the studio picks another month before retrying, reusing
+  // this same key makes the database reject the retry as a month mismatch instead of moving the
+  // project a second time. The dialog closes and reopens (a fresh key) to try again.
   const [attempt] = useState(() => crypto.randomUUID());
   const originExpired = fromMonth < months[0];
   const available = summaries.data?.[months.indexOf(target)]?.available;
@@ -468,7 +473,7 @@ function MoveMonthDialog({
         projectId: project.id,
         toMonth: target,
         chargeFull: originExpired && chargeFull,
-        idempotencyKey: `move:${project.id}:${attempt}:${target}`,
+        idempotencyKey: `move:${project.id}:${attempt}`,
       }),
     onSuccess: async () => {
       await invalidate();
@@ -534,7 +539,9 @@ function MoveMonthDialog({
           <button
             className="button primary"
             type="submit"
-            disabled={move.isPending || short || (originExpired && !chargeFull)}
+            disabled={
+              move.isPending || summaries.isPending || short || (originExpired && !chargeFull)
+            }
           >
             {move.isPending ? "Moving…" : `Move to ${to}`}
           </button>
@@ -560,7 +567,7 @@ function SettleCreditsDialog({
 }) {
   const { database } = useAuth();
   const invalidate = useInvalidateProjectCredits();
-  const months = useMemo(() => openCreditMonths(), []);
+  const months = useMemo(() => writableCreditMonths(creditMonthOf(new Date())), []);
   const [finalCredits, setFinalCredits] = useState(String(charged));
   const [reason, setReason] = useState("");
   const [chargeMonth, setChargeMonth] = useState<string | null>(null);

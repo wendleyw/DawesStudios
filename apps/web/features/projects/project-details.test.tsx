@@ -2,7 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { creditMonthLabel, openCreditMonths } from "@/features/briefings/briefing-model";
+import {
+  creditMonthLabel,
+  creditMonthOf,
+  writableCreditMonths,
+} from "@/features/credits/credit-model";
 import { MonthShortfallError, type CanvasVersion, type TableRow } from "./project-data";
 
 const state = vi.hoisted(() => ({
@@ -42,8 +46,11 @@ vi.mock("./project-data", async (importOriginal) => ({
 }));
 vi.mock("@/features/briefings/briefing-data", () => ({
   useBriefingRequester: () => ({ data: state.role === "designer" ? undefined : state.requester }),
+}));
+vi.mock("@/features/credits/credit-data", () => ({
   useCreditMonthSummaries: (_clientId: string, months: string[]) => ({
     data: months.map((month, index) => ({ month, available: index === 0 ? 2 : 50 })),
+    isPending: false,
   }),
 }));
 vi.mock("@/features/team/team-data", () => ({
@@ -200,7 +207,7 @@ describe("ProjectDetails version history", () => {
 });
 
 describe("ProjectDetails credits", () => {
-  const months = openCreditMonths();
+  const months = writableCreditMonths(creditMonthOf(new Date()));
   const [current, next] = months;
   const previous = "2020-01-01";
 
@@ -248,7 +255,29 @@ describe("ProjectDetails credits", () => {
         expect.objectContaining({ projectId: "p1", toMonth: next, chargeFull: false }),
       ),
     );
-    expect(state.move.mock.calls[0][1].idempotencyKey).toMatch(/^move:p1:.+:/);
+    // One key per dialog opening, not one per chosen target — see the retry test below.
+    expect(state.move.mock.calls[0][1].idempotencyKey).toMatch(/^move:p1:[^:]+$/);
+  });
+
+  it("retries a failed move with the same idempotency key", async () => {
+    const user = userEvent.setup();
+    state.credits = { charged: 9, settlement: null };
+    state.move.mockRejectedValueOnce(
+      new Error("The connection failed and your changes were not saved — try again."),
+    );
+    renderDetails([], { credit_month: current });
+    await user.click(screen.getByRole("button", { name: "Move to another month" }));
+    const dialog = screen.getByRole("dialog", { name: "Move to another month" });
+    await user.click(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(next)}` }),
+    );
+    await waitFor(() => expect(state.move).toHaveBeenCalledTimes(1));
+    await user.click(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(next)}` }),
+    );
+    await waitFor(() => expect(state.move).toHaveBeenCalledTimes(2));
+    const [first, second] = state.move.mock.calls.map((call) => call[1].idempotencyKey);
+    expect(first).toBe(second);
   });
 
   it("asks for the full charge when the project's month has expired", async () => {

@@ -5,6 +5,7 @@ import type { Database } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
+import { assertCreditResult, parseErrorDetails } from "@/features/credits/credit-model";
 import type { MiroLink } from "./miro-links";
 
 /**
@@ -745,12 +746,17 @@ export function useInvalidateProjectCredits() {
  * it is open and debits the new one in one transaction. When the old month has expired its credits
  * are gone, so the procedure debits the new month in full only with `chargeFull` confirmed. The key
  * makes a retry return the same move.
+ *
+ * Goes through `assertCreditResult` (`features/credits/credit-model.ts`), not the plain
+ * `assertResult` other writes in this file use, so a month outside the writable range or a target
+ * month that is short reads as a sentence (`describeCreditError`) instead of surfacing the
+ * database's raw `insufficient_month_credits` token.
  */
 export async function moveProjectMonth(
   database: SupabaseDatabase,
   input: { projectId: string; toMonth: string; chargeFull: boolean; idempotencyKey: string },
 ) {
-  return assertResult(
+  return assertCreditResult(
     await database.rpc("move_project_month", {
       p_project_id: input.projectId,
       p_to_month: input.toMonth,
@@ -797,11 +803,12 @@ export async function settleProjectCredits(
     ...(input.chargeMonth ? { p_charge_month: input.chargeMonth } : {}),
   });
   if (result.error?.message === "insufficient_month_credits") {
-    const detail = JSON.parse(result.error.details || "{}") as {
-      month?: string;
-      available?: number;
-      shortfall?: number;
-    };
+    const detail =
+      parseErrorDetails<{
+        month?: string;
+        available?: number;
+        shortfall?: number;
+      }>(result.error.details) ?? {};
     throw new MonthShortfallError(
       detail.month ?? input.chargeMonth ?? "",
       detail.available ?? 0,

@@ -2,9 +2,9 @@
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult, describeSupabaseError, type SupabaseDatabase } from "@/lib/supabase";
+import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import {
-  describeCreditError,
+  assertCreditResult,
   projectCostKinds,
   projectCreditsUsed,
   type CreditEntry,
@@ -13,21 +13,6 @@ import {
   type CreditPlan,
   type CreditRequest,
 } from "./credit-model";
-
-/**
- * `assertResult` for the monthly credit procedures: it keeps the error's code and details, so a
- * month outside the writable range (errcode 22023) or a short month reads as a sentence.
- */
-function assertCreditResult<T>(result: {
-  data: T | null;
-  error: { message: string; code?: string; details?: string | null } | null;
-}): T {
-  if (result.error)
-    throw new Error(
-      describeCreditError({ ...result.error, message: describeSupabaseError(result.error) }),
-    );
-  return result.data as T;
-}
 
 export function useCreditAccount(clientId: string) {
   const { database, session, profile } = useAuth();
@@ -96,6 +81,38 @@ export function useCreditMonthSummary(clientId: string, month: string) {
       ) as CreditMonthSummary[];
       return rows[0] ?? null;
     },
+  });
+}
+
+/**
+ * A client's figures for each of `months` (normally `writableCreditMonths(creditMonthOf(now))`),
+ * read through the read-only `credit_month_summary` procedure, one call per month, returned in the
+ * same order. The agency uses it to show every month's available credits when choosing where a
+ * project is charged: the Month select at briefing acceptance (`briefings/briefing-detail.tsx`) and
+ * the Move and Settle dialogs (`projects/project-details.tsx`).
+ *
+ * Keyed under `credit-account`, so every write that already refreshes the client's balance —
+ * accepting a briefing, moving or settling a project — refreshes these figures too, without a key of
+ * its own to remember.
+ */
+export function useCreditMonthSummaries(clientId: string, months: string[], enabled = true) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["credit-account", session?.user.id, clientId, "months", months],
+    enabled: !!session && enabled && months.length > 0,
+    // These figures decide where credits are charged, and another tab or studio member may have
+    // changed them (an extra, a transfer), so every picker that opens reads them fresh.
+    staleTime: 0,
+    queryFn: async () =>
+      Promise.all(
+        months.map(async (month) => {
+          const rows = assertCreditResult(
+            await database.rpc("credit_month_summary", { p_client_id: clientId, p_month: month }),
+          ) as CreditMonthSummary[];
+          if (!rows[0]) throw new Error(`No credit figures for ${month}.`);
+          return rows[0];
+        }),
+      ),
   });
 }
 

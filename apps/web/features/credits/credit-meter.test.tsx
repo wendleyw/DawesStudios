@@ -11,6 +11,7 @@ const fixture = vi.hoisted(() => ({
   month: "",
   isPending: false,
   isError: false,
+  isPlaceholderData: false,
 }));
 vi.mock("./credit-data", () => ({
   useCreditMonthSummary: (_clientId: string, month: string) => {
@@ -18,6 +19,7 @@ vi.mock("./credit-data", () => ({
     return {
       isPending: fixture.isPending,
       isError: fixture.isError,
+      isPlaceholderData: fixture.isPlaceholderData,
       data:
         fixture.isPending || fixture.isError
           ? undefined
@@ -78,6 +80,14 @@ describe("useCreditMeter", () => {
     fixture.isError = true;
     expect(meterFor(viewer("agency"))).toBeNull();
     fixture.isError = false;
+  });
+
+  it("is null while the summary still shows another month's placeholder figures", () => {
+    // The account menu stays mounted across a client switch; without this check it would show
+    // client A's credits for client B until the new month's figures actually arrive.
+    fixture.isPlaceholderData = true;
+    expect(meterFor(viewer("client"))).toBeNull();
+    fixture.isPlaceholderData = false;
   });
 
   it("keeps the amount without a ratio when the month received nothing", () => {

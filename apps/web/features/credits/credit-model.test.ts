@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   addCreditMonths,
+  assertCreditResult,
   creditCsv,
   creditEntryNote,
+  creditMonthLabel,
   creditMonthOf,
   creditMonthRange,
   creditRemainingRatio,
@@ -13,6 +15,7 @@ import {
   filterCreditEntries,
   formatCredits,
   monthCreditsReceived,
+  parseErrorDetails,
   planForMonth,
   projectCreditsUsed,
   writableCreditMonths,
@@ -241,6 +244,15 @@ describe("credit months", () => {
     expect(creditMonthOf(new Date("2026-09-01T00:00:00Z"))).toBe("2026-09-01");
   });
 
+  it("also takes a date-like string, normalizing an existing YYYY-MM-01 unchanged", () => {
+    expect(creditMonthOf("2026-12-24")).toBe("2026-12-01");
+    expect(creditMonthOf("2026-10-01")).toBe("2026-10-01");
+  });
+
+  it("labels a month by name and year", () => {
+    expect(creditMonthLabel("2026-10-01")).toBe("October 2026");
+  });
+
   it("steps across year boundaries in both directions", () => {
     expect(addCreditMonths("2026-12-01", 1)).toBe("2027-01-01");
     expect(addCreditMonths("2026-01-01", -1)).toBe("2025-12-01");
@@ -317,6 +329,48 @@ describe("describeCreditError", () => {
     expect(describeCreditError({ message: "Choose two different months" })).toBe(
       "Choose two different months",
     );
+  });
+
+  it("falls back to a plain sentence when details is malformed JSON rather than throwing", () => {
+    expect(
+      describeCreditError({ message: "insufficient_month_credits", details: "not json" }),
+    ).toBe("That month does not have enough credits.");
+  });
+});
+
+describe("parseErrorDetails", () => {
+  it("parses a JSON details payload", () => {
+    expect(parseErrorDetails<{ available: number }>(JSON.stringify({ available: 3 }))).toEqual({
+      available: 3,
+    });
+  });
+
+  it("returns null instead of throwing for missing or malformed details", () => {
+    expect(parseErrorDetails(null)).toBeNull();
+    expect(parseErrorDetails(undefined)).toBeNull();
+    expect(parseErrorDetails("")).toBeNull();
+    expect(parseErrorDetails("{not json")).toBeNull();
+  });
+});
+
+describe("assertCreditResult", () => {
+  it("returns the data when there is no error", () => {
+    expect(assertCreditResult({ data: { available: 5 }, error: null })).toEqual({ available: 5 });
+  });
+
+  it("describes a month-write error the same way describeCreditError does", () => {
+    expect(() =>
+      assertCreditResult({
+        data: null,
+        error: {
+          message: "insufficient_month_credits",
+          details: JSON.stringify({ available: 2, shortfall: 7 }),
+        },
+      }),
+    ).toThrow("That month has 2 credits available, 7 short.");
+    expect(() =>
+      assertCreditResult({ data: null, error: { message: "boom", code: "22023" } }),
+    ).toThrow("Choose the current month or one of the next 11 months.");
   });
 });
 

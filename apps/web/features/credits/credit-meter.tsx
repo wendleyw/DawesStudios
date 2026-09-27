@@ -40,7 +40,12 @@ export function useCreditMeter(
 ): CreditMeter | null {
   const summary = useCreditMonthSummary(clientId, creditMonthOf(now));
   if (!viewer || viewer.role === "designer") return null;
-  if (summary.isPending || summary.isError || !summary.data) return null;
+  // `useCreditMonthSummary` keeps the previous month's figures on screen while the next ones load
+  // (for the Credits page's own month switcher); the account menu stays mounted across a client
+  // switch, so without this check it would show client A's credits for client B until the load
+  // settles. The menu shows nothing rather than a stale amount.
+  if (summary.isPending || summary.isError || summary.isPlaceholderData || !summary.data)
+    return null;
   const balance = summary.data.available;
   return {
     balance,

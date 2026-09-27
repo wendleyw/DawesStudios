@@ -1,3 +1,6 @@
+import { createElement, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   assignDesigner,
@@ -13,7 +16,15 @@ import {
   setMiroLink,
   setProjectCoverVisibility,
   updateProjectDetails,
+  useProjectCredits,
 } from "./project-data";
+
+const auth = vi.hoisted(() => ({
+  database: {} as unknown,
+  session: { user: { id: "viewer-1" } } as { user: { id: string } } | null,
+  profile: { id: "viewer-1", role: "agency" as "agency" | "client" | "designer" },
+}));
+vi.mock("@/features/auth/auth-provider", () => ({ useAuth: () => auth }));
 
 type Result = { data: unknown; error: { message: string; code?: string } | null };
 type Call = { method: string; args: unknown[] };
@@ -383,5 +394,82 @@ describe("project credits", () => {
         idempotencyKey: "k",
       }),
     ).rejects.toThrow("This project is already settled");
+  });
+
+  it("falls back to a plain shortfall when the settlement error's details are malformed", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "insufficient_month_credits", details: "not json" },
+    } as never);
+    const error = await settleProjectCredits(database, {
+      projectId: "project-1",
+      finalCredits: 12,
+      reason: "r",
+      chargeMonth: null,
+      idempotencyKey: "k",
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(MonthShortfallError);
+    expect(error).toMatchObject({ month: "", available: 0, shortfall: 0 });
+  });
+
+  it("describes a short target month like other credit writes instead of the raw token", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: {
+        message: "insufficient_month_credits",
+        details: JSON.stringify({ available: 2, shortfall: 7 }),
+      },
+    } as never);
+    await expect(
+      moveProjectMonth(database, {
+        projectId: "project-1",
+        toMonth: "2026-11-01",
+        chargeFull: false,
+        idempotencyKey: "move:project-1:a",
+      }),
+    ).rejects.toThrow("That month has 2 credits available, 7 short.");
+  });
+
+  it("names the writable range for a target month outside it", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "Choose a month within the next 11 months", code: "22023" },
+    } as never);
+    await expect(
+      moveProjectMonth(database, {
+        projectId: "project-1",
+        toMonth: "2028-01-01",
+        chargeFull: false,
+        idempotencyKey: "move:project-1:a",
+      }),
+    ).rejects.toThrow("Choose the current month or one of the next 11 months.");
+  });
+});
+
+describe("useProjectCredits", () => {
+  function renderCredits(role: "agency" | "client" | "designer") {
+    const { database, calls } = stubDatabase(ok);
+    auth.profile = { id: "viewer-1", role };
+    auth.database = database;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderHook(() => useProjectCredits("project-1", "2026-09-01"), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    });
+    return calls;
+  }
+
+  it("never sends the credits query for a designer (the hook's enabled gate)", async () => {
+    const calls = renderCredits("designer");
+    // Give a disabled query every chance it would otherwise take to start fetching.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls).toHaveLength(0);
+  });
+
+  it("sends the credits query for the agency and the client", async () => {
+    for (const role of ["agency", "client"] as const) {
+      const calls = renderCredits(role);
+      await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    }
   });
 });

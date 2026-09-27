@@ -1,6 +1,7 @@
 import type { StatusTone } from "@/features/shared/status-tone";
 import catalog from "./service-catalog.json";
 import { z } from "@/lib/zod";
+import { creditMonthOf, writableCreditMonths } from "@/features/credits/credit-model";
 import type { Database } from "@database";
 
 export type ServiceQuestion = {
@@ -393,46 +394,18 @@ export function requesterErrors(
 }
 
 /**
- * Credit months are the first day of a month, `YYYY-MM-DD`, computed in UTC exactly like the
- * database's `private.month_of`/`private.current_month`, so the interface and the procedures agree
- * on which month is "now" whatever the viewer's timezone.
- */
-export function creditMonthOf(value: Date | string): string {
-  if (typeof value === "string" && /^\d{4}-\d{2}/.test(value)) return `${value.slice(0, 7)}-01`;
-  const date = typeof value === "string" ? new Date(value) : value;
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
-}
-
-/** `month` plus `count` months, both first-of-month strings. */
-export function addCreditMonths(month: string, count: number): string {
-  const [year, monthIndex] = month.split("-").map(Number);
-  return creditMonthOf(new Date(Date.UTC(year, monthIndex - 1 + count, 1)));
-}
-
-/** The months that accept debits: the current month and the next eleven, the database's window. */
-export function openCreditMonths(now: Date = new Date()): string[] {
-  const current = creditMonthOf(now);
-  return Array.from({ length: 12 }, (_, index) => addCreditMonths(current, index));
-}
-
-/**
  * The month `accept_briefing` debits when none is passed: the due date's month, no earlier than the
  * current month and no later than the last open one. A briefing without a due date uses the current
  * month. The Month select opens on this, so leaving it untouched is exactly the database default.
+ *
+ * `creditMonthOf` and `writableCreditMonths` (the current month and the next 11, the database's
+ * writable window) live in `features/credits/credit-model.ts`, which this reuses rather than keeping
+ * its own copy of the same month math.
  */
 export function defaultAcceptanceMonth(dueDate: string | null, now: Date = new Date()): string {
-  const months = openCreditMonths(now);
+  const months = writableCreditMonths(creditMonthOf(now));
   if (!dueDate) return months[0];
   const due = creditMonthOf(dueDate);
   if (due < months[0]) return months[0];
   return due > months[11] ? months[11] : due;
-}
-
-/** "October 2026" for `2026-10-01`. */
-export function creditMonthLabel(month: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${creditMonthOf(month)}T00:00:00Z`));
 }

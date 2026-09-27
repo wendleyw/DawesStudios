@@ -4,7 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClientPeople } from "@/features/team/client-people";
 import { BriefingDetail } from "./briefing-detail";
-import { creditMonthLabel, openCreditMonths, type Briefing } from "./briefing-model";
+import {
+  creditMonthLabel,
+  creditMonthOf,
+  writableCreditMonths,
+} from "@/features/credits/credit-model";
+import type { Briefing } from "./briefing-model";
 
 const ana = { user_id: "ana", display_name: "Ana Lima", email: "ana@sabre.test" };
 const ben = { user_id: "ben", display_name: "Ben Cole", email: "ben@sabre.test" };
@@ -17,6 +22,7 @@ const fixture = vi.hoisted(() => ({
   people: undefined as ClientPeople | undefined,
   setRequester: vi.fn(),
   accept: vi.fn(),
+  confirmBudget: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -43,14 +49,16 @@ vi.mock("./briefing-data", async (importOriginal) => ({
   }),
   useCampaigns: () => ({ data: [], isPending: false, error: null }),
   useBriefingProject: () => ({ data: null, isPending: false, error: null }),
+  confirmBriefingBudget: fixture.confirmBudget,
+  acceptBriefing: fixture.accept,
+  setBriefingRequester: fixture.setRequester,
+}));
+vi.mock("@/features/credits/credit-data", () => ({
   useCreditMonthSummaries: (_clientId: string, months: string[]) => ({
     data: months.map((month, index) => ({ month, available: fixture.available[index] ?? 0 })),
     isPending: false,
     error: null,
   }),
-  confirmBriefingBudget: vi.fn(),
-  acceptBriefing: fixture.accept,
-  setBriefingRequester: fixture.setRequester,
 }));
 
 // jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
@@ -75,6 +83,7 @@ beforeEach(() => {
   fixture.people = { team: [ana, ben], names: { ana: "Ana Lima", ben: "Ben Cole", cy: "Cy Gone" } };
   fixture.setRequester.mockResolvedValue(undefined);
   fixture.accept.mockResolvedValue("project-1");
+  fixture.confirmBudget.mockReset().mockResolvedValue(undefined);
   fixture.available = [100];
 });
 
@@ -135,7 +144,9 @@ describe("BriefingDetail agency budget review — one primary action at a time",
     expect(await screen.findByRole("button", { name: "Accept & create project" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Confirm budget" })).not.toBeInTheDocument();
     expect(
-      screen.getByText(`5 credits · one project · ${creditMonthLabel(openCreditMonths()[0])}`),
+      screen.getByText(
+        `5 credits · one project · ${creditMonthLabel(writableCreditMonths(creditMonthOf(new Date()))[0])}`,
+      ),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "View credits" })).toBeVisible();
   });
@@ -163,7 +174,7 @@ describe("BriefingDetail agency budget review — one primary action at a time",
 });
 
 describe("BriefingDetail credit month", () => {
-  const months = openCreditMonths();
+  const months = writableCreditMonths(creditMonthOf(new Date()));
   const confirmed = (overrides: Partial<Briefing> = {}) =>
     baseBriefing({
       status: "budget_confirmed",
@@ -210,6 +221,25 @@ describe("BriefingDetail credit month", () => {
     fixture.briefing = confirmed({ due_date: null });
     mountDetail();
     expect(await screen.findByRole("combobox", { name: "Credit month" })).toHaveValue(months[0]);
+  });
+
+  // Regression for 55475bd: the budget form remounts (a new `key`) once `updated_at` changes, so the
+  // chosen month must live in the parent, not the form, to survive confirming the budget.
+  it("keeps the chosen credit month across the remount that confirming the budget causes", async () => {
+    const user = userEvent.setup();
+    fixture.briefing = baseBriefing({ status: "awaiting_review", due_date: null });
+    fixture.confirmBudget.mockImplementation(async () => {
+      fixture.briefing = { ...fixture.briefing!, updated_at: "2026-09-02T00:00:00.000Z" };
+    });
+    mountDetail();
+    const select = await screen.findByRole("combobox", { name: "Credit month" });
+    expect(select).toHaveValue(months[0]);
+    await user.selectOptions(select, months[1]);
+    expect(select).toHaveValue(months[1]);
+    await user.click(screen.getByRole("button", { name: "Confirm budget" }));
+    await waitFor(() => expect(fixture.confirmBudget).toHaveBeenCalled());
+    // The remounted form (a fresh `key`) keeps the month choice held by the parent.
+    expect(await screen.findByRole("combobox", { name: "Credit month" })).toHaveValue(months[1]);
   });
 });
 
