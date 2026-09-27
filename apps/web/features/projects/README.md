@@ -112,8 +112,11 @@ body/attempt still present in that draft, preserving follow-up text entered whil
 `CanvasComment.versionId` retains the round/publication scope for labels; channel-specific queries
 and RLS still govern what the viewer receives. These comments live in this application, not Miro.
 
-Details (`project-details.tsx`) keeps real edit, assignment and resource actions. For the studio
-and the client it also shows **Requested by** (`useBriefingRequester`) and a version history naming
+Details (`project-details.tsx`) composes real edit, assignment and resource actions. Its project edit
+retains the revision captured when the form opens. The Drive link control and mutation live in
+`project-details-drive-link.tsx`; the credit move and settlement dialogs, including their per-dialog
+retry keys and shortfall handling, live in `project-details-credits.tsx`. For the studio and the
+client it also shows **Requested by** (`useBriefingRequester`) and a version history naming
 who decided; designers see neither. Editing the project is a compare-and-set write on the
 `updated_at` the form opened on; a lost race raises "changed while you were editing".
 
@@ -125,11 +128,12 @@ see none of it, and `useProjectCredits` does not query for them. The charge is r
 plus any final adjustment. The agency also gets:
 
 - **Move to another month** (while unsettled and charged): a dialog listing the other open months
-  with their available credits (`useCreditMonthSummaries` from `briefings/briefing-data.ts`) that
+  with their available credits (`useCreditMonthSummaries` from `credits/credit-data.ts`) that
   says where the credits go and blocks a month that cannot take them. When the project's month has
   already ended its credits expired, so the dialog explains they are not returned and requires
   **Charge the full N credits to <Month>** before `move_project_month` runs with
-  `p_charge_full`. One idempotency key per dialog and month (`move:<project>:<attempt>:<month>`).
+  `p_charge_full`. One idempotency key per dialog (`move:<project>:<attempt>`); switching the
+  target after an ambiguous response cannot silently move the project twice.
 - **Settle final credits** (approved or delivered, once): the final total and a required reason,
   with a preview of the extra charge (current month) or refund (always the current month). When the
   current month is short, `settle_project_credits` raises `insufficient_month_credits`;
@@ -154,8 +158,8 @@ visibility forward, and toggling it goes through `set_project_cover_visibility`
 **Drive links.** Nothing from design/internal may reach the client and nothing client-side may
 reach the designer, so a project keeps two separate Drive links in `project_drive_links`, one per
 channel, rather than the one link every role once shared. Details shows the agency two controls
-(`DriveLinkControl`, `project-details.tsx`), each an Add/Edit button and dialog: **Internal Drive
-link** ("Visible to the studio and the assigned designer") and **Client Drive link** ("Visible to
+(`DriveLinkControl`, `project-details-drive-link.tsx`), each an Add/Edit button and dialog:
+**Internal Drive link** ("Visible to the studio and the assigned designer") and **Client Drive link** ("Visible to
 the studio and the client"). A client or designer never sees either control. The dialog validates
 with `drive-link.ts`'s `parseDriveUrl` (`https://drive.google.com/...` only, blank clears it) before
 calling `setProjectDriveLink`/`set_project_drive_link(p_project_id, p_channel, p_url)` — the
@@ -173,6 +177,8 @@ two, in the bar, in Details and in every project list; the agency sees **Board d
 second row.
 
 ## Data access
+
+`version-row.ts` colocates the project version display helpers and grouping key used by project data and canonical browser checks.
 
 `project-data.ts` owns every Supabase read and write for the feature, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires.
