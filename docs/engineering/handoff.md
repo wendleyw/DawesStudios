@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT (evening). Owner: **Claude Code**; the session has ended and no session holds the tree.
+Updated: 2026-09-26 EDT (night). Owner: **Claude Code**; the session has ended and no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -16,15 +16,20 @@ history only when a task needs earlier evidence.
 
 ## Done (2026-09-26)
 
-**Miro mode** (`4ce756b..f6db41f`, [spec](../superpowers/specs/2026-09-26-miro-mode-design.md)): the
-project canvas switches to the version's Miro board; afternoon `5303c21..97df9a3` polished the shell.
-Evening (`75f1e13..0837bf5`): cards on the campaign grid (drop on a card swaps); client logo opens
-Overview; Files is a Brand Hub section (`/assets` redirects); Brand Hub Assets is a directory (nested folders, HTTPS links, Products tile, `FolderTile` shared with Files); clients add
-folders, images and links (`202609260004`/`0005`); one compact Brand Hub scale; the List Status sort
-steps through every status (`051bead`); one-board Kanban scroll (`e8dc241`); **Font: Geist / Editorial**
-row above Theme (`workspace/font.ts`, `--font-*` tokens). `workspace-actions` e2e is red locally by
-design (canonical 8 SABRE nodes, overlay 51); "Overview unavailable" only hits `playground-fixture`
-clients lacking `credit_accounts`. Earlier: [history](history/handoff-2026-09-26.md).
+**Miro workspace** (branch `feat/miro-workspace`, **not merged**; `5ecabde..dc8c05d` plus this docs
+commit, [spec](../superpowers/specs/2026-09-26-miro-workspace-design.md)): named design boards (one
+designer each) replace Versions in Working files, and per-project client versions replace it in
+Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
+`review_publication` for project-level versions, and designer-to-designer privacy on
+`internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
+`npm run check` 121/1258 passes; `supabase test db` locally fails `access_and_workflows`
+1-2,4,9,18,32,41,54 and `published_asset_attestation_invariant` 1 — wider than the previously
+recorded 2,4,9,18,32,54, unconfirmed whether any is a new regression; `playground.spec`
+focus-return and `workspace-actions`:14/`design-audit`:18 fail on `main` too (all SABRE-overlay).
+**Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden,
+AGENTS.md/CLAUDE.md); rebuilt via `local_stack.py reset` + the SABRE `apply`; the prior checkpoint
+is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earlier:
+[history](history/handoff-2026-09-26.md).
 
 ## In progress
 
@@ -55,19 +60,11 @@ clients lacking `credit_accounts`. Earlier: [history](history/handoff-2026-09-26
 - Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
   `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
   (last done 2026-09-26 ~17:30, pid 91871). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260005`; local
-  delivered projects show a 2026-09-25 `updated_at`); media on 55430. Do not reset or re-provision.
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260009`, rebuilt
+  2026-09-26 after the incident above); media on 55430. Do not reset or re-provision.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
-- Branch `main`, local commits only. Nothing has been pushed or deployed.
-
-## Evidence (2026-09-26)
-
-- Complete test at `1e6a675`: `npm run check` 1168 tests / 109 files; media 70/70 and its live
-  integration 15/15; `supabase test db` 25 files / 633 tests (only the six known overlay failures);
-  `next build` passes; all 34 browser specs 105 passed, 3 skipped, 8 failed — the 5 known overlay
-  counts plus 3 stale specs, fixed and green twice each in `c2a104f`.
-- Miro mode at `f6db41f`: `npm run check` 1200 tests / 113 files; Miro + CSP browser specs green.
+- `main` has local commits only; `feat/miro-workspace` is checked out and not merged.
 
 ## Open gaps
 
@@ -94,7 +91,9 @@ clients lacking `credit_accounts`. Earlier: [history](history/handoff-2026-09-26
 **Production setup (user-deferred on 2026-09-23):** follow the
 [production guide](../operations/production.md) on a real server (R2, TLS proxy, SMTP, backups).
 
-1. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
-2. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
+1. Run the full all-roles Playwright pass on `feat/miro-workspace`, then merge it on the user's
+   explicit approval; the two wider pgTAP failures above need a look first.
+2. The user's look at client people and Miro mode (header switch, card button, asset strip copy).
+3. The user's review of the overnight work: the competitor ads spec's delegated decisions, the
    [decision log](decisions-2026-09-24.md), and the studio name **Offline probe** (test data; the
    default is "Dawes Studio"). To preview Meta ads, set `META_AD_LIBRARY_ACCESS_TOKEN`.

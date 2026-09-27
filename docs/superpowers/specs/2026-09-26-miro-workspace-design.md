@@ -1,6 +1,7 @@
 # Miro workspace: boards, rounds and shared versions
 
-Date: 2026-09-26. Status: approved design, awaiting written-spec review.
+Date: 2026-09-26. Status: implemented on `feat/miro-workspace` (not yet merged); see
+[Implementation notes](#implementation-notes) below for where the branch corrected this plan.
 Builds on [Miro mode](2026-09-26-miro-mode-design.md) and
 [Miro version links](2026-09-26-miro-version-links-design.md).
 
@@ -180,3 +181,25 @@ One migration. Existing per-deliverable versions and their data are untouched.
 - Syncing anything with Miro's API (copying frames, reading comments). Copying stays manual.
 - Pins on the Miro embed (cross-origin).
 - Migrating existing projects' links into boards.
+
+## Implementation notes
+
+Where the branch corrected this plan during build:
+
+- `review_publication` needed a real rewrite, not a tolerant read of a null `deliverable_id`: its
+  existing logic compared a publication against "the latest version of the same deliverable",
+  which has no meaning for a project-level version, so the function now branches on
+  `target_deliverable is null` and sets `projects.status` from the decision directly in that case.
+- `usesWorkspace` is decided **per channel**, not once per project: the internal and client sides
+  of the same project can each independently be on the workspace or the legacy canvas, driven by
+  `miro-workspace.ts`.
+- Migration numbering is `202609260006` (boards, rounds, privacy) and `202609260009` (sharing);
+  `202609260008` is a fix-forward for a gap `0006` left open (a round could otherwise carry an
+  uploaded `designs` row), not a numbering gap — there is no `202609260007`.
+- The client-version idempotency/attribution table is `private.miro_share_requests`, not a reused
+  table from an earlier feature.
+- `?view=versions` is the actual escape hatch for every role at load, in addition to the agency-only
+  in-session **Versions** button this plan described; both are documented in
+  `apps/web/features/projects/README.md`.
+- Designs never attach to a round at all (enforced by a trigger, `202609260008`), rather than only
+  being excluded from the interface.

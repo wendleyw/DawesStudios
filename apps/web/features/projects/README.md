@@ -340,6 +340,60 @@ Miro mode by any path also closes this strip. `frame-src https://miro.com` is th
 Content-Security-Policy exception this feature requires (`apps/web/next.config.ts`); Miro mode is
 never reachable at all unless a link exists for the viewer's channel.
 
+## Miro workspace
+
+For a project that uses it, `ProjectWorkspace` (`project-workspace.tsx`) replaces the Versions
+canvas outright: Working files becomes named **design boards**, one designer each, and Shared with
+client becomes **client versions** numbered per project rather than per deliverable. The Miro frame
+is the design; no design is ever uploaded onto a board or a client version. See the
+[design](../../../../docs/superpowers/specs/2026-09-26-miro-workspace-design.md).
+
+`usesWorkspace` (`miro-workspace.ts`) decides per channel, in `project-page.tsx`, before any node
+is built: the internal channel uses the workspace once the viewer has any design board (a designer
+only ever gets their own, through `useDesignBoards`' RLS); the client channel uses it once the
+project has any shared (project-level, deliverable-less) version. Either way, a project that has no
+per-deliverable version at all opens on the workspace regardless, so a brand-new project starts
+there instead of an empty legacy canvas; a project that already has per-deliverable versions keeps
+the legacy canvas until its own channel also gains workspace data. The two channels decide
+independently, so the agency can see the workspace on one and the legacy canvas on the other in the
+same visit.
+
+`MiroWorkspaceBar` is the workspace's header, replacing `ProjectHeader`. In Working files it shows a
+board picker (only once there is more than one), a **Board / R1 / R2…** round toggle once the board
+has rounds, and the round's status; in Shared with client it shows a **V1, V2…** toggle, the shown
+version's status and the project's due date. Actions follow the role and what is shown: the board's
+own designer gets **Send to studio** (`project-action-round.tsx`, `kind: "round"`, an optional note
+and frame link, defaulting to the board's own link, sent through the idempotent `send_board_round`);
+the agency gets **Share with client** on a round (`project-action-share.tsx`, `kind: "share"`, the
+client board link prefilled from the deliverable-less channel's newest link) and, in Shared with
+client, **+ New client version** to add one directly with no round; the agency's **More** menu also
+holds **Add design board** / **Edit board** (`project-action-board.tsx`, `kind: "board"`, name, Miro
+link and one designer chosen from the project's assignments) and, on a shown client version, **Edit
+Miro link** (the existing `kind: "miro"` dialog). No board name, round or client version ever names a
+designer to anyone but the agency and that designer, matching the client-privacy pattern above: the
+bar's own markup carries no designer identity at all. An empty board or channel shows an inline
+call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
+message to everyone else.
+
+The workspace's **Feedback** tool bar button opens the same `CommentPanel`/`ProjectPanel` the legacy
+canvas uses, scoped to whichever round or client version is shown (`feedbackTarget`); the panel
+closes itself, during render, once nothing is shown to scope it to — the same reconciliation pattern
+`project-page.tsx` uses for Miro mode's phantom-state guard. `usePanelFocusReturn`
+(`use-panel-focus-return.ts`) is the shared hook behind both the legacy canvas's and the workspace's
+side panel, so Escape/close returns focus to whichever control opened it either way. The Playground
+button opens the full Playground when nothing is on Miro yet, or the asset strip over the embed once
+a board or version has a link, exactly as in Miro mode.
+
+The agency alone can step back to the legacy canvas on a project that still has per-deliverable
+versions: `viewControl`'s **Versions** button (only rendered when `legacyAvailable`) sets
+`legacyChosen`, which lasts until the channel switch resets it (`switchChannel`). Opening the URL
+with `?view=versions` forces the legacy canvas for every role on load (`legacyRequested`, read once);
+`miro-workspace.spec.ts`'s fixtures rely on this to exercise the older per-deliverable flows on a
+seeded project without disturbing its workspace state. Designer privacy for boards and rounds —
+RLS on `design_boards`/`design_versions`/`internal_comments`, enforced on both read and write — is
+described in [the backend contract](../../../../docs/architecture/backend.md); this feature's own
+part is simply that the interface never has another designer's identity to leak in the first place.
+
 ## Deviation from the data-access contract: reads that are not hooks
 
 `findUnchangedDesign`, `findDesignByAsset` and `downloadDesignAssetFile` in `project-data.ts` are
