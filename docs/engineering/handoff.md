@@ -22,12 +22,13 @@ Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 `review_publication` for project-level versions, and designer-to-designer privacy on
 `internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
 `npm run check` 123/1273 passes; `supabase test db` locally fails only `access_and_workflows`
-2,4,9,18,32,54 — the confirmed SABRE-overlay count baseline. A left-behind "Acceptance Playground …"
-client also fails 1, 41 and `published_asset_attestation_invariant` 1: remove it with the fixture's
-cleanup, never by editing assertions. **All-roles pass** (`e565ba4`): 109/3 skipped/8 failed; since
-fixed: video-loading, Playground focus return, board picker, Feedback icon, late share prefill. Only
-SABRE-overlay counts stay failing: `canonical-workspaces`:7, `design-audit`:18,
-`workspace-actions`:14, `workspace.spec`:25/:48.
+2,4,9,18,32,54 (SABRE-overlay counts; a left-behind "Acceptance Playground …" client adds more —
+remove it with the fixture's cleanup). **All-roles e2e:** only overlay counts fail
+(`canonical-workspaces`:7, `design-audit`:18, `workspace-actions`:14, `workspace.spec`:25/:48).
+**After the merge** (`08a38ed..13fb4fc`): Versions opens with every frame in view (50–100%); Brand Hub
+section titles hidden under the tabs; round comments notify only the board's designer (`0012`);
+`project-page.tsx` split into `project-versions-canvas.tsx`; a reassigned board leaves the designer's
+view within 30 s.
 **Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden);
 rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
 `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. [History](history/handoff-2026-09-26.md).
