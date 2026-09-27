@@ -4,17 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClientPeople } from "@/features/team/client-people";
 import { BriefingDetail } from "./briefing-detail";
-import type { Briefing } from "./briefing-model";
+import { creditMonthLabel, openCreditMonths, type Briefing } from "./briefing-model";
 
 const ana = { user_id: "ana", display_name: "Ana Lima", email: "ana@sabre.test" };
 const ben = { user_id: "ben", display_name: "Ben Cole", email: "ben@sabre.test" };
 const fixture = vi.hoisted(() => ({
   briefing: null as Briefing | null,
-  balance: 100,
+  /** Available credits per open month, current month first. */
+  available: [100] as number[],
   database: {},
   role: "agency" as "agency" | "client",
   people: undefined as ClientPeople | undefined,
   setRequester: vi.fn(),
+  accept: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -41,13 +43,13 @@ vi.mock("./briefing-data", async (importOriginal) => ({
   }),
   useCampaigns: () => ({ data: [], isPending: false, error: null }),
   useBriefingProject: () => ({ data: null, isPending: false, error: null }),
-  useBriefingCreditBalance: () => ({
-    data: { balance: fixture.balance },
+  useCreditMonthSummaries: (_clientId: string, months: string[]) => ({
+    data: months.map((month, index) => ({ month, available: fixture.available[index] ?? 0 })),
     isPending: false,
     error: null,
   }),
   confirmBriefingBudget: vi.fn(),
-  acceptBriefing: vi.fn(),
+  acceptBriefing: fixture.accept,
   setBriefingRequester: fixture.setRequester,
 }));
 
@@ -72,6 +74,8 @@ beforeEach(() => {
   fixture.role = "agency";
   fixture.people = { team: [ana, ben], names: { ana: "Ana Lima", ben: "Ben Cole", cy: "Cy Gone" } };
   fixture.setRequester.mockResolvedValue(undefined);
+  fixture.accept.mockResolvedValue("project-1");
+  fixture.available = [100];
 });
 
 afterEach(() => {
@@ -130,7 +134,9 @@ describe("BriefingDetail agency budget review — one primary action at a time",
     mountDetail();
     expect(await screen.findByRole("button", { name: "Accept & create project" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Confirm budget" })).not.toBeInTheDocument();
-    expect(screen.getByText("5 credits · one project")).toBeVisible();
+    expect(
+      screen.getByText(`5 credits · one project · ${creditMonthLabel(openCreditMonths()[0])}`),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "View credits" })).toBeVisible();
   });
 
@@ -153,6 +159,57 @@ describe("BriefingDetail agency budget review — one primary action at a time",
       screen.queryByRole("button", { name: "Accept & create project" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/unsaved changes/i)).toBeVisible();
+  });
+});
+
+describe("BriefingDetail credit month", () => {
+  const months = openCreditMonths();
+  const confirmed = (overrides: Partial<Briefing> = {}) =>
+    baseBriefing({
+      status: "budget_confirmed",
+      confirmed_credits: 9,
+      budget_note: "Scope.",
+      ...overrides,
+    });
+
+  it("opens on the due-date month, like accept_briefing, and shows that month's balance", async () => {
+    fixture.available = [100, 0];
+    fixture.briefing = confirmed({ due_date: months[1].replace("-01", "-12") });
+    mountDetail();
+    const select = await screen.findByRole("combobox", { name: "Credit month" });
+    expect(select).toHaveValue(months[1]);
+    expect(within(select).getAllByRole("option")).toHaveLength(12);
+    expect(
+      within(select).getByRole("option", {
+        name: `${creditMonthLabel(months[0])} · 100 available`,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(`Available in ${creditMonthLabel(months[1])}`)).toBeVisible();
+    expect(screen.getByText(/9 more are needed\. Choose another month/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Accept & create project" })).toBeDisabled();
+  });
+
+  it("accepts into the chosen month once it has the credits", async () => {
+    const user = userEvent.setup();
+    fixture.available = [100, 0];
+    fixture.briefing = confirmed({ due_date: months[1].replace("-01", "-12") });
+    mountDetail();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Credit month" }), months[0]);
+    expect(screen.queryByText(/more are needed/)).not.toBeInTheDocument();
+    expect(screen.getByText("91 credits")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Accept & create project" }));
+    await waitFor(() =>
+      expect(fixture.accept).toHaveBeenCalledWith(fixture.database, {
+        briefingId: "briefing-1",
+        month: months[0],
+      }),
+    );
+  });
+
+  it("defaults to the current month without a due date", async () => {
+    fixture.briefing = confirmed({ due_date: null });
+    mountDetail();
+    expect(await screen.findByRole("combobox", { name: "Credit month" })).toHaveValue(months[0]);
   });
 });
 

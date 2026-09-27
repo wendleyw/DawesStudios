@@ -664,3 +664,149 @@ export async function shareMiroVersion(
     }),
   );
 }
+
+// Credits ------------------------------------------------------------------------------------------
+
+/** The settlement columns granted to readers; `settled_by` and the idempotency key stay private. */
+const settlementColumns = "project_id,final_credits,difference,reason,charged_month,settled_at";
+export type ProjectSettlement = Pick<
+  TableRow<"project_settlements">,
+  "project_id" | "final_credits" | "difference" | "reason" | "charged_month" | "settled_at"
+>;
+type ProjectLedgerEntry = Pick<TableRow<"credit_ledger">, "amount" | "kind" | "month">;
+
+/**
+ * What a project is charged now, read the way `settle_project_credits` reads it: its debits and
+ * refunds in its current credit month, plus any final adjustment. A debit left in an expired month
+ * by a confirmed move stays spent but is not part of the project's charge.
+ */
+export function projectCreditCharge(
+  entries: ProjectLedgerEntry[],
+  creditMonth: string | null,
+): number {
+  return -entries
+    .filter(
+      (entry) =>
+        entry.kind === "final_adjustment" ||
+        (entry.month === creditMonth &&
+          (entry.kind === "project_debit" || entry.kind === "project_refund")),
+    )
+    .reduce((total, entry) => total + entry.amount, 0);
+}
+
+/**
+ * The project's credit charge and its settlement, for the agency and the client. Designers never
+ * read billing, so the query stays off for them (and the policies return nothing to one anyway).
+ * Keyed under `credit-ledger`, owned by `features/credits`, so the writes below refresh it through
+ * `useInvalidateProjectCredits` together with every other ledger view.
+ */
+export function useProjectCredits(projectId: string, creditMonth: string | null) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: ["credit-ledger", session?.user.id, "project-charge", projectId, creditMonth],
+    enabled: !!session && !!profile && profile.role !== "designer",
+    queryFn: async () => {
+      const [entries, settlement] = await Promise.all([
+        database.from("credit_ledger").select("amount,kind,month").eq("project_id", projectId),
+        database
+          .from("project_settlements")
+          .select(settlementColumns)
+          .eq("project_id", projectId)
+          .maybeSingle(),
+      ]);
+      return {
+        charged: projectCreditCharge(assertResult(entries) as ProjectLedgerEntry[], creditMonth),
+        settlement: assertResult(settlement) as ProjectSettlement | null,
+      };
+    },
+  });
+}
+
+/**
+ * Refreshes what moving or settling a project changes: the client's balances and ledger (keys
+ * `features/credits` owns, named here because its `useInvalidateCredits()` would also refetch credit
+ * requests, which neither write touches) and the project itself (`credit_month`, the notification a
+ * settlement sends).
+ */
+export function useInvalidateProjectCredits() {
+  const queryClient = useQueryClient();
+  const invalidateProject = useInvalidateProject();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["credit-account"] }),
+      queryClient.invalidateQueries({ queryKey: ["credit-ledger"] }),
+      invalidateProject(),
+    ]);
+  };
+}
+
+/**
+ * Moves a project's charge to another open month: `move_project_month` refunds the old month while
+ * it is open and debits the new one in one transaction. When the old month has expired its credits
+ * are gone, so the procedure debits the new month in full only with `chargeFull` confirmed. The key
+ * makes a retry return the same move.
+ */
+export async function moveProjectMonth(
+  database: SupabaseDatabase,
+  input: { projectId: string; toMonth: string; chargeFull: boolean; idempotencyKey: string },
+) {
+  return assertResult(
+    await database.rpc("move_project_month", {
+      p_project_id: input.projectId,
+      p_to_month: input.toMonth,
+      p_idempotency_key: input.idempotencyKey,
+      p_charge_full: input.chargeFull,
+    }),
+  );
+}
+
+/** The month a settlement's extra cost could not be charged to, as `insufficient_month_credits` reports it. */
+export class MonthShortfallError extends Error {
+  constructor(
+    readonly month: string,
+    readonly available: number,
+    readonly shortfall: number,
+  ) {
+    super(`The month is ${shortfall} credits short.`);
+    this.name = "MonthShortfallError";
+  }
+}
+
+/**
+ * Settles a project's final credits once, at approval or delivery. Extra cost is charged to
+ * `chargeMonth` (the current month when null); a refund always returns to the current month. When
+ * the charge month is short, the procedure raises `insufficient_month_credits` with the month, its
+ * available credits and the shortfall in the error detail; that becomes a `MonthShortfallError` so
+ * the dialog can offer another month. Nothing is written in that case, so the same key is retried.
+ */
+export async function settleProjectCredits(
+  database: SupabaseDatabase,
+  input: {
+    projectId: string;
+    finalCredits: number;
+    reason: string;
+    chargeMonth: string | null;
+    idempotencyKey: string;
+  },
+) {
+  const result = await database.rpc("settle_project_credits", {
+    p_project_id: input.projectId,
+    p_final_credits: input.finalCredits,
+    p_reason: input.reason,
+    p_idempotency_key: input.idempotencyKey,
+    ...(input.chargeMonth ? { p_charge_month: input.chargeMonth } : {}),
+  });
+  if (result.error?.message === "insufficient_month_credits") {
+    const detail = JSON.parse(result.error.details || "{}") as {
+      month?: string;
+      available?: number;
+      shortfall?: number;
+    };
+    throw new MonthShortfallError(
+      detail.month ?? input.chargeMonth ?? "",
+      detail.available ?? 0,
+      detail.shortfall ?? 0,
+    );
+  }
+  return assertResult(result) as ProjectSettlement;
+}

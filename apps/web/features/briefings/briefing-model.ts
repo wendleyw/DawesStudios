@@ -391,3 +391,48 @@ export function requesterErrors(
   if (!people?.length || people.some((person) => person.user_id === requestedBy)) return [];
   return ["Choose who requested this briefing."];
 }
+
+/**
+ * Credit months are the first day of a month, `YYYY-MM-DD`, computed in UTC exactly like the
+ * database's `private.month_of`/`private.current_month`, so the interface and the procedures agree
+ * on which month is "now" whatever the viewer's timezone.
+ */
+export function creditMonthOf(value: Date | string): string {
+  if (typeof value === "string" && /^\d{4}-\d{2}/.test(value)) return `${value.slice(0, 7)}-01`;
+  const date = typeof value === "string" ? new Date(value) : value;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** `month` plus `count` months, both first-of-month strings. */
+export function addCreditMonths(month: string, count: number): string {
+  const [year, monthIndex] = month.split("-").map(Number);
+  return creditMonthOf(new Date(Date.UTC(year, monthIndex - 1 + count, 1)));
+}
+
+/** The months that accept debits: the current month and the next eleven, the database's window. */
+export function openCreditMonths(now: Date = new Date()): string[] {
+  const current = creditMonthOf(now);
+  return Array.from({ length: 12 }, (_, index) => addCreditMonths(current, index));
+}
+
+/**
+ * The month `accept_briefing` debits when none is passed: the due date's month, no earlier than the
+ * current month and no later than the last open one. A briefing without a due date uses the current
+ * month. The Month select opens on this, so leaving it untouched is exactly the database default.
+ */
+export function defaultAcceptanceMonth(dueDate: string | null, now: Date = new Date()): string {
+  const months = openCreditMonths(now);
+  if (!dueDate) return months[0];
+  const due = creditMonthOf(dueDate);
+  if (due < months[0]) return months[0];
+  return due > months[11] ? months[11] : due;
+}
+
+/** "October 2026" for `2026-10-01`. */
+export function creditMonthLabel(month: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${creditMonthOf(month)}T00:00:00Z`));
+}

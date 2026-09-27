@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
   useInvalidateNotifications,
@@ -18,16 +18,19 @@ import {
   briefingQueryKeys,
   confirmBriefingBudget,
   setBriefingRequester,
-  useBriefingCreditBalance,
   useBriefingProject,
   useBriefings,
   useCampaigns,
+  useCreditMonthSummaries,
 } from "./briefing-data";
 import {
   briefingStatusLabels,
   briefingStatusTones,
+  creditMonthLabel,
+  defaultAcceptanceMonth,
   initialDraft,
   initialRequester,
+  openCreditMonths,
   type Briefing,
 } from "./briefing-model";
 import { statusToneClass } from "@/features/shared/status-tone";
@@ -253,7 +256,18 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
     String(briefing.confirmed_credits ?? briefing.estimated_credits ?? 1),
   );
   const [note, setNote] = useState(briefing.budget_note ?? "");
-  const balance = useBriefingCreditBalance(briefing.client_id);
+  // The project is charged to one month's credits. The select opens on the month `accept_briefing`
+  // defaults to (the due-date month, clamped to the open window) and always sends its choice, so
+  // the figures shown are the figures the procedure checks.
+  const months = useMemo(() => openCreditMonths(), []);
+  const [month, setMonth] = useState(() => defaultAcceptanceMonth(briefing.due_date));
+  const summaries = useCreditMonthSummaries(briefing.client_id, months);
+  const balance = {
+    isPending: summaries.isPending,
+    error: summaries.error,
+    available: summaries.data?.[months.indexOf(month)]?.available ?? 0,
+  };
+  const monthName = creditMonthLabel(month);
   const confirm = useMutation({
     mutationFn: async () => {
       const amount = Number(credits);
@@ -274,7 +288,7 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] }),
   });
   const accept = useMutation({
-    mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id }),
+    mutationFn: async () => await acceptBriefing(database, { briefingId: briefing.id, month }),
     onSuccess: async (id) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [briefingQueryKeys.briefings] }),
@@ -290,8 +304,8 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
       router.push(`/projects/${id}`);
     },
   });
-  const enough =
-    balance.data && balance.data.balance >= (briefing.confirmed_credits ?? Number(credits));
+  const required = briefing.confirmed_credits ?? Number(credits);
+  const enough = !balance.isPending && !balance.error && balance.available >= required;
   // Accept applies the confirmed figures, so an edited-but-unsaved form must say why it is blocked
   // instead of greying the button out with no explanation.
   const unconfirmedEdit =
@@ -327,6 +341,20 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
             placeholder="Explain any adjustment to the estimate"
           />
         </label>
+        <label>
+          Credit month
+          <select value={month} onChange={(event) => setMonth(event.target.value)}>
+            {months.map((option, index) => {
+              const summary = summaries.data?.[index];
+              return (
+                <option key={option} value={option}>
+                  {creditMonthLabel(option)}
+                  {summary ? ` · ${summary.available} available` : ""}
+                </option>
+              );
+            })}
+          </select>
+        </label>
         {balance.isPending ? (
           <p className="briefing-note">Checking balance…</p>
         ) : balance.error ? (
@@ -342,12 +370,12 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
               <dd>{Number(credits) || 0} credits</dd>
             </div>
             <div>
-              <dt>Available balance</dt>
-              <dd>{balance.data?.balance ?? 0} credits</dd>
+              <dt>Available in {monthName}</dt>
+              <dd>{balance.available} credits</dd>
             </div>
             <div>
               <dt>Balance after acceptance</dt>
-              <dd>{(balance.data?.balance ?? 0) - (Number(credits) || 0)} credits</dd>
+              <dd>{balance.available - (Number(credits) || 0)} credits</dd>
             </div>
           </dl>
         )}
@@ -363,12 +391,14 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
       </form>
       {briefing.status === "budget_confirmed" && (
         <div className="briefing-accept">
-          <p>{briefing.confirmed_credits} credits · one project</p>
+          <p>
+            {briefing.confirmed_credits} credits · one project · {monthName}
+          </p>
           {!enough && !balance.isPending && (
             <p className="form-error">
               {balance.error
                 ? "Check the credit account before accepting."
-                : `${(briefing.confirmed_credits ?? 0) - (balance.data?.balance ?? 0)} more credits are needed to accept this briefing.`}
+                : `${monthName} has ${balance.available} credits available; ${required - balance.available} more are needed. Choose another month, or add an extra to ${monthName} on the Credits page.`}
             </p>
           )}
           {accept.error && <FormError>{accept.error.message}</FormError>}

@@ -1,11 +1,24 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CanvasVersion, TableRow } from "./project-data";
+import { creditMonthLabel, openCreditMonths } from "@/features/briefings/briefing-model";
+import { MonthShortfallError, type CanvasVersion, type TableRow } from "./project-data";
 
 const state = vi.hoisted(() => ({
   role: "agency" as "agency" | "client" | "designer",
   requester: "ana" as string | null,
+  credits: null as null | {
+    charged: number;
+    settlement: null | {
+      final_credits: number;
+      difference: number;
+      charged_month: string | null;
+      reason: string;
+    };
+  },
+  move: vi.fn(),
+  settle: vi.fn(),
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ database: {}, profile: { id: "viewer-1", role: state.role } }),
@@ -22,9 +35,16 @@ vi.mock("./project-data", async (importOriginal) => ({
     refetch: vi.fn(),
   }),
   useInvalidateProject: () => vi.fn(),
+  useInvalidateProjectCredits: () => vi.fn(),
+  useProjectCredits: () => ({ data: state.role === "designer" ? undefined : state.credits }),
+  moveProjectMonth: state.move,
+  settleProjectCredits: state.settle,
 }));
 vi.mock("@/features/briefings/briefing-data", () => ({
   useBriefingRequester: () => ({ data: state.role === "designer" ? undefined : state.requester }),
+  useCreditMonthSummaries: (_clientId: string, months: string[]) => ({
+    data: months.map((month, index) => ({ month, available: index === 0 ? 2 : 50 })),
+  }),
 }));
 vi.mock("@/features/team/team-data", () => ({
   useClientPeople: () => ({
@@ -40,6 +60,22 @@ vi.mock("@/features/team/team-data", () => ({
 
 import { ProjectDetails } from "./project-details";
 
+// jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
+Object.defineProperties(HTMLDialogElement.prototype, {
+  showModal: {
+    configurable: true,
+    value() {
+      this.setAttribute("open", "");
+    },
+  },
+  close: {
+    configurable: true,
+    value() {
+      this.removeAttribute("open");
+    },
+  },
+});
+
 const project = {
   id: "p1",
   client_id: "c1",
@@ -53,20 +89,32 @@ const project = {
   due_date: null,
   created_at: "2026-09-20T00:00:00Z",
   updated_at: "2026-09-20T00:00:00Z",
+  credit_month: null,
 } as unknown as TableRow<"projects">;
 const deliverables = [{ id: "d1", name: "Portrait Feed" }] as unknown as TableRow<"deliverables">[];
 
-function renderDetails(versions: CanvasVersion[] = []) {
+function renderDetails(
+  versions: CanvasVersion[] = [],
+  overrides: Partial<TableRow<"projects">> = {},
+) {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <ProjectDetails project={project} deliverables={deliverables} versions={versions} />
+      <ProjectDetails
+        project={{ ...project, ...overrides }}
+        deliverables={deliverables}
+        versions={versions}
+      />
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   state.role = "agency";
   state.requester = "ana";
+  state.credits = null;
+  state.move.mockResolvedValue("entry-1");
+  state.settle.mockResolvedValue({});
 });
 
 describe("ProjectDetails requester", () => {
@@ -148,5 +196,144 @@ describe("ProjectDetails version history", () => {
       }),
     ]);
     expect(screen.getByText("Changes requested by Former member · Sep 23")).toBeInTheDocument();
+  });
+});
+
+describe("ProjectDetails credits", () => {
+  const months = openCreditMonths();
+  const [current, next] = months;
+  const previous = "2020-01-01";
+
+  it("shows the studio and the client the charge and its month", () => {
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: next });
+    expect(screen.getByText("Credits", { selector: "dt" })).toBeInTheDocument();
+    expect(screen.getByText(`9 · ${creditMonthLabel(next)}`)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move to another month" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Settle final credits" })).not.toBeInTheDocument();
+  });
+
+  it("gives the client the figures and none of the studio's actions", () => {
+    state.role = "client";
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: next, status: "delivered" });
+    expect(screen.getByText(`9 · ${creditMonthLabel(next)}`)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /month|Settle/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a designer no credits", () => {
+    state.role = "designer";
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: next });
+    expect(screen.queryByText("Credits")).not.toBeInTheDocument();
+  });
+
+  it("moves the charge after the studio confirms the month", async () => {
+    const user = userEvent.setup();
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: current });
+    await user.click(screen.getByRole("button", { name: "Move to another month" }));
+    const dialog = screen.getByRole("dialog", { name: "Move to another month" });
+    expect(
+      within(dialog).getByText(
+        `9 credits return to ${creditMonthLabel(current)} and are charged to ${creditMonthLabel(next)}.`,
+      ),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(next)}` }),
+    );
+    await waitFor(() =>
+      expect(state.move).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({ projectId: "p1", toMonth: next, chargeFull: false }),
+      ),
+    );
+    expect(state.move.mock.calls[0][1].idempotencyKey).toMatch(/^move:p1:.+:/);
+  });
+
+  it("asks for the full charge when the project's month has expired", async () => {
+    const user = userEvent.setup();
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: previous });
+    await user.click(screen.getByRole("button", { name: "Move to another month" }));
+    const dialog = screen.getByRole("dialog", { name: "Move to another month" });
+    // The current month has 2 credits in this fixture; pick a month with enough.
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "New month" }), next);
+    expect(within(dialog).getByText(/its credits expired/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(next)}` }),
+    ).toBeDisabled();
+    await user.click(within(dialog).getByRole("checkbox", { name: /Charge the full 9 credits/ }));
+    await user.click(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(next)}` }),
+    );
+    await waitFor(() =>
+      expect(state.move).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({ toMonth: next, chargeFull: true }),
+      ),
+    );
+  });
+
+  it("warns when the chosen month cannot take the charge", async () => {
+    const user = userEvent.setup();
+    state.credits = { charged: 9, settlement: null };
+    renderDetails([], { credit_month: next });
+    await user.click(screen.getByRole("button", { name: "Move to another month" }));
+    const dialog = screen.getByRole("dialog", { name: "Move to another month" });
+    expect(within(dialog).getByText(/has 2 credits available; 7 more are needed/)).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: `Move to ${creditMonthLabel(current)}` }),
+    ).toBeDisabled();
+  });
+
+  it("settles at delivery and offers another charge month on a shortfall", async () => {
+    const user = userEvent.setup();
+    state.credits = { charged: 9, settlement: null };
+    state.settle.mockRejectedValueOnce(new MonthShortfallError(current, 2, 1));
+    renderDetails([], { credit_month: current, status: "delivered" });
+    await user.click(screen.getByRole("button", { name: "Settle final credits" }));
+    const dialog = screen.getByRole("dialog", { name: "Settle final credits" });
+    const total = within(dialog).getByRole("spinbutton", { name: "Final total" });
+    await user.clear(total);
+    await user.type(total, "12");
+    await user.type(within(dialog).getByRole("textbox", { name: "Reason" }), "Two extra sizes");
+    expect(
+      within(dialog).getByText(`3 more credits will be charged to ${creditMonthLabel(current)}.`),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Settle credits" }));
+    expect(await within(dialog).findByText(/has 2 credits available, 1 short/)).toBeVisible();
+    await user.selectOptions(within(dialog).getByRole("combobox", { name: "Charge month" }), next);
+    await user.click(within(dialog).getByRole("button", { name: "Settle credits" }));
+    await waitFor(() => expect(state.settle).toHaveBeenCalledTimes(2));
+    const [first, second] = state.settle.mock.calls.map((call) => call[1]);
+    expect(first).toMatchObject({ finalCredits: 12, reason: "Two extra sizes", chargeMonth: null });
+    expect(second).toMatchObject({ chargeMonth: next, idempotencyKey: first.idempotencyKey });
+  });
+
+  it("shows the settlement and its reason to the client, and stops further changes", () => {
+    state.role = "client";
+    state.credits = {
+      charged: 7,
+      settlement: {
+        final_credits: 7,
+        difference: -2,
+        charged_month: current,
+        reason: "One size dropped",
+      },
+    };
+    renderDetails([], { credit_month: current, status: "delivered" });
+    expect(screen.getByText(`2 refunded to ${creditMonthLabel(current)}`)).toBeInTheDocument();
+    expect(screen.getByText("One size dropped")).toBeInTheDocument();
+  });
+
+  it("offers the studio no move or settle once settled", () => {
+    state.credits = {
+      charged: 7,
+      settlement: { final_credits: 7, difference: 0, charged_month: null, reason: "As quoted" },
+    };
+    renderDetails([], { credit_month: current, status: "delivered" });
+    expect(screen.getByText("No change")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Move to another month|Settle/ })).toBeNull();
   });
 });

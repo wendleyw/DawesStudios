@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assignDesigner,
   clearMiroLink,
+  moveProjectMonth,
+  MonthShortfallError,
+  projectCreditCharge,
+  settleProjectCredits,
   postComment,
   resolveComment,
   reviewPublication,
@@ -280,5 +284,104 @@ describe("Miro link writes", () => {
     await clearMiroLink(database, { channel: "internal", versionId: "v-1" });
     expect(rpc).toHaveBeenCalledWith("clear_publication_miro_link", { p_publication_id: "pub-1" });
     expect(rpc).toHaveBeenCalledWith("clear_version_miro_link", { p_version_id: "v-1" });
+  });
+});
+
+describe("project credits", () => {
+  it("charges the project what its credit month holds, plus any final adjustment", () => {
+    expect(
+      projectCreditCharge(
+        [
+          { amount: -9, kind: "project_debit", month: "2026-09-01" },
+          { amount: 9, kind: "project_refund", month: "2026-09-01" },
+          { amount: -9, kind: "project_debit", month: "2026-11-01" },
+          { amount: -3, kind: "final_adjustment", month: "2026-10-01" },
+        ],
+        "2026-11-01",
+      ),
+    ).toBe(12);
+    // A debit left in an expired origin month stays spent but is not the project's charge.
+    expect(
+      projectCreditCharge(
+        [
+          { amount: -9, kind: "project_debit", month: "2026-08-01" },
+          { amount: -9, kind: "project_debit", month: "2026-10-01" },
+        ],
+        "2026-10-01",
+      ),
+    ).toBe(9);
+  });
+
+  it("moves a project to another month with its key and full-charge confirmation", async () => {
+    const { database, rpc } = stubDatabase({ data: "entry-1", error: null });
+    await moveProjectMonth(database, {
+      projectId: "project-1",
+      toMonth: "2026-11-01",
+      chargeFull: true,
+      idempotencyKey: "move:project-1:a:2026-11-01",
+    });
+    expect(rpc).toHaveBeenCalledWith("move_project_month", {
+      p_project_id: "project-1",
+      p_to_month: "2026-11-01",
+      p_idempotency_key: "move:project-1:a:2026-11-01",
+      p_charge_full: true,
+    });
+  });
+
+  it("settles with the current month by default and a chosen charge month when given", async () => {
+    const { database, rpc } = stubDatabase({ data: { project_id: "project-1" }, error: null });
+    const input = {
+      projectId: "project-1",
+      finalCredits: 12,
+      reason: "Two extra sizes",
+      idempotencyKey: "settle:project-1:a",
+    };
+    await settleProjectCredits(database, { ...input, chargeMonth: null });
+    expect(rpc).toHaveBeenLastCalledWith("settle_project_credits", {
+      p_project_id: "project-1",
+      p_final_credits: 12,
+      p_reason: "Two extra sizes",
+      p_idempotency_key: "settle:project-1:a",
+    });
+    await settleProjectCredits(database, { ...input, chargeMonth: "2026-11-01" });
+    expect(rpc).toHaveBeenLastCalledWith(
+      "settle_project_credits",
+      expect.objectContaining({ p_charge_month: "2026-11-01" }),
+    );
+  });
+
+  it("turns insufficient_month_credits into a shortfall the dialog can act on", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: {
+        message: "insufficient_month_credits",
+        details: JSON.stringify({ month: "2026-09-01", available: 2, required: 3, shortfall: 1 }),
+      },
+    } as never);
+    const error = await settleProjectCredits(database, {
+      projectId: "project-1",
+      finalCredits: 12,
+      reason: "Two extra sizes",
+      chargeMonth: null,
+      idempotencyKey: "settle:project-1:a",
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(MonthShortfallError);
+    expect(error).toMatchObject({ month: "2026-09-01", available: 2, shortfall: 1 });
+  });
+
+  it("surfaces any other settlement error as it is", async () => {
+    const { database } = stubDatabase({
+      data: null,
+      error: { message: "This project is already settled" },
+    });
+    await expect(
+      settleProjectCredits(database, {
+        projectId: "project-1",
+        finalCredits: 12,
+        reason: "r",
+        chargeMonth: null,
+        idempotencyKey: "k",
+      }),
+    ).rejects.toThrow("This project is already settled");
   });
 });

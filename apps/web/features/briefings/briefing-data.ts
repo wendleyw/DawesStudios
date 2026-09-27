@@ -19,7 +19,7 @@ import type { Database } from "@database";
  *
  * `campaigns`, `credit-account`, `service-presets` and `briefing-project` are absent on purpose:
  * the first two are keys other features own and this file only reads (see `useCampaigns` and
- * `useBriefingCreditBalance` below), and no write here invalidates the last two.
+ * `useCreditMonthSummaries` below), and no write here invalidates the last two.
  */
 export const briefingQueryKeys = {
   /** `useBriefings` — the briefing list, which every briefing write changes. */
@@ -145,23 +145,39 @@ export function useBriefingRequester(briefingId: string | null) {
   });
 }
 
+/** One row of `credit_month_summary`: a client's figures for one month. */
+export type CreditMonthSummary =
+  Database["public"]["Functions"]["credit_month_summary"]["Returns"][number];
+
 /**
- * The client's credit balance, read for the agency's budget-review panel.
+ * A client's figures for each of `months` (normally `openCreditMonths()`), read through the
+ * read-only `credit_month_summary` procedure, one call per month, returned in the same order. The
+ * agency uses it to show every month's available credits when choosing where a project is charged:
+ * the Month select at acceptance here, and the Move and Settle dialogs in
+ * `projects/project-details.tsx`.
  *
- * This intentionally shares the `credit-account` cache key that `features/credits/credit-data.ts`
- * also writes under, and — unlike every other hook in this file — carries no `enabled` gate. Both
- * are exactly how `BudgetReview` issued this query in `briefing-detail.tsx` before this move; this
- * relocation preserves the query verbatim rather than aligning it with the rest of this file, per
- * the "no behavior change" mandate for this pass. See the feature `README.md`.
+ * Keyed under `credit-account` (which `features/credits` owns), so every write that already
+ * refreshes the client's balance — accepting a briefing, moving or settling a project — refreshes
+ * these figures too, without a key of its own to remember.
  */
-export function useBriefingCreditBalance(clientId: string) {
+export function useCreditMonthSummaries(clientId: string, months: string[], enabled = true) {
   const { database, session } = useAuth();
   return useQuery({
-    queryKey: ["credit-account", session?.user.id, clientId],
+    queryKey: ["credit-account", session?.user.id, clientId, "months", months],
+    enabled: !!session && enabled && months.length > 0,
+    // These figures decide where credits are charged, and another tab or studio member may have
+    // changed them (an extra, a transfer), so every picker that opens reads them fresh.
+    staleTime: 0,
     queryFn: async () =>
-      assertResult(
-        await database.from("credit_accounts").select("balance").eq("client_id", clientId).single(),
-      ) as { balance: number },
+      Promise.all(
+        months.map(async (month) => {
+          const rows = assertResult(
+            await database.rpc("credit_month_summary", { p_client_id: clientId, p_month: month }),
+          ) as CreditMonthSummary[];
+          if (!rows[0]) throw new Error(`No credit figures for ${month}.`);
+          return rows[0];
+        }),
+      ),
   });
 }
 
@@ -205,14 +221,21 @@ export async function confirmBriefingBudget(
 }
 
 /**
- * Accepts a briefing. The backend `accept_briefing` procedure is what atomically creates one
- * project and one credit debit, rejects insufficient balance, and stays idempotent under retries —
- * see the comment above `confirmBriefingBudget`. This function only relocates the RPC call and its
- * `assertResult`; it adds no retry logic of its own.
+ * Accepts a briefing, debiting `month` (a first-of-month date). The backend `accept_briefing`
+ * procedure is what atomically creates one project and one debit of that month, rejects an
+ * insufficient month balance or a month outside the open window, and stays idempotent under
+ * retries — see the comment above `confirmBriefingBudget`. The detail page always passes the month
+ * its Month select shows, which opens on the same default the procedure applies without one.
  */
-export async function acceptBriefing(database: SupabaseDatabase, input: { briefingId: string }) {
+export async function acceptBriefing(
+  database: SupabaseDatabase,
+  input: { briefingId: string; month: string },
+) {
   return assertResult(
-    await database.rpc("accept_briefing", { p_briefing_id: input.briefingId }),
+    await database.rpc("accept_briefing", {
+      p_briefing_id: input.briefingId,
+      p_month: input.month,
+    }),
   ) as string;
 }
 

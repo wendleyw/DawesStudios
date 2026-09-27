@@ -96,6 +96,28 @@ and the client it also shows **Requested by** (`useBriefingRequester`) and a ver
 who decided; designers see neither. Editing the project is a compare-and-set write on the
 `updated_at` the form opened on; a lost race raises "changed while you were editing".
 
+**Credits.** Details shows the studio and the client **Credits: N · <Month>**, the project's charge
+in its credit month (`projects.credit_month`), and, once settled, **Settled** ("3 more charged to
+September 2026", "2 refunded to …" or "No change") with the **Reason** the client reads. Designers
+see none of it, and `useProjectCredits` does not query for them. The charge is read the way
+`settle_project_credits` reads it (`projectCreditCharge`): debits and refunds in the credit month
+plus any final adjustment. The agency also gets:
+
+- **Move to another month** (while unsettled and charged): a dialog listing the other open months
+  with their available credits (`useCreditMonthSummaries` from `briefings/briefing-data.ts`) that
+  says where the credits go and blocks a month that cannot take them. When the project's month has
+  already ended its credits expired, so the dialog explains they are not returned and requires
+  **Charge the full N credits to <Month>** before `move_project_month` runs with
+  `p_charge_full`. One idempotency key per dialog and month (`move:<project>:<attempt>:<month>`).
+- **Settle final credits** (approved or delivered, once): the final total and a required reason,
+  with a preview of the extra charge (current month) or refund (always the current month). When the
+  current month is short, `settle_project_credits` raises `insufficient_month_credits`;
+  `settleProjectCredits` turns its detail into a `MonthShortfallError`, and the dialog names the
+  shortfall and adds a **Charge month** select for a retry with the same key.
+
+Both writes refresh `credit-account`, `credit-ledger` and the project's keys through
+`useInvalidateProjectCredits`.
+
 **Cover.** Details opens with a Cover block (`project-cover.tsx`): one sanitized PNG per project,
 set by the agency and optionally shown to the client. `useProjectCover` reads
 `public.project_covers` and signs the path from the private `project-covers` bucket (300-second
@@ -138,7 +160,10 @@ RPCs parse and validate the URL, and `miro-links.ts`'s `parseMiroBoardUrl` only 
 an obviously bad link first. A shared client version is nothing but its link, so its field is
 required and clearing it is refused by the dialog and the database. The workspace writes are
 `createDesignBoard`, `updateDesignBoard`, `sendBoardRound`, `shareMiroVersion` and
-`reviewPublication`; comments go through `postComment` / `resolveComment`.
+`reviewPublication`; comments go through `postComment` / `resolveComment`. Credits are read by
+`useProjectCredits` (the ledger rows and the settlement, whose granted columns it names:
+`settled_by` and the idempotency key are not selectable) and written by `moveProjectMonth` and
+`settleProjectCredits`.
 
 The author columns (`created_by` on `design_versions`, `updated_by` on `design_version_miro_links`)
 are not selectable by any API role, so `useProjectDetail` names its columns

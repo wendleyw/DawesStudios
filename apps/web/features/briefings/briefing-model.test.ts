@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCreditMonths,
   brandDefaults,
   byOpenedDate,
   briefingPayload,
   catalogWithPresets,
+  creditMonthLabel,
+  creditMonthOf,
   decodeBriefing,
+  defaultAcceptanceMonth,
   formats,
   initialDraft,
   initialRequester,
   newDeliverable,
   nextVariation,
+  openCreditMonths,
   requesterErrors,
   serviceEstimate,
   services,
@@ -302,5 +307,39 @@ describe("byOpenedDate", () => {
       { id: "today", created_at: "2026-09-26T22:08:17.415533+00:00" },
     ];
     expect(byOpenedDate(list).map((item) => item.id)).toEqual(["today", "sep-a", "sep-b", "may"]);
+  });
+});
+
+describe("credit months", () => {
+  // 23:30 on Sep 30 in São Paulo is already October in UTC, the database's clock.
+  const now = new Date("2026-10-01T02:30:00Z");
+
+  it("takes the first day of a month in UTC, from a date or a day string", () => {
+    expect(creditMonthOf(now)).toBe("2026-10-01");
+    expect(creditMonthOf(new Date("2026-09-30T23:59:59Z"))).toBe("2026-09-01");
+    expect(creditMonthOf("2026-12-24")).toBe("2026-12-01");
+  });
+
+  it("adds months across a year", () => {
+    expect(addCreditMonths("2026-11-01", 3)).toBe("2027-02-01");
+    expect(addCreditMonths("2026-01-01", -1)).toBe("2025-12-01");
+  });
+
+  it("opens the current month and the next eleven", () => {
+    const months = openCreditMonths(now);
+    expect(months).toHaveLength(12);
+    expect(months[0]).toBe("2026-10-01");
+    expect(months[11]).toBe("2027-09-01");
+  });
+
+  it("defaults acceptance to the due month, clamped to the open window like accept_briefing", () => {
+    expect(defaultAcceptanceMonth(null, now)).toBe("2026-10-01");
+    expect(defaultAcceptanceMonth("2026-12-12", now)).toBe("2026-12-01");
+    expect(defaultAcceptanceMonth("2026-08-02", now)).toBe("2026-10-01");
+    expect(defaultAcceptanceMonth("2028-03-01", now)).toBe("2027-09-01");
+  });
+
+  it("labels a month by name and year", () => {
+    expect(creditMonthLabel("2026-10-01")).toBe("October 2026");
   });
 });

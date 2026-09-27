@@ -75,8 +75,14 @@ describe("budget-acceptance writes", () => {
 
   it("accepts a briefing and returns the created project id", async () => {
     const { database, rpc } = stubDatabase({ data: "project-1", error: null });
-    const projectId = await acceptBriefing(database, { briefingId: "briefing-1" });
-    expect(rpc).toHaveBeenCalledWith("accept_briefing", { p_briefing_id: "briefing-1" });
+    const projectId = await acceptBriefing(database, {
+      briefingId: "briefing-1",
+      month: "2026-10-01",
+    });
+    expect(rpc).toHaveBeenCalledWith("accept_briefing", {
+      p_briefing_id: "briefing-1",
+      p_month: "2026-10-01",
+    });
     expect(projectId).toBe("project-1");
   });
 
@@ -92,9 +98,9 @@ describe("budget-acceptance writes", () => {
       data: null,
       error: { message: "insufficient credit balance" },
     });
-    await expect(acceptBriefing(database, { briefingId: "briefing-1" })).rejects.toThrow(
-      "insufficient credit balance",
-    );
+    await expect(
+      acceptBriefing(database, { briefingId: "briefing-1", month: "2026-09-01" }),
+    ).rejects.toThrow("insufficient credit balance");
   });
 });
 
