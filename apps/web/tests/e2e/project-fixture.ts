@@ -123,8 +123,8 @@ delete from public.project_settlements where project_id in (select id from accep
 delete from public.credit_ledger where project_id in (select id from acceptance_target);
 delete from public.projects where id in (select id from acceptance_target);
 delete from public.briefings where id in (select briefing_id from acceptance_target);
-update public.credit_accounts a set balance=(select coalesce(sum(amount),0) from public.credit_ledger l where l.client_id=a.client_id) where client_id in(select client_id from acceptance_target);
-update public.credit_months m set balance=(select coalesce(sum(amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month) where client_id in(select client_id from acceptance_target);
+update public.credit_months m set balance=t.total from (select m2.client_id,m2.month,(select coalesce(sum(amount),0) from public.credit_ledger l where l.client_id=m2.client_id and l.month=m2.month) as total from public.credit_months m2 where m2.client_id in(select client_id from acceptance_target)) t where m.client_id=t.client_id and m.month=t.month and m.balance is distinct from t.total;
+update public.credit_accounts a set balance=coalesce((select m.balance from public.credit_months m where m.client_id=a.client_id and m.month=private.month_of(now())),0) where a.client_id in(select client_id from acceptance_target) and a.balance is distinct from coalesce((select m.balance from public.credit_months m where m.client_id=a.client_id and m.month=private.month_of(now())),0);
 commit;`;
   runPrivilegedSql(sql, 20_000);
 }
