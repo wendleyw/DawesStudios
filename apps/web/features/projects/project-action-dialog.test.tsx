@@ -21,7 +21,6 @@ const version = {
   id: "version-1",
   number: 1,
   status: "draft",
-  deliverableId: null,
   boardId: "board-1",
   miro: null,
 } as unknown as CanvasVersion;

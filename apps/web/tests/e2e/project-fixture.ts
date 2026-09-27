@@ -112,9 +112,7 @@ delete from public.notifications where project_id in (select id from acceptance_
 delete from public.internal_comments where project_id in (select id from acceptance_target);
 delete from public.client_comments where project_id in (select id from acceptance_target);
 delete from public.publication_reviews where project_id in (select id from acceptance_target);
-delete from public.published_designs where project_id in (select id from acceptance_target);
 delete from public.published_versions where project_id in (select id from acceptance_target);
-delete from public.designs where project_id in (select id from acceptance_target);
 delete from private.miro_share_requests where project_id in (select id from acceptance_target);
 delete from public.publication_miro_links where project_id in (select id from acceptance_target);
 delete from public.design_version_miro_links where project_id in (select id from acceptance_target);

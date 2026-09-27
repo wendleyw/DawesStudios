@@ -23,7 +23,6 @@ insert into client_team_context values
   ('empty',md5('client-team:empty-client')::uuid),
   ('newcomer',md5('client-team:newcomer')::uuid),
   ('project',md5('client-team:project')::uuid),
-  ('deliverable',md5('client-team:deliverable')::uuid),
   ('publication',md5('client-team:publication')::uuid);
 create function pg_temp.context(p_key text) returns uuid language sql as $$
   select value from client_team_context where key=p_key
@@ -204,10 +203,8 @@ select isnt_empty($$select 1 from private.audit_events
 insert into public.projects(id,client_id,briefing_id,title,service_type)
   values(pg_temp.context('project'),pg_temp.context('sabre'),pg_temp.context('studio-briefing'),
     'Client team: reviewed project','social');
-insert into public.deliverables(id,project_id,name,format,width,height,quantity,scope,sort_order)
-  values(pg_temp.context('deliverable'),pg_temp.context('project'),'Campaign square','square',1080,1080,1,'original',0);
-insert into public.published_versions(id,project_id,deliverable_id,version_number)
-  values(pg_temp.context('publication'),pg_temp.context('project'),pg_temp.context('deliverable'),1);
+insert into public.published_versions(id,project_id,version_number)
+  values(pg_temp.context('publication'),pg_temp.context('project'),1);
 insert into public.publication_reviews(publication_id,project_id)
   values(pg_temp.context('publication'),pg_temp.context('project'));
 select pg_temp.act_as('teammate');

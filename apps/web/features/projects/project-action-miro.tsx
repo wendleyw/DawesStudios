@@ -39,10 +39,7 @@ export function ProjectActionMiro({
   onClose: () => void;
 }) {
   const { database } = useAuth();
-  const linkRequired =
-    action.channel === "client" &&
-    action.version.deliverableId === null &&
-    action.version.boardId === null;
+  const linkRequired = action.channel === "client";
   const miroPrefill = action.version.miro ? miroBoardUrl(action.version.miro) : "";
   const { closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({

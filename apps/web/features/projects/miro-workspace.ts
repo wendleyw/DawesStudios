@@ -2,9 +2,8 @@ import type { MiroLink } from "./miro-links";
 import type { CanvasVersion } from "./project-data";
 
 /**
- * The Miro workspace's rules. Rounds are internal versions with a design board; shared versions
- * are client versions with no deliverable and no board. Legacy per-deliverable versions are never
- * shown.
+ * The Miro workspace's rules. Rounds are internal versions on a design board; shared versions are
+ * the project-level client versions, which have no board.
  */
 const newestFirst = (a: CanvasVersion, b: CanvasVersion) => b.number - a.number;
 
@@ -15,11 +14,7 @@ export function boardRounds(versions: CanvasVersion[], boardId: string): CanvasV
 }
 
 export function sharedVersions(versions: CanvasVersion[]): CanvasVersion[] {
-  return versions
-    .filter(
-      (version) => version.deliverableId === null && version.boardId === null && !!version.miro,
-    )
-    .sort(newestFirst);
+  return versions.filter((version) => version.boardId === null && !!version.miro).sort(newestFirst);
 }
 
 export function pickById<T extends { id: string }>(items: T[], id: string | null): T | null {

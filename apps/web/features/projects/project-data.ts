@@ -20,8 +20,7 @@ export type ProjectChannel = "internal" | "client";
 export type CanvasVersion = {
   id: string;
   projectId: string;
-  deliverableId: string | null;
-  /** The design board a Miro-workspace round belongs to; null elsewhere. */
+  /** The design board a round belongs to; null on a client version, which is project-level. */
   boardId: string | null;
   number: number;
   note: string;
@@ -48,7 +47,7 @@ export type CanvasComment = {
  * never learns who worked on it before. A `select("*")` on these tables is refused.
  */
 const internalVersionColumns =
-  "id,project_id,deliverable_id,board_id,version_number,notes,status,created_at,request_key";
+  "id,project_id,board_id,version_number,notes,status,created_at,request_key";
 
 /** A canvas version row, from whichever of the two channel tables the canvas was read from. */
 type CanvasVersionRow =
@@ -91,7 +90,6 @@ export function toCanvasVersions(
     return {
       id: version.id,
       projectId: version.project_id,
-      deliverableId: version.deliverable_id,
       boardId: "board_id" in version ? version.board_id : null,
       number: version.version_number,
       note: versionNote(version),
@@ -219,8 +217,7 @@ export function useLatestSharedMiroLink(projectId: string, enabled: boolean) {
         await database
           .from("published_versions")
           .select("id, version_number")
-          .eq("project_id", projectId)
-          .is("deliverable_id", null),
+          .eq("project_id", projectId),
       ).map((row) => ({ id: row.id, number: row.version_number }));
       if (!versions.length) return null;
       const links = await readMiroLinks(database, "client", {
@@ -268,10 +265,8 @@ export function useProjectComments(projectId: string, channel: ProjectChannel, v
           .select("*")
           .eq("project_id", projectId)
           .order("created_at");
-        // Comments pinned to a legacy design are not part of any conversation shown today.
-        const scoped = query.is("design_id", null);
         const rows = assertResult(
-          await (versionId ? scoped.eq("publication_id", versionId) : scoped),
+          await (versionId ? query.eq("publication_id", versionId) : query),
         );
         return rows.map((comment) => toCanvasComment(comment, comment.author_label));
       }
@@ -280,8 +275,7 @@ export function useProjectComments(projectId: string, channel: ProjectChannel, v
         .select("*")
         .eq("project_id", projectId)
         .order("created_at");
-      const scoped = query.is("design_id", null);
-      const rows = assertResult(await (versionId ? scoped.eq("version_id", versionId) : scoped));
+      const rows = assertResult(await (versionId ? query.eq("version_id", versionId) : query));
       return rows.map((comment) =>
         toCanvasComment(
           comment,

@@ -8,8 +8,7 @@ type Row<Name extends keyof Database["public"]["Tables"]> =
 const internalVersion: Row<"design_versions"> = {
   id: "11111111-1111-1111-1111-111111111111",
   project_id: "project-1",
-  deliverable_id: "deliverable-1",
-  board_id: null,
+  board_id: "board-1",
   request_key: null,
   version_number: 1,
   notes: "V1 explores two square directions.",
@@ -21,7 +20,6 @@ const internalVersion: Row<"design_versions"> = {
 const publishedVersion: Row<"published_versions"> = {
   id: "22222222-2222-2222-2222-222222222222",
   project_id: "project-1",
-  deliverable_id: "deliverable-1",
   version_number: 1,
   release_note: "First round for review.",
   published_at: "2026-09-21T11:00:00.000Z",
@@ -74,8 +72,7 @@ describe("canvas versions and their client review", () => {
     expect(version).toEqual({
       id: internalVersion.id,
       projectId: "project-1",
-      deliverableId: "deliverable-1",
-      boardId: null,
+      boardId: "board-1",
       number: 1,
       note: "V1 explores two square directions.",
       status: "reviewed",
@@ -123,11 +120,10 @@ describe("Miro links on canvas versions", () => {
 });
 
 describe("project-level versions", () => {
-  it("maps a round's board and a shared version's missing deliverable", () => {
+  it("maps a round's board and leaves a client version without one", () => {
     const round = {
       id: "r1",
       project_id: "p",
-      deliverable_id: null,
       board_id: "b1",
       version_number: 1,
       notes: "First pass",
@@ -137,8 +133,9 @@ describe("project-level versions", () => {
       request_key: null,
     };
     const [version] = toCanvasVersions([round], [], false);
-    expect(version.deliverableId).toBeNull();
     expect(version.boardId).toBe("b1");
+    const [shared] = toCanvasVersions([publishedVersion], [], true);
+    expect(shared.boardId).toBeNull();
   });
 });
 

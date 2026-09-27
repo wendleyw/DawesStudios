@@ -51,12 +51,6 @@ describe("useLatestSharedMiroLink", () => {
     const { result } = renderHook(() => useLatestSharedMiroLink("p", true), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ boardId: "uXjVNew0001=", widgetId: "2" });
-    // Only project-level versions count: a deliverable's publication never prefills a shared one.
-    expect(calls).toContainEqual({
-      table: "published_versions",
-      method: "is",
-      args: ["deliverable_id", null],
-    });
     expect(calls).toContainEqual({
       table: "published_versions",
       method: "eq",

@@ -120,13 +120,9 @@ export function inReviewTab(
  * All Supabase access for the reviews list, on the Miro workspace model:
  * - a designer sees the latest round of each of their design boards (`design_versions` with a
  *   `board_id`; row-level security admits only their own boards);
- * - the agency and the client see the latest client version of each project (`published_versions`
- *   without a deliverable), with the client's decision from `publication_reviews`;
+ * - the agency and the client see the latest client version of each project (`published_versions`,
+ *   always project-level), with the client's decision from `publication_reviews`;
  * - the agency also sees every round a designer has submitted for studio review.
- *
- * Rows with a deliverable are legacy per-deliverable versions, kept in the database only until
- * they are deleted: both reads leave them out (`board_id` is set only on rounds, which the
- * one-parent check keeps free of a deliverable; client versions filter `deliverable_id is null`).
  */
 export function useReviews(clientId: string) {
   const { database, profile, session } = useAuth();
@@ -185,8 +181,7 @@ export function useReviews(clientId: string) {
         await database
           .from("published_versions")
           .select(CLIENT_VERSION_COLUMNS)
-          .in("project_id", ids)
-          .is("deliverable_id", null),
+          .in("project_id", ids),
       ) as ClientVersionRow[];
       const rows: ReviewRow[] = latestBy(versions, (version) => version.project_id).map(
         (version) => ({

@@ -3,9 +3,9 @@ create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
 
--- One rolled-back transaction covering six previously untested security-definer functions
--- (submit_design_version, resolve_comment for both channels, revoke_invitation,
--- reject_credit_request, discard_sanitized_asset, finalize_asset_discard), the new item-1
+-- One rolled-back transaction covering previously untested security-definer functions
+-- (resolve_comment for both channels, revoke_invitation, reject_credit_request,
+-- discard_sanitized_asset, finalize_asset_discard), the new item-1
 -- briefing/attachment size limits from 202609260003_briefing_limits_and_credit_lock.sql, and
 -- adjust_credits' idempotent retry. Every fixture below is created here, not reused from the seed
 -- or the SABRE demonstration overlay, so these assertions do not depend on either's current shape.
@@ -18,9 +18,6 @@ insert into sdc_context values
   ('client-org', md5('sdc:client-org')::uuid),
   ('drafts-client', md5('sdc:drafts-client')::uuid),
   ('project', md5('sdc:project')::uuid),
-  ('deliverable', md5('sdc:deliverable')::uuid),
-  ('version', md5('sdc:version')::uuid),
-  ('design', md5('sdc:design')::uuid),
   ('internal-comment', md5('sdc:internal-comment')::uuid),
   ('client-comment', md5('sdc:client-comment')::uuid),
   ('invitation', md5('sdc:invitation')::uuid),
@@ -36,7 +33,7 @@ create function pg_temp.act_as(p_key text) returns text language sql as $$
   select set_config('request.jwt.claim.sub',pg_temp.context(p_key)::text,true)
 $$;
 
--- Fixture people, client, production chain, comments, invitation and credit request. Direct table
+-- Fixture people, client, project, comments, invitation and credit request. Direct table
 -- inserts run as the connecting role (no RLS/grant boundary to satisfy, the same way
 -- production_integrity.test.sql seeds private.audit_events and private.sanitized_assets directly);
 -- every write actually under test happens through the RPC further below.
@@ -59,12 +56,6 @@ insert into public.projects(id,client_id,title,service_type,status) values
   (pg_temp.context('project'),pg_temp.context('client-org'),'SDC coverage project','ai','in_progress');
 insert into public.project_assignments(project_id,designer_id) values
   (pg_temp.context('project'),pg_temp.context('designer'));
-insert into public.deliverables(id,project_id,name,format) values
-  (pg_temp.context('deliverable'),pg_temp.context('project'),'Fixture deliverable','a4');
-insert into public.design_versions(id,project_id,deliverable_id,version_number,created_by) values
-  (pg_temp.context('version'),pg_temp.context('project'),pg_temp.context('deliverable'),1,pg_temp.context('agency'));
-insert into public.designs(id,project_id,version_id,title,created_by) values
-  (pg_temp.context('design'),pg_temp.context('project'),pg_temp.context('version'),'Fixture design',pg_temp.context('agency'));
 
 insert into public.internal_comments(id,project_id,author_id,body) values
   (pg_temp.context('internal-comment'),pg_temp.context('project'),pg_temp.context('agency'),'Internal note');
@@ -75,23 +66,6 @@ insert into public.invitations(id,email,role,status) values
   (pg_temp.context('invitation'),'sdc-invitee@fixture.local','designer','pending');
 insert into public.credit_requests(id,client_id,requested_by,amount,status) values
   (pg_temp.context('credit-request'),pg_temp.context('client-org'),pg_temp.context('client'),50,'pending');
-
--- 1. submit_design_version: a client has no production access; the agency does, and the version
--- and its project really transition.
-select pg_temp.act_as('client');
-set local role authenticated;
-select throws_ok($$select public.submit_design_version(pg_temp.context('version'))$$,
-  '42501','Production access required','A client cannot submit a design version');
-reset role;
-select pg_temp.act_as('agency');
-set local role authenticated;
-select lives_ok($$select public.submit_design_version(pg_temp.context('version'))$$,
-  'The agency submits the design version');
-select is((select status from public.design_versions where id=pg_temp.context('version')),
-  'submitted','Submitting the version records its new status');
-select is((select status::text from public.projects where id=pg_temp.context('project')),
-  'internal_review','Submitting the version moves the project into internal review');
-reset role;
 
 -- 2. resolve_comment: a client cannot resolve an internal comment; a designer cannot resolve a
 -- client-channel comment. The agency may resolve either, and a client may resolve its own channel.
@@ -283,7 +257,7 @@ select is((select count(*)::int from public.briefing_attachments where briefing_
   20,'Exactly 20 attachments exist for that briefing once the cap holds');
 
 -- 8. adjust_credits: a repeated idempotency key returns the original ledger id, not an error,
--- mirroring production_integrity.test.sql's identical check on publish_version.
+-- mirroring production_integrity.test.sql's identical check on share_miro_version.
 select pg_temp.act_as('agency');
 set local role authenticated;
 select is(

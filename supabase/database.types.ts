@@ -428,12 +428,8 @@ export type Database = {
           author_label: string
           body: string
           created_at: string
-          design_id: string | null
           id: string
           idempotency_key: string | null
-          pin_t: number | null
-          pin_x: number | null
-          pin_y: number | null
           project_id: string
           publication_id: string | null
           resolved: boolean
@@ -443,12 +439,8 @@ export type Database = {
           author_label: string
           body: string
           created_at?: string
-          design_id?: string | null
           id?: string
           idempotency_key?: string | null
-          pin_t?: number | null
-          pin_x?: number | null
-          pin_y?: number | null
           project_id: string
           publication_id?: string | null
           resolved?: boolean
@@ -458,24 +450,13 @@ export type Database = {
           author_label?: string
           body?: string
           created_at?: string
-          design_id?: string | null
           id?: string
           idempotency_key?: string | null
-          pin_t?: number | null
-          pin_x?: number | null
-          pin_y?: number | null
           project_id?: string
           publication_id?: string | null
           resolved?: boolean
         }
         Relationships: [
-          {
-            foreignKeyName: "client_comments_design_id_project_id_publication_id_fkey"
-            columns: ["design_id", "project_id", "publication_id"]
-            isOneToOne: false
-            referencedRelation: "published_designs"
-            referencedColumns: ["id", "project_id", "publication_id"]
-          },
           {
             foreignKeyName: "client_comments_project_id_fkey"
             columns: ["project_id"]
@@ -1030,10 +1011,9 @@ export type Database = {
       }
       design_versions: {
         Row: {
-          board_id: string | null
+          board_id: string
           created_at: string
           created_by: string
-          deliverable_id: string | null
           id: string
           notes: string
           project_id: string
@@ -1042,10 +1022,9 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          board_id?: string | null
+          board_id: string
           created_at?: string
           created_by: string
-          deliverable_id?: string | null
           id?: string
           notes?: string
           project_id: string
@@ -1054,10 +1033,9 @@ export type Database = {
           version_number: number
         }
         Update: {
-          board_id?: string | null
+          board_id?: string
           created_at?: string
           created_by?: string
-          deliverable_id?: string | null
           id?: string
           notes?: string
           project_id?: string
@@ -1081,76 +1059,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "design_versions_deliverable_id_project_id_fkey"
-            columns: ["deliverable_id", "project_id"]
-            isOneToOne: false
-            referencedRelation: "deliverables"
-            referencedColumns: ["id", "project_id"]
-          },
-          {
             foreignKeyName: "design_versions_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      designs: {
-        Row: {
-          content: Json
-          created_at: string
-          created_by: string
-          id: string
-          internal_asset_path: string | null
-          project_id: string
-          sort_order: number
-          title: string
-          version_id: string
-        }
-        Insert: {
-          content?: Json
-          created_at?: string
-          created_by: string
-          id?: string
-          internal_asset_path?: string | null
-          project_id: string
-          sort_order?: number
-          title: string
-          version_id: string
-        }
-        Update: {
-          content?: Json
-          created_at?: string
-          created_by?: string
-          id?: string
-          internal_asset_path?: string | null
-          project_id?: string
-          sort_order?: number
-          title?: string
-          version_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "designs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "designs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "designs_version_id_project_id_fkey"
-            columns: ["version_id", "project_id"]
-            isOneToOne: false
-            referencedRelation: "design_versions"
-            referencedColumns: ["id", "project_id"]
           },
         ]
       }
@@ -1174,12 +1087,8 @@ export type Database = {
           author_id: string
           body: string
           created_at: string
-          design_id: string | null
           id: string
           idempotency_key: string | null
-          pin_t: number | null
-          pin_x: number | null
-          pin_y: number | null
           project_id: string
           resolved: boolean
           version_id: string | null
@@ -1188,12 +1097,8 @@ export type Database = {
           author_id: string
           body: string
           created_at?: string
-          design_id?: string | null
           id?: string
           idempotency_key?: string | null
-          pin_t?: number | null
-          pin_x?: number | null
-          pin_y?: number | null
           project_id: string
           resolved?: boolean
           version_id?: string | null
@@ -1202,12 +1107,8 @@ export type Database = {
           author_id?: string
           body?: string
           created_at?: string
-          design_id?: string | null
           id?: string
           idempotency_key?: string | null
-          pin_t?: number | null
-          pin_x?: number | null
-          pin_y?: number | null
           project_id?: string
           resolved?: boolean
           version_id?: string | null
@@ -1219,13 +1120,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "internal_comments_design_id_project_id_version_id_fkey"
-            columns: ["design_id", "project_id", "version_id"]
-            isOneToOne: false
-            referencedRelation: "designs"
-            referencedColumns: ["id", "project_id", "version_id"]
           },
           {
             foreignKeyName: "internal_comments_project_id_fkey"
@@ -1812,54 +1706,8 @@ export type Database = {
           },
         ]
       }
-      published_designs: {
-        Row: {
-          asset_path: string | null
-          content: Json
-          id: string
-          project_id: string
-          publication_id: string
-          sort_order: number
-          title: string
-        }
-        Insert: {
-          asset_path?: string | null
-          content?: Json
-          id?: string
-          project_id: string
-          publication_id: string
-          sort_order?: number
-          title: string
-        }
-        Update: {
-          asset_path?: string | null
-          content?: Json
-          id?: string
-          project_id?: string
-          publication_id?: string
-          sort_order?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "published_designs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "published_designs_publication_id_project_id_fkey"
-            columns: ["publication_id", "project_id"]
-            isOneToOne: false
-            referencedRelation: "published_versions"
-            referencedColumns: ["id", "project_id"]
-          },
-        ]
-      }
       published_versions: {
         Row: {
-          deliverable_id: string | null
           id: string
           project_id: string
           published_at: string
@@ -1867,7 +1715,6 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          deliverable_id?: string | null
           id?: string
           project_id: string
           published_at?: string
@@ -1875,7 +1722,6 @@ export type Database = {
           version_number: number
         }
         Update: {
-          deliverable_id?: string | null
           id?: string
           project_id?: string
           published_at?: string
@@ -1883,13 +1729,6 @@ export type Database = {
           version_number?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "published_versions_deliverable_id_project_id_fkey"
-            columns: ["deliverable_id", "project_id"]
-            isOneToOne: false
-            referencedRelation: "deliverables"
-            referencedColumns: ["id", "project_id"]
-          },
           {
             foreignKeyName: "published_versions_project_id_fkey"
             columns: ["project_id"]
@@ -2087,15 +1926,6 @@ export type Database = {
         }
         Returns: string
       }
-      add_design: {
-        Args: {
-          p_content?: Json
-          p_internal_asset_path?: string
-          p_title: string
-          p_version_id: string
-        }
-        Returns: string
-      }
       add_month_extra: {
         Args: {
           p_amount: number
@@ -2159,14 +1989,6 @@ export type Database = {
         }
         Returns: string
       }
-      create_design_version: {
-        Args: {
-          p_copy_version_id?: string
-          p_deliverable_id: string
-          p_notes?: string
-        }
-        Returns: string
-      }
       create_invitation: {
         Args: {
           p_client_id?: string
@@ -2199,10 +2021,6 @@ export type Database = {
         }
         Returns: string
       }
-      discard_prepared_assets: {
-        Args: { p_paths: string[] }
-        Returns: string[]
-      }
       discard_sanitized_asset: {
         Args: { p_bucket_id: string; p_storage_path: string }
         Returns: undefined
@@ -2210,13 +2028,6 @@ export type Database = {
       finalize_asset_discard: {
         Args: { p_bucket_id: string; p_storage_path: string }
         Returns: undefined
-      }
-      find_sanitized_video_by_source: {
-        Args: { p_project_id: string; p_source_path: string }
-        Returns: {
-          mime_type: string
-          storage_path: string
-        }[]
       }
       fulfill_credit_request: {
         Args: { p_note?: string; p_request_id: string }
@@ -2257,14 +2068,6 @@ export type Database = {
           storage_path: string
         }[]
       }
-      list_stale_video_uploads: {
-        Args: never
-        Returns: {
-          attested: boolean
-          bucket_id: string
-          storage_path: string
-        }[]
-      }
       mark_project_delivered: {
         Args: { p_project_id: string }
         Returns: undefined
@@ -2282,22 +2085,9 @@ export type Database = {
         Args: {
           p_body: string
           p_channel: string
-          p_design_id?: string
           p_idempotency_key?: string
-          p_pin_t?: number
-          p_pin_x?: number
-          p_pin_y?: number
           p_project_id: string
           p_version_id?: string
-        }
-        Returns: string
-      }
-      publish_version: {
-        Args: {
-          p_assets?: Json
-          p_idempotency_key?: string
-          p_release_note?: string
-          p_version_id: string
         }
         Returns: string
       }
@@ -2310,18 +2100,6 @@ export type Database = {
           p_project_id: string
           p_sha256: string
           p_source_design_id?: string
-          p_source_path?: string
-          p_storage_path: string
-        }
-        Returns: undefined
-      }
-      register_sanitized_video: {
-        Args: {
-          p_file_size: number
-          p_mime_type: string
-          p_prepared_by: string
-          p_project_id: string
-          p_sha256: string
           p_source_path?: string
           p_storage_path: string
         }
@@ -2515,10 +2293,6 @@ export type Database = {
         Returns: string
       }
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
-      submit_design_version: {
-        Args: { p_version_id: string }
-        Returns: undefined
-      }
       transfer_month_credits: {
         Args: {
           p_amount: number

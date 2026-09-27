@@ -20,10 +20,10 @@ select is((select count(*)::int from public.projects),7,'Client sees its seven p
 select is((select count(*)::int from public.profiles),1,'Client cannot enumerate staff profiles');
 select is((select count(*)::int from public.project_assignments),0,'Client cannot discover designer assignments');
 select is((select count(*)::int from public.design_versions),0,'Client cannot read production versions');
-select is((select count(*)::int from public.designs),0,'Client cannot read production designs');
+select hasnt_table('public','designs','Uploaded production designs are retired');
 select is((select count(*)::int from public.internal_comments),0,'Client cannot read internal comments');
 select is((select count(*)::int from public.credit_accounts),1,'Client can read only its credit account');
-select ok(exists(select 1 from public.published_versions where id=md5('dawes:publication-sabre-campaign-landing-page')::uuid) and not exists(select 1 from public.published_versions where project_id not in(select id from public.projects)),'Client sees its published versions without cross-tenant publications');
+select ok(not exists(select 1 from public.published_versions where project_id not in(select id from public.projects)),'Client sees no cross-tenant client versions');
 select is((select count(*)::int from public.brand_sections),8,'Brand sections are tenant scoped');
 select is((select count(*)::int from public.template_drafts),1,'Personal drafts are owner scoped');
 select throws_ok('select * from private.publication_sources','42501',null,'Client cannot read publication source mapping');
@@ -31,14 +31,14 @@ select throws_ok($$update public.profiles set role='agency' where id=auth.uid()$
 select throws_ok($$select public.adjust_credits(md5('dawes:client-org-8')::uuid,100,'Unauthorized','attack')$$,'42501','Agency access required','Client cannot grant credits');
 select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Client cannot post internally');
 select throws_ok($$select public.post_comment(md5('dawes:project-4')::uuid,'client','Attack')$$,'42501','Client channel access required','Client cannot post across tenants');
-select throws_ok($$select public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid)$$,'42501','Agency access required','Client cannot publish');
+select throws_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAttack1=/')$$,'42501','Agency access required','Client cannot share a client version');
 select throws_ok($$update public.credit_accounts set balance=9999$$,'42501',null,'Balances cannot be updated directly');
-select ok(not exists(select 1 from public.published_designs where content ? 'internal_author' or content ? 'internal_note'),'Publication content excludes internal metadata');
+select hasnt_table('public','published_designs','Uploaded client snapshots are retired');
 select ok(not exists(select 1 from public.client_comments where author_kind='studio' and author_label<>'Studio'),'Agency messages use Studio identity');
 select lives_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','The direction looks good.')$$,'Client can post in its client channel');
-select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Invalid pin',md5('dawes:publication-sabre-campaign-landing-page')::uuid,md5('published:'||md5('dawes:design-sabre-campaign-landing-page-1-0')::uuid::text)::uuid,1.5,0.5)$$,'23514',null,'Out-of-bounds pins are rejected');
-select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Partial pin',md5('dawes:publication-sabre-campaign-landing-page')::uuid,md5('published:'||md5('dawes:design-sabre-campaign-landing-page-1-0')::uuid::text)::uuid,null,0.5)$$,'23514',null,'Partial pin coordinates are rejected');
-select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Cross-project pin',md5('dawes:publication-4')::uuid,md5('published:'||md5('dawes:design-4-1-0')::uuid::text)::uuid,.5,.5)$$,'23503',null,'Cross-project publication references are rejected');
+select hasnt_column('public','client_comments','pin_x','Client comments carry no pin');
+select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Old pin call',null,null,0.5,0.5,null,null)$$,'42883',null,'The design and pin arguments are gone');
+select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Cross-project version',md5('dawes:publication-4')::uuid)$$,'23503',null,'Cross-project publication references are rejected');
 
 reset role;
 select set_config('request.jwt.claim.sub',md5('dawes:designer-1')::uuid::text,true);
@@ -49,8 +49,8 @@ select is((select count(*)::int from public.credit_ledger),0,'Designer cannot re
 select is((select count(*)::int from public.client_comments),0,'Designer cannot read client conversations');
 select is((select count(*)::int from public.published_versions),0,'Designer cannot enumerate client publication records');
 select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Attack')$$,'42501','Client channel access required','Designer cannot post in client channel');
-select throws_ok($$select public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid)$$,'42501','Agency access required','Designer cannot publish');
-select throws_ok($$select public.add_design(md5('dawes:version-3-1')::uuid,'Attack')$$,'42501','Production access required','Designer cannot edit another assignment');
+select throws_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAttack1=/')$$,'42501','Agency access required','Designer cannot share a client version');
+select throws_ok($$select public.post_comment(md5('dawes:project-3')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Designer cannot comment on another assignment');
 select lives_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'internal','Ready for studio review.')$$,'Assigned designer can comment internally');
 
 reset role;
@@ -65,11 +65,11 @@ select is(public.accept_briefing(md5('dawes:pending-2')::uuid),(select id from p
 select is((select count(*)::int from public.credit_ledger where project_id=(select id from public.projects where briefing_id=md5('dawes:pending-2')::uuid)),1,'Repeated acceptance creates exactly one debit');
 select throws_ok($$select public.accept_briefing(md5('dawes:pending-3')::uuid)$$,'P0001','Insufficient credit balance','Insufficient balance rejects acceptance');
 select is((select count(*)::int from public.projects where briefing_id=md5('dawes:pending-3')::uuid),0,'Failed acceptance creates no project');
-select lives_ok($$update public.designs set content='{"headline":"INTERNAL EDIT","internal_author":"PRIVATE"}' where id=md5('dawes:design-sabre-campaign-landing-page-1-0')::uuid$$,'Agency can revise internal design after publication');
-select isnt((select content->>'headline' from public.published_designs where id=md5('published:'||md5('dawes:design-sabre-campaign-landing-page-1-0')::uuid::text)::uuid),'INTERNAL EDIT','Internal edits cannot change an existing client snapshot');
-select throws_ok($$update public.published_designs set title='Changed'$$,'42501',null,'Clients snapshots cannot be updated directly');
-select lives_ok($$select public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid,'Second direction')$$,'Agency can publish the next internal version');
-select is(public.publish_version(md5('dawes:version-sabre-campaign-landing-page-2')::uuid),(select id from public.published_versions where deliverable_id=md5('dawes:deliverable-sabre-campaign-landing-page')::uuid and version_number=2),'Publication retries return the existing snapshot');
+select lives_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction',null,md5('aw:share-1')::uuid)$$,'Agency shares a client version');
+select is(public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction',null,md5('aw:share-1')::uuid),(select publication_id from public.publication_miro_links where board_id='uXjVAccept1='),'Share retries return the existing client version');
+select throws_ok($$update public.published_versions set release_note='Changed'$$,'42501',null,'Client versions cannot be updated directly');
+select is((select status::text from public.projects where id=md5('dawes:project-sabre-campaign-landing-page')::uuid),'client_review','Sharing puts the project in client review');
+select is((select status from public.publication_reviews r join public.publication_miro_links l on l.publication_id=r.publication_id where l.board_id='uXjVAccept1='),'pending','A shared version opens a pending client review');
 select ok(not exists(select 1 from public.credit_months m where m.balance<>(select coalesce(sum(l.amount),0) from public.credit_ledger l where l.client_id=m.client_id and l.month=m.month)),'Workflow operations leave balances reconciled');
 select * from finish();
 rollback;

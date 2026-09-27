@@ -36,14 +36,9 @@ import { ProjectPanelHeader } from "./project-panel";
 import { ProjectCover } from "./project-cover";
 import { FormError } from "@/features/shared/form-error";
 
-/**
- * A Miro-workspace round reads "Round N" and a project-level shared version "VN"; a legacy version
- * keeps its deliverable's name.
- */
-function historyLabel(version: CanvasVersion, deliverables: TableRow<"deliverables">[]): string {
-  if (version.boardId) return `Round ${version.number}`;
-  const deliverable = deliverables.find((item) => item.id === version.deliverableId);
-  return deliverable ? `${deliverable.name} · V${version.number}` : `V${version.number}`;
+/** A round reads "Round N" and a project-level client version "VN". */
+function historyLabel(version: CanvasVersion): string {
+  return version.boardId ? `Round ${version.number}` : `V${version.number}`;
 }
 
 export function ProjectDetails({
@@ -265,7 +260,7 @@ export function ProjectDetails({
               .toSorted((a, b) => b.date.localeCompare(a.date))
               .map((version) => (
                 <li key={version.id}>
-                  <strong>{historyLabel(version, deliverables)}</strong>
+                  <strong>{historyLabel(version)}</strong>
                   <span>
                     {decisionLine(version) ??
                       `${formatDate(version.date)} · ${versionStatusLabel(version.status)}`}

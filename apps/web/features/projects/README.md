@@ -57,8 +57,8 @@ decision (`canReviewShared`: the latest shared version, pending, project not del
 **Approve** open `project-action-review.tsx` with that decision preselected.
 
 `miro-workspace.ts` holds the pure rules: `boardRounds` (a board's rounds with a link, newest
-first), `sharedVersions` (client versions with no deliverable and no board), `pickById`,
-`canReviewShared` and `latestSharedLink`. Legacy per-deliverable versions are never shown.
+first), `sharedVersions` (the project-level client versions, which have no board), `pickById`,
+`canReviewShared` and `latestSharedLink`.
 
 ## Tools and panels
 
@@ -86,8 +86,7 @@ do not stack. A file dropped anywhere on the page is swallowed, so the browser n
 `comment-panel.tsx` carries the two comment channels: `useProjectComments` reads
 `internal_comments` or `client_comments`, the whole project's conversation or one version's
 feedback (`versionId`), and labels internal authors as the signed-in person or "Studio team",
-never a designer's identity. Legacy comments pinned to a design (`design_id` set) are filtered out
-of every list. `comment-draft.ts` keeps an unsent comment and its retry attempt per viewer, project,
+never a designer's identity. `comment-draft.ts` keeps an unsent comment and its retry attempt per viewer, project,
 channel and version, so a retry after a remount replays the same idempotency key
 (`nextCommentAttempt`) and switching versions cannot mix unsent comments.
 

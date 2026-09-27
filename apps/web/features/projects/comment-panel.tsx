@@ -77,13 +77,11 @@ export function CommentPanel({
   // dialog is not reopened against a surviving draft, so the gap is unreachable there today.
   //
   // The payload identity below must include every field `post_comment`'s replay guard compares
-  // (`supabase/migrations/202609210002_post_comment_replay_hardening.sql`: version_id/
-  // publication_id, design_id, body, pin_x, pin_y, pin_t) — a field the server compares but the
-  // client's identity omits can vary underneath an unchanged key, and the retry either replays
-  // against the wrong content or gets an unrecoverable "Idempotency key conflicts" error the
-  // person cannot act on. This panel never sends a design or a pin, so those stay null and the
-  // identity is the version and the body. If the server starts comparing another field, mirror it
-  // here too.
+  // (`supabase/migrations/202609270007_retire_versions_schema.sql`: version_id/publication_id and
+  // body) — a field the server compares but the client's identity omits can vary underneath an
+  // unchanged key, and the retry either replays against the wrong content or gets an
+  // unrecoverable "Idempotency key conflicts" error the person cannot act on. If the server
+  // starts comparing another field, mirror it here too.
   const [showResolved, setShowResolved] = useState(false);
   const post = useMutation({
     mutationFn: async () => {

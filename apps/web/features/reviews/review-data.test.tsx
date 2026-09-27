@@ -115,7 +115,6 @@ describe("useReviews", () => {
       expect.objectContaining({ id: "r2", label: "Hero banner · Round 2", internal: true }),
       expect.objectContaining({ id: "v2", label: "V2", status: "pending", internal: false }),
     ]);
-    expect(has(calls, "published_versions", "is", "deliverable_id", null)).toBe(true);
     expect(has(calls, "design_versions", "not", "board_id", "is", null)).toBe(true);
     expect(
       calls.some((call) => call.method === "select" && String(call.args[0]).includes("*")),

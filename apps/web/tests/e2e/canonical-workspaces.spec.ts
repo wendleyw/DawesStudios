@@ -69,11 +69,7 @@ test("all ten clients and twenty-five projects render with matching records and 
       }
       if (actor.role === "client") {
         const versions = (
-          await caller
-            .from("published_versions")
-            .select("id,project_id,deliverable_id,version_number")
-            // Client versions only: legacy per-deliverable versions are never shown.
-            .is("deliverable_id", null)
+          await caller.from("published_versions").select("id,project_id,version_number")
         ).data!;
         const reviews = (await caller.from("publication_reviews").select("publication_id,status"))
           .data!;

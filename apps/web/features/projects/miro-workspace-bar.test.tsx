@@ -27,7 +27,6 @@ const round = {
   status: "submitted",
   miro: link,
   boardId: "a",
-  deliverableId: null,
 } as CanvasVersion;
 const shared = {
   id: "s1",
@@ -35,7 +34,6 @@ const shared = {
   status: "pending",
   miro: link,
   boardId: null,
-  deliverableId: null,
 } as CanvasVersion;
 function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps {
   return {

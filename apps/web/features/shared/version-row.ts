@@ -42,15 +42,10 @@ export function versionStatus(version: VersionRow, reviewStatus?: string | null)
 }
 
 /**
- * The group a version's history belongs to: its deliverable, or for the Miro workspace (no
- * deliverable) its design board, or the project itself for a shared client version.
+ * The group a version's history belongs to: its design board for a round, or the project itself
+ * for a client version.
  */
-export function versionGroupKey(row: {
-  deliverable_id: string | null;
-  board_id?: string | null;
-  project_id: string;
-}): string {
-  if (row.deliverable_id) return row.deliverable_id;
+export function versionGroupKey(row: { board_id?: string | null; project_id: string }): string {
   if (row.board_id) return `board:${row.board_id}`;
   return `project:${row.project_id}`;
 }

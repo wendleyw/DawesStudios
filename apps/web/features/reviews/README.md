@@ -22,9 +22,8 @@ still waiting on their decision; a version they sent back is waiting on the stud
 the page's single read hook. Rounds are `design_versions` rows with a `board_id` (named columns:
 the API grants no role `design_versions.created_by`), labelled with `roundLabel` through a
 `design_boards` read of `id,name`; client
-versions are `published_versions` rows with `deliverable_id is null`, embedding their
-`publication_reviews` decision (`status,reviewed_by,reviewed_at`). Both filters leave out the
-legacy per-deliverable versions still stored until they are deleted. A client session never reads
+versions are `published_versions` rows, always project-level, embedding their
+`publication_reviews` decision (`status,reviewed_by,reviewed_at`). A client session never reads
 `design_versions` or `design_boards`. `review-data.test.tsx` covers the three roles' reads.
 
 `isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,

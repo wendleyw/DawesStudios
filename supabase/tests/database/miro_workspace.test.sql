@@ -101,13 +101,13 @@ reset role;
 select is((select array_agg(version_number order by version_number) from public.design_versions where board_id=pg_temp.k('board-a')),array[1,2],'Rounds are numbered per board, once each');
 select is((select notes from public.design_versions where id=pg_temp.k('round-a1')),'First pass','The note is trimmed');
 select is((select status from public.design_versions where id=pg_temp.k('round-a1')),'submitted','A round is submitted');
-select is((select deliverable_id from public.design_versions where id=pg_temp.k('round-a1')),null,'A round has no deliverable');
+select is((select board_id from public.design_versions where id=pg_temp.k('round-a1')),pg_temp.k('board-a'),'A round belongs to its board');
 select is((select widget_id from public.design_version_miro_links where version_id=pg_temp.k('round-a1')),'11','A round without a frame link uses the board''s link');
 select is((select widget_id from public.design_version_miro_links where version_id=pg_temp.k('round-a2')),'22','A round keeps its own frame');
 select is((select status::text from public.projects where id=pg_temp.k('project')),'internal_review','Sending a round moves the project to internal review');
 select ok(exists(select 1 from public.notifications n join public.profiles p on p.id=n.user_id where n.project_id=pg_temp.k('project') and p.id=pg_temp.k('agency') and n.title='Design ready for studio review'),'The agency is notified');
 select throws_ok($$insert into public.design_versions(project_id,version_number,created_by) values(pg_temp.k('project'),9,pg_temp.k('agency'))$$,
-  '23514',null,'A version needs exactly one of a deliverable or a board');
+  '23502',null,'A version needs a board');
 
 -- Round and link visibility: only the board's designer and the agency.
 select pg_temp.act_as('designer-b');
@@ -196,26 +196,6 @@ set local role authenticated;
 select is((select count(*)::int from public.design_boards where project_id=pg_temp.k('project')),2,'The reassigned designer now sees it');
 reset role;
 
--- The Miro frame is the round's design: rounds never carry an uploaded design record, for anyone.
-select pg_temp.act_as('agency');
-set local role authenticated;
-select throws_ok($$select public.add_design(pg_temp.k('round-a1'),'Nope')$$,
-  '22023',null,'The agency cannot add an uploaded design to a round');
-reset role;
-select pg_temp.act_as('designer-b');
-set local role authenticated;
--- Designer B was unassigned from the project earlier in this test, so private.can_produce fails
--- first here (42501); a still-assigned designer would instead hit the round-designs guard (22023).
-select throws_ok($$select public.add_design(pg_temp.k('round-a1'),'Sneaky design')$$,
-  '42501',null,'Another designer cannot add an uploaded design to a round either');
-reset role;
-select pg_temp.act_as('designer-a');
-set local role authenticated;
-select throws_ok($$select public.submit_design_version(pg_temp.k('round-a1'))$$,
-  'P0001','Add a design before submitting','A round cannot be submitted through submit_design_version');
-select is((select count(*)::int from public.designs where version_id=pg_temp.k('round-a1')),0,'The round still has no design row');
-reset role;
-
 -- Sharing: agency only; from a round or direct; idempotent; atomic on a bad link; delivered refused.
 select pg_temp.act_as('designer-a');
 set local role authenticated;
@@ -232,7 +212,6 @@ select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https:
 select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','other',null,md5('mw:share-1')::uuid)$$,'23505','Idempotency key conflicts with a different version','A reused key for another share is refused');
 select throws_ok($$select public.share_miro_version(pg_temp.k('delivered'),'https://miro.com/app/board/uXjVClient1=/','late')$$,'22023','Delivered projects cannot publish new revisions','A delivered project refuses sharing');
 reset role;
-select is((select deliverable_id from public.published_versions where id=pg_temp.k('shared-1')),null,'A shared version belongs to the project, not a deliverable');
 select is((select version_number from public.published_versions where id=pg_temp.k('shared-1')),1,'The first shared version is V1');
 select is((select release_note from public.published_versions where id=pg_temp.k('shared-1')),'First look','The note is trimmed');
 select is((select widget_id from public.publication_miro_links where publication_id=pg_temp.k('shared-1')),'5','The client link is stored');
@@ -304,15 +283,12 @@ select is((select count(*)::int from public.design_versions where board_id=pg_te
 select throws_ok($$select created_by from public.design_versions where board_id=pg_temp.k('board-a')$$,'42501',null,'Designer B cannot read who made a round');
 select throws_ok($$select count(*) from public.design_versions where created_by=pg_temp.k('designer-a')$$,'42501',null,'Designer B cannot probe for Designer A''s id');
 select throws_ok($$select updated_by from public.design_version_miro_links where version_id=pg_temp.k('round-a1')$$,'42501',null,'Designer B cannot read who linked a round');
-select throws_ok($$select created_by from public.designs limit 1$$,'42501',null,'Designer B cannot read who made a design');
 select throws_ok($$select * from public.design_versions limit 1$$,'42501',null,'A whole-row read is refused rather than leaking the author');
 select lives_ok($$select version_id, board_id, widget_id, updated_at from public.design_version_miro_links limit 1$$,'Designer B reads the link columns');
-select lives_ok($$select id, version_id, title, content, internal_asset_path, sort_order from public.designs limit 1$$,'Designer B reads the design columns');
 reset role;
 
 -- Sharing: a round from another project is refused; the anon role has no access at all; and an
--- idempotency key already used by a different publication_sources row (as publish_version writes
--- one) is refused with a clean message, not a raw unique-constraint error.
+-- idempotency key already used by a different publication_sources row is refused with a clean message, not a raw unique-constraint error.
 insert into public.projects(id,client_id,title,service_type,status) values
   (pg_temp.remember('other-project',md5('mw:other-project')::uuid),pg_temp.k('client-org'),'MW other project','ai','in_progress');
 insert into public.project_assignments(project_id,designer_id) values (pg_temp.k('other-project'),pg_temp.k('designer-a'));
@@ -339,8 +315,8 @@ set local role authenticated;
 select pg_temp.remember('round-a3',public.send_board_round(pg_temp.k('board-a'),'Third pass'));
 reset role;
 select pg_temp.remember('fixture-publication',md5('mw:fixture-publication')::uuid);
-insert into public.published_versions(id,project_id,deliverable_id,version_number,release_note) values
-  (pg_temp.k('fixture-publication'),pg_temp.k('project'),null,500,'fixture');
+insert into public.published_versions(id,project_id,version_number,release_note) values
+  (pg_temp.k('fixture-publication'),pg_temp.k('project'),500,'fixture');
 insert into private.publication_sources(publication_id,internal_version_id,published_by,request_key,request_note) values
   (pg_temp.k('fixture-publication'),pg_temp.k('round-a1'),pg_temp.k('agency'),md5('mw:foreign-key')::uuid,'fixture');
 select pg_temp.act_as('agency');

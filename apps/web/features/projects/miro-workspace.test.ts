@@ -12,7 +12,6 @@ const link = (widgetId: string) => ({ boardId: "uXjVBoard01=", widgetId });
 function v(partial: Partial<CanvasVersion> & { id: string; number: number }): CanvasVersion {
   return {
     projectId: "p",
-    deliverableId: null,
     boardId: null,
     note: "",
     status: "pending",
@@ -29,7 +28,6 @@ describe("boardRounds and sharedVersions", () => {
     v({ id: "rx", number: 1, boardId: "b2" }),
     v({ id: "s1", number: 1 }),
     v({ id: "s2", number: 2 }),
-    v({ id: "legacy", number: 3, deliverableId: "d" }),
   ];
   it("lists a board's rounds newest first", () => {
     expect(boardRounds(versions, "b1").map((item) => item.id)).toEqual(["r2", "r1"]);

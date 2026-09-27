@@ -3,16 +3,15 @@ create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
 
--- One rolled-back transaction over the seeded SABRE landing page: its publication, its V2
--- internal version, the designer assigned to it, and a designer who is not.
+-- One rolled-back transaction over the seeded SABRE landing page, the designer assigned to it and
+-- a designer who is not. The client version and the round are created here, in the Miro model: a
+-- board for the assigned designer with one round, and one project-level client version.
 create temporary table miro_context(key text primary key,value uuid);
 grant all on miro_context to authenticated;
 insert into miro_context values
   ('agency',md5('dawes:agency')::uuid),
   ('client',md5('dawes:client-8')::uuid),
-  ('project',md5('dawes:project-sabre-campaign-landing-page')::uuid),
-  ('publication',md5('dawes:publication-sabre-campaign-landing-page')::uuid),
-  ('version',md5('dawes:version-sabre-campaign-landing-page-2')::uuid);
+  ('project',md5('dawes:project-sabre-campaign-landing-page')::uuid);
 insert into miro_context
   select 'assigned',designer_id from public.project_assignments
   where project_id=md5('dawes:project-sabre-campaign-landing-page')::uuid limit 1;
@@ -29,9 +28,18 @@ create function pg_temp.act_as(p_key text) returns text language sql as $$
   select set_config('request.jwt.claim.sub',pg_temp.context(p_key)::text,true)
 $$;
 
+select set_config('request.jwt.claim.sub',pg_temp.context('agency')::text,true);
+set local role authenticated;
+insert into miro_context values('board',public.create_design_board(pg_temp.context('project'),'Links board',
+  'https://miro.com/app/board/uXjVBoard01=/',pg_temp.context('assigned')));
+insert into miro_context values('version',public.send_board_round(pg_temp.context('board'),'Links round'));
+insert into miro_context values('publication',public.share_miro_version(pg_temp.context('project'),
+  'https://miro.com/app/board/uXjVClient00=/','Links version'));
+reset role;
+
 select has_table('public','publication_miro_links','Client-board links have their own table');
 select has_table('public','design_version_miro_links','Internal-board links have their own table');
-select is((select count(*)::int from miro_context where value is not null),7,'Every fixture role resolved');
+select is((select count(*)::int from miro_context where value is not null),8,'Every fixture role resolved');
 
 -- The parser.
 select is((select board_id from private.parse_miro_board_url('https://miro.com/app/board/uXjVKabc123=/')),
@@ -87,24 +95,27 @@ set local role authenticated;
 select is((select board_id from public.design_version_miro_links where version_id=pg_temp.context('version')),
   'uXjVStudio1=','An assigned designer reads the internal link');
 select is((select count(*)::int from public.publication_miro_links),0,'A designer never reads client links');
-select throws_ok($$select public.set_version_miro_link(pg_temp.context('version'),
-  'https://miro.com/app/board/uXjVStudio1=/')$$,'42501',null,'A designer cannot set a link');
+select lives_ok($$select public.set_version_miro_link(pg_temp.context('version'),
+  'https://miro.com/app/board/uXjVStudio1=/?moveToWidget=333')$$,'The board''s designer can relink its own round');
 reset role;
 
 select pg_temp.act_as('outsider');
 set local role authenticated;
 -- Scoped to this project: the designer may be assigned elsewhere, where internal links can exist.
 select is((select count(*)::int from public.design_version_miro_links where project_id=pg_temp.context('project')),0,'An unassigned designer reads no internal link');
+select throws_ok($$select public.set_version_miro_link(pg_temp.context('version'),
+  'https://miro.com/app/board/uXjVStudio1=/')$$,'42501',null,'Another designer cannot set a link');
 reset role;
 
 -- Clearing, and clearing twice.
 select pg_temp.act_as('agency');
 set local role authenticated;
-select lives_ok($$select public.clear_publication_miro_link(pg_temp.context('publication'))$$,'The agency clears a link');
-select lives_ok($$select public.clear_publication_miro_link(pg_temp.context('publication'))$$,'Clearing a missing link is not an error');
+select throws_ok($$select public.clear_publication_miro_link(pg_temp.context('publication'))$$,
+  '22023','A shared version needs its Miro link','A client version keeps its link');
+select lives_ok($$select public.clear_publication_miro_link(gen_random_uuid())$$,'Clearing an unknown version is not an error');
 select lives_ok($$select public.clear_version_miro_link(pg_temp.context('version'))$$,'The agency clears an internal link');
 select is((select count(*)::int from public.publication_miro_links where publication_id=pg_temp.context('publication')),
-  0,'The publication link is gone');
+  1,'The client version link stays');
 select throws_ok($$select public.set_version_miro_link(gen_random_uuid(),'https://miro.com/app/board/uXjVStudio1=/')$$,
   'P0002',null,'An unknown version is reported');
 reset role;

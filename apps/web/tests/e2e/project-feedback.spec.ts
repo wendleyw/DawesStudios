@@ -78,13 +78,13 @@ test("conversation and client version feedback stay in their channel, with draft
     const saved = value(
       await localAdmin
         .from("client_comments")
-        .select("body,publication_id,design_id")
+        .select("body,publication_id")
         .eq("project_id", fixture.projectId)
         .order("created_at"),
     );
     expect(saved).toEqual([
-      { body: "Client note on the whole project.", publication_id: null, design_id: null },
-      { body: "Client feedback on V1.", publication_id: version, design_id: null },
+      { body: "Client note on the whole project.", publication_id: null },
+      { body: "Client feedback on V1.", publication_id: version },
     ]);
 
     // The studio's internal conversation never reaches the client channel, and back.

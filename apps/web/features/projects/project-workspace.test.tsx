@@ -64,7 +64,6 @@ const round = {
   date: "2026-09-20T00:00:00Z",
   miro: link,
   boardId: "b1",
-  deliverableId: null,
 } satisfies CanvasVersion;
 
 // `project-page.tsx` owns `panels` above its own early returns; this harness stands in for it so
