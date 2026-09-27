@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  defaultAcceptanceMonth,
   addCreditMonths,
   assertCreditResult,
   creditCsv,
@@ -395,5 +396,17 @@ describe("creditRemainingRatio", () => {
   it("is null without a positive top-up balance to measure against", () => {
     expect(creditRemainingRatio(40, null)).toBeNull();
     expect(creditRemainingRatio(40, 0)).toBeNull();
+  });
+});
+
+describe("defaultAcceptanceMonth", () => {
+  // 23:30 on Sep 30 in São Paulo is already October in UTC, the database's clock.
+  const now = new Date("2026-10-01T02:30:00Z");
+
+  it("defaults acceptance to the due month, clamped to the open window like accept_briefing", () => {
+    expect(defaultAcceptanceMonth(null, now)).toBe("2026-10-01");
+    expect(defaultAcceptanceMonth("2026-12-12", now)).toBe("2026-12-01");
+    expect(defaultAcceptanceMonth("2026-08-02", now)).toBe("2026-10-01");
+    expect(defaultAcceptanceMonth("2028-03-01", now)).toBe("2027-09-01");
   });
 });

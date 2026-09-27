@@ -5,7 +5,6 @@ import {
   briefingPayload,
   catalogWithPresets,
   decodeBriefing,
-  defaultAcceptanceMonth,
   formats,
   initialDraft,
   initialRequester,
@@ -308,15 +307,3 @@ describe("byOpenedDate", () => {
 
 // The UTC month math itself (`creditMonthOf`, `addCreditMonths`, `writableCreditMonths`,
 // `creditMonthLabel`) lives in and is covered by `features/credits/credit-model.test.ts`;
-// `defaultAcceptanceMonth` here is the one helper this feature keeps, built on that shared math.
-describe("defaultAcceptanceMonth", () => {
-  // 23:30 on Sep 30 in São Paulo is already October in UTC, the database's clock.
-  const now = new Date("2026-10-01T02:30:00Z");
-
-  it("defaults acceptance to the due month, clamped to the open window like accept_briefing", () => {
-    expect(defaultAcceptanceMonth(null, now)).toBe("2026-10-01");
-    expect(defaultAcceptanceMonth("2026-12-12", now)).toBe("2026-12-01");
-    expect(defaultAcceptanceMonth("2026-08-02", now)).toBe("2026-10-01");
-    expect(defaultAcceptanceMonth("2028-03-01", now)).toBe("2027-09-01");
-  });
-});

@@ -17,6 +17,7 @@ import { useCreditMonthSummaries } from "@/features/credits/credit-data";
 import {
   creditMonthLabel,
   creditMonthOf,
+  defaultAcceptanceMonth,
   writableCreditMonths,
 } from "@/features/credits/credit-model";
 import {
@@ -31,7 +32,6 @@ import {
 import {
   briefingStatusLabels,
   briefingStatusTones,
-  defaultAcceptanceMonth,
   initialDraft,
   initialRequester,
   type Briefing,

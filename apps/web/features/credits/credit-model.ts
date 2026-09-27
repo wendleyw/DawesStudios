@@ -357,3 +357,16 @@ export function creditCsv({
   });
   return `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
 }
+
+/**
+ * The month `accept_briefing` debits when none is passed: the due date's month, no earlier than the
+ * current month and no later than the last open one. A briefing without a due date uses the current
+ * month. The Month select opens on this, so leaving it untouched is exactly the database default.
+ */
+export function defaultAcceptanceMonth(dueDate: string | null, now: Date = new Date()): string {
+  const months = writableCreditMonths(creditMonthOf(now));
+  if (!dueDate) return months[0];
+  const due = creditMonthOf(dueDate);
+  if (due < months[0]) return months[0];
+  return due > months[11] ? months[11] : due;
+}

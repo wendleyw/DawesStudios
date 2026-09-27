@@ -1,7 +1,6 @@
 import type { StatusTone } from "@/features/shared/status-tone";
 import catalog from "./service-catalog.json";
 import { z } from "@/lib/zod";
-import { creditMonthOf, writableCreditMonths } from "@/features/credits/credit-model";
 import type { Database } from "@database";
 
 export type ServiceQuestion = {
@@ -391,21 +390,4 @@ export function requesterErrors(
 ): string[] {
   if (!people?.length || people.some((person) => person.user_id === requestedBy)) return [];
   return ["Choose who requested this briefing."];
-}
-
-/**
- * The month `accept_briefing` debits when none is passed: the due date's month, no earlier than the
- * current month and no later than the last open one. A briefing without a due date uses the current
- * month. The Month select opens on this, so leaving it untouched is exactly the database default.
- *
- * `creditMonthOf` and `writableCreditMonths` (the current month and the next 11, the database's
- * writable window) live in `features/credits/credit-model.ts`, which this reuses rather than keeping
- * its own copy of the same month math.
- */
-export function defaultAcceptanceMonth(dueDate: string | null, now: Date = new Date()): string {
-  const months = writableCreditMonths(creditMonthOf(now));
-  if (!dueDate) return months[0];
-  const due = creditMonthOf(dueDate);
-  if (due < months[0]) return months[0];
-  return due > months[11] ? months[11] : due;
 }
