@@ -1,7 +1,7 @@
 name: dawes-studios-app
 services:
   web:
-    image: dawes-studios-web:local
+    image: ${WEB_IMAGE:-dawes-studios-web:local}
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -28,7 +28,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
   media:
-    image: dawes-studios-media:local
+    image: ${MEDIA_IMAGE:-dawes-studios-media:local}
     build:
       context: apps/media
     ports:

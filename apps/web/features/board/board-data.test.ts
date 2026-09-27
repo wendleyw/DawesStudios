@@ -1,11 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import {
   THUMBNAIL_TTL,
   addBoardWidget,
   moveProjectPosition,
   removeBoardWidget,
   saveBoardView,
+  useProjectArtwork,
 } from "./board-data";
+
+const auth = vi.hoisted(() => ({ database: null as unknown }));
+vi.mock("@/features/auth/auth-provider", () => ({
+  useAuth: () => ({
+    database: auth.database,
+    session: { user: { id: "viewer" } },
+    profile: { role: "client" },
+  }),
+}));
 
 function stubDatabase(result: { data: unknown; error: { message: string } | null }) {
   const single = vi.fn().mockResolvedValue(result);
@@ -92,5 +105,95 @@ describe("board widget placement", () => {
     ).rejects.toThrow("No widget");
     expect(clientFilter).toHaveBeenCalledWith("client_id", "client-1");
     expect(kindFilter).toHaveBeenCalledWith("kind", "competitor_ads");
+  });
+});
+
+describe("useProjectArtwork pagination", () => {
+  it("loads later deliverables and covers across bounded project-ID filters", async () => {
+    const ids = Array.from(
+      { length: 101 },
+      (_, index) => `project-${String(index).padStart(3, "0")}`,
+    );
+    const deliverables = Array.from({ length: 1_101 }, (_, index) => ({
+      id: `deliverable-${String(index).padStart(4, "0")}`,
+      project_id: ids[index % ids.length],
+      format: "feed",
+      sort_order: index,
+    }));
+    const covers = ids.map((project_id) => ({
+      project_id,
+      storage_path: `${project_id}/cover.webp`,
+    }));
+    const calls: { table: string; ids: string[]; range?: [number, number] }[] = [];
+    const signedPaths: string[][] = [];
+    auth.database = {
+      from: (table: string) => {
+        const call: { table: string; ids: string[]; range?: [number, number] } = { table, ids: [] };
+        calls.push(call);
+        const chain = {
+          select: () => chain,
+          in: (_column: string, projectIds: string[]) => {
+            call.ids = projectIds;
+            return chain;
+          },
+          order: () => chain,
+          range: (from: number, to: number) => {
+            call.range = [from, to];
+            return chain;
+          },
+          abortSignal: () => chain,
+          then: (resolve: (result: { data: unknown[]; error: null }) => unknown) => {
+            const source = table === "deliverables" ? deliverables : covers;
+            const rows = source.filter((row) => call.ids.includes(row.project_id));
+            return Promise.resolve({
+              data: rows.slice(call.range?.[0] ?? 0, (call.range?.[1] ?? 0) + 1),
+              error: null,
+            }).then(resolve);
+          },
+        };
+        return chain;
+      },
+      storage: {
+        from: () => ({
+          createSignedUrls: async (paths: string[]) => {
+            signedPaths.push(paths);
+            return {
+              data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
+              error: null,
+            };
+          },
+        }),
+      },
+    };
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        QueryClientProvider,
+        {
+          client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+        },
+        children,
+      );
+
+    const { result } = renderHook(() => useProjectArtwork(ids), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[ids[100]]).toEqual({
+      url: `https://signed/${ids[100]}/cover.webp`,
+      typeLabel: "Portrait Feed",
+    });
+    expect(Object.keys(result.current.data ?? {})).toHaveLength(101);
+    expect(
+      calls.filter((call) => call.table === "deliverables").map((call) => call.ids.length),
+    ).toEqual([100, 100, 100, 1]);
+    expect(calls.filter((call) => call.table === "deliverables").map((call) => call.range)).toEqual(
+      [
+        [0, 499],
+        [500, 999],
+        [1000, 1499],
+        [0, 499],
+      ],
+    );
+    expect(calls.every((call) => call.ids.length <= 100)).toBe(true);
+    expect(signedPaths.map((paths) => paths.length)).toEqual([100, 1]);
   });
 });

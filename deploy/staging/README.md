@@ -1,11 +1,10 @@
-# Local staging rehearsal
+# Local staging rehearsals
 
-A reproducible, disposable rehearsal of the earlier production topology: the official self-hosted
-Supabase Docker distribution, with MinIO as the S3 Storage backend, plus this repo's `web` and
-`media` images. It runs under its own compose
-project names, its own image tags, and a reserved host port range, alongside the existing local
-dev stack (`dawes-studios*`, `supabase_*_dawes-studios*`) without touching it. Authorized
-2026-09-23; see the root `CLAUDE.md` "Product and Delivery Requirements".
+Two isolated rehearsals use the pinned official self-hosted Supabase Docker distribution plus
+this repo's `web` and `media` images. The default `minio` mode retains the historical S3
+rehearsal and its data. `STAGING_STORAGE=file` selects the production-shaped filesystem Storage
+mode. Each mode has its own compose projects, containers, ports, generated secrets and storage,
+so the local development stack and the other staging mode are left intact.
 
 This directory is **not** part of the application. Nothing here is imported by `apps/web` or
 `apps/media`, and nothing under it is ever a deploy target — it only rehearses the topology
@@ -13,26 +12,28 @@ recorded here.
 
 **Production decision, 2026-09-27:** creative work lives in Miro and R2 is no longer required.
 The [current production target](../../docs/operations/production.md) uses persistent filesystem
-Storage for remaining application uploads. This existing MinIO rehearsal and its retained volumes
-have not been migrated; its S3 checks remain historical compatibility evidence. A filesystem
-Storage rehearsal with TLS, SMTP, restart persistence and a restore drill is still required before
-release. Do not treat this script's existing S3 result as verification of the new production target.
+Storage for remaining application uploads. The new `file` configuration has passed local upload, canonical role and browser checks; see the
+[current verification record](../../docs/verification/preproduction-hardening-2026-09-27.md).
+Production TLS, SMTP and off-host recovery still need execution before release. The retained MinIO results remain historical compatibility evidence.
 
 ## Layout
 
 | Path | Tracked? | What |
 | --- | --- | --- |
 | `README.md` | yes | this file |
-| `compose.supabase.override.yml` | yes | ports (127.0.0.1, reserved range), container names, the two storage settings upstream hardcodes/omits — layered on the upstream compose files |
-| `compose.app.yml` | yes | standalone `web`/`media` staging services (does not read or depend on the repo-root `compose.yaml`) |
+| `compose.supabase.override.yml` | yes | historical MinIO ports, container names and S3 Storage settings — layered on upstream's base and S3 compose files |
+| `compose.filesystem.override.yml` | yes | isolated filesystem mode ports and container names, plus the Storage size limit — layered on upstream's base compose file only |
+| `compose.app.yml` | yes | standalone `web`/`media` staging services, with optional `WEB_IMAGE`/`MEDIA_IMAGE` release references |
 | `scripts/stage.sh` | yes | the setup/run/verify script — see `./scripts/stage.sh` with no arguments for the command list |
 | `scripts/provision_fixtures.py` | yes | fixture Auth passwords + Storage objects for the canonical dataset, run after `supabase/seed.sql` is applied with `psql`; see "Canonical dataset" below |
 | `.upstream/` | **no** (gitignored) | pristine sparse checkout of `supabase/supabase`'s `docker/` directory at the pinned commit — reference only, never run in place |
 | `.work/` | **no** (gitignored) | generated working copy: `.work/docker/` (a disposable copy of `.upstream/docker/`, including the Postgres/MinIO bind-mount data), `.work/.env` (mode 0600, every generated secret), `.work/artifacts/` (test outputs, response headers, downloaded objects) |
+| `.work-file/` | **no** (gitignored) | independent filesystem mode working copy: generated secrets, Postgres data and test artifacts; Storage bytes live in the project-scoped Docker volume `dawes-staging-file_staging-storage` |
 
-`.upstream/` is the vendor reference, checked out once and left alone. `.work/` is what actually
-runs and is freely regenerated; `scripts/stage.sh prepare` builds it from `.upstream/` and refuses
-to overwrite an existing one unless you pass `--force`.
+`.upstream/` is the shared vendor reference, checked out once and left alone. `prepare` copies it
+into the selected mode's work directory. MinIO mode can overwrite it with `--force`, which
+deletes its local data. Filesystem mode refuses `--force`: its separately stored Storage volume
+and Postgres data must be retained or explicitly removed together. Neither mode's work directory is a deploy target.
 
 ## Pinned upstream
 
@@ -48,15 +49,18 @@ to overwrite an existing one unless you pass `--force`.
   `docker-compose.kong.yml`, not used here). Postgres major version (17) matches this repo's
   `supabase/config.toml`.
 
-## Ports (127.0.0.1 only, reserved 56000-56999 range + explicit web port)
+## Ports (127.0.0.1 only)
 
-| Port | Service | Notes |
+| Service | MinIO default | Filesystem `STAGING_STORAGE=file` |
 | --- | --- | --- |
-| 3103 | web | explicit requirement; matches `SITE_URL`/`APP_ORIGIN`/CSP |
-| 56010 | Supabase gateway (Envoy, aliased `kong`) | `/auth/v1`, `/rest/v1`, `/storage/v1`, `/realtime/v1`, `/functions/v1`; Studio stays unpublished, same as production |
-| 56011 | Postgres (`db`, direct) | added because this rehearsal bypasses the pooler for migrations — see "What proved wrong or missing" |
-| 56012 / 56013 | MinIO S3 API / console | for `mc`/inspection only; the app and Storage reach MinIO over the compose network, never through these |
-| 56014 | media | |
+| web | 3103 | 3113 |
+| Supabase gateway (Envoy, aliased `kong`) | 56010 | 56110 |
+| Postgres (`db`, direct) | 56011 | 56111 |
+| MinIO API / console | 56012 / 56013 | absent |
+| media | 56014 | 56114 |
+
+Both modes keep Studio and Supavisor unpublished. The Realtime container has the upstream
+`realtime-dev.supabase-realtime` network alias, which Envoy needs for WebSocket routing.
 
 Supavisor (the pooler) publishes no host port at all in this rehearsal (`ports: !override []`) —
 see "What proved wrong or missing" for why. Verified free with `lsof -iTCP:<port> -sTCP:LISTEN`
@@ -70,19 +74,49 @@ the blocked ports (55421-55430, 3003, 3004, 3000, 5432, 9000/9001) are touched.
 cd deploy/staging
 
 ./scripts/stage.sh fetch                 # once: sparse-clone the pinned upstream commit
-./scripts/stage.sh prepare                # generate secrets + .work/ (refuses to clobber; --force to rotate)
+./scripts/stage.sh prepare                # generate secrets + .work/ (refuses to clobber; --force deletes data)
 ./scripts/stage.sh up                     # pull images, start the Supabase stack, wait for health
 ./scripts/stage.sh migrate                # supabase db push against the staging Postgres; lists recorded versions
-./scripts/stage.sh app-build               # build dawes-studios-web:staging / dawes-studios-media:staging
-./scripts/stage.sh app-up                  # start the staging web/media containers
+./scripts/stage.sh app-build               # build web/media with mode-specific local tags
+./scripts/stage.sh app-up                  # start web/media from selected images; does not build
 ./scripts/stage.sh verify                  # header/health checks (release checklist step 4)
 ./scripts/stage.sh bootstrap               # first agency account, the way production creates one
-./scripts/stage.sh storage-test            # TUS + standard upload through MinIO, SHA-256, anon-denied
+./scripts/stage.sh storage-test            # TUS + standard upload, SHA-256, anon-denied
 ./scripts/stage.sh provision-fixtures      # fixture Auth passwords + Storage objects (run supabase/seed.sql with psql first)
 
 ./scripts/stage.sh status                  # docker compose ps for both projects
 ./scripts/stage.sh down                    # stop (not remove) both projects; prints teardown commands
+
+STAGING_STORAGE=file ./scripts/stage.sh prepare   # independent .work-file/ and ports
+STAGING_STORAGE=file ./scripts/stage.sh up
+STAGING_STORAGE=file ./scripts/stage.sh app-build
+STAGING_STORAGE=file ./scripts/stage.sh app-up
+STAGING_STORAGE=file ./scripts/stage.sh status
+STAGING_STORAGE=file ./scripts/stage.sh down      # stop only; retain Postgres and Storage data
 ```
+
+Apply `STAGING_STORAGE=file` to every command for that mode. `file` layers only
+`docker-compose.yml` and `compose.filesystem.override.yml`; it keeps upstream's
+`STORAGE_BACKEND=file` and `FILE_STORAGE_BACKEND_PATH=/var/lib/storage`. Both `storage` and
+`imgproxy` mount the project-scoped named volume `dawes-staging-file_staging-storage` at that
+path. This replaces upstream's host bind mount because macOS Docker shared directories lack the
+extended attributes that Storage writes on upload (`ENOTSUP`). The volume remains in Docker's
+Linux filesystem and persists across container replacement. It does not include
+`docker-compose.s3.yml`, MinIO or external S3 credentials. The new mode sets
+`FILE_SIZE_LIMIT=52428800` (50 MiB); the retained
+MinIO mode keeps its historical 1 GiB limit. The upstream `S3_PROTOCOL_ACCESS_KEY_*` values
+are generated in both modes for Supabase's own protocol endpoint, not an external S3 provider.
+
+For release rehearsals, export `WEB_IMAGE` and `MEDIA_IMAGE` as immutable image digest references
+before `app-up`, such as `registry.example.com/web@sha256:<digest>`. The MinIO mode uses
+`:staging` local image tags, while the filesystem mode generates separate `:staging-file` tags.
+The root `compose.yaml` uses the same two
+selectors with `:local` defaults. Build-time `NEXT_PUBLIC_*` values must match the image being
+selected; a different gateway or media URL requires a separately built image.
+
+`python3 -m unittest discover -s deploy/staging/tests -v` checks both resolved Compose modes
+with inert dummy values, image selection and isolated prepare/stop behavior without starting
+containers. The file mode's executed runtime checks are recorded in the verification record linked above.
 
 `stage.sh` never runs `supabase/seed.sql`, anything under `supabase/scripts/` or `supabase/demo/`,
 `supabase start/stop/db reset`, or `supabase/scripts/local_stack.py`. `migrate` applies
@@ -90,11 +124,10 @@ cd deploy/staging
 
 ### Stop, resume, full teardown
 
-`down` stops both compose projects; containers, images and volumes (Postgres data dir, MinIO data)
-are retained. Resume with `up` then `app-up` — `prepare` is not needed again as long as
-`.work/.env` still exists. `down`'s own output prints the exact `docker compose ... down -v`
-commands for a full, irreversible teardown (destroys the Postgres bind-mount and the MinIO
-volume), followed by `rm -rf .work` to discard the generated secrets.
+`down` calls `stop` on the selected mode's two compose projects; containers, images and volumes
+remain. Resume with `up` then `app-up` using the same `STAGING_STORAGE` value. `prepare` is not
+needed again while that mode's `.env` exists. `down` prints mode-specific `down -v` teardown
+commands; do not run them as part of a restart or release rehearsal.
 
 ## Secrets
 
@@ -102,9 +135,10 @@ volume), followed by `rm -rf .work` to discard the generated secrets.
 ("Generate a fresh value for every secret the guide lists") the same way
 `.upstream/docker/utils/generate-keys.sh` does — `openssl rand`, and HS256 JWTs for `ANON_KEY`/
 `SERVICE_ROLE_KEY` signed with a freshly generated `JWT_SECRET`. Everything lands only in
-`.work/.env`, created with `chmod 600`. No command in `stage.sh` prints a secret value; `verify`
-and the test commands write response headers/bodies to `.work/artifacts/` (also gitignored) and
-print pass/fail lines, not credentials. These are rehearsal-only secrets with no production
+the selected mode's `.env`, created with `chmod 600`. No command in `stage.sh` prints a secret
+value; `verify` and the test commands write response headers/bodies to that mode's ignored
+`artifacts/` directory and print pass/fail lines, not credentials. The `file` mode's working
+directory has mode 0700. These are rehearsal-only secrets with no production
 validity; nothing here is reused for the real deployment.
 
 ## What `docs/operations/production.md` got wrong or missing
@@ -115,13 +149,11 @@ comments for the exact evidence):
 
 - **`FILE_SIZE_LIMIT` is not an environment variable in upstream's `docker-compose.yml`.** It's
   hardcoded to `52428800` on the `storage` service (line 372 at the pinned commit). Setting it in
-  `.env` does nothing; it needs a compose-level override, which `compose.supabase.override.yml`
-  provides. The production guide's table lists it alongside real `${VAR}`-driven settings as if
-  it were one too — it isn't, at least not at this commit.
+  `.env` does nothing; it needs a compose-level override, which both staging overrides provide.
 - **`TUS_ALLOW_S3_TAGS` is not wired into any upstream compose file at all** (`docker-compose.yml`,
   `docker-compose.s3.yml`, or any override under `docker/`) despite being a real, documented
   `storage-api` setting (`docker/CONFIG.md`). It also needs a compose-level addition, not just an
-  `.env` value.
+  `.env` value. This setting belongs to the retained S3 rehearsal only.
 - **The pooler's connection format isn't in the production guide.** Reaching Postgres through
   Supavisor needs a tenant-qualified username (`postgres.<POOLER_TENANT_ID>`-shaped, session mode
   on `${POSTGRES_PORT}` or transaction mode on `${POOLER_PROXY_PORT_TRANSACTION}`); the guide's
@@ -182,6 +214,11 @@ comments for the exact evidence):
 
 ## Canonical dataset (release checklist step 4)
 
+The commands and outcomes in this section describe the historical MinIO mode. For filesystem
+mode, use `dawes-staging-file-db`, prefix `stage.sh` commands with `STAGING_STORAGE=file`, and
+point browser tests at port 3113 with the filesystem mode's generated credentials.
+Run `python3 supabase/scripts/verify_seed.py --staging-file` for that mode.
+
 `supabase/seed.sql` applies cleanly to this rehearsal's self-hosted `auth` schema with plain
 `psql` — its `insert into auth.users`/`auth.identities` column lists are a subset of what
 `supabase/gotrue:v2.196.0` (the pinned staging Auth image) actually has, so nothing was rejected:
@@ -205,10 +242,11 @@ disposable.
 `supabase/scripts/provision_local_auth.py` itself — that script calls `supabase status` (the
 CLI-tracked local project only) and hard-refuses any URL other than the local stack or its
 restore-drill copy, neither of which is this staging rehearsal. The one secret it mints (the
-fixture password) is written to `.work/fixtures.env` (mode 0600, gitignored) *before* it is PUT to
+fixture password) is written to the selected mode's `fixtures.env` (mode 0600, gitignored)
+*before* it is PUT to
 any user, so an interrupted run is always safely resumable, and every run re-applies it to every
 fixture user. Besides the passwords and the 70 brand files it posts one cover per project to the
-staging media worker (`MEDIA_PORT`, 56014) under the agency session, so each cover is sanitized and
+staging media worker (`MEDIA_PORT`, 56014 or 56114) under the agency session, so each cover is sanitized and
 attested, and it attaches the delivery PDF (`fixture_media.delivery_pdf`) and marks that project
 delivered, as the local provisioning does. It exits non-zero unless the counts are 10 / 25.
 Verified 2026-09-27 on the Miro-model seed: `verify_seed.py --staging` PASS with 29 boards, 30
@@ -223,7 +261,7 @@ backend, every credential must come from the environment: `ACCEPTANCE_SUPABASE_S
 with another backend's URL. Set `PLAYWRIGHT_BASE_URL=http://localhost:3103` for the staging web
 container, and exclude `sabre-demo.spec.ts`, which needs the local demo overlay.
 
-## Results
+## Historical MinIO results
 
 See `docs/engineering/handoffs/2026-09-23-staging-rehearsal.md` for the pass/fail results of
 `verify`, `bootstrap` and `storage-test`, the exact commands run, and what remains unproven, and

@@ -1,0 +1,2 @@
+# The filesystem rehearsal has its own generated secrets and persistent bind mounts.
+.work-file/

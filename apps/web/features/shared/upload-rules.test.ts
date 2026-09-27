@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BUCKET_MAX_BYTES,
-  VIDEO_MAX_BYTES,
   brandUploadMimes,
   standardUploadMimes,
   uploadExtensionMap,
@@ -88,6 +87,11 @@ function effectiveBucketMimeTypes(sources: string[]): Map<string, string[]> {
       const append = statement.match(
         /allowed_mime_types\s*=\s*allowed_mime_types\s*\|\|\s*array\[([^\]]*)\]/i,
       );
+      const replacement = statement.match(/allowed_mime_types\s*=\s*array\[([^\]]*)\]/i);
+      if (replacement) {
+        for (const id of targetedBucketIds(statement))
+          mimes.set(id, replacement[1].split(",").map(unquote));
+      }
       if (!append) continue;
       const added = append[1].split(",").map(unquote);
       for (const id of targetedBucketIds(statement))
@@ -151,13 +155,12 @@ describe("the client upload ceiling mirrors the bucket limit", () => {
       migration("202609200003_storage.sql"),
       migration("202609200004_requests_and_attachments.sql"),
       migration("202609210004_video_storage.sql"),
+      migration("202609270017_working_file_limits.sql"),
     ]);
     expect(limits.size).toBeGreaterThan(0);
-    // The two design buckets carry video and are deliberately larger. Every other bucket holds
-    // images, PDFs and delivery archives, and stays where it was.
-    const designBuckets = ["internal-assets", "published-assets"];
-    for (const [id, limit] of limits)
-      expect(limit).toBe(designBuckets.includes(id) ? VIDEO_MAX_BYTES : BUCKET_MAX_BYTES);
+    // The retired published-assets bucket is deleted by migration 202609270008.
+    limits.delete("published-assets");
+    for (const limit of limits.values()) expect(limit).toBe(BUCKET_MAX_BYTES);
   });
 
   it("matches the `file_size` check constraint that guards briefing attachments", () => {
@@ -170,31 +173,27 @@ describe("the client upload ceiling mirrors the bucket limit", () => {
 
   it("matches the `file_size` check constraint's EFFECTIVE ceiling on the sanitized-asset attestation table", () => {
     // `private.sanitized_assets.file_size` was created at BUCKET_MAX_BYTES in
-    // `202609200008_trusted_media.sql` and raised to VIDEO_MAX_BYTES by
+    // `202609200008_trusted_media.sql` and raised for historical video by
     // `202609210004_video_storage.sql`'s `drop constraint` + `add constraint`. Asserting against
     // only the first source would silently re-introduce the drift this test exists to catch.
     const sources = [
       migration("202609200008_trusted_media.sql"),
       migration("202609210004_video_storage.sql"),
+      migration("202609270017_working_file_limits.sql"),
     ];
     expect(effectiveFileSizeCheckMax([sources[0]])).toBe(BUCKET_MAX_BYTES);
-    expect(effectiveFileSizeCheckMax(sources)).toBe(VIDEO_MAX_BYTES);
+    expect(effectiveFileSizeCheckMax(sources)).toBe(1024 ** 3);
   });
 });
 
 describe("the per-consumer allow-lists mirror their buckets", () => {
-  it("matches `internal-assets` for the standard uploaders, plus video", () => {
+  it("matches the active working-file formats after video retirement", () => {
     const mimes = effectiveBucketMimeTypes([
       migration("202609200003_storage.sql"),
       migration("202609210004_video_storage.sql"),
+      migration("202609270017_working_file_limits.sql"),
     ]);
-    // `internal-assets` keeps every standard type and gains video on top from the retired
-    // per-deliverable video-design path; no current uploader offers video on this bucket.
-    expect(mimes.get("internal-assets")).toEqual([
-      ...standardUploadMimes,
-      "video/mp4",
-      "video/webm",
-    ]);
+    expect(mimes.get("internal-assets")).toEqual([...standardUploadMimes]);
   });
 
   it("matches `briefing-files` for briefing attachments", () => {
@@ -208,6 +207,7 @@ describe("the per-consumer allow-lists mirror their buckets", () => {
     const mimes = effectiveBucketMimeTypes([
       migration("202609200003_storage.sql"),
       migration("202609210004_video_storage.sql"),
+      migration("202609270017_working_file_limits.sql"),
     ]);
     expect(brandUploadMimes).toContain("image/svg+xml");
     expect(standardUploadMimes).not.toContain("image/svg+xml");
@@ -228,7 +228,7 @@ describe("the messages each uploader shows", () => {
 
   it("states the ceiling once, in megabytes, from the byte value", () => {
     expect(uploadSizeMessage()).toBe("Choose a file no larger than 50 MB.");
-    expect(uploadSizeMessage(VIDEO_MAX_BYTES)).toBe("Choose a file no larger than 1024 MB.");
+    expect(uploadSizeMessage(10 * 1024 * 1024)).toBe("Choose a file no larger than 10 MB.");
   });
 });
 

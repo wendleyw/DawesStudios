@@ -11,11 +11,17 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@/features/auth/auth-provider", () => ({ useAuth: () => auth }));
 
-/** A `.select().in()` chain resolving to the given rows. */
+/** A paged, abortable query chain resolving to the given small fixture. */
 function table(rows: unknown[]) {
-  const inFn = vi.fn().mockResolvedValue({ data: rows, error: null });
-  const select = vi.fn().mockReturnValue({ in: inFn });
-  return { select };
+  const result = { data: rows, error: null };
+  const query = {
+    select: vi.fn(() => query),
+    in: vi.fn(() => query),
+    order: vi.fn(() => query),
+    range: vi.fn(() => query),
+    abortSignal: vi.fn().mockResolvedValue(result),
+  };
+  return query;
 }
 
 function stubDatabase(

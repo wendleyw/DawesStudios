@@ -1,0 +1,56 @@
+# Local filesystem-backed staging. Layer this on the pinned upstream docker-compose.yml alone.
+# Upstream storage already sets STORAGE_BACKEND=file and
+# FILE_STORAGE_BACKEND_PATH=/var/lib/storage. Replace its host bind mount for both consumers
+# with a Docker-managed volume: macOS shared bind mounts cannot provide the xattrs Storage needs.
+# No S3 override or MinIO service is included.
+services:
+  api-gw:
+    container_name: dawes-staging-file-envoy
+    ports: !override
+      - "127.0.0.1:${STAGING_GATEWAY_PORT}:8000/tcp"
+
+  studio:
+    container_name: dawes-staging-file-studio
+
+  auth:
+    container_name: dawes-staging-file-auth
+
+  rest:
+    container_name: dawes-staging-file-rest
+
+  realtime:
+    container_name: dawes-staging-file-realtime
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
+
+  imgproxy:
+    container_name: dawes-staging-file-imgproxy
+    volumes: !override
+      - staging-storage:/var/lib/storage
+
+  meta:
+    container_name: dawes-staging-file-meta
+
+  functions:
+    container_name: dawes-staging-file-functions
+
+  storage:
+    container_name: dawes-staging-file-storage
+    environment:
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
+    volumes: !override
+      - staging-storage:/var/lib/storage
+
+  supavisor:
+    container_name: dawes-staging-file-pooler
+    ports: !override []
+
+  db:
+    container_name: dawes-staging-file-db
+    ports: !override
+      - "127.0.0.1:${STAGING_DB_PORT}:5432"
+
+volumes:
+  staging-storage: {}

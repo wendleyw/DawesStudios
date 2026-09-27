@@ -1,50 +1,10 @@
 /**
- * The upload contract every uploader enforces before a file leaves the browser.
- *
- * **Postgres is authoritative.** Each storage bucket is created with an explicit
- * `file_size_limit` and `allowed_mime_types` list in
- * `supabase/migrations/202609200003_storage.sql`, and the briefing-attachment paths are
- * constrained the same way in `supabase/migrations/202609200004_requests_and_attachments.sql`
- * and `202609200008_trusted_media.sql`. A bucket's value is not always set only where it is
- * created, either: `202609210004_video_storage.sql` widens `internal-assets` and
- * `published-assets` with an `update storage.buckets set ...` layered over the original insert.
- * Nothing here decides what storage accepts; it only restates that decision early enough to
- * explain it.
- *
- * The client ceiling exists to reject **before** the upload exactly what the bucket rejects
- * **after** it, so the two must agree. A client ceiling *above* the bucket limit turns a friendly
- * rejection into a raw storage error at the end of a long transfer; one *below* it refuses valid
- * files with no explanation. Raising a limit or widening a MIME list means editing the migration
- * first and this module second — `upload-rules.test.ts` computes each bucket's *effective* value
- * (inserts with later `update storage.buckets` statements applied, regardless of column order or
- * whether the `where` clause names one bucket or several) from the migrations themselves, and
- * fails if that effective value drifts from this module's constants. That check only covers
- * migrations it has been told to read, though: a new migration that changes a bucket must still
- * be added by hand to that test's source list, or the comparison keeps passing against a stale
- * value without any parser being able to notice.
- *
- * The ceiling is expressed per upload path rather than as a single number, because the paths can
- * deliberately disagree with each other and with their bucket: see `VIDEO_MAX_BYTES`.
- */
-
-/**
- * The ceiling every bucket enforces: `file_size_limit = 52428800`
- * (`supabase/migrations/202609200003_storage.sql`). This is the default for upload paths that
- * hand the file to storage as-is.
+ * Browser validation mirrors the active Storage buckets. The database owns access, MIME and
+ * per-file limits; these helpers explain rejections before a transfer starts. Migration
+ * 202609270017 restores working files to 50 MiB and PNG/JPEG/WebP/PDF after video retirement.
+ * Covers have a separate 10 MiB ceiling beside their media-service request.
  */
 export const BUCKET_MAX_BYTES = 50 * 1024 * 1024;
-
-/**
- * `internal-assets` still carries this gigabyte ceiling from
- * `supabase/migrations/202609210004_video_storage.sql`, written for the per-deliverable
- * video-design path that migrations `202609270007`/`202609270008` later retired along with
- * `published-assets` itself. No current uploader offers this ceiling; it is kept only so a
- * production `FILE_SIZE_LIMIT` below it does not silently reject the bucket's own configured
- * value (see `docs/operations/production.md`), and so `upload-rules.test.ts` and
- * `media-scratch.test.ts` keep asserting the real, still-live bucket/container configuration
- * rather than a stale copy of it.
- */
-export const VIDEO_MAX_BYTES = 1024 * 1024 * 1024;
 
 /**
  * The shared type vocabulary. Each entry lists the filename extensions a file of that type may

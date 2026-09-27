@@ -1,5 +1,7 @@
 # Preproduction priorities
 
+Follow-up implementation and current evidence: [preproduction hardening](preproduction-hardening-2026-09-27.md). Findings below describe the earlier review, not the final implementation state.
+
 Date: 2026-09-27. Orchestrator: Codex. Request: identify the remaining analysis and refactoring
 before production. This is a readiness review and implementation proposal, not a release approval
 or a claim that the proposed changes have been implemented.

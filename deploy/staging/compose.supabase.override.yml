@@ -60,7 +60,7 @@ services:
     container_name: dawes-staging-storage
     environment:
       # Upstream hardcodes 52428800 (50 MiB) in docker-compose.yml instead of reading a variable;
-      # raise it here to the production 1 GiB video ceiling (docs/operations/production.md).
+      # retain the historical rehearsal's 1 GiB video ceiling. The filesystem mode uses 50 MiB.
       FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
       # Not wired into any upstream compose file at all (grepped the full docker/ tree — absent).
       # Kept for this historical S3 rehearsal; production now uses the filesystem backend.

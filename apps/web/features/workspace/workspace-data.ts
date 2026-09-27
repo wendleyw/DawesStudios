@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
+import { fetchAllPages } from "@/features/shared/pagination";
 import type { StatusTone } from "@/features/shared/status-tone";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { assertResult, describeSupabaseError, type SupabaseDatabase } from "@/lib/supabase";
@@ -145,17 +146,34 @@ export function useProjects(clientId?: string) {
   return useQuery({
     queryKey: ["projects", session?.user.id, clientId ?? "all", designer ? "designer" : "all"],
     enabled: !!session,
-    queryFn: async () => {
-      const query = database.from("projects").select("*").order("created_at", { ascending: false });
-      const projects = assertResult(
-        await (clientId ? query.eq("client_id", clientId) : query),
-      ) as Project[];
+    queryFn: async ({ signal }) => {
+      const projects = await fetchAllPages(async (from, to) => {
+        const query = database
+          .from("projects")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false });
+        return assertResult(
+          await (clientId ? query.eq("client_id", clientId) : query)
+            .range(from, to)
+            .abortSignal(signal),
+        ) as Project[];
+      }, signal);
       if (!designer) return projects;
-      const boards = assertResult(
-        await database
-          .from("design_boards")
-          .select("project_id,due_date")
-          .not("due_date", "is", null),
+      const boards = await fetchAllPages(
+        async (from, to) =>
+          assertResult(
+            await database
+              .from("design_boards")
+              .select("project_id,due_date")
+              .not("due_date", "is", null)
+              .order("project_id")
+              .order("due_date")
+              .order("id")
+              .range(from, to)
+              .abortSignal(signal),
+          ),
+        signal,
       );
       return withDesignerDueDates(projects, boards);
     },

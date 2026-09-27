@@ -1,7 +1,7 @@
 """Read-only acceptance checks for the exact fixture dataset, its Miro-model records and actual files.
 
 Targets the local stack by default, the restore drill with `--workdir supabase/.restore-drill`, or the
-disposable staging rehearsal with `--staging` (credentials from deploy/staging/.work/fixtures.env)."""
+disposable rehearsals with `--staging` (MinIO) or `--staging-file` (filesystem Storage)."""
 from pathlib import Path
 from collections import Counter
 import argparse
@@ -18,13 +18,18 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--workdir', type=Path)
-    parser.add_argument('--staging', action='store_true', help='verify the disposable staging rehearsal instead')
+    target = parser.add_mutually_exclusive_group()
+    target.add_argument('--staging', action='store_true', help='verify the disposable MinIO staging rehearsal')
+    target.add_argument('--staging-file', action='store_true', help='verify the disposable filesystem staging rehearsal')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
-    if args.staging and args.workdir:
-        parser.error('--staging verifies the staging rehearsal; it cannot be combined with --workdir')
+    if (args.staging or args.staging_file) and args.workdir:
+        parser.error('Staging targets cannot be combined with --workdir')
     workdir = (args.workdir or ROOT).resolve()
-    if args.staging:
+    if args.staging_file:
+        env_file = ROOT / 'deploy/staging/.work-file/fixtures.env'
+        expected = 'http://127.0.0.1:56110'
+    elif args.staging:
         env_file = ROOT / 'deploy/staging/.work/fixtures.env'
         expected = 'http://127.0.0.1:56010'
     else:

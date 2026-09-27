@@ -9,12 +9,12 @@ supabase/scripts/provision_local_auth.py itself, because that script calls `supa
 rehearsal, which runs as a plain `docker compose` project the Supabase CLI does not track.
 
 Never touches supabase/.env.local, supabase/seed.sql, supabase/scripts/* or apps/**. Targets only
-the staging gateway read from the generated deploy/staging/.work/.env (refuses anything other
-than 127.0.0.1:56010). The one secret this script mints (the fixture password) is written only to
-deploy/staging/.work/fixtures.env, mode 0600, and is never printed.
+the selected staging gateway read from its generated .env (refuses any port outside the two
+rehearsals). The one secret this script mints (the fixture password) is written only to that
+rehearsal's ignored fixtures.env, mode 0600, and is never printed.
 
 Scope: fixture Auth passwords for every fixtures.json user, the brand_assets Storage objects, and
-one project cover per project, posted to the staging media worker (127.0.0.1:56014, started by
+one project cover per project, posted to the selected staging media worker (started by
 `stage.sh app-up`) so it is sanitized and attested exactly as in production, and the single
 delivery_files PDF that marks the delivery project delivered, as provision_local_auth.py does.
 """
@@ -30,8 +30,12 @@ import urllib.request
 
 STAGING_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = STAGING_DIR.parents[1]
-ENV_FILE = STAGING_DIR / ".work" / ".env"
-FIXTURES_ENV = STAGING_DIR / ".work" / "fixtures.env"
+STAGING_STORAGE = os.environ.get("STAGING_STORAGE", "minio")
+if STAGING_STORAGE not in ("minio", "file"):
+    raise SystemExit("STAGING_STORAGE must be minio or file.")
+WORK_DIR = STAGING_DIR / (".work-file" if STAGING_STORAGE == "file" else ".work")
+ENV_FILE = WORK_DIR / ".env"
+FIXTURES_ENV = WORK_DIR / "fixtures.env"
 FIXTURES_JSON = REPO_ROOT / "supabase" / "fixtures.json"
 
 sys.path.insert(0, str(REPO_ROOT / "supabase" / "scripts"))
@@ -53,12 +57,13 @@ if not ENV_FILE.exists():
     raise SystemExit(f"Not prepared: {ENV_FILE} missing. Run stage.sh up first.")
 env = load_env(ENV_FILE)
 api_url = f"http://127.0.0.1:{env.get('STAGING_GATEWAY_PORT', '')}"
-expected_url = "http://127.0.0.1:56010"
+expected_url = "http://127.0.0.1:56110" if STAGING_STORAGE == "file" else "http://127.0.0.1:56010"
 if api_url != expected_url:
     raise SystemExit(f"Refusing to provision an unexpected gateway ({api_url}); staging must be {expected_url}.")
 media_url = f"http://127.0.0.1:{env.get('MEDIA_PORT', '')}"
-if media_url != "http://127.0.0.1:56014":
-    raise SystemExit(f"Refusing to use an unexpected media worker ({media_url}); staging must be http://127.0.0.1:56014.")
+expected_media_url = "http://127.0.0.1:56114" if STAGING_STORAGE == "file" else "http://127.0.0.1:56014"
+if media_url != expected_media_url:
+    raise SystemExit(f"Refusing to use an unexpected media worker ({media_url}); staging must be {expected_media_url}.")
 anon_key = env["ANON_KEY"]
 service_role_key = env["SERVICE_ROLE_KEY"]
 

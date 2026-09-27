@@ -4,7 +4,7 @@ The React and TypeScript frontend uses the Next.js App Router, xyflow canvases a
 
 ## Local setup
 
-Use Node.js `>=22.13.0` and npm. From the repository root:
+Use Node.js 24 and npm for parity with CI and the production containers (package minimum: `>=22.13.0`). From the repository root:
 
 ```bash
 npm ci --prefix apps/web
@@ -80,6 +80,8 @@ npm run check
 npm run build
 npm start
 ```
+
+CI runs on Node.js 24 and includes the production web build after the source and media tests. Database and browser checks still require the separately provisioned staging stack.
 
 `check` generates Next.js route types, checks TypeScript, runs ESLint, verifies Prettier formatting and executes the colocated Vitest tests. Formatting is part of the gate so the pre-commit hook cannot rewrite files the gate has already passed. `build` creates production output under `apps/web/.next`; `start` serves that output with Node.js. Next.js fetches the configured Google fonts during the build, so the build requires network access to the font service.
 

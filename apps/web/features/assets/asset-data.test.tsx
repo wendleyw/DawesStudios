@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   initialUploadProject,
   useAssetPreviews,
@@ -9,12 +9,17 @@ import {
   type ProjectAsset,
 } from "./asset-data";
 
-const storage = vi.hoisted(() => ({ createSignedUrls: vi.fn(), from: vi.fn(), table: vi.fn() }));
+const storage = vi.hoisted(() => ({
+  createSignedUrls: vi.fn(),
+  from: vi.fn(),
+  table: vi.fn(),
+  role: "agency",
+}));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({
     database: { from: storage.table, storage: { from: storage.from } },
     session: { user: { id: "viewer" } },
-    profile: { role: "agency" },
+    profile: { role: storage.role },
   }),
 }));
 
@@ -62,6 +67,34 @@ function asset(id: string, bucket: ProjectAsset["bucket"], mime: string): Projec
 }
 
 describe("Files grid previews", () => {
+  it("does not sign another batch after the query is cancelled", async () => {
+    let completeFirstBatch!: () => void;
+    storage.createSignedUrls.mockReset().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          completeFirstBatch = () => resolve({ data: [], error: null });
+        }),
+    );
+    storage.from.mockImplementation(() => ({ createSignedUrls: storage.createSignedUrls }));
+    const files = Array.from({ length: 205 }, (_, index) =>
+      asset(`image-${index}`, "delivery-files", "image/png"),
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { unmount } = renderHook(() => useAssetPreviews(files), { wrapper });
+    await waitFor(() => expect(storage.createSignedUrls).toHaveBeenCalledTimes(1));
+    await queryClient.cancelQueries({ queryKey: ["asset-previews"] });
+    completeFirstBatch();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(storage.createSignedUrls).toHaveBeenCalledTimes(1);
+    unmount();
+    queryClient.clear();
+    storage.createSignedUrls.mockReset();
+    storage.from.mockClear();
+  });
+
   it("signs raster images only, one request per bucket, for ten minutes", async () => {
     storage.createSignedUrls.mockImplementation(async (paths: string[]) => ({
       data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
@@ -90,9 +123,36 @@ describe("Files grid previews", () => {
     ]);
     expect(storage.createSignedUrls).toHaveBeenCalledWith(["project-1/working.png"], 600);
   });
+
+  it("signs a large image list in bounded requests", async () => {
+    storage.createSignedUrls.mockReset().mockImplementation(async (paths: string[]) => ({
+      data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
+      error: null,
+    }));
+    storage.from.mockImplementation(() => ({ createSignedUrls: storage.createSignedUrls }));
+    const files = Array.from({ length: 205 }, (_, index) =>
+      asset(`image-${index}`, "delivery-files", "image/png"),
+    );
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useAssetPreviews(files), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(Object.keys(result.current.data ?? {})).toHaveLength(205);
+    expect(storage.createSignedUrls.mock.calls.map(([paths]) => paths.length)).toEqual([
+      100, 100, 5,
+    ]);
+  });
 });
 
 describe("useProjectAssets", () => {
+  beforeEach(() => {
+    storage.role = "agency";
+    storage.table.mockReset();
+  });
+
   it("lists working files and deliveries only, never a design copy", async () => {
     const file = (id: string) => ({
       id,
@@ -134,6 +194,9 @@ describe("useProjectAssets", () => {
         select: () => typeof chain;
         eq: (column: string, value: string) => typeof chain;
         in: () => typeof chain;
+        order: () => typeof chain;
+        range: () => typeof chain;
+        abortSignal: () => typeof chain;
         then: Promise<{ data: unknown[]; error: null }>["then"];
       } = {
         select: () => chain,
@@ -146,6 +209,9 @@ describe("useProjectAssets", () => {
           return chain;
         },
         in: () => chain,
+        order: () => chain,
+        range: () => chain,
+        abortSignal: () => chain,
         then: (...args) => Promise.resolve({ data: matchingRows, error: null }).then(...args),
       };
       return chain;
@@ -172,5 +238,102 @@ describe("useProjectAssets", () => {
     expect(result.current.data?.projects[0].driveUrl).toBe(
       "https://drive.google.com/drive/folders/1",
     );
+  });
+
+  it("loads more than 1,000 client deliveries across bounded project-ID filters", async () => {
+    storage.role = "client";
+    const projects = Array.from({ length: 101 }, (_, index) => ({
+      id: `project-${String(index).padStart(3, "0")}`,
+      title: `Project ${index}`,
+      status: "approved",
+      campaign_id: null,
+      campaigns: null,
+      client_id: "client-1",
+    }));
+    const files = Array.from({ length: 1_101 }, (_, index) => ({
+      id: `file-${String(index).padStart(4, "0")}`,
+      name: `File ${index}`,
+      project_id: projects[index % projects.length].id,
+      storage_path: `file-${index}`,
+      mime_type: "application/pdf",
+      file_size: 1,
+      created_at: "2026-09-27T00:00:00Z",
+    }));
+    const filters: {
+      table: string;
+      ids?: string[];
+      range?: [number, number];
+      equals: [string, string][];
+    }[] = [];
+    storage.table.mockImplementation((table: string) => {
+      const call: {
+        table: string;
+        ids?: string[];
+        range?: [number, number];
+        equals: [string, string][];
+      } = { table, equals: [] };
+      filters.push(call);
+      let rows: Record<string, unknown>[] =
+        table === "projects" ? projects : table === "delivery_files" ? files : [];
+      const chain = {
+        select: () => chain,
+        eq: (column: string, value: string) => {
+          call.equals.push([column, value]);
+          rows = rows.filter((row) => row[column] === value);
+          return chain;
+        },
+        in: (_column: string, ids: string[]) => {
+          call.ids = ids;
+          rows = rows.filter((row) => ids.includes(row.project_id as string));
+          return chain;
+        },
+        order: () => chain,
+        range: (from: number, to: number) => {
+          call.range = [from, to];
+          return chain;
+        },
+        abortSignal: () => chain,
+        then: (resolve: (value: { data: Record<string, unknown>[]; error: null }) => unknown) =>
+          Promise.resolve({
+            data: rows.slice(call.range?.[0] ?? 0, (call.range?.[1] ?? 0) + 1),
+            error: null,
+          }).then(resolve),
+      };
+      return chain;
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        {children}
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useProjectAssets("client-1"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.projects).toHaveLength(101);
+    expect(result.current.data?.assets).toHaveLength(1_101);
+    expect(storage.table.mock.calls.map(([table]) => table)).not.toContain("project_assets");
+    expect(
+      filters.filter((call) => call.table === "delivery_files").map((call) => call.ids?.length),
+    ).toEqual([100, 100, 100, 1]);
+    expect(filters.filter((call) => call.table === "projects").map((call) => call.range)).toEqual([
+      [0, 499],
+    ]);
+    expect(
+      filters
+        .filter((call) => call.table === "projects")
+        .every((call) =>
+          call.equals.some(([column, value]) => column === "client_id" && value === "client-1"),
+        ),
+    ).toBe(true);
+    expect(
+      filters
+        .filter((call) => call.table === "project_drive_links")
+        .every((call) =>
+          call.equals.some(([column, value]) => column === "channel" && value === "client"),
+        ),
+    ).toBe(true);
   });
 });

@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Orchestrates the local staging rehearsal described in deploy/staging/README.md: the official
-# self-hosted Supabase Docker distribution (docker-compose.yml + docker-compose.s3.yml, MinIO
-# retained as a historical S3 rehearsal), plus this repo's web/media images, under a distinct compose
-# project name and a reserved 56000-56999 host port range.
+# Orchestrates the two isolated local staging rehearsals described in deploy/staging/README.md:
+# the pinned official Supabase distribution with historical MinIO or filesystem Storage, plus
+# this repo's web/media images. STAGING_STORAGE=file selects the filesystem variant.
 #
 # Subcommands run in this order for a full rehearsal:
 #   fetch          sparse-clone supabase/supabase's docker/ dir at the pinned commit (once)
-#   prepare        generate secrets, write .work/.env (0600), copy docker/ into .work/docker
+#   prepare        generate secrets, write the selected working copy (0600), copy docker/
 #   up             pull images, start the staging Supabase stack, wait for health
 #   migrate        supabase db push against the staging Postgres, then list recorded versions
 #   app-build      build the staging web/media images (distinct :staging tags)
@@ -23,8 +22,8 @@
 #   status         docker compose ps for both projects
 #   down           stop (not remove) both projects; prints the real teardown commands
 #
-# Every command is safe to re-run. `prepare` refuses to touch an existing .work/.env unless you
-# pass `prepare --force` (which rotates every secret and wipes any local Postgres/MinIO data).
+# `prepare` refuses to touch an existing mode's working copy unless you pass `prepare --force`
+# (MinIO only; filesystem mode refuses --force to preserve its separately stored bytes).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +31,14 @@ STAGING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$STAGING_DIR/../.." && pwd)"
 UPSTREAM_DIR="$STAGING_DIR/.upstream"
 UPSTREAM_DOCKER_DIR="$UPSTREAM_DIR/docker"
-WORK_DIR="$STAGING_DIR/.work"
+# Keep the historical MinIO rehearsal as the default. The filesystem rehearsal has a
+# separate working copy and Storage volume so it never shares the S3 data.
+STAGING_STORAGE="${STAGING_STORAGE:-minio}"
+case "$STAGING_STORAGE" in
+  minio) WORK_DIR="$STAGING_DIR/.work"; PROJECT_SUPABASE="dawes-staging"; PROJECT_APP="dawes-staging-app" ;;
+  file) WORK_DIR="$STAGING_DIR/.work-file"; PROJECT_SUPABASE="dawes-staging-file"; PROJECT_APP="dawes-staging-file-app" ;;
+  *) printf 'ERROR: STAGING_STORAGE must be minio or file.\n' >&2; exit 1 ;;
+esac
 WORK_DOCKER_DIR="$WORK_DIR/docker"
 ARTIFACT_DIR="$WORK_DIR/artifacts"
 ENV_FILE="$WORK_DIR/.env"
@@ -41,9 +47,6 @@ ENV_FILE="$WORK_DIR/.env"
 # this on its own. Recorded here so `docker/versions.md` at this SHA is the single source of truth
 # for image tags — see deploy/staging/README.md for the versions it lists.
 PINNED_SHA="d51ed9f451b0bf870c86a3427cc321511dbe73ab"
-
-PROJECT_SUPABASE="dawes-staging"
-PROJECT_APP="dawes-staging-app"
 
 log() { printf '>> %s\n' "$*" >&2; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -58,6 +61,8 @@ require_prepared() {
 
 load_env() {
   require_prepared
+  # An exported release image reference takes precedence over the generated local build tag.
+  local selected_web_image="${WEB_IMAGE:-}" selected_media_image="${MEDIA_IMAGE:-}"
   # docker compose's own --env-file parser handles unquoted spaces/parens/globs fine (e.g.
   # STUDIO_DEFAULT_ORGANIZATION's "Dawes Studios (staging)"), but plain bash `source` does not —
   # it would glob-expand or word-split them. Wrap every value in double quotes first. This goes
@@ -72,14 +77,18 @@ load_env() {
   source "$quoted"
   set +a
   rm -f "$quoted"
+  [[ -z "$selected_web_image" ]] || export WEB_IMAGE="$selected_web_image"
+  [[ -z "$selected_media_image" ]] || export MEDIA_IMAGE="$selected_media_image"
 }
 
 compose_supabase() {
-  docker compose -p "$PROJECT_SUPABASE" --env-file "$ENV_FILE" \
-    -f "$WORK_DOCKER_DIR/docker-compose.yml" \
-    -f "$WORK_DOCKER_DIR/docker-compose.s3.yml" \
-    -f "$STAGING_DIR/compose.supabase.override.yml" \
-    "$@"
+  local files=(-f "$WORK_DOCKER_DIR/docker-compose.yml")
+  if [[ "$STAGING_STORAGE" == minio ]]; then
+    files+=(-f "$WORK_DOCKER_DIR/docker-compose.s3.yml" -f "$STAGING_DIR/compose.supabase.override.yml")
+  else
+    files+=(-f "$STAGING_DIR/compose.filesystem.override.yml")
+  fi
+  docker compose -p "$PROJECT_SUPABASE" --env-file "$ENV_FILE" "${files[@]}" "$@"
 }
 
 compose_app() {
@@ -131,10 +140,14 @@ jwt_sign() { # $1=json payload  $2=secret
 
 cmd_prepare() {
   require_upstream
+  if [[ "$STAGING_STORAGE" == file && "${1:-}" == "--force" ]]; then
+    die "Filesystem staging refuses --force: Postgres and the named Storage volume must stay together. Use an explicit full teardown before preparing a new rehearsal."
+  fi
   if [[ -f "$ENV_FILE" && "${1:-}" != "--force" ]]; then
     log "$ENV_FILE already exists — leaving it and $WORK_DOCKER_DIR as-is."
-    log "Pass 'prepare --force' to regenerate (rotates every secret and wipes any local"
-    log "Postgres/MinIO data under $WORK_DOCKER_DIR/volumes)."
+    if [[ "$STAGING_STORAGE" == minio ]]; then
+      log "Pass 'prepare --force' to regenerate (rotates secrets and wipes Postgres/MinIO data)."
+    fi
     return 0
   fi
   if [[ "${1:-}" == "--force" ]]; then
@@ -143,6 +156,7 @@ cmd_prepare() {
   fi
 
   mkdir -p "$WORK_DIR" "$ARTIFACT_DIR"
+  [[ "$STAGING_STORAGE" == file ]] && chmod 700 "$WORK_DIR"
   cp -R "$UPSTREAM_DOCKER_DIR" "$WORK_DOCKER_DIR"
 
   log "Generating secrets and staging .env"
@@ -154,22 +168,28 @@ cmd_prepare() {
   anon_key="$(jwt_sign "{\"role\":\"anon\",\"iss\":\"supabase\",\"iat\":${iat},\"exp\":${exp}}" "$jwt_secret")"
   service_role_key="$(jwt_sign "{\"role\":\"service_role\",\"iss\":\"supabase\",\"iat\":${iat},\"exp\":${exp}}" "$jwt_secret")"
 
-  local staging_gateway_port=56010
-  local staging_db_port=56011
-  local staging_minio_api_port=56012
-  local staging_minio_console_port=56013
-  local web_port=3103
-  local media_port=56014
+  local staging_gateway_port=56010 staging_db_port=56011
+  local staging_minio_api_port=56012 staging_minio_console_port=56013
+  local web_port=3103 media_port=56014 file_size_limit=1073741824
+  if [[ "$STAGING_STORAGE" == file ]]; then
+    staging_gateway_port=56110
+    staging_db_port=56111
+    web_port=3113
+    media_port=56114
+    file_size_limit=52428800
+  fi
 
   {
     echo "# Generated by scripts/stage.sh prepare on $(date -u +%FT%TZ). Mode 0600. Never commit."
     echo "# Secret values are never printed by stage.sh; read this file directly if you need one."
     echo
-    echo "### Host ports (127.0.0.1 only; see compose.supabase.override.yml / compose.app.yml)"
+    echo "### Host ports (127.0.0.1 only; see the selected Supabase override / compose.app.yml)"
     echo "STAGING_GATEWAY_PORT=${staging_gateway_port}"
     echo "STAGING_DB_PORT=${staging_db_port}"
-    echo "STAGING_MINIO_API_PORT=${staging_minio_api_port}"
-    echo "STAGING_MINIO_CONSOLE_PORT=${staging_minio_console_port}"
+    if [[ "$STAGING_STORAGE" == minio ]]; then
+      echo "STAGING_MINIO_API_PORT=${staging_minio_api_port}"
+      echo "STAGING_MINIO_CONSOLE_PORT=${staging_minio_console_port}"
+    fi
     echo "WEB_PORT=${web_port}"
     echo "MEDIA_PORT=${media_port}"
     echo
@@ -186,9 +206,9 @@ cmd_prepare() {
     echo "LOGFLARE_PRIVATE_ACCESS_TOKEN=$(gen_b64 24)"
     echo "S3_PROTOCOL_ACCESS_KEY_ID=$(gen_hex 16)"
     echo "S3_PROTOCOL_ACCESS_KEY_SECRET=$(gen_hex 32)"
-    echo "DASHBOARD_USERNAME=dawes-staging"
+    echo "DASHBOARD_USERNAME=${PROJECT_SUPABASE}"
     echo "DASHBOARD_PASSWORD=$(gen_hex 16)"
-    echo "POOLER_TENANT_ID=dawes-staging-$(gen_hex 4)"
+    echo "POOLER_TENANT_ID=${PROJECT_SUPABASE}-$(gen_hex 4)"
     echo "POOLER_DEFAULT_POOL_SIZE=20"
     echo "POOLER_MAX_CLIENT_CONN=100"
     echo "POOLER_DB_POOL_SIZE=5"
@@ -197,12 +217,16 @@ cmd_prepare() {
     echo "POSTGRES_HOST=db"
     echo "POSTGRES_DB=postgres"
     echo
-    echo "### MinIO (historical S3 rehearsal; production now uses filesystem Storage)"
-    echo "MINIO_ROOT_USER=dawes-staging-minio"
-    echo "MINIO_ROOT_PASSWORD=$(gen_hex 16)"
-    echo "GLOBAL_S3_BUCKET=dawes-staging-storage"
+    if [[ "$STAGING_STORAGE" == minio ]]; then
+      echo "### MinIO (historical S3 rehearsal)"
+      echo "MINIO_ROOT_USER=dawes-staging-minio"
+      echo "MINIO_ROOT_PASSWORD=$(gen_hex 16)"
+    else
+      echo "### Filesystem Storage (GLOBAL_S3_BUCKET is a directory name upstream)"
+    fi
+    echo "GLOBAL_S3_BUCKET=${PROJECT_SUPABASE}-storage"
     echo "REGION=auto"
-    echo "STORAGE_TENANT_ID=dawes-staging"
+    echo "STORAGE_TENANT_ID=${PROJECT_SUPABASE}"
     echo
     echo "### URLs"
     echo "SUPABASE_PUBLIC_URL=http://localhost:${staging_gateway_port}"
@@ -218,12 +242,12 @@ cmd_prepare() {
     echo "ENABLE_ANONYMOUS_USERS=false"
     echo "ENABLE_PHONE_SIGNUP=false"
     echo "ENABLE_PHONE_AUTOCONFIRM=false"
-    echo "SMTP_ADMIN_EMAIL=admin@dawes-staging.local"
+    echo "SMTP_ADMIN_EMAIL=admin@${PROJECT_SUPABASE}.local"
     echo "SMTP_HOST=supabase-mail"
     echo "SMTP_PORT=2500"
     echo "SMTP_USER=fake_mail_user"
     echo "SMTP_PASS=fake_mail_password"
-    echo "SMTP_SENDER_NAME=dawes-staging"
+    echo "SMTP_SENDER_NAME=${PROJECT_SUPABASE}"
     echo "MAILER_URLPATHS_CONFIRMATION=/auth/v1/verify"
     echo "MAILER_URLPATHS_INVITE=/auth/v1/verify"
     echo "MAILER_URLPATHS_RECOVERY=/auth/v1/verify"
@@ -234,7 +258,7 @@ cmd_prepare() {
     echo "PGRST_DB_MAX_ROWS=1000"
     echo "PGRST_DB_EXTRA_SEARCH_PATH=public"
     echo "STUDIO_DEFAULT_ORGANIZATION=Dawes Studios (staging)"
-    echo "STUDIO_DEFAULT_PROJECT=dawes-staging"
+    echo "STUDIO_DEFAULT_PROJECT=${PROJECT_SUPABASE}"
     echo "OPENAI_API_KEY="
     echo "FUNCTIONS_VERIFY_JWT=false"
     echo "IMGPROXY_AUTO_WEBP=true"
@@ -247,10 +271,11 @@ cmd_prepare() {
     echo "JWT_KEYS="
     echo "JWT_JWKS="
     echo
-    echo "### Storage (production.md targets; see compose.supabase.override.yml for how these two"
-    echo "### actually reach the storage service — upstream hardcodes/omits both, see README)"
-    echo "FILE_SIZE_LIMIT=1073741824"
-    echo "TUS_ALLOW_S3_TAGS=false"
+    echo "### Storage (FILE_SIZE_LIMIT is overridden in the selected Compose override)"
+    echo "FILE_SIZE_LIMIT=${file_size_limit}"
+    if [[ "$STAGING_STORAGE" == minio ]]; then
+      echo "TUS_ALLOW_S3_TAGS=false"
+    fi
     echo
     echo "### App containers (compose.app.yml) — build-time NEXT_PUBLIC_* and runtime server vars"
     echo "NEXT_PUBLIC_SUPABASE_URL=http://localhost:${staging_gateway_port}"
@@ -260,6 +285,10 @@ cmd_prepare() {
     echo "SUPABASE_SERVICE_ROLE_KEY=${service_role_key}"
     echo "APP_ORIGIN=http://localhost:${web_port}"
     echo "MEDIA_ALLOWED_ORIGINS="
+    if [[ "$STAGING_STORAGE" == file ]]; then
+      echo "WEB_IMAGE=dawes-studios-web:staging-file"
+      echo "MEDIA_IMAGE=dawes-studios-media:staging-file"
+    fi
   } > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
   log "Wrote $ENV_FILE (mode 0600) and working copy at $WORK_DOCKER_DIR"
@@ -293,7 +322,7 @@ cmd_migrate() {
   log "PGSSLMODE=disable supabase db push --db-url <staging Postgres, password redacted> --workdir $REPO_ROOT"
   PGSSLMODE=disable supabase db push --db-url "$url" --include-all --yes --workdir "$REPO_ROOT"
   log "Recorded migration versions (supabase_migrations.schema_migrations):"
-  docker exec dawes-staging-db psql -U postgres -d postgres -Atc \
+  docker exec "${PROJECT_SUPABASE}-db" psql -U postgres -d postgres -Atc \
     "select version from supabase_migrations.schema_migrations order by version;"
 }
 
@@ -307,7 +336,7 @@ cmd_app_build() {
 
 cmd_app_up() {
   load_env
-  compose_app up -d --wait --wait-timeout 120
+  compose_app up -d --no-build --wait --wait-timeout 120
   compose_app ps
 }
 
@@ -389,7 +418,7 @@ cmd_bootstrap() {
     || echo "FAIL admin create (second user): $client_resp"
 
   log "SQL as postgres: update public.profiles set role='agency' where id='${agency_id}'"
-  docker exec dawes-staging-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \
+  docker exec "${PROJECT_SUPABASE}-db" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \
     "update public.profiles set role='agency' where id='${agency_id}';"
   echo "PASS SQL promotion executed"
 
@@ -428,7 +457,7 @@ cmd_bootstrap() {
 }
 
 # ---------------------------------------------------------------------------------------------
-# storage-test — TUS + standard upload against the S3/MinIO backend.
+# storage-test — TUS + standard upload against the selected Storage backend.
 # ---------------------------------------------------------------------------------------------
 tus_meta_b64() { printf '%s' "$1" | openssl base64 -A; }
 
@@ -437,16 +466,14 @@ cmd_storage_test() {
   command -v jq >/dev/null || die "jq is required"
   mkdir -p "$ARTIFACT_DIR"
   local gw="http://localhost:${STAGING_GATEWAY_PORT}"
-  local bucket="internal-assets" # widened to 1 GiB + video mime types by the migrations
+  local bucket="internal-assets"
 
-  local big_dir big_name big_path big_bytes=$((55 * 1024 * 1024))
+  local big_dir big_name big_path big_bytes
+  local big_content_type="image/png"
   big_dir="$(uuidgen | tr '[:upper:]' '[:lower:]')"
-  big_name="$(uuidgen | tr '[:upper:]' '[:lower:]').mp4"
-  big_path="${big_dir}/${big_name}"
+  big_name="$(uuidgen | tr '[:upper:]' '[:lower:]').png"
   local big_src="$ARTIFACT_DIR/big-src.bin"
   local big_dl="$ARTIFACT_DIR/big-downloaded.bin"
-  log "Generating ${big_bytes} byte test object -> $big_src"
-  head -c "$big_bytes" /dev/urandom > "$big_src"
 
   local small_dir small_name small_path
   small_dir="$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -456,10 +483,14 @@ cmd_storage_test() {
   local small_dl="$ARTIFACT_DIR/small-downloaded.png"
   # Minimal valid 1x1 PNG.
   printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\nIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00IEND\xaeB`\x82' > "$small_src"
+  # The active bucket allows PNG/JPEG/WebP/PDF with a 50 MiB cap in both storage modes.
+  cp "$small_src" "$big_src"
+  big_bytes="$(wc -c < "$big_src" | tr -d ' ')"
+  big_path="${big_dir}/${big_name}"
 
   log "TUS: POST $gw/storage/v1/upload/resumable ($bucket/$big_path, $big_bytes bytes)"
   local metadata post_headers location upload_url
-  metadata="bucketName $(tus_meta_b64 "$bucket"),objectName $(tus_meta_b64 "$big_path"),contentType $(tus_meta_b64 "video/mp4"),cacheControl $(tus_meta_b64 "3600")"
+  metadata="bucketName $(tus_meta_b64 "$bucket"),objectName $(tus_meta_b64 "$big_path"),contentType $(tus_meta_b64 "$big_content_type"),cacheControl $(tus_meta_b64 "3600")"
   post_headers="$(curl -sS -D - -o /dev/null -X POST "$gw/storage/v1/upload/resumable" \
     -H "Tus-Resumable: 1.0.0" -H "Upload-Length: ${big_bytes}" -H "Upload-Metadata: ${metadata}" \
     -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" -H "apikey: ${SERVICE_ROLE_KEY}")"
@@ -495,24 +526,22 @@ cmd_storage_test() {
   big_sha_dl="$(shasum -a 256 "$big_dl" | awk '{print $1}')"
   small_sha_src="$(shasum -a 256 "$small_src" | awk '{print $1}')"
   small_sha_dl="$(shasum -a 256 "$small_dl" | awk '{print $1}')"
-  [[ "$big_sha_src" == "$big_sha_dl" ]] && echo "PASS big object SHA-256 matches (${big_sha_src})" \
-    || echo "FAIL big object SHA-256 mismatch (src=${big_sha_src} dl=${big_sha_dl})"
+  [[ "$big_sha_src" == "$big_sha_dl" ]] && echo "PASS TUS object SHA-256 matches (${big_sha_src})" \
+    || echo "FAIL TUS object SHA-256 mismatch (src=${big_sha_src} dl=${big_sha_dl})"
   [[ "$small_sha_src" == "$small_sha_dl" ]] && echo "PASS small object SHA-256 matches (${small_sha_src})" \
     || echo "FAIL small object SHA-256 mismatch (src=${small_sha_src} dl=${small_sha_dl})"
 
-  log "Confirming both objects exist in MinIO (mc ls via a throwaway client on the staging network)"
-  local net
-  net="$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_SUPABASE}" --format '{{.Name}}' | head -n1)"
-  [[ -n "$net" ]] || die "Could not find the $PROJECT_SUPABASE compose network"
-  local mc_out
-  # --entrypoint sh: this image's default entrypoint is already `mc`, so an unoverridden `sh -c
-  # "..."` is parsed as arguments to `mc` itself ("`sh` is not a recognized command") rather than
-  # as a shell invocation — reproduced against this exact image.
-  mc_out="$(docker run --rm --network "$net" --entrypoint sh cgr.dev/chainguard/minio-client:latest-dev -c \
-    "mc alias set staging http://minio:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}' >/dev/null && mc ls --recursive staging/${GLOBAL_S3_BUCKET}")"
-  echo "$mc_out" | grep -q "$big_name" && echo "PASS big object present in MinIO" || echo "FAIL big object not found in MinIO listing"
-  echo "$mc_out" | grep -q "$small_name" && echo "PASS small object present in MinIO" || echo "FAIL small object not found in MinIO listing"
-  echo "This checks the historical MinIO/S3 rehearsal only. Production now uses filesystem Storage; its persistence and restore checks remain a separate release gate."
+  if [[ "$STAGING_STORAGE" == minio ]]; then
+    log "Confirming both objects exist in MinIO (mc ls via a throwaway client on the staging network)"
+    local net mc_out
+    net="$(docker network ls --filter "label=com.docker.compose.project=${PROJECT_SUPABASE}" --format '{{.Name}}' | head -n1)"
+    [[ -n "$net" ]] || die "Could not find the $PROJECT_SUPABASE compose network"
+    # --entrypoint sh: this image's default entrypoint is already `mc`.
+    mc_out="$(docker run --rm --network "$net" --entrypoint sh cgr.dev/chainguard/minio-client:latest-dev -c \
+      "mc alias set staging http://minio:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}' >/dev/null && mc ls --recursive staging/${GLOBAL_S3_BUCKET}")"
+    echo "$mc_out" | grep -q "$big_name" && echo "PASS TUS object present in MinIO" || echo "FAIL TUS object not found in MinIO listing"
+    echo "$mc_out" | grep -q "$small_name" && echo "PASS small object present in MinIO" || echo "FAIL small object not found in MinIO listing"
+  fi
 
   log "Confirming an anonymous request cannot read the objects"
   local anon_code
@@ -535,7 +564,7 @@ cmd_storage_test() {
 cmd_provision_fixtures() {
   load_env
   command -v python3 >/dev/null || die "python3 is required"
-  python3 "$SCRIPT_DIR/provision_fixtures.py"
+  STAGING_STORAGE="$STAGING_STORAGE" python3 "$SCRIPT_DIR/provision_fixtures.py"
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -555,14 +584,20 @@ cmd_down() {
   compose_app stop
   log "Stopping $PROJECT_SUPABASE (containers and volumes retained, not removed)"
   compose_supabase stop
+  local supabase_teardown
+  if [[ "$STAGING_STORAGE" == minio ]]; then
+    supabase_teardown="docker compose -p ${PROJECT_SUPABASE} --env-file ${ENV_FILE} -f ${WORK_DOCKER_DIR}/docker-compose.yml -f ${WORK_DOCKER_DIR}/docker-compose.s3.yml -f ${STAGING_DIR}/compose.supabase.override.yml down -v"
+  else
+    supabase_teardown="docker compose -p ${PROJECT_SUPABASE} --env-file ${ENV_FILE} -f ${WORK_DOCKER_DIR}/docker-compose.yml -f ${STAGING_DIR}/compose.filesystem.override.yml down -v"
+  fi
   cat <<EOF
 
 Stopped, not removed. Resume with:
-  $0 up && $0 app-up
+  STAGING_STORAGE=$STAGING_STORAGE $0 up && STAGING_STORAGE=$STAGING_STORAGE $0 app-up
 
-Full teardown (irreversible — destroys the Postgres data dir and MinIO volume):
+Full teardown (irreversible — destroys this mode's Postgres data and Storage volume):
   docker compose -p ${PROJECT_APP} --env-file ${ENV_FILE} -f ${STAGING_DIR}/compose.app.yml down -v
-  docker compose -p ${PROJECT_SUPABASE} --env-file ${ENV_FILE} -f ${WORK_DOCKER_DIR}/docker-compose.yml -f ${WORK_DOCKER_DIR}/docker-compose.s3.yml -f ${STAGING_DIR}/compose.supabase.override.yml down -v
+  ${supabase_teardown}
   rm -rf ${WORK_DIR}   # only after both 'down -v' above; deletes generated secrets too
 EOF
 }
@@ -570,17 +605,18 @@ EOF
 usage() {
   cat <<EOF
 Usage: $0 <command>
+Set STAGING_STORAGE=file to select the isolated filesystem rehearsal (default: minio).
 
   fetch          sparse-clone the pinned upstream docker/ directory (see PINNED_SHA in this file)
   prepare [--force]
-                 generate secrets + working copy (.work/.env, .work/docker) — refuses to clobber
+                 generate secrets + selected working copy — refuses to clobber
   up             pull images, start the staging Supabase stack, wait for health
   migrate        supabase db push against the staging Postgres; list recorded migration versions
-  app-build      build dawes-studios-web:staging and dawes-studios-media:staging
+  app-build      build web/media images under the selected mode's local tags
   app-up         start the staging web/media containers
   verify         header/health checks (production checklist step 4)
   bootstrap      create + promote the first agency user; prove login, agency-only REST, no sign-up
-  storage-test   TUS + standard upload through MinIO; SHA-256 compare; anon read denied
+  storage-test   TUS + standard upload; SHA-256 compare; anon read denied
   provision-fixtures
                  fixture Auth passwords + Storage objects for supabase/seed.sql's canonical
                  dataset (apply the seed with psql first); checks the 10 clients/25 projects counts

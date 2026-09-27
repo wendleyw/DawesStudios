@@ -7,13 +7,13 @@ on:
 
 jobs:
   static:
-    name: Types, lint, formatting and unit tests
+    name: Types, lint, formatting, unit tests and production build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Install web dependencies
         run: npm ci --prefix apps/web
       - name: Install media dependencies
@@ -22,6 +22,11 @@ jobs:
         run: npm run check
       - name: Media unit tests
         run: npm --prefix apps/media test
+      - name: Production web build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:55421
+          NEXT_PUBLIC_MEDIA_URL: http://127.0.0.1:55430
 
 # The browser suite is deliberately absent from this workflow.
 #

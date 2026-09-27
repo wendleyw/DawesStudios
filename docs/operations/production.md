@@ -53,7 +53,7 @@ The local `supabase/config.toml` values are the tested behaviour. Carry them ove
 | Anonymous users | disabled | `ENABLE_ANONYMOUS_USERS=false` |
 | Password policy | 12 characters; lower, upper, digit, symbol | Auth service `GOTRUE_PASSWORD_MIN_LENGTH=12`, plus the matching required-character setting (verify on staging) |
 | Max rows per request | `max_rows = 1000` | `PGRST_DB_MAX_ROWS=1000` on the REST service |
-| Upload ceiling | `file_size_limit = "1GiB"` | Storage `FILE_SIZE_LIMIT=1073741824`. `internal-assets` still carries this legacy ceiling from the retired video-design path (`202609210004_video_storage.sql`); the official 50 MB default would silently reject it below its own bucket setting. |
+| Upload ceiling | `file_size_limit = "50MiB"` | Storage `FILE_SIZE_LIMIT=52428800`; active uploads are at most 50 MiB, and covers retain their narrower 10 MiB bucket limit. Migration `202609270017` removes the retired video allowance from working files. |
 
 Buckets, per-bucket size and MIME limits, RLS policies and the Realtime publication are all
 created by the migrations. Do not create them by hand.
@@ -76,16 +76,20 @@ FILE_STORAGE_BACKEND_PATH: /var/lib/storage
 
 Upstream mounts `./volumes/storage:/var/lib/storage:z`. Keep that host directory on persistent
 disk, outside disposable release directories, and preserve it across container replacement.
+The filesystem must support extended attributes; verify an actual upload on the selected disk.
+Docker Desktop on macOS failed this check for a host bind mount (`ENOTSUP`), so the local file
+rehearsal uses the persistent Linux volume `dawes-staging-file_staging-storage`, shared by Storage
+and imgproxy. That local volume does not prove support on a future production host.
 Keep `GLOBAL_S3_BUCKET` stable too: despite its name, upstream also uses it as a directory name
 with the file backend. No external S3 credentials, object-tagging workaround or bucket lifecycle
 rule is required. The distribution's `S3_PROTOCOL_ACCESS_KEY_*` values configure its own protocol
 endpoint and are separate from external storage-provider credentials.
 
-Set `FILE_SIZE_LIMIT: 1073741824` on `storage` through a Compose override. Upstream hardcodes
-50 MiB, so adding a value only to `.env` does not change the service. The existing staging
-override demonstrates that limit override, but its MinIO/S3 topology is historical and must not
-be copied as the new production storage configuration. Verify actual uploads, restart persistence
-and restoration on the filesystem-backed server before release.
+Set `FILE_SIZE_LIMIT: 52428800` on `storage` through a Compose override. Adding a value only to
+`.env` does not change upstream's hardcoded service setting. The filesystem staging override
+implements this value; its isolated rehearsal is selected with `STAGING_STORAGE=file`.
+Verify actual uploads, restart persistence and restoration on the filesystem-backed server
+before release. Retained MinIO/S3 results are historical compatibility evidence.
 
 The application does not use Storage image transformations, so `imgproxy` may stay disabled.
 
@@ -146,15 +150,21 @@ docker compose exec media df -h /scratch   # verify free scratch space for cover
 
 `NEXT_PUBLIC_*` values are baked in at build time, so rebuild after changing them. The web Content-Security-Policy is derived from the same two origins (Supabase and media, including the `wss:` Realtime origin), so a URL change also needs a rebuild. Both services
 bind to `127.0.0.1` and run read-only as non-root with every capability dropped. They are
-reachable only through the proxy. Tag each release image with its commit
-(`docker tag dawes-studios-web:local dawes-studios-web:<sha>`, and the same for media) so you
-can roll back.
+reachable only through the proxy. Select each release using `WEB_IMAGE` and `MEDIA_IMAGE` in
+`.env.production`, preferably immutable registry digest references. For local rehearsals, commit
+specific tags also work. Start selected, already built images with:
 
-The `internal-assets` bucket still carries a 1 GiB ceiling left over from the retired video-design
-path (see the Upload ceiling row above); keep production's `FILE_SIZE_LIMIT` at least that high to
-match it. `compose.yaml`'s own comment on this still names the removed `/designs/sanitize-video` and
-`/publications/prepare` media routes and a since-deleted `apps/media/src/sanitize.js` constant —
-that comment needs its own cleanup pass, tracked separately from this guide.
+```bash
+docker compose --env-file .env.production up -d --no-build --wait web media
+```
+
+Keep the previous references and build-time public origins with the release record. To roll
+back application containers, restore those references and run the same command. Do not build
+into the previous release's tags; database migrations are forward-only and need separate
+compatibility review. Defaults remain `dawes-studios-web:local` and `dawes-studios-media:local`.
+
+The working-file limit now matches the UI: 50 MiB, PNG/JPEG/WebP/PDF. Historical objects and
+attestations remain readable. This per-file cap does not bound total disk consumption.
 
 ### Competitor ad previews (optional)
 
@@ -196,6 +206,12 @@ the public interface, and reach them through an SSH tunnel.
   role checks (agency and client login, a forbidden internal-board read, an authorized download
   with a matching SHA-256). The local `restore_drill.py` is local-only evidence, not a production
   restore command or proof that the server's volumes, permissions and backups are correct.
+  Preserve owners and ACLs; the filesystem rehearsal proved that restoring without privileges
+  breaks authenticated reads. Its ordinary `postgres` role could not restore objects owned by
+  `supabase_admin`, so use the trusted Supabase administrative restore role in the isolated target.
+  Reconcile the empty target's default `public` schema before replaying a dump that creates it.
+  See the [same-host offline recovery evidence](../verification/preproduction-hardening-2026-09-27.md);
+  it does not replace an off-host HTTP/Auth recovery drill.
 - **Monitoring:** watch container health (web `/login`, media `/health`), host disk (Postgres
   volume, Storage directory and `media-scratch`), Postgres, Auth and SMTP errors, and the media
   4xx/5xx rates. Miro-hosted board content is outside the application's database/file backups.
@@ -209,8 +225,8 @@ Record the results in `docs/verification/` before serving clients. This is the J
 2. `npm run build` and `docker compose build` succeed. Both containers report healthy.
 3. Staging uses the production topology: self-hosted Supabase with persistent filesystem Storage,
    the web/media containers and the TLS proxy. The existing [local rehearsal](../../deploy/staging/README.md)
-   uses MinIO/S3 and records historical evidence; it does not yet verify this revised topology.
-   Verify upload/download authorization, persistence across container replacement and off-host
+   offers an isolated `STAGING_STORAGE=file` mode; the default MinIO mode retains historical
+   evidence. Verify upload/download authorization, persistence across container replacement and off-host
    restoration on the filesystem backend. R2 and S3 object-tagging checks are not release gates.
 4. The browser suite runs against staging with `ACCEPTANCE_SUPABASE_URL` plus
    `ACCEPTANCE_SUPABASE_SERVICE_ROLE_KEY`, `ACCEPTANCE_SUPABASE_ANON_KEY` and
@@ -238,6 +254,10 @@ charge a card.
 The 2026-09-23 security audit found no dependency advisories (`npm audit`: 0 for web and media)
 and no leaked secrets in the 155 commits of history (gitleaks). These operational gaps remain:
 
+- **Aggregate upload capacity.** The 50 MiB per-file cap does not enforce workspace or installation
+  quotas. A repeated uploader can still exhaust disk. Implement atomic server-side capacity
+  reservations across all upload paths, including retries and uncertain Storage responses; an RLS
+  count-before-insert check alone is insufficient. Until verified, this remains a release gap.
 - **Rate limiting.** Nothing throttles requests per IP apart from the media worker's concurrency
   cap and the database limit on invitations. Add per-IP limits at the proxy, especially for
   `/auth/v1/token` and the media host.

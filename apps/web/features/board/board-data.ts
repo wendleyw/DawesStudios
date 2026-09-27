@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { chunkItems, fetchAllPages } from "@/features/shared/pagination";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { BoardCampaign } from "./board-layout";
 import { normalizeBoardView, type BoardView } from "./board-views";
@@ -110,30 +111,63 @@ function useBoardArtworkQuery(projectIds: string[]) {
     queryKey: ["board-thumbnails", session?.user.id, role, ids],
     enabled: !!session && !!role && ids.length > 0,
     staleTime: THUMBNAIL_STALE,
-    queryFn: async (): Promise<ProjectArtworkMap> => {
-      // The deliverable read and the cover read touch nothing in common, so they run as one round
-      // trip rather than two sequential ones.
-      const [deliverableRows, coverRows] = await Promise.all([
-        database.from("deliverables").select(DELIVERABLE_SELECT).in("project_id", ids),
-        database.from("project_covers").select(COVER_SELECT).in("project_id", ids),
-      ]);
+    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<ProjectArtworkMap> => {
+      async function readDeliverables(projectIds: string[]) {
+        return fetchAllPages(
+          async (from, to) =>
+            assertResult(
+              await database
+                .from("deliverables")
+                .select(DELIVERABLE_SELECT)
+                .in("project_id", projectIds)
+                .order("project_id")
+                .order("sort_order")
+                .order("id")
+                .range(from, to)
+                .abortSignal(signal),
+            ),
+          signal,
+        );
+      }
+      async function readCovers(projectIds: string[]) {
+        return fetchAllPages(
+          async (from, to) =>
+            assertResult(
+              await database
+                .from("project_covers")
+                .select(COVER_SELECT)
+                .in("project_id", projectIds)
+                .order("project_id")
+                .range(from, to)
+                .abortSignal(signal),
+            ),
+          signal,
+        );
+      }
+      const deliverableRows: Awaited<ReturnType<typeof readDeliverables>> = [];
+      const coverRows: Awaited<ReturnType<typeof readCovers>> = [];
+      for (const projectIds of chunkItems(ids)) {
+        const [deliverables, covers] = await Promise.all([
+          readDeliverables(projectIds),
+          readCovers(projectIds),
+        ]);
+        deliverableRows.push(...deliverables);
+        coverRows.push(...covers);
+      }
       const covers: ProjectCoverMap = {};
-      for (const row of assertResult(coverRows) as { project_id: string; storage_path: string }[])
-        covers[row.project_id] = row.storage_path;
+      for (const row of coverRows) covers[row.project_id] = row.storage_path;
       const coverPaths = [...new Set(Object.values(covers))];
       const urlByPath = new Map<string, string>();
-      if (coverPaths.length) {
+      for (const paths of chunkItems(coverPaths)) {
+        signal.throwIfAborted();
         const signed = assertResult(
-          await database.storage.from("project-covers").createSignedUrls(coverPaths, THUMBNAIL_TTL),
+          await database.storage.from("project-covers").createSignedUrls(paths, THUMBNAIL_TTL),
         );
+        signal.throwIfAborted();
         for (const item of signed)
           if (item.path && item.signedUrl) urlByPath.set(item.path, item.signedUrl);
       }
-      return resolveProjectArtwork(
-        fromDeliverableRows(assertResult(deliverableRows)),
-        covers,
-        urlByPath,
-      );
+      return resolveProjectArtwork(fromDeliverableRows(deliverableRows), covers, urlByPath);
     },
   };
 }

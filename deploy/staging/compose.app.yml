@@ -6,14 +6,14 @@
 # specific: image tags, ports, SUPABASE_INTERNAL_URL via host.docker.internal to the staging
 # Supabase gateway, APP_ORIGIN, and an empty MEDIA_ALLOWED_ORIGINS.
 #
-# Values come from the same deploy/staging/.work/.env that scripts/stage.sh prepare generates
-# (mode 0600, gitignored) — the "compose_app" values documented in deploy/staging/README.md.
+# Values come from the selected mode's generated .env (mode 0600, gitignored). The
+# WEB_IMAGE/MEDIA_IMAGE selectors can reference immutable release digests.
 
 name: dawes-staging-app
 
 services:
   web:
-    image: dawes-studios-web:staging
+    image: ${WEB_IMAGE:-dawes-studios-web:staging}
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
@@ -38,7 +38,7 @@ services:
       - "host.docker.internal:host-gateway"
 
   media:
-    image: dawes-studios-media:staging
+    image: ${MEDIA_IMAGE:-dawes-studios-media:staging}
     build:
       context: ../../apps/media
     ports:

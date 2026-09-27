@@ -190,6 +190,11 @@ is the key's canonical source of truth, not which module happens to read or writ
 site. The `moveProject` mutation (`board/use-board-card-positions.ts`) now calls `useInvalidateWorkspace()` for that reason
 instead of its former inline `queryClient.invalidateQueries({ queryKey: ["projects"] })`.
 
+`useProjects()` reads the full authorized list in ordered 500-row pages (creation time descending,
+then ID descending), so boards and project totals remain complete past Supabase's 1,000-row API
+ceiling. For designers it also pages the role-scoped board dates before applying the earliest
+internal due date. React Query cancellation reaches both reads.
+
 **Naming note for the next reader:** `features/settings/settings-data.ts` used to also export a
 function named `useInvalidateWorkspace()`, for its own "Workspace" domain (the singleton studio
 name/timezone settings screen). The two never collided at the type or build level — different

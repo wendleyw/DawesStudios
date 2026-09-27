@@ -26,9 +26,12 @@ unambiguous, and every role may read campaigns (`campaigns_read` on `private.can
 this needs no second query or role branch. `findAssetByStoragePath`, `removeUnusedUpload`,
 `uploadInternalAsset`, `recordProjectAsset` and `markProjectDelivered` were relocated from
 `upload-file-dialog.tsx` and `assets-page.tsx` during the small-features migration (task 15).
+The hook pages projects and each file/link table in 500-row requests, then reads related rows in
+100-project ID groups. Project IDs and file creation time have stable ordering across pages; the
+client role still skips working-file reads, and only client-channel Drive links are requested.
 
 Each file is a `FileCard` (`file-card.tsx`). A raster image (PNG, JPEG, WebP, GIF) shows its own
-preview: `useAssetPreviews` signs every image in the list, one `createSignedUrls` request per bucket,
+preview: `useAssetPreviews` signs every image in the list, in at most 100 paths per `createSignedUrls` request,
 for ten minutes, the board thumbnails' revocation window, and the page signs the whole list rather
 than the filtered one so filtering never re-signs. Every file in the list already came through the
 viewer's role-scoped read, so a client is only ever signed deliveries. Any other file shows an

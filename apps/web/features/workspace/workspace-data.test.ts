@@ -1,11 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import {
   designerDueDate,
   markNotificationsRead,
   unreadNotificationCount,
+  useProjects,
   withDesignerDueDates,
   type Project,
 } from "./workspace-data";
+
+const auth = vi.hoisted(() => ({ database: null as unknown, role: "agency" }));
+vi.mock("@/features/auth/auth-provider", () => ({
+  useAuth: () => ({
+    database: auth.database,
+    session: { user: { id: "viewer" } },
+    profile: { role: auth.role },
+  }),
+}));
 
 type Result = { data: unknown; error: { message: string } | null };
 type Call = { method: string; args: unknown[] };
@@ -120,5 +133,120 @@ describe("a designer's due date", () => {
     expect(result.map((item) => item.due_date)).toEqual(["2026-10-04", "2026-11-01", "2026-10-10"]);
     // A project without a board date keeps its own object.
     expect(result[2]).toBe(projects[2]);
+  });
+});
+
+describe("useProjects pagination", () => {
+  afterEach(() => {
+    auth.role = "agency";
+  });
+
+  it("loads and orders more than 1,000 projects within the selected client", async () => {
+    const projects = Array.from({ length: 1_201 }, (_, index) => ({
+      id: `project-${String(1_200 - index).padStart(4, "0")}`,
+      client_id: "client-1",
+      created_at: "2026-09-27T00:00:00Z",
+    }));
+    const calls: {
+      table: string;
+      clientId?: string;
+      range?: [number, number];
+      orders: string[];
+    }[] = [];
+    auth.database = {
+      from: (table: string) => {
+        const call: {
+          table: string;
+          clientId?: string;
+          range?: [number, number];
+          orders: string[];
+        } = { table, orders: [] };
+        calls.push(call);
+        const chain = {
+          select: () => chain,
+          eq: (_column: string, value: string) => {
+            call.clientId = value;
+            return chain;
+          },
+          order: (column: string) => {
+            call.orders.push(column);
+            return chain;
+          },
+          range: (from: number, to: number) => {
+            call.range = [from, to];
+            return chain;
+          },
+          abortSignal: () => chain,
+          then: (resolve: (result: { data: typeof projects; error: null }) => unknown) =>
+            Promise.resolve({
+              data: projects.slice(call.range?.[0] ?? 0, (call.range?.[1] ?? 0) + 1),
+              error: null,
+            }).then(resolve),
+        };
+        return chain;
+      },
+    };
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        QueryClientProvider,
+        {
+          client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+        },
+        children,
+      );
+
+    const { result } = renderHook(() => useProjects("client-1"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.map((project) => project.id)).toEqual(
+      projects.map((project) => project.id),
+    );
+    expect(calls.map((call) => call.range)).toEqual([
+      [0, 499],
+      [500, 999],
+      [1000, 1499],
+    ]);
+    expect(calls.every((call) => call.clientId === "client-1")).toBe(true);
+    expect(calls.every((call) => call.orders.join(",") === "created_at,id")).toBe(true);
+  });
+
+  it("surfaces a database failure on a later page", async () => {
+    let page = 0;
+    auth.database = {
+      from: () => {
+        const chain = {
+          select: () => chain,
+          order: () => chain,
+          range: () => chain,
+          abortSignal: () => chain,
+          then: (resolve: (value: Result) => unknown) => {
+            page += 1;
+            return Promise.resolve(
+              page === 1
+                ? {
+                    data: Array.from({ length: 500 }, (_, index) => ({ id: `project-${index}` })),
+                    error: null,
+                  }
+                : { data: null, error: { message: "later page failed" } },
+            ).then(resolve);
+          },
+        };
+        return chain;
+      },
+    };
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        QueryClientProvider,
+        {
+          client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+        },
+        children,
+      );
+
+    const { result } = renderHook(() => useProjects(), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error?.message).toBe("later page failed");
+    expect(page).toBe(2);
   });
 });

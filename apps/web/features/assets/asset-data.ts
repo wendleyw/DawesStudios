@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { chunkItems, fetchAllPages } from "@/features/shared/pagination";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
@@ -105,12 +106,19 @@ export function useProjectAssets(clientId: string) {
   return useQuery({
     queryKey: ["assets", session?.user.id, clientId],
     enabled: !!session && !!profile,
-    queryFn: async () => {
-      const projectRows = assertResult(
-        await database
-          .from("projects")
-          .select("id,title,status,campaign_id,campaigns(id,title)")
-          .eq("client_id", clientId),
+    queryFn: async ({ signal }) => {
+      const projectRows = await fetchAllPages(
+        async (from, to) =>
+          assertResult(
+            await database
+              .from("projects")
+              .select("id,title,status,campaign_id,campaigns(id,title)")
+              .eq("client_id", clientId)
+              .order("id")
+              .range(from, to)
+              .abortSignal(signal),
+          ),
+        signal,
       );
       const projects: AssetProject[] = projectRows.map((row) => ({
         id: row.id,
@@ -123,34 +131,69 @@ export function useProjectAssets(clientId: string) {
       if (!projects.length) return { assets: [] as ProjectAsset[], projects };
       const ids = projects.map((project) => project.id);
       const assets: ProjectAsset[] = [];
-      const [deliveries, internal, driveLinks] = await Promise.all([
-        database.from("delivery_files").select("*").in("project_id", ids),
-        profile?.role !== "client"
-          ? database.from("project_assets").select("*").in("project_id", ids)
-          : Promise.resolve({ data: [], error: null }),
-        database
-          .from("project_drive_links")
-          .select("project_id,url")
-          .eq("channel", "client")
-          .in("project_id", ids),
-      ]);
-      assets.push(
-        ...assertResult(deliveries).map((file) =>
-          fromStoredFile(file, "delivery-files", "Delivery", true),
-        ),
-      );
-      assets.push(
-        ...assertResult(internal).map((file) =>
-          fromStoredFile(file, "internal-assets", "Working file", false),
-        ),
-      );
-      const driveUrlByProject = new Map(
-        assertResult(driveLinks).map((row) => [row.project_id, row.url]),
-      );
+      const driveUrlByProject = new Map<string, string>();
+      for (const projectIds of chunkItems(ids)) {
+        const [deliveries, internal, driveLinks] = await Promise.all([
+          fetchAllPages(
+            async (from, to) =>
+              assertResult(
+                await database
+                  .from("delivery_files")
+                  .select("*")
+                  .in("project_id", projectIds)
+                  .order("created_at", { ascending: false })
+                  .order("id")
+                  .range(from, to)
+                  .abortSignal(signal),
+              ),
+            signal,
+          ),
+          profile?.role !== "client"
+            ? fetchAllPages(
+                async (from, to) =>
+                  assertResult(
+                    await database
+                      .from("project_assets")
+                      .select("*")
+                      .in("project_id", projectIds)
+                      .order("created_at", { ascending: false })
+                      .order("id")
+                      .range(from, to)
+                      .abortSignal(signal),
+                  ),
+                signal,
+              )
+            : Promise.resolve([]),
+          fetchAllPages(
+            async (from, to) =>
+              assertResult(
+                await database
+                  .from("project_drive_links")
+                  .select("project_id,url")
+                  .eq("channel", "client")
+                  .in("project_id", projectIds)
+                  .order("project_id")
+                  .range(from, to)
+                  .abortSignal(signal),
+              ),
+            signal,
+          ),
+        ]);
+        assets.push(
+          ...deliveries.map((file) => fromStoredFile(file, "delivery-files", "Delivery", true)),
+        );
+        assets.push(
+          ...internal.map((file) => fromStoredFile(file, "internal-assets", "Working file", false)),
+        );
+        for (const row of driveLinks) driveUrlByProject.set(row.project_id, row.url);
+      }
       for (const project of projects) {
         project.driveUrl = driveUrlByProject.get(project.id) ?? null;
       }
-      return { assets: assets.toSorted((a, b) => b.date.localeCompare(a.date)), projects };
+      return {
+        assets: assets.toSorted((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)),
+        projects,
+      };
     },
   });
 }
@@ -254,21 +297,25 @@ export function useAssetPreviews(assets: ProjectAsset[]) {
     ],
     enabled: !!session && images.length > 0,
     staleTime: (PREVIEW_TTL - 300) * 1000,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const previews: Record<string, string> = {};
       const buckets = [...new Set(images.map((image) => image.bucket))];
       await Promise.all(
         buckets.map(async (bucket) => {
           const inBucket = images.filter((image) => image.bucket === bucket);
-          const signed = assertResult(
-            await database.storage.from(bucket).createSignedUrls(
-              inBucket.map((image) => image.path),
-              PREVIEW_TTL,
-            ),
-          );
-          for (const image of inBucket) {
-            const url = signed.find((item) => item.path === image.path)?.signedUrl;
-            if (url) previews[`${bucket}:${image.id}`] = url;
+          for (const batch of chunkItems(inBucket)) {
+            signal.throwIfAborted();
+            const signed = assertResult(
+              await database.storage.from(bucket).createSignedUrls(
+                batch.map((image) => image.path),
+                PREVIEW_TTL,
+              ),
+            );
+            signal.throwIfAborted();
+            for (const image of batch) {
+              const url = signed.find((item) => item.path === image.path)?.signedUrl;
+              if (url) previews[`${bucket}:${image.id}`] = url;
+            }
           }
         }),
       );
