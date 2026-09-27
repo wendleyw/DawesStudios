@@ -20,23 +20,24 @@ Earlier entries (Miro merge, Miro bar, board due dates, account ring): [history]
 **Project covers** ([spec](../superpowers/specs/2026-09-27-project-cover-design.md)): agency upload,
 sanitized by the media worker, "Visible to the client" toggle; board cards show cover or placeholder.
 **Retire Versions, phase 1** ([spec](../superpowers/specs/2026-09-27-retire-versions-design.md),
-`5d89e64..cddfa48`): every project renders only the Miro workspace; legacy canvas, uploads, pins and
-media publication routes deleted; e2e rewritten (`project-cover.spec.ts`). The DB was untouched.
+`5d89e64..cddfa48`): only the Miro workspace renders; legacy UI and media routes deleted.
 **Monthly credits** ([spec](../superpowers/specs/2026-09-27-monthly-credits-design.md),
 `6fe2291..4f867c9`, migrations `202609270003`–`0006`): per-client monthly plans, extras, transfers,
 lazy expiry; acceptance picks a month (current + 11); agency moves and settles a project's credits
-once with a reason; Credits page month switcher; header ring shows the current month. All four tasks
-reviewed; `monthly-credits.spec.ts` 5/5, `intake-admin` 6/6, unit 1174/1174 (this session).
+once with a reason; month switcher on Credits. Reviewed; `monthly-credits.spec.ts` 5/5.
 
-## In progress — Retire Versions, phase 2 (database)
+## In progress — Retire Versions, phase 5 acceptance (waiting for the user's reset approval)
 
-[Plan](../superpowers/plans/2026-09-27-retire-versions-phase-2.md). Task 1 (delete legacy rows, drop
-`designs`/`published_designs`, version `deliverable_id`, comment design/pin columns, legacy RPCs)
-dispatched from `4f867c9`; ledger in `.superpowers/sdd/2026-09-27-retire-versions-phase-2/`. Then
-Task 2 (storage cleanup script, drop `published-assets`), phase 3 (seed and SABRE demo in the Miro
-model), phase 4 (Drive link), phase 5 (rules, docs, full e2e, ONE approved reset + SABRE apply).
-After that: the user's all-roles audit goal (every role, text, badge, status, alignment).
-
+Phases 1–4 done and reviewed ([plans](../superpowers/plans/)): phase 2 dropped the legacy schema
+and data (`202609270007`) and 333 Storage objects, then `published-assets` (`0008`); phase 3 rebuilt
+the seed (staging-verified, 10 / 25) and SABRE on boards, rounds, client versions and covers, and
+backfilled the live overlay (50 covers, counts unchanged); phase 4 added the Drive link (`0009`,
+`0010`); phase 5 rewrote the rules, docs and tests (`7afacc2`, `3bf2527`, `43e6b2c`, `411a245`).
+The live overlay's rollback is superseded: `remove` refuses on it (legacy rows gone, manual boards);
+the approved fresh reset + SABRE apply makes a new checkpoint. Canonical-count specs fail on the
+overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py reset
+--confirm-local-data-loss`, verify canonical, SABRE apply, `remove --dry-run`, full e2e, record in
+`docs/verification/`. Then the all-roles audit goal.
 J10 staging: 68/72 pass (canonical); only SMTP remains.
 
 ## Accepted decisions
@@ -64,7 +65,7 @@ J10 staging: 68/72 pass (canonical); only SMTP remains.
 - Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
   `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
   (last done 2026-09-26 ~17:30, pid 91871). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609270006`; rebuilt
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609270010`; rebuilt
   2026-09-26 after the incident in history); media on 55430. Never `db reset` / `migration down`.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
