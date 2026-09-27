@@ -148,15 +148,55 @@ describe("board cover artwork", () => {
         version: null,
       });
       expect(createSignedUrls).toHaveBeenCalledWith(["project-covers/project-1/cover.png"], 600);
-      // project-2 has no cover, so today's rule still applies.
+      // project-2 has no cover, so today's rule still applies. Its legacy path is signed in the
+      // same design-bucket call as project-1's own legacy candidate (gathered as a fallback even
+      // though project-1's cover ends up winning).
       expect(result.current.data?.["project-2"]).toMatchObject({
         url: "https://private.test/project-2/design.png",
         version: 3,
       });
-      expect(createSignedUrls).toHaveBeenCalledWith(["project-2/design.png"], 600);
+      expect(createSignedUrls).toHaveBeenCalledWith(
+        ["project-1/design.png", "project-2/design.png"],
+        600,
+      );
       unmount();
       queryClient.clear();
     });
+
+  it("falls back to the legacy design and its own version when the cover's signature is missing", async () => {
+    auth.profile.role = "agency";
+    const rows = [deliverableRow("project-1", "project-1/design.png")];
+    const coverRows = [
+      { project_id: "project-1", storage_path: "project-covers/project-1/cover.png" },
+    ];
+    const from = vi.fn((table: string) =>
+      table === "project_covers" ? coversTable(coverRows) : deliverablesTable(rows),
+    );
+    // The design bucket signs normally; the covers bucket returns no match for the one path asked
+    // for, standing in for a partial `createSignedUrls` failure on that path.
+    const designSignedUrls = vi.fn().mockResolvedValue({
+      data: [{ path: "project-1/design.png", signedUrl: "https://private.test/design.png" }],
+      error: null,
+    });
+    const coverSignedUrls = vi.fn().mockResolvedValue({ data: [], error: null });
+    const bucket = vi.fn((name: string) => ({
+      createSignedUrls: name === "project-covers" ? coverSignedUrls : designSignedUrls,
+    }));
+    auth.database = { from, storage: { from: bucket } };
+    const { result, unmount, queryClient } = renderArtwork(["project-1"]);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // The cover never resolved to a signed URL, so the card falls back to the legacy design and
+    // its own version rather than showing an empty image with no label.
+    expect(result.current.data?.["project-1"]).toEqual({
+      url: "https://private.test/design.png",
+      version: 3,
+      typeLabel: "Square",
+    });
+    expect(coverSignedUrls).toHaveBeenCalledWith(["project-covers/project-1/cover.png"], 600);
+    unmount();
+    queryClient.clear();
+  });
 
   it("reads project_covers with the same query for every role, unlike the split deliverable reads", async () => {
     auth.profile.role = "client";

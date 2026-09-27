@@ -4,6 +4,7 @@ import {
   formatTypeLabel,
   fromInternalRows,
   fromPublishedRows,
+  resolveProjectArtwork,
   selectProjectArtwork,
   type DeliverableArtwork,
 } from "./project-thumbnail";
@@ -42,8 +43,9 @@ describe("selectProjectArtwork", () => {
     ]);
     // V2 exists but carries nothing, so the card shows V1's image and says V1.
     expect(chosen["project-1"]).toEqual({
-      path: "project-1/one.png",
-      version: 1,
+      coverPath: null,
+      legacyPath: "project-1/one.png",
+      legacyVersion: 1,
       typeLabel: "Portrait Feed",
     });
   });
@@ -58,9 +60,9 @@ describe("selectProjectArtwork", () => {
         ],
       }),
     ]);
-    expect(chosen["project-1"]).toEqual({
-      path: "project-1/three.png",
-      version: 3,
+    expect(chosen["project-1"]).toMatchObject({
+      legacyPath: "project-1/three.png",
+      legacyVersion: 3,
       typeLabel: "Portrait Feed",
     });
   });
@@ -70,8 +72,9 @@ describe("selectProjectArtwork", () => {
       deliverable({ format: "guidelines", versions: [{ versionNumber: 2, designs: [] }] }),
     ]);
     expect(chosen["project-1"]).toEqual({
-      path: null,
-      version: null,
+      coverPath: null,
+      legacyPath: null,
+      legacyVersion: null,
       typeLabel: "Brand Guidelines",
     });
   });
@@ -96,9 +99,9 @@ describe("selectProjectArtwork", () => {
       }),
     ]);
     // The adaptation's V5 is a higher number, but it counts versions of a different deliverable.
-    expect(chosen["project-1"]).toEqual({
-      path: "project-1/one.png",
-      version: 1,
+    expect(chosen["project-1"]).toMatchObject({
+      legacyPath: "project-1/one.png",
+      legacyVersion: 1,
       typeLabel: "Portrait Feed",
     });
   });
@@ -127,10 +130,10 @@ describe("selectProjectArtwork", () => {
         ],
       }),
     ]);
-    expect(chosen["project-1"].path).toBe("project-1/second-a.png");
+    expect(chosen["project-1"].legacyPath).toBe("project-1/second-a.png");
   });
 
-  it("prefers a readable cover over any legacy design, and drops the version label", () => {
+  it("carries both a readable cover and today's legacy pick as separate candidates", () => {
     const chosen = selectProjectArtwork(
       [
         deliverable({
@@ -142,14 +145,14 @@ describe("selectProjectArtwork", () => {
       { "project-1": "project-covers/project-1/cover.png" },
     );
     expect(chosen["project-1"]).toEqual({
-      path: "project-covers/project-1/cover.png",
-      version: null,
+      coverPath: "project-covers/project-1/cover.png",
+      legacyPath: "project-1/one.png",
+      legacyVersion: 1,
       typeLabel: "Portrait Feed",
-      isCover: true,
     });
   });
 
-  it("keeps today's rule when the project has no readable cover", () => {
+  it("carries no cover candidate when the project has no readable cover", () => {
     const chosen = selectProjectArtwork(
       [
         deliverable({
@@ -161,9 +164,20 @@ describe("selectProjectArtwork", () => {
       { "project-2": "project-covers/project-2/cover.png" },
     );
     expect(chosen["project-1"]).toEqual({
-      path: "project-1/one.png",
-      version: 1,
+      coverPath: null,
+      legacyPath: "project-1/one.png",
+      legacyVersion: 1,
       typeLabel: "Portrait Feed",
+    });
+  });
+
+  it("still carries a readable cover for a project with no deliverable row at all", () => {
+    const chosen = selectProjectArtwork([], { "project-1": "project-covers/project-1/cover.png" });
+    expect(chosen["project-1"]).toEqual({
+      coverPath: "project-covers/project-1/cover.png",
+      legacyPath: null,
+      legacyVersion: null,
+      typeLabel: null,
     });
   });
 
@@ -177,8 +191,107 @@ describe("selectProjectArtwork", () => {
       }),
       deliverable({ projectId: "project-2", format: "a4", versions: [] }),
     ]);
-    expect(chosen["project-1"].version).toBe(2);
-    expect(chosen["project-2"]).toEqual({ path: null, version: null, typeLabel: "A4" });
+    expect(chosen["project-1"].legacyVersion).toBe(2);
+    expect(chosen["project-2"]).toEqual({
+      coverPath: null,
+      legacyPath: null,
+      legacyVersion: null,
+      typeLabel: "A4",
+    });
+  });
+});
+
+describe("resolveProjectArtwork", () => {
+  it("shows the cover when it signed, and drops the version label", () => {
+    const candidates = selectProjectArtwork(
+      [
+        deliverable({
+          versions: [
+            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+          ],
+        }),
+      ],
+      { "project-1": "project-covers/project-1/cover.png" },
+    );
+    const urlByPath = new Map([
+      ["project-covers/project-1/cover.png", "https://signed/cover.png"],
+      ["project-1/one.png", "https://signed/one.png"],
+    ]);
+    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
+      url: "https://signed/cover.png",
+      version: null,
+      typeLabel: "Portrait Feed",
+    });
+  });
+
+  it("falls back to the legacy design and its own version when the cover's signature is missing", () => {
+    const candidates = selectProjectArtwork(
+      [
+        deliverable({
+          versions: [
+            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+          ],
+        }),
+      ],
+      { "project-1": "project-covers/project-1/cover.png" },
+    );
+    // The cover candidate exists but never made it into urlByPath — signing omitted or failed it.
+    const urlByPath = new Map([["project-1/one.png", "https://signed/one.png"]]);
+    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
+      url: "https://signed/one.png",
+      version: 4,
+      typeLabel: "Portrait Feed",
+    });
+  });
+
+  it("falls back to the placeholder when neither candidate signed", () => {
+    const candidates = selectProjectArtwork(
+      [
+        deliverable({
+          versions: [
+            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+          ],
+        }),
+      ],
+      { "project-1": "project-covers/project-1/cover.png" },
+    );
+    expect(resolveProjectArtwork(candidates, new Map())["project-1"]).toEqual({
+      url: null,
+      version: null,
+      typeLabel: "Portrait Feed",
+    });
+  });
+
+  it("keeps today's rule unchanged when there is no cover candidate at all", () => {
+    const candidates = selectProjectArtwork([
+      deliverable({
+        versions: [
+          { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
+        ],
+      }),
+    ]);
+    const urlByPath = new Map([["project-1/one.png", "https://signed/one.png"]]);
+    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
+      url: "https://signed/one.png",
+      version: 4,
+      typeLabel: "Portrait Feed",
+    });
+  });
+
+  it("names a video candidate's version without a signed URL, cover candidate absent", () => {
+    const candidates = selectProjectArtwork([
+      deliverable({
+        versions: [
+          { versionNumber: 2, designs: [{ id: "d1", sortOrder: 0, path: "project-1/clip.mp4" }] },
+        ],
+      }),
+    ]);
+    expect(resolveProjectArtwork(candidates, new Map())["project-1"]).toEqual({
+      url: null,
+      version: 2,
+      isVideo: true,
+      typeLabel: "Portrait Feed",
+    });
   });
 });
 
@@ -204,9 +317,9 @@ describe("channel mapping", () => {
     expect(mapped[0].versions[0].designs).toEqual([
       { id: "d2", sortOrder: 1, path: "project-1/two.png" },
     ]);
-    expect(selectProjectArtwork(mapped)["project-1"]).toEqual({
-      path: "project-1/two.png",
-      version: 2,
+    expect(selectProjectArtwork(mapped)["project-1"]).toMatchObject({
+      legacyPath: "project-1/two.png",
+      legacyVersion: 2,
       typeLabel: "Portrait Feed",
     });
   });
@@ -229,9 +342,9 @@ describe("channel mapping", () => {
         ],
       },
     ]);
-    expect(selectProjectArtwork(mapped)["project-1"]).toEqual({
-      path: "project-1/published.png",
-      version: 1,
+    expect(selectProjectArtwork(mapped)["project-1"]).toMatchObject({
+      legacyPath: "project-1/published.png",
+      legacyVersion: 1,
       typeLabel: "Portrait Feed",
     });
   });

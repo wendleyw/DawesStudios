@@ -2,6 +2,7 @@
 
 import { ImageIcon, Play } from "lucide-react";
 import { formats } from "@/features/briefings/briefing-model";
+import { isVideoAsset } from "@/features/shared/upload-rules";
 
 /**
  * Artwork for the project cards on the board canvas, together with the version and the deliverable
@@ -24,10 +25,14 @@ import { formats } from "@/features/briefings/briefing-model";
  * Every bucket is private, so the cards are shown through short-lived signed URLs, the same
  * mechanism the brand asset previews use.
  *
- * The image and the number it is labelled with come out of one query and one selection, so a card
- * can never announce a version it is not actually showing. Where the image is missing — because
- * there is no artwork, because signing it failed, or because it is a cover — the version goes with
- * it (absent for a cover, dropped otherwise).
+ * The image and the number it is labelled with come out of one selection, so a card can never
+ * announce a version it is not actually showing. That selection happens in two steps rather than
+ * one, because a cover can fail to sign independently of whether a legacy design exists:
+ * `selectProjectArtwork` gathers both candidates — the cover path and today's role-based
+ * design/published pick — before either has been signed, and `resolveProjectArtwork` is the one
+ * place that then picks between them, once it knows which paths actually signed. A cover that
+ * fails to sign therefore falls back to the legacy candidate (with its own version, or none), never
+ * to an empty image with a silently dropped version.
  */
 
 /**
@@ -51,19 +56,28 @@ type VersionArtwork = {
   designs: { id: string; sortOrder: number; path: string }[];
 };
 
-/** What one card needs, before the storage path has been signed. */
-type ProjectArtwork = {
-  path: string | null;
-  version: number | null;
+/**
+ * What one card needs, before either candidate path has been signed: the project's readable cover,
+ * if any, and today's role-based design/published pick, kept apart so a failed cover signature can
+ * fall back to the legacy pick's own path and version rather than losing both.
+ */
+type ProjectArtworkCandidate = {
+  /** The project's readable cover path (`project_covers.storage_path`), or null when this viewer
+   * has none to read. Always a still PNG, so it is never a video candidate. */
+  coverPath: string | null;
+  /** Today's role-based pick: the leading deliverable's newest artwork-bearing version, or a null
+   * path when nothing has been drawn yet. */
+  legacyPath: string | null;
+  legacyVersion: number | null;
   typeLabel: string | null;
-  /** Set when `path` is a cover's storage path, so the caller signs it against `project-covers`
-   * rather than the role's design bucket, and never treats it as a video asset. */
-  isCover?: boolean;
 };
+
+export type ProjectArtworkCandidateMap = Record<string, ProjectArtworkCandidate>;
 
 /** A project's readable cover, as `project_covers.storage_path`, keyed by project id. Board's read
  * (`board-data.ts`) already scoped the row to what this viewer's role may see through the table's
- * own row-level security, so every entry here is chosen unconditionally. */
+ * own row-level security, so every entry here is a candidate, not yet a chosen image: signing can
+ * still fail for it (see `resolveProjectArtwork`). */
 export type ProjectCoverMap = Record<string, string>;
 
 /** What one card needs, ready to render. */
@@ -148,31 +162,69 @@ function leadingDesign(designs: VersionArtwork["designs"]) {
 }
 
 /**
- * The one image, version and type label each project's card should carry.
+ * The image and version candidates each project's card could carry, gathered before either has
+ * been signed.
  *
  * The type label stands on its own — it describes the work whether or not anything has been drawn
- * yet — while the path and the version are decided together and are returned together or not at
- * all. A readable cover (`covers[projectId]`) always wins here, ahead of any legacy design or
- * published artwork, and carries no version: `newestArtworkVersion`/`leadingDesign` are not even
- * consulted for that project. Without a cover, today's rule applies unchanged.
+ * yet — while a candidate's path and version are decided together. This stops short of the actual
+ * choice: `resolveProjectArtwork` makes it, once signing has told it which candidate is real.
+ *
+ * A project with a readable cover but no deliverable row at all (a defensive case; every project
+ * briefed today has at least one) still gets an entry, cover-only, rather than being dropped from
+ * the map.
  */
-export function selectProjectArtwork(rows: DeliverableArtwork[], covers: ProjectCoverMap = {}) {
-  const chosen: Record<string, ProjectArtwork> = {};
+export function selectProjectArtwork(
+  rows: DeliverableArtwork[],
+  covers: ProjectCoverMap = {},
+): ProjectArtworkCandidateMap {
+  const chosen: ProjectArtworkCandidateMap = {};
   for (const [projectId, deliverable] of leadingDeliverable(rows)) {
-    const typeLabel = formatTypeLabel(deliverable.format);
-    const coverPath = covers[projectId];
-    if (coverPath) {
-      chosen[projectId] = { path: coverPath, version: null, typeLabel, isCover: true };
-      continue;
-    }
     const newest = newestArtworkVersion(deliverable.versions);
     const design = newest ? leadingDesign(newest.designs) : null;
-    chosen[projectId] =
-      newest && design
-        ? { path: design.path, version: newest.versionNumber, typeLabel }
-        : { path: null, version: null, typeLabel };
+    chosen[projectId] = {
+      coverPath: covers[projectId] ?? null,
+      legacyPath: newest && design ? design.path : null,
+      legacyVersion: newest && design ? newest.versionNumber : null,
+      typeLabel: formatTypeLabel(deliverable.format),
+    };
   }
+  for (const [projectId, coverPath] of Object.entries(covers))
+    if (!(projectId in chosen))
+      chosen[projectId] = { coverPath, legacyPath: null, legacyVersion: null, typeLabel: null };
   return chosen;
+}
+
+/**
+ * The one image, version and type label each project's card actually shows, once both candidates
+ * from `selectProjectArtwork` have had their turn to sign.
+ *
+ * A readable cover wins whenever its own signature succeeded (`urlByPath` has its path) — never a
+ * version, since a cover is not one. When the cover has no signed URL (there was none to begin
+ * with, or signing it failed), the legacy candidate takes over exactly as it did before covers
+ * existed: its own signed image and version, a video tile that names its version without signing a
+ * movie, or the placeholder. A losing candidate never lends its version to the other.
+ */
+export function resolveProjectArtwork(
+  candidates: ProjectArtworkCandidateMap,
+  urlByPath: Map<string, string>,
+): ProjectArtworkMap {
+  const artwork: ProjectArtworkMap = {};
+  for (const [projectId, candidate] of Object.entries(candidates)) {
+    const coverUrl = candidate.coverPath ? urlByPath.get(candidate.coverPath) : undefined;
+    if (coverUrl) {
+      artwork[projectId] = { url: coverUrl, version: null, typeLabel: candidate.typeLabel };
+      continue;
+    }
+    const video = isVideoAsset(candidate.legacyPath);
+    const legacyUrl = candidate.legacyPath ? urlByPath.get(candidate.legacyPath) : undefined;
+    artwork[projectId] = {
+      url: legacyUrl ?? null,
+      version: legacyUrl || video ? candidate.legacyVersion : null,
+      ...(video ? { isVideo: true } : {}),
+      typeLabel: candidate.typeLabel,
+    };
+  }
+  return artwork;
 }
 
 /** The internal channel, as `designs` + `design_versions` come back from one embedded read. */

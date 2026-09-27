@@ -10,6 +10,7 @@ import { normalizeBoardView, type BoardView } from "./board-views";
 import {
   fromInternalRows,
   fromPublishedRows,
+  resolveProjectArtwork,
   selectProjectArtwork,
   type DeliverableArtwork,
   type ProjectArtworkMap,
@@ -163,20 +164,21 @@ function useBoardArtworkQuery(projectIds: string[]) {
       for (const row of assertResult(coverRows) as { project_id: string; storage_path: string }[])
         covers[row.project_id] = row.storage_path;
 
-      const chosen = selectProjectArtwork(deliverables, covers);
+      // Both candidates per project — the cover and today's role-based pick — are gathered before
+      // either is signed, so a cover's signature failing below can still fall back to the legacy
+      // candidate's own path and version instead of losing both (`resolveProjectArtwork` decides).
+      const candidates = selectProjectArtwork(deliverables, covers);
       const designPaths = [
         ...new Set(
-          Object.values(chosen)
-            .filter((item) => !item.isCover)
-            .map((item) => item.path)
+          Object.values(candidates)
+            .map((item) => item.legacyPath)
             .filter((path): path is string => !!path && !isVideoAsset(path)),
         ),
       ];
       const coverPaths = [
         ...new Set(
-          Object.values(chosen)
-            .filter((item) => item.isCover)
-            .map((item) => item.path)
+          Object.values(candidates)
+            .map((item) => item.coverPath)
             .filter((path): path is string => !!path),
         ),
       ];
@@ -199,21 +201,7 @@ function useBoardArtworkQuery(projectIds: string[]) {
         for (const item of signed)
           if (item.path && item.signedUrl) urlByPath.set(item.path, item.signedUrl);
       }
-      const artwork: ProjectArtworkMap = {};
-      for (const [projectId, item] of Object.entries(chosen)) {
-        const url = item.path ? (urlByPath.get(item.path) ?? null) : null;
-        const video = !item.isCover && isVideoAsset(item.path);
-        // A video tile names the selected version without downloading the movie. Image signing
-        // failures still drop the version claim rather than labeling an empty image. A cover never
-        // carries a version at all — `selectProjectArtwork` already set it to null.
-        artwork[projectId] = {
-          url,
-          version: item.isCover ? null : url || video ? item.version : null,
-          ...(video ? { isVideo: true } : {}),
-          typeLabel: item.typeLabel,
-        };
-      }
-      return artwork;
+      return resolveProjectArtwork(candidates, urlByPath);
     },
   };
 }
