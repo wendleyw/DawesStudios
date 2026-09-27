@@ -3,16 +3,17 @@
  *
  * A project's versions arrive from one of two tables depending on the channel: `design_versions`
  * for the internal channel, `published_versions` for the client one. **The type split between
- * those two stays** — it is the channel boundary itself, and mixing an internal version number
- * with published artwork is the leak it prevents (see the header of
- * `projects/project-thumbnail.tsx`). What does not need stating twice is how to read the three
- * facts the two tables hold under different column names, which `projects/project-data.ts` and
- * `reviews/review-data.ts` each carried their own copy of.
+ * those two stays** — it is the channel boundary itself. What does not need stating twice is how
+ * to read the three facts the two tables hold under different column names.
+ *
+ * Consumers today: `projects/project-data.ts` (`versionNote`, `versionDate`, `versionStatus`) and
+ * the canonical e2e spec (`versionGroupKey`). Overview and Reviews read rounds and client versions
+ * with their own named columns and no longer use this module; drop each export once its last
+ * consumer goes.
  *
  * `published_versions` has no status column of its own: a published version's status lives on its
- * `publication_reviews` row, and the two callers reach that row differently — one by a separate
- * query, one by an embedded join. That difference is real, so the review status is passed in
- * rather than looked up here; only the `?? "pending"` default is shared.
+ * `publication_reviews` row, so the review status is passed in rather than looked up here; only
+ * the `?? "pending"` default is shared.
  */
 
 /** The internal channel's column names. */

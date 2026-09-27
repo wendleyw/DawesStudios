@@ -4,7 +4,6 @@ import {
   publishedVersionStatus,
   type ReviewRow,
 } from "@/features/reviews/review-data";
-import { versionGroupKey } from "@/features/shared/version-row";
 import type { Project } from "@/features/workspace/workspace-data";
 
 /** Rows per dashboard column; "See all" leads to the full list. */
@@ -114,57 +113,62 @@ export function clientOverview(input: {
   };
 }
 
-export type RawDesignerVersion = {
+export type RawDesignerRound = {
   id: string;
   project_id: string;
-  deliverable_id: string | null;
-  /** The design board a Miro-workspace round belongs to; null elsewhere. */
+  /** The design board the round belongs to; the read only returns rows that have one. */
   board_id: string | null;
   version_number: number;
   status: string;
   created_at: string;
 };
 
-export type DesignerVersion = {
+export type DesignerRound = {
   id: string;
   projectId: string;
   title: string;
-  deliverable: string;
-  version: number;
+  /** "Board name · Round N". */
+  label: string;
   status: string;
   date: string;
 };
 
+/** The label a round is listed under: its design board's name and its number on that board. */
+export function roundLabel(boardName: string | undefined, roundNumber: number): string {
+  return `${boardName ?? "Design board"} · Round ${roundNumber}`;
+}
+
 /**
- * Each deliverable's latest version on the designer's projects. A version shared with the client
+ * Each design board's latest round on the designer's projects. A round shared with the client
  * takes the client's decision from its project (`publishedVersionStatus`), so a share the client
- * sent back reads as changes requested.
+ * sent back reads as changes requested. A row without a board is not a round and is skipped.
  */
-export function designerVersions(
-  versions: RawDesignerVersion[],
-  deliverables: { id: string; name: string }[],
+export function designerRounds(
+  rounds: RawDesignerRound[],
+  boards: { id: string; name: string }[],
   projects: Project[],
-): DesignerVersion[] {
-  const latest = new Map<string, RawDesignerVersion>();
-  for (const version of versions) {
-    const key = versionGroupKey(version);
-    const current = latest.get(key);
-    if (!current || current.version_number < version.version_number) latest.set(key, version);
+): DesignerRound[] {
+  const latest = new Map<string, RawDesignerRound>();
+  for (const round of rounds) {
+    if (!round.board_id) continue;
+    const current = latest.get(round.board_id);
+    if (!current || current.version_number < round.version_number)
+      latest.set(round.board_id, round);
   }
-  return [...latest.values()].flatMap((version) => {
-    const project = projects.find((item) => item.id === version.project_id);
+  return [...latest.values()].flatMap((round) => {
+    const project = projects.find((item) => item.id === round.project_id);
     if (!project) return [];
     return [
       {
-        id: version.id,
+        id: round.id,
         projectId: project.id,
         title: project.title,
-        deliverable: version.deliverable_id
-          ? (deliverables.find((item) => item.id === version.deliverable_id)?.name ?? "Deliverable")
-          : "Design board round",
-        version: version.version_number,
-        status: publishedVersionStatus(version.status, project.status),
-        date: version.created_at,
+        label: roundLabel(
+          boards.find((board) => board.id === round.board_id)?.name,
+          round.version_number,
+        ),
+        status: publishedVersionStatus(round.status, project.status),
+        date: round.created_at,
       },
     ];
   });
@@ -176,25 +180,25 @@ export type DesignerOverview = {
   inStudioReview: number;
   deliveredThisMonth: number;
   moving: Project[];
-  yourTurnRows: DesignerVersion[];
+  yourTurnRows: DesignerRound[];
   delivered: Project[];
 };
 
 /** Everything the designer's `/home` shows, over the projects their assignments admit. */
 export function designerOverview(input: {
   projects: Project[];
-  versions: DesignerVersion[];
+  rounds: DesignerRound[];
   now: Date;
   formatMonth: MonthFormatter;
 }): DesignerOverview {
   const active = input.projects.filter((project) => project.status !== "delivered");
   const delivered = input.projects.filter((project) => project.status === "delivered");
   const month = input.formatMonth(input.now.toISOString());
-  const sentBack = input.versions.filter((version) => version.status === "changes_requested");
+  const sentBack = input.rounds.filter((round) => round.status === "changes_requested");
   return {
     active: active.length,
     yourTurn: sentBack.length,
-    inStudioReview: input.versions.filter((version) => version.status === "submitted").length,
+    inStudioReview: input.rounds.filter((round) => round.status === "submitted").length,
     deliveredThisMonth: delivered.filter(
       (project) => input.formatMonth(deliveredOn(project)) === month,
     ).length,

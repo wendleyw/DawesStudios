@@ -2,24 +2,20 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { isVideoAsset } from "@/features/shared/upload-rules";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import type { BoardCampaign } from "./board-layout";
 import { normalizeBoardView, type BoardView } from "./board-views";
 import {
-  fromInternalRows,
-  fromPublishedRows,
+  fromDeliverableRows,
   resolveProjectArtwork,
-  selectProjectArtwork,
-  type DeliverableArtwork,
   type ProjectArtworkMap,
   type ProjectCoverMap,
 } from "./project-thumbnail";
 
 /**
- * Supabase access for the board: the campaigns a client's board is grouped by, the artwork shown
- * on each project's card, and moving a card to a stored canvas position.
+ * Supabase access for the board: the campaigns a client's board is grouped by, the cover and type
+ * label shown on each project's card, and moving a card to a stored canvas position.
  */
 
 /**
@@ -38,57 +34,19 @@ export const THUMBNAIL_TTL = 600;
 /** Refetch a little before the URLs expire rather than after a card has already gone blank. */
 const THUMBNAIL_STALE = (THUMBNAIL_TTL - 300) * 1000;
 
-/*
- * The two artwork reads. Each one names only the tables its role may touch, so the wrong channel is
- * never even asked for; row level security is what makes that a guarantee rather than a convention.
- * Deliverables lead both queries so a project without any artwork still comes back with its type.
+/**
+ * The type-label read: only the deliverable's scope columns, never a version or a design, so the
+ * same query is safe for every role.
  */
-const INTERNAL_SELECT =
-  "id, project_id, format, sort_order, design_versions(version_number, designs(id, sort_order, internal_asset_path))";
-const PUBLISHED_SELECT =
-  "id, project_id, format, sort_order, published_versions(version_number, published_designs(id, sort_order, asset_path))";
+const DELIVERABLE_SELECT = "id, project_id, format, sort_order";
 
 /**
  * The cover read, shared by every role: `public.project_covers`' own row-level security already
  * answers "may this viewer see it" (`private.can_produce`, or `private.can_client_channel` while
- * `client_visible`), so — unlike the deliverable queries above — this needs no `asClient` branch.
- * `updated_by` is not selected: it is not readable by `authenticated` and is not needed here.
+ * `client_visible`). `updated_by` is not selected: it is not readable by `authenticated` and is
+ * not needed here.
  */
 const COVER_SELECT = "project_id, storage_path";
-
-/**
- * The deliverable half of the board's artwork read, by role.
- *
- * Pulled out from `useBoardArtworkQuery` below so the ternary's two branches each resolve to
- * `DeliverableArtwork[]` on their own: inlined as one array element of a `Promise.all` pair with
- * the unrelated cover read, the two branches' distinct row shapes would otherwise widen to a union
- * that neither `fromPublishedRows` nor `fromInternalRows` accepts.
- */
-async function fetchDeliverableArtwork(
-  database: SupabaseDatabase,
-  ids: string[],
-  asClient: boolean,
-): Promise<DeliverableArtwork[]> {
-  return asClient
-    ? fromPublishedRows(
-        assertResult(
-          await database
-            .from("deliverables")
-            .select(PUBLISHED_SELECT)
-            .in("project_id", ids)
-            .not("published_versions.published_designs.asset_path", "is", null),
-        ),
-      )
-    : fromInternalRows(
-        assertResult(
-          await database
-            .from("deliverables")
-            .select(INTERNAL_SELECT)
-            .in("project_id", ids)
-            .not("design_versions.designs.internal_asset_path", "is", null),
-        ),
-      );
-}
 
 /** The campaigns inside one client's board, ordered for the campaign rail. */
 export function useBoardCampaigns(clientId: string) {
@@ -153,47 +111,17 @@ function useBoardArtworkQuery(projectIds: string[]) {
     enabled: !!session && !!role && ids.length > 0,
     staleTime: THUMBNAIL_STALE,
     queryFn: async (): Promise<ProjectArtworkMap> => {
-      const asClient = role === "client";
-      // The deliverable read and the cover read name different tables and touch nothing in
-      // common, so they run as one round trip rather than two sequential ones.
-      const [deliverables, coverRows] = await Promise.all([
-        fetchDeliverableArtwork(database, ids, asClient),
+      // The deliverable read and the cover read touch nothing in common, so they run as one round
+      // trip rather than two sequential ones.
+      const [deliverableRows, coverRows] = await Promise.all([
+        database.from("deliverables").select(DELIVERABLE_SELECT).in("project_id", ids),
         database.from("project_covers").select(COVER_SELECT).in("project_id", ids),
       ]);
       const covers: ProjectCoverMap = {};
       for (const row of assertResult(coverRows) as { project_id: string; storage_path: string }[])
         covers[row.project_id] = row.storage_path;
-
-      // Both candidates per project — the cover and today's role-based pick — are gathered before
-      // either is signed, so a cover's signature failing below can still fall back to the legacy
-      // candidate's own path and version instead of losing both (`resolveProjectArtwork` decides).
-      const candidates = selectProjectArtwork(deliverables, covers);
-      const designPaths = [
-        ...new Set(
-          Object.values(candidates)
-            .map((item) => item.legacyPath)
-            .filter((path): path is string => !!path && !isVideoAsset(path)),
-        ),
-      ];
-      const coverPaths = [
-        ...new Set(
-          Object.values(candidates)
-            .map((item) => item.coverPath)
-            .filter((path): path is string => !!path),
-        ),
-      ];
+      const coverPaths = [...new Set(Object.values(covers))];
       const urlByPath = new Map<string, string>();
-      if (designPaths.length) {
-        const signed = assertResult(
-          await database.storage
-            .from(asClient ? "published-assets" : "internal-assets")
-            .createSignedUrls(designPaths, THUMBNAIL_TTL),
-        );
-        for (const item of signed)
-          if (item.path && item.signedUrl) urlByPath.set(item.path, item.signedUrl);
-      }
-      // Covers live in their own private bucket, signed with a second, independent call: mixing a
-      // cover path into the design/published bucket call above would just fail to resolve it.
       if (coverPaths.length) {
         const signed = assertResult(
           await database.storage.from("project-covers").createSignedUrls(coverPaths, THUMBNAIL_TTL),
@@ -201,16 +129,20 @@ function useBoardArtworkQuery(projectIds: string[]) {
         for (const item of signed)
           if (item.path && item.signedUrl) urlByPath.set(item.path, item.signedUrl);
       }
-      return resolveProjectArtwork(candidates, urlByPath);
+      return resolveProjectArtwork(
+        fromDeliverableRows(assertResult(deliverableRows)),
+        covers,
+        urlByPath,
+      );
     },
   };
 }
 
 /**
- * Artwork, version and type label for a whole board, keyed by project id.
+ * Cover and type label for a whole board, keyed by project id.
  *
- * One query covers every card: twenty cards each fetching their own design row and signature
- * would be twenty round trips for a board that is read as a single surface.
+ * One query covers every card: twenty cards each fetching their own cover and signature would be
+ * twenty round trips for a board that is read as a single surface.
  */
 export function useProjectArtwork(projectIds: string[]) {
   return useQuery(useBoardArtworkQuery(projectIds));

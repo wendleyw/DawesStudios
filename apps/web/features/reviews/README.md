@@ -1,27 +1,30 @@
 # Reviews
 
 The page uses the shared floating client navigation/profile above a white title/action card on
-the plain page background. Review filters sit inside the title card; below it, each version is one
-line in a single bordered list: title, deliverable and version, the review note (full text in its
+the plain page background. Review filters sit inside the title card; below it, each row is one
+line in a single bordered list: title, label (`V<N>` for a client version, `<board name> · Round
+<N>` for a round), the review note (full text in its
 tooltip), a status badge and the date. The status column has a fixed width so columns align; below
-1000 px the note and date drop, and below 720 px the deliverable moves under the title. Version
+1000 px the note and date drop, and below 720 px the label moves under the title. Version
 statuses map onto the shared badge tones in `reviews-page.tsx`. The same layout adapts to desktop and mobile without duplicating client
 navigation in the sidebar.
 
-`reviews-page.tsx` lists the design versions currently in review: a designer's own in-progress
-versions, or (for an agency/client session) the published versions awaiting client review, plus,
-for an agency session, the versions a designer has submitted for internal studio review.
+`reviews-page.tsx` lists work on the Miro workspace model: a designer sees the latest round of each
+of their own design boards; the agency and the client see the latest client version of each
+project (awaiting or decided by the client); the agency also sees every round a designer has
+submitted for studio review (**Studio review**). No row carries a deliverable label.
 `inReviewTab` decides which tab shows a row. A client's **Waiting for you** holds only versions
 still waiting on their decision; a version they sent back is waiting on the studio and appears under
 **With the studio**, and an approved one under **Approved**.
 
 `review-data.ts` owns the feature's Supabase access, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useReviews` is
-the page's single read hook, relocated verbatim from the page's inline `useQuery` during the
-small-features migration (task 15) — same tables, filters, ordering and `refetchInterval`; its
-embedded review now also selects `reviewed_by,reviewed_at`. The feature has no writes, so it has no
-accompanying `<feature>-data.test.ts`: the contract's unit-testing requirement is for extracted
-write functions and for reads that cannot be hooks, and this feature's one read is a proper hook.
+the page's single read hook. Rounds are `design_versions` rows with a `board_id` (named columns;
+`created_by` is not readable), labelled through a `design_boards` read of `id,name`; client
+versions are `published_versions` rows with `deliverable_id is null`, embedding their
+`publication_reviews` decision (`status,reviewed_by,reviewed_at`). Both filters leave out the
+legacy per-deliverable versions still stored until they are deleted. A client session never reads
+`design_versions` or `design_boards`. `review-data.test.tsx` covers the three roles' reads.
 
 `isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,
 rather than in `reviews-page.tsx`, so another feature can read the tab rule without importing the

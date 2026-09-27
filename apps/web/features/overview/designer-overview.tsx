@@ -12,8 +12,8 @@ import {
   useDateFormat,
   useProjects,
 } from "@/features/workspace/workspace-data";
-import { useDesignerVersions } from "./overview-data";
-import { deliveredOn, designerOverview, designerVersions, relativeAge } from "./overview-model";
+import { useDesignerRounds } from "./overview-data";
+import { deliveredOn, designerOverview, designerRounds, relativeAge } from "./overview-model";
 import { OverviewPanel } from "./overview-panel";
 import "./overview.css";
 
@@ -23,15 +23,15 @@ export function DesignerOverview() {
   const clients = useClients();
   const projects = useProjects();
   // Nothing on a delivered project still waits on the designer or the studio, so only active
-  // projects need their versions read.
+  // projects need their rounds read.
   const activeProjectIds = projects.data
     ?.filter((project) => project.status !== "delivered")
     .map((project) => project.id);
-  const versions = useDesignerVersions(activeProjectIds);
+  const rounds = useDesignerRounds(activeProjectIds);
   const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
-  const reads = [clients, projects, versions];
+  const reads = [clients, projects, rounds];
   // Checked before `isPending`: when `projects` fails, `activeProjectIds` stays undefined and
-  // `versions` stays disabled (so pending) forever, which used to hide this error behind an
+  // `rounds` stays disabled (so pending) forever, which used to hide this error behind an
   // unending "Loading your work…" with no retry.
   if (reads.some((read) => read.error))
     return (
@@ -47,11 +47,7 @@ export function DesignerOverview() {
   const list = projects.data ?? [];
   const overview = designerOverview({
     projects: list,
-    versions: designerVersions(
-      versions.data?.versions ?? [],
-      versions.data?.deliverables ?? [],
-      list,
-    ),
+    rounds: designerRounds(rounds.data?.rounds ?? [], rounds.data?.boards ?? [], list),
     now,
     formatMonth,
   });
@@ -112,7 +108,7 @@ export function DesignerOverview() {
           {overview.yourTurnRows.map((row) => (
             <Link key={row.id} className="overview-row" href={`/projects/${row.projectId}`}>
               <strong>
-                {row.title} · {row.deliverable}
+                {row.title} · {row.label}
               </strong>
               <span className="overview-row-meta">
                 Changes requested · submitted {relativeAge(row.date, now, formatDayKey)}

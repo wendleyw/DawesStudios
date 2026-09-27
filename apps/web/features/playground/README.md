@@ -50,11 +50,10 @@ this split.
 ## Albums
 
 Below the title, a horizontally scrolling row of album chips lists the client's Brand Hub folders
-(**Unfiled** first when it holds files, then named folders alphabetically) and the project's
-deliverable versions (**{Deliverable} · V{n}**, in canvas order then version number), for whichever
-role is signed in. An album with no stored file gets no chip; a file the Playground cannot hold still
+(**Unfiled** first when it holds files, then named folders alphabetically), for whichever role is
+signed in. Project designs live in Miro, so there is no project album. An album with no stored file gets no chip; a file the Playground cannot hold still
 appears in its album, dimmed, with its reason on hover and focus (SVG and video: **Stays in the
-project**; a file over 25 MB, though neither source stores a byte size today, so only a caller that
+project**; a file over 25 MB, though Brand Hub stores no byte size today, so only a caller that
 knows one can trigger it). Clicking a chip opens its thumbnail row and a second click closes it;
 only one album is open at a time, and switching albums clears the selection. Clicking a thumbnail
 toggles its selection, Shift+click selects a range, and Enter on a focused thumbnail adds it at the
@@ -65,19 +64,17 @@ disabled the same way, with **This Playground holds 500 items. Remove an item be
 — the message a native drop at the cap already shows.
 
 Dragging a thumbnail (or the whole selection, when the dragged one is part of it) onto the canvas
-downloads each file with the viewer's own session — `downloadBrandAssetFile` from `brand-data.ts`,
-or `downloadDesignAssetFile` from `project-data.ts`, which picks `internal-assets` or
-`published-assets` by channel exactly as the design viewer does — wraps it in a `File` named after
+downloads each file with the viewer's own session — `downloadBrandAssetFile` from `brand-data.ts` — wraps it in a `File` named after
 its title and stored extension, and passes the result to this board's own `addFiles` at the drop
 point: the same validation, storage, retry and **Waiting to upload…** placeholder a native drop
 produces. At most three downloads run at once. A download in progress shows as **Copying…** in the
 list below the album row; a failed one stays there with **Try again**, which replaces the failed
 row, without affecting the other files of the same drag. `playground-albums.ts` holds the logic
-(`buildBrandAlbums`, `buildProjectAlbums`, `computeDisabledReason`, `copyAlbumFilesToBoard`) and
-`playground-albums-panel.tsx` renders it. A client's `useProjectDetail` read resolves only published
-versions and designs, so a client session never requests an `internal-assets` object.
+(`buildBrandAlbums`, `computeDisabledReason`, `copyAlbumFilesToBoard`) and
+`playground-albums-panel.tsx` renders it. The panel reads no project data, so no session ever
+requests an `internal-assets` object through it.
 
-`PlaygroundAlbumsPanel`'s props are `{ clientId; projectId; extraAlbums? } & (BoardMode | ClipboardMode)`.
+`PlaygroundAlbumsPanel`'s props are `{ clientId; extraAlbums? } & (BoardMode | ClipboardMode)`.
 Board mode (`mode?: "board"`, the default) is everything above, unchanged. Clipboard mode
 (`mode: "clipboard"`, plus `onCopy`/`onDownload`) renders the same chip row and album but clicking a
 thumbnail calls `onCopy(file)` instead of selecting or dragging it — there is no selection, Shift
@@ -87,7 +84,7 @@ thumbnail's accessible name becomes **Copy \<title\>** with no `aria-pressed`. A
 the row announces **Copied — paste in Miro with ⌘V / Ctrl+V**, or **Couldn't copy this image.** with
 a **Download \<title\>** fallback button that calls `onDownload(file)`. `extraAlbums` (used by
 `PlaygroundAssetStrip` for the viewer's own Playground album) render first, ahead of the Brand Hub
-and project albums, with the existing divider now also drawn before the first Brand Hub album
+albums, with the divider drawn before the first Brand Hub album
 whenever at least one extra album is present.
 
 ### Miro mode strip
@@ -96,12 +93,12 @@ whenever at least one extra album is present.
 Miro view: it reads `usePlayground` for the viewer's own images (`buildPlaygroundAlbum`, newest
 first) and renders `PlaygroundAlbumsPanel` in clipboard mode alongside an **Open full Playground**
 button. Copying downloads the source file with the viewer's own session —
-`downloadBrandAssetFile`, `downloadDesignAssetFile`, or a signed `getPlaygroundDownload` URL for a
+`downloadBrandAssetFile` or a signed `getPlaygroundDownload` URL for a
 Playground-owned image — and hands it to `copyImageToClipboard` (`album-clipboard.ts`), which
 converts it to PNG and writes it with the Clipboard API inside the same click's user activation.
 Download falls back to `saveBlob` with `fileNameFor`'s stored-extension name; a download that fails
 too announces "Couldn't download this file." in the same polite status region.
-`project-versions-canvas.tsx` mounts this strip above the Miro embed, toggled by the project's own
+`project-workspace.tsx` mounts this strip above the Miro embed, toggled by the project's own
 Playground icon button.
 
 ## Compact header

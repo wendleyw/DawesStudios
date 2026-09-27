@@ -10,20 +10,13 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import { useAuth } from "@/features/auth/auth-provider";
 import {
   useBrandAssetFolders,
   useBrandAssetPreviewUrl,
   useBrandAssets,
 } from "@/features/brand/brand-data";
 import {
-  useDesignAssetUrl,
-  useProjectDetail,
-  type ProjectChannel,
-} from "@/features/projects/project-data";
-import {
   buildBrandAlbums,
-  buildProjectAlbums,
   clipboardDisabledReason,
   isPreviewableImage,
   PLAYGROUND_ALBUM_DRAG_TYPE,
@@ -56,14 +49,13 @@ type ClipboardMode = {
 
 export type PlaygroundAlbumsPanelProps = {
   clientId: string;
-  projectId: string;
-  /** Albums shown before the Brand Hub/project albums this panel already builds — the caller's own
+  /** Albums shown before the Brand Hub albums this panel already builds — the caller's own
    * album, such as `buildPlaygroundAlbum`'s Playground album for the asset strip. */
   extraAlbums?: Album[];
 } & (BoardMode | ClipboardMode);
 
 export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
-  const { clientId, projectId, extraAlbums = [] } = props;
+  const { clientId, extraAlbums = [] } = props;
   const mode = props.mode ?? "board";
   const canAdd = props.mode === "clipboard" ? false : props.canAdd;
   const blockedReason = props.mode === "clipboard" ? undefined : props.blockedReason;
@@ -74,11 +66,8 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
   const onCopy = props.mode === "clipboard" ? props.onCopy : undefined;
   const onDownload = props.mode === "clipboard" ? props.onDownload : undefined;
 
-  const { profile } = useAuth();
-  const channel: ProjectChannel = profile?.role === "client" ? "client" : "internal";
   const folders = useBrandAssetFolders(clientId);
   const assets = useBrandAssets(clientId);
-  const project = useProjectDetail(projectId, channel);
   const [openId, setOpenId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
@@ -95,12 +84,6 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
   const albums: Album[] = [
     ...extraAlbums,
     ...buildBrandAlbums(folders.data ?? [], assets.data ?? []),
-    ...buildProjectAlbums(
-      project.data?.deliverables ?? [],
-      project.data?.versions ?? [],
-      project.data?.designs ?? [],
-      channel,
-    ),
   ];
   const openAlbum = albums.find((album) => album.id === openId);
   const openFiles =
@@ -108,7 +91,6 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
       ? openAlbum.files.map((file) => ({ ...file, disabledReason: clipboardDisabledReason(file) }))
       : (openAlbum?.files ?? []);
   const firstBrandIndex = albums.findIndex((album) => album.group === "brand");
-  const firstProjectIndex = albums.findIndex((album) => album.group === "project");
   const copiedFile = copyState
     ? openAlbum?.files.find((file) => file.id === copyState.fileId)
     : undefined;
@@ -183,11 +165,9 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
           // is used explicitly here so both the optional divider and the chip share one keyed
           // wrapper without an extra DOM element.
           <Fragment key={album.id}>
-            {index > 0 &&
-              ((index === firstBrandIndex && extraAlbums.length > 0) ||
-                index === firstProjectIndex) && (
-                <span className="playground-album-divider" aria-hidden="true" />
-              )}
+            {index > 0 && index === firstBrandIndex && extraAlbums.length > 0 && (
+              <span className="playground-album-divider" aria-hidden="true" />
+            )}
             <button
               type="button"
               aria-pressed={openId === album.id}
@@ -282,21 +262,7 @@ function AlbumThumbnail({
     file.source.kind === "brand" ? file.source.storagePath : null,
     previewable && file.source.kind === "brand",
   );
-  // `file.source.channel` already carries the panel's own computed channel for a design file —
-  // `buildProjectAlbums` stamped it there — so there is no separate `channel` prop to keep in sync.
-  // The "internal" fallback below is inert: the query stays disabled whenever the source isn't a
-  // design, so its channel argument is never actually used.
-  const designPreview = useDesignAssetUrl(
-    file.source.kind === "design" ? file.source.assetPath : null,
-    file.source.kind === "design" ? file.source.channel : "internal",
-    previewable && file.source.kind === "design",
-  );
-  const url =
-    file.source.kind === "brand"
-      ? brandPreview.data
-      : file.source.kind === "design"
-        ? designPreview.data
-        : file.source.previewUrl;
+  const url = file.source.kind === "brand" ? brandPreview.data : file.source.previewUrl;
   const reason = file.disabledReason ?? blockedReason;
   const reasonId = useId();
   return (

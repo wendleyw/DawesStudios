@@ -27,24 +27,24 @@ const project = (overrides: Partial<Project>): Project => ({
   ...overrides,
 });
 
-const defaultVersions = {
-  versions: [
+const defaultRounds = {
+  rounds: [
     {
-      id: "v1",
+      id: "r1",
       project_id: "p1",
-      deliverable_id: "d1",
+      board_id: "b1",
       version_number: 2,
       status: "reviewed",
       created_at: "2026-09-23T00:00:00Z",
     },
   ],
-  deliverables: [{ id: "d1", name: "Portrait Feed" }],
+  boards: [{ id: "b1", name: "Hero banner" }],
 };
 const data = vi.hoisted(() => ({
   projects: [] as Project[],
   projectsError: null as Error | null,
 }));
-const mocks = vi.hoisted(() => ({ useDesignerVersions: vi.fn() }));
+const mocks = vi.hoisted(() => ({ useDesignerRounds: vi.fn() }));
 
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ profile: { role: "designer", display_name: "Alex Morgan" } }),
@@ -63,7 +63,7 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => {
     useDateFormat: () => actual.createDateFormatters("UTC"),
   };
 });
-vi.mock("./overview-data", () => ({ useDesignerVersions: mocks.useDesignerVersions }));
+vi.mock("./overview-data", () => ({ useDesignerRounds: mocks.useDesignerRounds }));
 
 import { DesignerOverview } from "./designer-overview";
 
@@ -72,7 +72,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-09-25T15:00:00Z"));
   data.projects = [project({})];
   data.projectsError = null;
-  mocks.useDesignerVersions.mockReturnValue(query(defaultVersions));
+  mocks.useDesignerRounds.mockReturnValue(query(defaultRounds));
 });
 afterEach(() => vi.useRealTimers());
 
@@ -83,22 +83,22 @@ describe("DesignerOverview", () => {
     expect(screen.getByText("My work")).toHaveClass("eyebrow");
     expect(tiles().getByText("Your turn").closest("div")).toHaveTextContent("1");
     expect(screen.getByText("Changes requested · submitted 2 days ago")).toBeInTheDocument();
-    expect(screen.getByText("Launch · Portrait Feed")).toBeInTheDocument();
+    expect(screen.getByText("Launch · Hero banner · Round 2")).toBeInTheDocument();
     expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
   });
 
-  it("asks for versions on active projects only, never a delivered one", () => {
+  it("asks for rounds on active projects only, never a delivered one", () => {
     data.projects = [
       project({ id: "p1", status: "changes_requested" }),
       project({ id: "p2", status: "delivered", delivered_at: "2026-09-10T00:00:00Z" }),
     ];
     render(<DesignerOverview />);
-    expect(mocks.useDesignerVersions).toHaveBeenCalledWith(["p1"]);
+    expect(mocks.useDesignerRounds).toHaveBeenCalledWith(["p1"]);
   });
 
   it("shows each column's empty text when it has no rows", () => {
     data.projects = [];
-    mocks.useDesignerVersions.mockReturnValue(query({ versions: [], deliverables: [] }));
+    mocks.useDesignerRounds.mockReturnValue(query({ rounds: [], boards: [] }));
     render(<DesignerOverview />);
     expect(screen.getByText("No active assignments.")).toBeInTheDocument();
     expect(screen.getByText("Nothing sent back to you.")).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe("DesignerOverview", () => {
 
   it("shows the error state rather than a forever-pending read when projects fails", () => {
     data.projectsError = new Error("boom");
-    mocks.useDesignerVersions.mockReturnValue({
+    mocks.useDesignerRounds.mockReturnValue({
       data: undefined,
       isPending: true,
       error: null,

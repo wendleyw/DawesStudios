@@ -19,7 +19,6 @@ import { usePlaygroundNavigationGuard } from "./use-playground-navigation-guard"
 import { usePlaygroundDrop } from "./use-playground-drop";
 import { usePlaygroundItems } from "./use-playground-items";
 import { downloadBrandAssetFile } from "@/features/brand/brand-data";
-import { downloadDesignAssetFile } from "@/features/projects/project-data";
 import {
   copyAlbumFilesToBoard,
   PLAYGROUND_ALBUM_DRAG_TYPE,
@@ -100,8 +99,6 @@ export function PlaygroundBoard({
       point,
       {
         downloadBrand: (storagePath) => downloadBrandAssetFile(database, { path: storagePath }),
-        downloadDesign: (assetPath, channel) =>
-          downloadDesignAssetFile(database, { assetPath, channel }),
       },
       onCopyStatus,
     );
@@ -158,7 +155,6 @@ export function PlaygroundBoard({
         />
         <PlaygroundAlbumsPanel
           clientId={clientId}
-          projectId={projectId}
           canAdd={!!board.boardId && !board.closing && board.items.length < PLAYGROUND_MAX_ITEMS}
           blockedReason={
             board.items.length >= PLAYGROUND_MAX_ITEMS ? PLAYGROUND_FULL_MESSAGE : undefined

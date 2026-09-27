@@ -146,7 +146,7 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
           {overview.yourTurn.map((row) => (
             <Link key={row.id} className="overview-row" href={projectHref(row.projectId)}>
               <strong>
-                {row.title} · {row.deliverable}
+                {row.title} · {row.label}
               </strong>
               <span className="overview-row-meta">
                 Review · {relativeAge(row.date, now, formatDayKey)}

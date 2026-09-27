@@ -7,8 +7,8 @@ folder view omits since a folder spans every project in its campaign. Actual fil
 folders, or a campaign's files grouped by project — remain below. The content uses the full
 available width with the same desktop/mobile gutters as other client sections.
 
-The Brand Hub's Files section at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query) lists working files, shared designs and delivery
-files across a client's projects, grouped into campaign folders rather than one flat grid (a client
+The Brand Hub's Files section at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query) lists working files (`project_assets`) and delivery
+files (`delivery_files`) across a client's projects, grouped into campaign folders rather than one flat grid (a client
 the size of SABRE's demo overlay runs to 167 files across 50 projects in 11 campaigns). The default
 view (no `campaign` param) shows one folder card per campaign with at least one matching file,
 newest file first; projects with no readable campaign share a "No campaign" folder that always
@@ -31,10 +31,10 @@ Each file is a `FileCard` (`file-card.tsx`). A raster image (PNG, JPEG, WebP, GI
 preview: `useAssetPreviews` signs every image in the list, one `createSignedUrls` request per bucket,
 for ten minutes, the board thumbnails' revocation window, and the page signs the whole list rather
 than the filtered one so filtering never re-signs. Every file in the list already came through the
-viewer's role-scoped read, so a client is only ever signed shared designs and deliveries. Any other
-file shows an icon and its real type from `fileTypeLabel` ("PDF", "MP4", "Word", or "File"); a
-shared design takes its type from its stored file (`publishedDesignAsset` with `mimeForPath`), so a
-shared video is never called an image. Cards in a row share a height and their footers line up.
+viewer's role-scoped read, so a client is only ever signed deliveries. Any other file shows an
+icon and its real type from `fileTypeLabel` ("PDF", "MP4", "Word", or "File"). Designs live in
+Miro, so the list has no design copies: the former shared-designs source (`published_designs`) is
+no longer read. Cards in a row share a height and their footers line up.
 `FileCard` does not render its own project link — the campaign view's project group heading, which
 every `.file-grid` of cards sits under, carries that link instead.
 
@@ -97,8 +97,8 @@ reason is also recorded above the function in `asset-data.ts`.
 
 ## Test files
 
-`asset-data.test.tsx` holds the regression tests for `initialUploadProject`, the shared-design type
-and the preview signing; `file-card.test.tsx` covers the card. The five functions relocated in this migration are tested in
+`asset-data.test.tsx` holds the regression tests for `initialUploadProject`, the working-file and
+delivery read (`useProjectAssets`) and the preview signing; `file-card.test.tsx` covers the card. The five functions relocated in this migration are tested in
 `asset-data-writes.test.ts` instead, kept separate so the existing file's diff stays empty.
 `file-groups.test.ts` covers campaign grouping and ordering, "No campaign" always sorting last,
 counts and cover choice under a filter, project grouping, and resolving the view from `campaign`/

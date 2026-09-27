@@ -7,7 +7,7 @@ import {
   clientOverview,
   deliveredOn,
   designerOverview,
-  designerVersions,
+  designerRounds,
   relativeAge,
 } from "./overview-model";
 
@@ -39,8 +39,7 @@ function review(overrides: Partial<ReviewRow> = {}): ReviewRow {
     id: overrides.id ?? "v1",
     projectId: "p1",
     title: "Project",
-    deliverable: "Portrait Feed",
-    version: 1,
+    label: "V1",
     status: "pending",
     date: "2026-09-20T00:00:00Z",
     note: null,
@@ -162,7 +161,7 @@ describe("clientOverview", () => {
   });
 });
 
-describe("designerVersions and designerOverview", () => {
+describe("designerRounds and designerOverview", () => {
   const projects = [
     project({ id: "p1", title: "Launch", status: "changes_requested", due_date: "2026-10-02" }),
     project({ id: "p2", title: "Guide", status: "internal_review" }),
@@ -175,56 +174,60 @@ describe("designerVersions and designerOverview", () => {
   ];
   const raw = [
     {
-      id: "v1",
+      id: "r1",
       project_id: "p1",
-      deliverable_id: "d1",
-      board_id: null,
+      board_id: "b1",
       version_number: 1,
       status: "approved",
       created_at: "2026-09-01T00:00:00Z",
     },
-    // The client sent the project back after this version was shared.
+    // The client sent the project back after this round was shared.
     {
-      id: "v2",
+      id: "r2",
       project_id: "p1",
-      deliverable_id: "d1",
-      board_id: null,
+      board_id: "b1",
       version_number: 2,
       status: "reviewed",
       created_at: "2026-09-20T00:00:00Z",
     },
     {
-      id: "v3",
+      id: "r3",
       project_id: "p2",
-      deliverable_id: "d2",
-      board_id: null,
+      board_id: "b2",
       version_number: 1,
       status: "submitted",
       created_at: "2026-09-22T00:00:00Z",
     },
+    // Not a round: a row without a board is skipped.
+    {
+      id: "legacy",
+      project_id: "p2",
+      board_id: null,
+      version_number: 4,
+      status: "submitted",
+      created_at: "2026-09-23T00:00:00Z",
+    },
   ];
-  const deliverables = [
-    { id: "d1", name: "Portrait Feed" },
-    { id: "d2", name: "Story" },
+  const boards = [
+    { id: "b1", name: "Hero banner" },
+    { id: "b2", name: "Guide pages" },
   ];
 
-  it("keeps each deliverable's latest version and reads a sent-back share as changes requested", () => {
-    expect(designerVersions(raw, deliverables, projects)).toEqual([
+  it("keeps each board's latest round, labelled by board and round, and reads a sent-back share as changes requested", () => {
+    expect(designerRounds(raw, boards, projects)).toEqual([
       {
-        id: "v2",
+        id: "r2",
         projectId: "p1",
         title: "Launch",
-        deliverable: "Portrait Feed",
-        version: 2,
+        label: "Hero banner · Round 2",
         status: "changes_requested",
         date: "2026-09-20T00:00:00Z",
       },
       {
-        id: "v3",
+        id: "r3",
         projectId: "p2",
         title: "Guide",
-        deliverable: "Story",
-        version: 1,
+        label: "Guide pages · Round 1",
         status: "submitted",
         date: "2026-09-22T00:00:00Z",
       },
@@ -234,7 +237,7 @@ describe("designerVersions and designerOverview", () => {
   it("counts the designer's work", () => {
     const overview = designerOverview({
       projects,
-      versions: designerVersions(raw, deliverables, projects),
+      rounds: designerRounds(raw, boards, projects),
       now,
       formatMonth,
     });
@@ -245,7 +248,7 @@ describe("designerVersions and designerOverview", () => {
       deliveredThisMonth: 1,
     });
     expect(overview.moving.map((item) => item.id)).toEqual(["p1", "p2"]);
-    expect(overview.yourTurnRows.map((row) => row.id)).toEqual(["v2"]);
+    expect(overview.yourTurnRows.map((row) => row.id)).toEqual(["r2"]);
     expect(overview.delivered.map((item) => item.id)).toEqual(["p3"]);
   });
 });

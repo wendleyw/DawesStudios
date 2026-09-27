@@ -11,36 +11,31 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@/features/auth/auth-provider", () => ({ useAuth: () => auth }));
 
-/** A `.select().in().not()` chain resolving to the given deliverable rows. */
-function deliverablesTable(rows: unknown[]) {
-  const not = vi.fn().mockResolvedValue({ data: rows, error: null });
-  const inFn = vi.fn().mockReturnValue({ not });
-  return { select: vi.fn().mockReturnValue({ in: inFn }) };
-}
-
-/** A `.select().in()` chain resolving to the given `project_covers` rows: no `.not()`, since the
- * covers query filters nothing but the project id list — row-level security already did the rest. */
-function coversTable(rows: { project_id: string; storage_path: string }[]) {
+/** A `.select().in()` chain resolving to the given rows. */
+function table(rows: unknown[]) {
   const inFn = vi.fn().mockResolvedValue({ data: rows, error: null });
-  return { select: vi.fn().mockReturnValue({ in: inFn }) };
+  const select = vi.fn().mockReturnValue({ in: inFn });
+  return { select };
 }
 
 function stubDatabase(
   deliverableRows: unknown[],
   coverRows: { project_id: string; storage_path: string }[],
+  signedPaths?: string[],
 ) {
-  const from = vi.fn((table: string) =>
-    table === "project_covers" ? coversTable(coverRows) : deliverablesTable(deliverableRows),
-  );
+  const tables = { deliverables: table(deliverableRows), project_covers: table(coverRows) };
+  const from = vi.fn((name: keyof typeof tables) => tables[name]);
   const createSignedUrls = vi.fn().mockImplementation((paths: string[]) =>
     Promise.resolve({
-      data: paths.map((path) => ({ path, signedUrl: `https://private.test/${path}` })),
+      data: paths
+        .filter((path) => !signedPaths || signedPaths.includes(path))
+        .map((path) => ({ path, signedUrl: `https://private.test/${path}` })),
       error: null,
     }),
   );
   const bucket = vi.fn().mockReturnValue({ createSignedUrls });
   auth.database = { from, storage: { from: bucket } };
-  return { from, bucket, createSignedUrls };
+  return { from, tables, bucket, createSignedUrls };
 }
 
 function renderArtwork(ids: string[]) {
@@ -52,166 +47,60 @@ function renderArtwork(ids: string[]) {
   return { ...rendered, queryClient };
 }
 
-describe("board video artwork", () => {
-  for (const role of ["agency", "designer", "client"])
-    it(`keeps ${role} video versions without signing movies as images`, async () => {
-      auth.profile.role = role;
-      const client = role === "client";
-      const rows = ["mp4", "png"].map((extension, index) => ({
-        id: `deliverable-${index}`,
-        project_id: `project-${index}`,
-        format: "square",
-        sort_order: 0,
-        [client ? "published_versions" : "design_versions"]: [
-          {
-            version_number: 2,
-            [client ? "published_designs" : "designs"]: [
-              {
-                id: `design-${index}`,
-                sort_order: 0,
-                [client ? "asset_path" : "internal_asset_path"]:
-                  `project-${index}/asset.${extension}`,
-              },
-            ],
-          },
-        ],
-      }));
-      const { bucket, createSignedUrls } = stubDatabase(rows, []);
-      const { result, unmount, queryClient } = renderArtwork(["project-0", "project-1"]);
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(createSignedUrls).toHaveBeenCalledWith(["project-1/asset.png"], 600);
-      expect(bucket).toHaveBeenCalledWith(client ? "published-assets" : "internal-assets");
-      expect(result.current.data?.["project-0"]).toMatchObject({
-        url: null,
-        version: 2,
-        isVideo: true,
-      });
-      expect(result.current.data?.["project-1"]).toMatchObject({
-        url: "https://private.test/project-1/asset.png",
-        version: 2,
-      });
-      unmount();
-      queryClient.clear();
-    });
-});
+const deliverables = ["project-1", "project-2"].map((projectId) => ({
+  id: `deliverable-${projectId}`,
+  project_id: projectId,
+  format: "square",
+  sort_order: 0,
+}));
 
 describe("board cover artwork", () => {
-  function deliverableRow(projectId: string, assetPath: string) {
-    return {
-      id: `deliverable-${projectId}`,
-      project_id: projectId,
-      format: "square",
-      sort_order: 0,
-      design_versions: [
-        {
-          version_number: 3,
-          designs: [{ id: `design-${projectId}`, sort_order: 0, internal_asset_path: assetPath }],
-        },
-      ],
-    };
-  }
-
   for (const role of ["agency", "designer", "client"])
-    it(`prefers a readable cover over the legacy design for ${role}, and drops the version label`, async () => {
+    it(`shows the readable cover, otherwise the placeholder, for ${role}`, async () => {
       auth.profile.role = role;
-      const rows = [
-        deliverableRow("project-1", "project-1/design.png"),
-        deliverableRow("project-2", "project-2/design.png"),
-      ].map((row) =>
-        role === "client"
-          ? {
-              ...row,
-              published_versions: row.design_versions.map((version) => ({
-                version_number: version.version_number,
-                published_designs: version.designs.map((design) => ({
-                  id: design.id,
-                  sort_order: design.sort_order,
-                  asset_path: design.internal_asset_path,
-                })),
-              })),
-              design_versions: undefined,
-            }
-          : row,
-      );
-      const coverRows = [
-        { project_id: "project-1", storage_path: "project-covers/project-1/cover.png" },
-      ];
-      const { createSignedUrls } = stubDatabase(rows, coverRows);
+      const { tables, bucket, createSignedUrls } = stubDatabase(deliverables, [
+        { project_id: "project-1", storage_path: "project-1/cover.png" },
+      ]);
       const { result, unmount, queryClient } = renderArtwork(["project-1", "project-2"]);
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      // The cover wins for project-1: its image comes from the covers bucket and carries no
-      // version, even though project-1 also has a legacy design.
-      expect(result.current.data?.["project-1"]).toMatchObject({
-        url: "https://private.test/project-covers/project-1/cover.png",
-        version: null,
+      expect(result.current.data).toEqual({
+        "project-1": { url: "https://private.test/project-1/cover.png", typeLabel: "Square" },
+        "project-2": { url: null, typeLabel: "Square" },
       });
-      expect(createSignedUrls).toHaveBeenCalledWith(["project-covers/project-1/cover.png"], 600);
-      // project-2 has no cover, so today's rule still applies. Its legacy path is signed in the
-      // same design-bucket call as project-1's own legacy candidate (gathered as a fallback even
-      // though project-1's cover ends up winning).
-      expect(result.current.data?.["project-2"]).toMatchObject({
-        url: "https://private.test/project-2/design.png",
-        version: 3,
-      });
-      expect(createSignedUrls).toHaveBeenCalledWith(
-        ["project-1/design.png", "project-2/design.png"],
-        600,
-      );
+      // Only the covers bucket is ever signed, and the deliverable read names scope columns only.
+      expect(bucket).toHaveBeenCalledTimes(1);
+      expect(bucket).toHaveBeenCalledWith("project-covers");
+      expect(createSignedUrls).toHaveBeenCalledWith(["project-1/cover.png"], 600);
+      expect(tables.deliverables.select).toHaveBeenCalledWith("id, project_id, format, sort_order");
+      expect(tables.project_covers.select).toHaveBeenCalledWith("project_id, storage_path");
       unmount();
       queryClient.clear();
     });
 
-  it("falls back to the legacy design and its own version when the cover's signature is missing", async () => {
+  it("falls back to the placeholder when the cover's signature is missing", async () => {
     auth.profile.role = "agency";
-    const rows = [deliverableRow("project-1", "project-1/design.png")];
-    const coverRows = [
-      { project_id: "project-1", storage_path: "project-covers/project-1/cover.png" },
-    ];
-    const from = vi.fn((table: string) =>
-      table === "project_covers" ? coversTable(coverRows) : deliverablesTable(rows),
+    stubDatabase(
+      deliverables,
+      [{ project_id: "project-1", storage_path: "project-1/cover.png" }],
+      [],
     );
-    // The design bucket signs normally; the covers bucket returns no match for the one path asked
-    // for, standing in for a partial `createSignedUrls` failure on that path.
-    const designSignedUrls = vi.fn().mockResolvedValue({
-      data: [{ path: "project-1/design.png", signedUrl: "https://private.test/design.png" }],
-      error: null,
-    });
-    const coverSignedUrls = vi.fn().mockResolvedValue({ data: [], error: null });
-    const bucket = vi.fn((name: string) => ({
-      createSignedUrls: name === "project-covers" ? coverSignedUrls : designSignedUrls,
-    }));
-    auth.database = { from, storage: { from: bucket } };
     const { result, unmount, queryClient } = renderArtwork(["project-1"]);
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // The cover never resolved to a signed URL, so the card falls back to the legacy design and
-    // its own version rather than showing an empty image with no label.
-    expect(result.current.data?.["project-1"]).toEqual({
-      url: "https://private.test/design.png",
-      version: 3,
-      typeLabel: "Square",
-    });
-    expect(coverSignedUrls).toHaveBeenCalledWith(["project-covers/project-1/cover.png"], 600);
+    expect(result.current.data?.["project-1"]).toEqual({ url: null, typeLabel: "Square" });
     unmount();
     queryClient.clear();
   });
 
-  it("reads project_covers with the same query for every role, unlike the split deliverable reads", async () => {
+  it("signs nothing when no project has a cover", async () => {
     auth.profile.role = "client";
-    const rows = [deliverableRow("project-1", "project-1/design.png")].map((row) => ({
-      ...row,
-      published_versions: [],
-      design_versions: undefined,
-    }));
-    const { from } = stubDatabase(rows, []);
-    const { result, unmount, queryClient } = renderArtwork(["project-1"]);
+    const { bucket } = stubDatabase(deliverables, []);
+    const { result, unmount, queryClient } = renderArtwork(["project-1", "project-2"]);
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(from).toHaveBeenCalledWith("project_covers");
-    // A client never gets internal art: with no cover and no published design, the card has none.
-    expect(result.current.data?.["project-1"]).toMatchObject({ url: null, version: null });
+    expect(bucket).not.toHaveBeenCalled();
+    expect(result.current.data?.["project-2"]).toEqual({ url: null, typeLabel: "Square" });
     unmount();
     queryClient.clear();
   });

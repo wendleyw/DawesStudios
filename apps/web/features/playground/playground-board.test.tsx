@@ -35,7 +35,6 @@ vi.mock("./playground-albums", async (importOriginal) => ({
   copyAlbumFilesToBoard: albumBackend.copyAlbumFilesToBoard,
 }));
 vi.mock("@/features/brand/brand-data", () => ({ downloadBrandAssetFile: vi.fn() }));
-vi.mock("@/features/projects/project-data", () => ({ downloadDesignAssetFile: vi.fn() }));
 vi.mock("@/features/shared/canvas-background", () => ({ CanvasBackground: () => null }));
 vi.mock("@/features/shared/canvas-controls", () => ({ CanvasControls: () => null }));
 vi.mock("./playground-viewport", () => ({ PlaygroundViewport: () => null }));

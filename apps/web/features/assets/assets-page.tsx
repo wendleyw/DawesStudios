@@ -187,8 +187,8 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             {campaignId !== null
               ? `${countLabel(campaignCounts.fileCount, "file")} from ${countLabel(campaignCounts.projectCount, "project")}`
               : profile?.role === "client"
-                ? "Shared designs and final files, together."
-                : "Working files, shared designs, and final deliveries."}
+                ? "Final files, ready to download."
+                : "Working files and final deliveries."}
           </p>
         </div>
         <div className="page-actions">

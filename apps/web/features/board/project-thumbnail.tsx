@@ -1,101 +1,45 @@
 "use client";
 
-import { ImageIcon, Play } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { formats } from "@/features/briefings/briefing-model";
-import { isVideoAsset } from "@/features/shared/upload-rules";
 
 /**
- * Artwork for the project cards on the board canvas, together with the version and the deliverable
- * type that artwork belongs to.
+ * Artwork for the project cards on the board canvas: the project's cover, otherwise the
+ * placeholder, together with the leading deliverable's type label.
  *
- * A project cover, when one is readable by this viewer, wins over everything else: `public
- * .project_covers` under its own row-level security (`private.can_produce`, or
+ * `public.project_covers` under its own row-level security (`private.can_produce`, or
  * `private.can_client_channel` while `client_visible`) already answers "readable by this viewer"
  * before this module ever sees the row, so the choice below never re-derives that decision from
- * `profile.role`. A cover is not a version, so a card showing one never carries a version label.
+ * `profile.role`. The `project-covers` bucket is private, so a cover is shown through a
+ * short-lived signed URL; a cover whose signature fails falls back to the placeholder.
  *
- * Otherwise the source is chosen by role, and the private buckets behind it do the real enforcing:
- * working designs live in `public.designs` under `private.can_produce`, their numbering in
- * `public.design_versions` under the same rule, and what a client may see lives in
- * `public.published_designs` / `public.published_versions` under `private.can_client_channel`. A
- * client never asks for an internal path or an internal version number, and would be refused if it
- * did. The two sets are never mixed: an internal draft number over a published image, or published
- * artwork under an internal number, would each be a leak of the other channel.
- *
- * Every bucket is private, so the cards are shown through short-lived signed URLs, the same
- * mechanism the brand asset previews use.
- *
- * The image and the number it is labelled with come out of one selection, so a card can never
- * announce a version it is not actually showing. That selection happens in two steps rather than
- * one, because a cover can fail to sign independently of whether a legacy design exists:
- * `selectProjectArtwork` gathers both candidates — the cover path and today's role-based
- * design/published pick — before either has been signed, and `resolveProjectArtwork` is the one
- * place that then picks between them, once it knows which paths actually signed. A cover that
- * fails to sign therefore falls back to the legacy candidate (with its own version, or none), never
- * to an empty image with a silently dropped version.
+ * The designs themselves live in Miro, so the card never shows a design or a version number.
  */
 
-/**
- * One deliverable, reduced to the artwork the viewer's role is allowed to read.
- *
- * Both channels collapse into this shape before anything is chosen, so the selection rule below is
- * written once and cannot drift between the agency's view and the client's.
- */
-export type DeliverableArtwork = {
+/** One deliverable, reduced to what the card's type label needs. */
+export type DeliverableType = {
   deliverableId: string;
   projectId: string;
   /** A `format_catalog` id, resolved to a human label through the bundled copy of that catalog. */
   format: string;
   sortOrder: number;
-  versions: VersionArtwork[];
 };
 
-/** A numbered version and the artwork-bearing rows inside it. */
-type VersionArtwork = {
-  versionNumber: number;
-  designs: { id: string; sortOrder: number; path: string }[];
-};
-
-/**
- * What one card needs, before either candidate path has been signed: the project's readable cover,
- * if any, and today's role-based design/published pick, kept apart so a failed cover signature can
- * fall back to the legacy pick's own path and version rather than losing both.
- */
-type ProjectArtworkCandidate = {
-  /** The project's readable cover path (`project_covers.storage_path`), or null when this viewer
-   * has none to read. Always a still PNG, so it is never a video candidate. */
-  coverPath: string | null;
-  /** Today's role-based pick: the leading deliverable's newest artwork-bearing version, or a null
-   * path when nothing has been drawn yet. */
-  legacyPath: string | null;
-  legacyVersion: number | null;
-  typeLabel: string | null;
-};
-
-export type ProjectArtworkCandidateMap = Record<string, ProjectArtworkCandidate>;
-
-/** A project's readable cover, as `project_covers.storage_path`, keyed by project id. Board's read
- * (`board-data.ts`) already scoped the row to what this viewer's role may see through the table's
- * own row-level security, so every entry here is a candidate, not yet a chosen image: signing can
- * still fail for it (see `resolveProjectArtwork`). */
+/** A project's readable cover, as `project_covers.storage_path`, keyed by project id. */
 export type ProjectCoverMap = Record<string, string>;
 
 /** What one card needs, ready to render. */
 export type SignedProjectArtwork = {
-  /** A short-lived signed URL for the artwork, or null when the card has none to show. */
+  /** A short-lived signed URL for the cover, or null when the card shows the placeholder. */
   url: string | null;
-  /** Video tiles load only in the project viewer and therefore have no signed thumbnail URL. */
-  isVideo?: boolean;
-  /** The selected artwork version; absent when no video or successfully signed image exists. */
-  version: number | null;
-  /** The leading deliverable's format, as a human label. Present even without artwork. */
+  /** The leading deliverable's format, as a human label. Present even without a cover. */
   typeLabel: string | null;
 };
 
 export type ProjectArtworkMap = Record<string, SignedProjectArtwork>;
 
-/** A project with no readable deliverable at all: nothing to show, nothing to claim. */
-const NO_ARTWORK: SignedProjectArtwork = { url: null, version: null, typeLabel: null };
+/** A project with neither a cover nor a deliverable: nothing to show. */
+const NO_ARTWORK: SignedProjectArtwork = { url: null, typeLabel: null };
 
 /** Reading a card's artwork without having to spell out the missing case at every call site. */
 export function artworkFor(map: ProjectArtworkMap | undefined, projectId: string) {
@@ -115,19 +59,11 @@ export function formatTypeLabel(format: string) {
 }
 
 /**
- * The project's leading deliverable: the lowest `sort_order`, ties broken by `id`.
- *
- * A project can hold several deliverables — the seeded baseline pairs an original with an
- * adaptation — and `sort_order` is the order the briefing requested them in, with the original
- * first. Taking the first row the database happens to return would let the card change its mind
- * between loads, so the rule is stated here and is total: `sort_order` then `id`, both stable.
- *
- * It also makes "the newest version" mean something. `version_number` is unique per deliverable,
- * not per project, so V2 of one deliverable and V2 of another are unrelated numbers; comparing
- * them would be meaningless. Pinning the card to one deliverable is what lets it count.
+ * The project's leading deliverable: the lowest `sort_order`, ties broken by `id`, so the card's
+ * label never changes its mind between loads.
  */
-function leadingDeliverable(rows: DeliverableArtwork[]) {
-  const leading = new Map<string, DeliverableArtwork>();
+function leadingDeliverables(rows: DeliverableType[]) {
+  const leading = new Map<string, DeliverableType>();
   for (const row of rows) {
     const current = leading.get(row.projectId);
     const earlier =
@@ -139,183 +75,64 @@ function leadingDeliverable(rows: DeliverableArtwork[]) {
   return leading;
 }
 
-/** The newest version of that deliverable that actually carries artwork, or none. */
-function newestArtworkVersion(versions: VersionArtwork[]) {
-  let newest: VersionArtwork | null = null;
-  for (const version of versions)
-    if (version.designs.length && (!newest || version.versionNumber > newest.versionNumber))
-      newest = version;
-  return newest;
-}
-
-/** Within that version, the first artwork by the order the project canvas lays them out in. */
-function leadingDesign(designs: VersionArtwork["designs"]) {
-  let leading: VersionArtwork["designs"][number] | null = null;
-  for (const design of designs) {
-    const earlier =
-      !leading ||
-      design.sortOrder < leading.sortOrder ||
-      (design.sortOrder === leading.sortOrder && design.id < leading.id);
-    if (earlier) leading = design;
-  }
-  return leading;
-}
-
 /**
- * The image and version candidates each project's card could carry, gathered before either has
- * been signed.
- *
- * The type label stands on its own — it describes the work whether or not anything has been drawn
- * yet — while a candidate's path and version are decided together. This stops short of the actual
- * choice: `resolveProjectArtwork` makes it, once signing has told it which candidate is real.
- *
- * A project with a readable cover but no deliverable row at all (a defensive case; every project
- * briefed today has at least one) still gets an entry, cover-only, rather than being dropped from
- * the map.
- */
-export function selectProjectArtwork(
-  rows: DeliverableArtwork[],
-  covers: ProjectCoverMap = {},
-): ProjectArtworkCandidateMap {
-  const chosen: ProjectArtworkCandidateMap = {};
-  for (const [projectId, deliverable] of leadingDeliverable(rows)) {
-    const newest = newestArtworkVersion(deliverable.versions);
-    const design = newest ? leadingDesign(newest.designs) : null;
-    chosen[projectId] = {
-      coverPath: covers[projectId] ?? null,
-      legacyPath: newest && design ? design.path : null,
-      legacyVersion: newest && design ? newest.versionNumber : null,
-      typeLabel: formatTypeLabel(deliverable.format),
-    };
-  }
-  for (const [projectId, coverPath] of Object.entries(covers))
-    if (!(projectId in chosen))
-      chosen[projectId] = { coverPath, legacyPath: null, legacyVersion: null, typeLabel: null };
-  return chosen;
-}
-
-/**
- * The one image, version and type label each project's card actually shows, once both candidates
- * from `selectProjectArtwork` have had their turn to sign.
- *
- * A readable cover wins whenever its own signature succeeded (`urlByPath` has its path) — never a
- * version, since a cover is not one. When the cover has no signed URL (there was none to begin
- * with, or signing it failed), the legacy candidate takes over exactly as it did before covers
- * existed: its own signed image and version, a video tile that names its version without signing a
- * movie, or the placeholder. A losing candidate never lends its version to the other.
+ * Each project's card: the signed cover when its path signed (`urlByPath` has it), otherwise the
+ * placeholder, plus the leading deliverable's type label. A project with a cover but no
+ * deliverable row (a defensive case) still gets a cover-only entry.
  */
 export function resolveProjectArtwork(
-  candidates: ProjectArtworkCandidateMap,
+  deliverables: DeliverableType[],
+  covers: ProjectCoverMap,
   urlByPath: Map<string, string>,
 ): ProjectArtworkMap {
   const artwork: ProjectArtworkMap = {};
-  for (const [projectId, candidate] of Object.entries(candidates)) {
-    const coverUrl = candidate.coverPath ? urlByPath.get(candidate.coverPath) : undefined;
-    if (coverUrl) {
-      artwork[projectId] = { url: coverUrl, version: null, typeLabel: candidate.typeLabel };
-      continue;
-    }
-    const video = isVideoAsset(candidate.legacyPath);
-    const legacyUrl = candidate.legacyPath ? urlByPath.get(candidate.legacyPath) : undefined;
+  const leading = leadingDeliverables(deliverables);
+  const projectIds = new Set([...leading.keys(), ...Object.keys(covers)]);
+  for (const projectId of projectIds) {
+    const coverPath = covers[projectId];
+    const deliverable = leading.get(projectId);
     artwork[projectId] = {
-      url: legacyUrl ?? null,
-      version: legacyUrl || video ? candidate.legacyVersion : null,
-      ...(video ? { isVideo: true } : {}),
-      typeLabel: candidate.typeLabel,
+      url: (coverPath && urlByPath.get(coverPath)) || null,
+      typeLabel: deliverable ? formatTypeLabel(deliverable.format) : null,
     };
   }
   return artwork;
 }
 
-/** The internal channel, as `designs` + `design_versions` come back from one embedded read. */
-type InternalRow = {
-  id: string;
-  project_id: string;
-  format: string;
-  sort_order: number;
-  design_versions: {
-    version_number: number;
-    designs: { id: string; sort_order: number; internal_asset_path: string | null }[];
-  }[];
-};
+/** A `deliverables` row as the board reads it. */
+type DeliverableRow = { id: string; project_id: string; format: string; sort_order: number };
 
-/** The client channel, as `published_designs` + `published_versions` come back from the same read. */
-type PublishedRow = {
-  id: string;
-  project_id: string;
-  format: string;
-  sort_order: number;
-  published_versions: {
-    version_number: number;
-    published_designs: { id: string; sort_order: number; asset_path: string | null }[];
-  }[];
-};
-
-export function fromInternalRows(rows: InternalRow[]): DeliverableArtwork[] {
+export function fromDeliverableRows(rows: DeliverableRow[]): DeliverableType[] {
   return rows.map((row) => ({
     deliverableId: row.id,
     projectId: row.project_id,
     format: row.format,
     sortOrder: row.sort_order,
-    versions: row.design_versions.map((version) => ({
-      versionNumber: version.version_number,
-      designs: version.designs
-        .filter((design) => !!design.internal_asset_path)
-        .map((design) => ({
-          id: design.id,
-          sortOrder: design.sort_order,
-          path: design.internal_asset_path as string,
-        })),
-    })),
-  }));
-}
-
-export function fromPublishedRows(rows: PublishedRow[]): DeliverableArtwork[] {
-  return rows.map((row) => ({
-    deliverableId: row.id,
-    projectId: row.project_id,
-    format: row.format,
-    sortOrder: row.sort_order,
-    versions: row.published_versions.map((version) => ({
-      versionNumber: version.version_number,
-      designs: version.published_designs
-        .filter((design) => !!design.asset_path)
-        .map((design) => ({
-          id: design.id,
-          sortOrder: design.sort_order,
-          path: design.asset_path as string,
-        })),
-    })),
   }));
 }
 
 /**
  * The card's artwork band.
  *
- * Most projects have no artwork yet, so the empty state is the ordinary one: a quiet tile that
+ * Most projects have no cover yet, so the empty state is the ordinary one: a quiet tile that
  * reads as part of the card rather than as a missing image. The band is decorative — the card is
  * already named by its title — so it stays out of the accessibility tree, and the image is not
  * natively draggable so it can never compete with dragging the card.
  */
-export function ProjectThumbnail({ src, video = false }: { src?: string; video?: boolean }) {
+export function ProjectThumbnail({ src }: { src?: string }) {
   return (
     // The box keeps its size either way so cards in a row line up, but an empty one says what it
     // is rather than sitting there as a filled grey block that reads like a broken image. Every
-    // project starts without artwork, so this is a normal state, not a fault.
+    // project starts without a cover, so this is a normal state, not a fault.
     <div className={`board-card-media ${src ? "" : "empty"}`} aria-hidden="true">
-      {video ? (
-        <>
-          <Play size={18} />
-          <span>Video</span>
-        </>
-      ) : src ? (
+      {src ? (
         // Keep expiring, caller-scoped signed URLs out of Next.js's shared image optimization cache.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" loading="lazy" draggable={false} />
       ) : (
         <>
           <ImageIcon size={15} />
-          <span>No design yet</span>
+          <span>No cover yet</span>
         </>
       )}
     </div>

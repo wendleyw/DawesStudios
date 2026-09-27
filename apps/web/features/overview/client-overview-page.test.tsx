@@ -93,8 +93,7 @@ beforeEach(() => {
       id: "v1",
       projectId: "p1",
       title: "Campus Welcome",
-      deliverable: "Portrait Feed",
-      version: 2,
+      label: "V2",
       status: "pending",
       date: "2026-09-17T00:00:00Z",
       note: null,
@@ -104,8 +103,7 @@ beforeEach(() => {
       id: "v2",
       projectId: "p1",
       title: "Studio-only draft",
-      deliverable: "Story",
-      version: 1,
+      label: "V1",
       status: "pending",
       date: "2026-09-20T00:00:00Z",
       note: null,
@@ -133,7 +131,7 @@ describe("ClientOverviewPage", () => {
   it("lists the client's turn with its age and never an internal version", () => {
     render(<ClientOverviewPage clientId="c1" />);
     expect(screen.getByText("Review · last week")).toBeInTheDocument();
-    expect(screen.getByText("Campus Welcome · Portrait Feed")).toBeInTheDocument();
+    expect(screen.getByText("Campus Welcome · V2")).toBeInTheDocument();
     expect(screen.queryByText(/Studio-only draft/)).not.toBeInTheDocument();
     expect(screen.getByText("Holiday Poster")).toBeInTheDocument();
   });

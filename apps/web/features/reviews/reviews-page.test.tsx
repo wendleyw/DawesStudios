@@ -37,8 +37,7 @@ const row = (overrides: Partial<ReviewRow>): ReviewRow => ({
   id: "v1",
   projectId: "p1",
   title: "Campus Welcome",
-  deliverable: "Portrait Feed",
-  version: 2,
+  label: "V2",
   status: "approved",
   date: "2026-09-20T00:00:00Z",
   note: "Second round.",
@@ -89,5 +88,26 @@ describe("ReviewsPage decisions", () => {
     render(<ReviewsPage clientId="c1" />);
     await userEvent.setup().click(screen.getByRole("button", { name: "With the studio" }));
     expect(screen.getByText("Changes requested by Former member · Sep 23")).toBeInTheDocument();
+  });
+
+  it("labels client versions V N and studio-review rounds by board and round", async () => {
+    state.rows.push(
+      row({
+        id: "r1",
+        projectId: "p4",
+        title: "Launch",
+        label: "Hero banner · Round 3",
+        status: "submitted",
+        internal: true,
+        reviewedBy: null,
+        reviewedAt: null,
+      }),
+    );
+    render(<ReviewsPage clientId="c1" />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Approved" }));
+    expect(screen.getAllByText("V2")).not.toHaveLength(0);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Studio review" }));
+    expect(screen.getByText("Hero banner · Round 3")).toBeInTheDocument();
+    expect(screen.queryByText(/Portrait Feed/)).toBeNull();
   });
 });

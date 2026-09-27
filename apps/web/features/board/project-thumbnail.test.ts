@@ -2,20 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   artworkFor,
   formatTypeLabel,
-  fromInternalRows,
-  fromPublishedRows,
+  fromDeliverableRows,
   resolveProjectArtwork,
-  selectProjectArtwork,
-  type DeliverableArtwork,
+  type DeliverableType,
 } from "./project-thumbnail";
 
-function deliverable(extra: Partial<DeliverableArtwork> = {}): DeliverableArtwork {
+function deliverable(extra: Partial<DeliverableType> = {}): DeliverableType {
   return {
     deliverableId: "deliverable-a",
     projectId: "project-1",
     format: "feed",
     sortOrder: 0,
-    versions: [],
     ...extra,
   };
 }
@@ -31,342 +28,75 @@ describe("formatTypeLabel", () => {
   });
 });
 
-describe("selectProjectArtwork", () => {
-  it("labels the artwork with the version it actually belongs to", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({
-        versions: [
-          { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          { versionNumber: 2, designs: [] },
-        ],
-      }),
-    ]);
-    // V2 exists but carries nothing, so the card shows V1's image and says V1.
-    expect(chosen["project-1"]).toEqual({
-      coverPath: null,
-      legacyPath: "project-1/one.png",
-      legacyVersion: 1,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("prefers the newest version that has artwork", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({
-        versions: [
-          { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          { versionNumber: 3, designs: [{ id: "d3", sortOrder: 0, path: "project-1/three.png" }] },
-          { versionNumber: 2, designs: [{ id: "d2", sortOrder: 0, path: "project-1/two.png" }] },
-        ],
-      }),
-    ]);
-    expect(chosen["project-1"]).toMatchObject({
-      legacyPath: "project-1/three.png",
-      legacyVersion: 3,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("keeps the type label and drops the version when nothing has been drawn", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({ format: "guidelines", versions: [{ versionNumber: 2, designs: [] }] }),
-    ]);
-    expect(chosen["project-1"]).toEqual({
-      coverPath: null,
-      legacyPath: null,
-      legacyVersion: null,
-      typeLabel: "Brand Guidelines",
-    });
-  });
-
-  it("reads the leading deliverable by sort order, whatever order the rows arrive in", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({
-        deliverableId: "adaptation",
-        format: "square",
-        sortOrder: 1,
-        versions: [
-          { versionNumber: 5, designs: [{ id: "d5", sortOrder: 0, path: "project-1/five.png" }] },
-        ],
-      }),
-      deliverable({
-        deliverableId: "original",
-        format: "feed",
-        sortOrder: 0,
-        versions: [
-          { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-        ],
-      }),
-    ]);
-    // The adaptation's V5 is a higher number, but it counts versions of a different deliverable.
-    expect(chosen["project-1"]).toMatchObject({
-      legacyPath: "project-1/one.png",
-      legacyVersion: 1,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("breaks a sort order tie by deliverable id so the card does not change its mind", () => {
-    const rows = [
-      deliverable({ deliverableId: "bbb", format: "square", sortOrder: 0 }),
-      deliverable({ deliverableId: "aaa", format: "feed", sortOrder: 0 }),
-    ];
-    expect(selectProjectArtwork(rows)["project-1"].typeLabel).toBe("Portrait Feed");
-    expect(selectProjectArtwork([...rows].reverse())["project-1"].typeLabel).toBe("Portrait Feed");
-  });
-
-  it("takes the first artwork of the chosen version, by sort order then id", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({
-        versions: [
-          {
-            versionNumber: 1,
-            designs: [
-              { id: "d9", sortOrder: 2, path: "project-1/third.png" },
-              { id: "d2", sortOrder: 1, path: "project-1/second-b.png" },
-              { id: "d1", sortOrder: 1, path: "project-1/second-a.png" },
-            ],
-          },
-        ],
-      }),
-    ]);
-    expect(chosen["project-1"].legacyPath).toBe("project-1/second-a.png");
-  });
-
-  it("carries both a readable cover and today's legacy pick as separate candidates", () => {
-    const chosen = selectProjectArtwork(
-      [
-        deliverable({
-          versions: [
-            { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          ],
-        }),
-      ],
-      { "project-1": "project-covers/project-1/cover.png" },
-    );
-    expect(chosen["project-1"]).toEqual({
-      coverPath: "project-covers/project-1/cover.png",
-      legacyPath: "project-1/one.png",
-      legacyVersion: 1,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("carries no cover candidate when the project has no readable cover", () => {
-    const chosen = selectProjectArtwork(
-      [
-        deliverable({
-          versions: [
-            { versionNumber: 1, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          ],
-        }),
-      ],
-      { "project-2": "project-covers/project-2/cover.png" },
-    );
-    expect(chosen["project-1"]).toEqual({
-      coverPath: null,
-      legacyPath: "project-1/one.png",
-      legacyVersion: 1,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("still carries a readable cover for a project with no deliverable row at all", () => {
-    const chosen = selectProjectArtwork([], { "project-1": "project-covers/project-1/cover.png" });
-    expect(chosen["project-1"]).toEqual({
-      coverPath: "project-covers/project-1/cover.png",
-      legacyPath: null,
-      legacyVersion: null,
-      typeLabel: null,
-    });
-  });
-
-  it("keeps projects apart", () => {
-    const chosen = selectProjectArtwork([
-      deliverable({
-        projectId: "project-1",
-        versions: [
-          { versionNumber: 2, designs: [{ id: "d2", sortOrder: 0, path: "project-1/two.png" }] },
-        ],
-      }),
-      deliverable({ projectId: "project-2", format: "a4", versions: [] }),
-    ]);
-    expect(chosen["project-1"].legacyVersion).toBe(2);
-    expect(chosen["project-2"]).toEqual({
-      coverPath: null,
-      legacyPath: null,
-      legacyVersion: null,
-      typeLabel: "A4",
-    });
-  });
-});
-
 describe("resolveProjectArtwork", () => {
-  it("shows the cover when it signed, and drops the version label", () => {
-    const candidates = selectProjectArtwork(
-      [
-        deliverable({
-          versions: [
-            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          ],
-        }),
-      ],
-      { "project-1": "project-covers/project-1/cover.png" },
+  const coverPath = "project-1/cover.png";
+
+  it("shows the signed cover with the leading deliverable's type", () => {
+    const artwork = resolveProjectArtwork(
+      [deliverable()],
+      { "project-1": coverPath },
+      new Map([[coverPath, "https://signed/cover"]]),
     );
-    const urlByPath = new Map([
-      ["project-covers/project-1/cover.png", "https://signed/cover.png"],
-      ["project-1/one.png", "https://signed/one.png"],
-    ]);
-    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
-      url: "https://signed/cover.png",
-      version: null,
+    expect(artwork["project-1"]).toEqual({
+      url: "https://signed/cover",
       typeLabel: "Portrait Feed",
     });
   });
 
-  it("falls back to the legacy design and its own version when the cover's signature is missing", () => {
-    const candidates = selectProjectArtwork(
-      [
-        deliverable({
-          versions: [
-            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          ],
-        }),
-      ],
-      { "project-1": "project-covers/project-1/cover.png" },
-    );
-    // The cover candidate exists but never made it into urlByPath — signing omitted or failed it.
-    const urlByPath = new Map([["project-1/one.png", "https://signed/one.png"]]);
-    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
-      url: "https://signed/one.png",
-      version: 4,
-      typeLabel: "Portrait Feed",
-    });
+  it("falls back to the placeholder when the cover did not sign", () => {
+    const artwork = resolveProjectArtwork([deliverable()], { "project-1": coverPath }, new Map());
+    expect(artwork["project-1"]).toEqual({ url: null, typeLabel: "Portrait Feed" });
   });
 
-  it("falls back to the placeholder when neither candidate signed", () => {
-    const candidates = selectProjectArtwork(
-      [
-        deliverable({
-          versions: [
-            { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-          ],
-        }),
-      ],
-      { "project-1": "project-covers/project-1/cover.png" },
-    );
-    expect(resolveProjectArtwork(candidates, new Map())["project-1"]).toEqual({
+  it("shows the placeholder for a project without a cover", () => {
+    expect(resolveProjectArtwork([deliverable()], {}, new Map())["project-1"]).toEqual({
       url: null,
-      version: null,
       typeLabel: "Portrait Feed",
     });
   });
 
-  it("keeps today's rule unchanged when there is no cover candidate at all", () => {
-    const candidates = selectProjectArtwork([
-      deliverable({
-        versions: [
-          { versionNumber: 4, designs: [{ id: "d1", sortOrder: 0, path: "project-1/one.png" }] },
-        ],
-      }),
-    ]);
-    const urlByPath = new Map([["project-1/one.png", "https://signed/one.png"]]);
-    expect(resolveProjectArtwork(candidates, urlByPath)["project-1"]).toEqual({
-      url: "https://signed/one.png",
-      version: 4,
-      typeLabel: "Portrait Feed",
-    });
+  it("labels the lowest sort order, ties broken by id, whatever the row order", () => {
+    const rows = [
+      deliverable({ deliverableId: "b", format: "square", sortOrder: 0 }),
+      deliverable({ deliverableId: "a", format: "feed", sortOrder: 0 }),
+      deliverable({ deliverableId: "c", format: "a4", sortOrder: 1 }),
+    ];
+    expect(resolveProjectArtwork(rows, {}, new Map())["project-1"].typeLabel).toBe("Portrait Feed");
+    expect(resolveProjectArtwork([...rows].reverse(), {}, new Map())["project-1"].typeLabel).toBe(
+      "Portrait Feed",
+    );
   });
 
-  it("names a video candidate's version without a signed URL, cover candidate absent", () => {
-    const candidates = selectProjectArtwork([
-      deliverable({
-        versions: [
-          { versionNumber: 2, designs: [{ id: "d1", sortOrder: 0, path: "project-1/clip.mp4" }] },
-        ],
-      }),
-    ]);
-    expect(resolveProjectArtwork(candidates, new Map())["project-1"]).toEqual({
-      url: null,
-      version: 2,
-      isVideo: true,
-      typeLabel: "Portrait Feed",
-    });
+  it("keeps a cover-only entry for a project without a deliverable row", () => {
+    const artwork = resolveProjectArtwork(
+      [],
+      { "project-1": coverPath },
+      new Map([[coverPath, "https://signed/cover"]]),
+    );
+    expect(artwork["project-1"]).toEqual({ url: "https://signed/cover", typeLabel: null });
+  });
+
+  it("returns nothing when there is nothing to show", () => {
+    expect(resolveProjectArtwork([], {}, new Map())).toEqual({});
   });
 });
 
-describe("channel mapping", () => {
-  it("reads the internal channel and leaves rows without a stored file out", () => {
-    const mapped = fromInternalRows([
-      {
-        id: "deliverable-a",
-        project_id: "project-1",
-        format: "feed",
-        sort_order: 0,
-        design_versions: [
-          {
-            version_number: 2,
-            designs: [
-              { id: "d1", sort_order: 0, internal_asset_path: null },
-              { id: "d2", sort_order: 1, internal_asset_path: "project-1/two.png" },
-            ],
-          },
-        ],
-      },
-    ]);
-    expect(mapped[0].versions[0].designs).toEqual([
-      { id: "d2", sortOrder: 1, path: "project-1/two.png" },
-    ]);
-    expect(selectProjectArtwork(mapped)["project-1"]).toMatchObject({
-      legacyPath: "project-1/two.png",
-      legacyVersion: 2,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("reads the client channel from the published mirror only", () => {
-    const mapped = fromPublishedRows([
-      {
-        id: "deliverable-a",
-        project_id: "project-1",
-        format: "feed",
-        sort_order: 0,
-        published_versions: [
-          {
-            version_number: 1,
-            published_designs: [
-              { id: "p1", sort_order: 0, asset_path: "project-1/published.png" },
-              { id: "p2", sort_order: 1, asset_path: null },
-            ],
-          },
-        ],
-      },
-    ]);
-    expect(selectProjectArtwork(mapped)["project-1"]).toMatchObject({
-      legacyPath: "project-1/published.png",
-      legacyVersion: 1,
-      typeLabel: "Portrait Feed",
-    });
-  });
-
-  it("returns nothing for a project whose channel is empty for this viewer", () => {
-    expect(fromPublishedRows([])).toEqual([]);
-    expect(selectProjectArtwork([])).toEqual({});
+describe("fromDeliverableRows", () => {
+  it("maps the scope columns", () => {
+    expect(
+      fromDeliverableRows([{ id: "d1", project_id: "project-1", format: "feed", sort_order: 2 }]),
+    ).toEqual([{ deliverableId: "d1", projectId: "project-1", format: "feed", sortOrder: 2 }]);
   });
 });
 
 describe("artworkFor", () => {
-  it("reads a card that has artwork", () => {
-    const map = { "project-1": { url: "https://signed", version: 3, typeLabel: "Square" } };
-    expect(artworkFor(map, "project-1").version).toBe(3);
+  it("reads a card that has a cover", () => {
+    const map = { "project-1": { url: "https://signed", typeLabel: "Square" } };
+    expect(artworkFor(map, "project-1").url).toBe("https://signed");
   });
 
   it("answers for a project the board has no entry for", () => {
-    expect(artworkFor(undefined, "project-1")).toEqual({
-      url: null,
-      version: null,
-      typeLabel: null,
-    });
+    expect(artworkFor(undefined, "project-1")).toEqual({ url: null, typeLabel: null });
     expect(artworkFor({}, "project-1").typeLabel).toBeNull();
   });
 });

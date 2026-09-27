@@ -535,32 +535,15 @@
   font-size: var(--text-sm);
   line-height: 1.3;
 }
-/* `.board-card-body > p` clamps a card paragraph as a -webkit-box, which would drop this flex line's
-   gap and leave the dash against the badge; the row stays flex so the dash has 7px on each side. */
+/* `.board-card-body > p` clamps a card paragraph as a -webkit-box; the type line stays flex so its
+   ellipsis applies to the span. */
 .board-card-body > .board-card-meta {
   display: flex;
-}
-/* A dash between the version and the deliverable type, so "V1" and "Infographic" read as two
-   facts rather than one run-on label. */
-.board-card-meta > span + span::before {
-  margin-right: 7px;
-  color: var(--border-strong);
-  content: "–";
 }
 .board-card-meta > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.board-card-meta .board-card-version {
-  flex: 0 0 auto;
-  padding: 1px 5px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--foreground);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  letter-spacing: 0.02em;
 }
 
 /* One compact view selector; every icon keeps its accessible name and native tooltip. */

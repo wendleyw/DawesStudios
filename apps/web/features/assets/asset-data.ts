@@ -3,11 +3,10 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
-import { mimeForPath } from "@/features/shared/upload-rules";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
- * The one cache key this feature owns: the combined delivery/working/published file list behind
+ * The one cache key this feature owns: the combined delivery/working file list behind
  * `useProjectAssets`.
  *
  * Unlike `brand` and `briefings`, this feature does get an aggregate `useInvalidateAssets()`: both
@@ -36,20 +35,19 @@ export type ProjectAsset = {
   name: string;
   projectId: string;
   path: string;
-  bucket: "internal-assets" | "published-assets" | "delivery-files";
+  bucket: "internal-assets" | "delivery-files";
   mime: string;
   size: number | null;
   date: string;
-  category: "Working file" | "Shared design" | "Delivery";
+  category: "Working file" | "Delivery";
   approved: boolean;
 };
 
 /**
  * `delivery_files` and `project_assets` are two tables with the same seven column names, so the
  * only thing that distinguishes their rows as assets is which bucket holds them, what the list
- * calls them and whether they count as approved. `published_designs` is not read this way: it
- * names its columns differently, carries no mime or size of its own, and takes its approval from
- * a review, so it keeps its own mapping below.
+ * calls them and whether they count as approved. The designs themselves live in Miro, so no
+ * design copy is listed here.
  */
 function fromStoredFile(
   file: {
@@ -76,35 +74,6 @@ function fromStoredFile(
     date: file.created_at,
     category,
     approved,
-  };
-}
-
-/**
- * A shared design as a file. `published_designs` stores no type of its own, so the type comes from
- * the stored file's extension: a shared video is a video, not an image.
- */
-export function publishedDesignAsset(
-  file: {
-    id: string;
-    title: string;
-    project_id: string;
-    asset_path: string;
-    publication_id: string;
-    published_versions: { published_at: string };
-  },
-  approvedIds: Set<string>,
-): ProjectAsset {
-  return {
-    id: file.id,
-    name: file.title,
-    projectId: file.project_id,
-    path: file.asset_path,
-    bucket: "published-assets",
-    mime: mimeForPath(file.asset_path) ?? "image/png",
-    size: null,
-    date: file.published_versions.published_at,
-    category: "Shared design",
-    approved: approvedIds.has(file.publication_id),
   };
 }
 
@@ -146,32 +115,12 @@ export function useProjectAssets(clientId: string) {
       if (!projects.length) return { assets: [] as ProjectAsset[], projects };
       const ids = projects.map((project) => project.id);
       const assets: ProjectAsset[] = [];
-      const [deliveries, internal, publications, reviews] = await Promise.all([
+      const [deliveries, internal] = await Promise.all([
         database.from("delivery_files").select("*").in("project_id", ids),
         profile?.role !== "client"
           ? database.from("project_assets").select("*").in("project_id", ids)
           : Promise.resolve({ data: [], error: null }),
-        profile?.role !== "designer"
-          ? database
-              .from("published_designs")
-              .select(
-                "*,published_versions!published_designs_publication_id_project_id_fkey(published_at)",
-              )
-              .in("project_id", ids)
-              .not("asset_path", "is", null)
-          : Promise.resolve({ data: [], error: null }),
-        profile?.role !== "designer"
-          ? database
-              .from("publication_reviews")
-              .select("publication_id,status")
-              .in("project_id", ids)
-          : Promise.resolve({ data: [], error: null }),
       ]);
-      const approvedIds = new Set(
-        assertResult(reviews)
-          .filter((review) => review.status === "approved")
-          .map((review) => review.publication_id),
-      );
       assets.push(
         ...assertResult(deliveries).map((file) =>
           fromStoredFile(file, "delivery-files", "Delivery", true),
@@ -181,13 +130,6 @@ export function useProjectAssets(clientId: string) {
         ...assertResult(internal).map((file) =>
           fromStoredFile(file, "internal-assets", "Working file", false),
         ),
-      );
-      assets.push(
-        ...assertResult(publications)
-          .filter((file) => file.asset_path)
-          .map((file) =>
-            publishedDesignAsset({ ...file, asset_path: file.asset_path! }, approvedIds),
-          ),
       );
       return { assets: assets.toSorted((a, b) => b.date.localeCompare(a.date)), projects };
     },

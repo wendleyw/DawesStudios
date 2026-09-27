@@ -45,12 +45,6 @@ vi.mock("@/features/brand/brand-data", () => ({
   downloadBrandAssetFile: vi.fn(),
 }));
 
-vi.mock("@/features/projects/project-data", () => ({
-  useProjectDetail: vi.fn(() => ({ data: undefined })),
-  useDesignAssetUrl: vi.fn(() => ({ data: undefined })),
-  downloadDesignAssetFile: vi.fn(),
-}));
-
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal(

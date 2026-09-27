@@ -1,21 +1,16 @@
 /**
- * Pure album model for the Playground's Brand Hub and project-version albums. Takes data the
- * owning features already fetched (`brand-data.ts`, `project-data.ts`) and decides album/file
- * ordering, grouping and — checked against the Playground's own allow-list and size ceiling —
- * which files the board accepts. No Supabase, no React: `playground-albums-panel.tsx` (Task 3)
- * calls the owning features' hooks and passes their results in here.
+ * Pure album model for the Playground's Brand Hub albums and the viewer's own Playground album.
+ * Takes data the owning features already fetched (`brand-data.ts`, `playground-data.ts`) and
+ * decides album/file ordering, grouping and — checked against the Playground's own allow-list and
+ * size ceiling — which files the board accepts. No Supabase, no React:
+ * `playground-albums-panel.tsx` calls the owning features' hooks and passes their results in here.
+ * Project designs live in Miro, so there is no project album.
  *
  * docs/superpowers/specs/2026-09-23-playground-albums-design.md
  */
 import type { BrandAsset, BrandAssetFolder } from "@/features/brand/brand-data";
-import type {
-  CanvasDesign,
-  CanvasVersion,
-  ProjectChannel,
-  TableRow,
-} from "@/features/projects/project-data";
 import { mapWithConcurrency } from "@/features/shared/concurrency";
-import { uploadSizeMessage, type UploadMime } from "@/features/shared/upload-rules";
+import { uploadSizeMessage } from "@/features/shared/upload-rules";
 import {
   PLAYGROUND_FILE_MIMES,
   PLAYGROUND_MAX_FILE_BYTES,
@@ -28,7 +23,6 @@ export const PLAYGROUND_ALBUM_DRAG_TYPE = "application/x-playground-album-file";
 
 export type AlbumFileSource =
   | { kind: "brand"; storagePath: string }
-  | { kind: "design"; channel: ProjectChannel; assetPath: string }
   | { kind: "playground"; assetPath: string; previewUrl?: string };
 
 export type AlbumFile = {
@@ -45,7 +39,7 @@ export type AlbumFile = {
 
 export type Album = {
   id: string;
-  group: "brand" | "project" | "playground";
+  group: "brand" | "playground";
   label: string;
   files: AlbumFile[];
 };
@@ -125,66 +119,6 @@ export function buildBrandAlbums(
   return albums;
 }
 
-/** A design's stored path always ends in `.png` (images, via `sanitizeArtwork`) or `.mp4`/`.webm`
- * (video, via the raw-then-remuxed video path) — never any other extension; see `isVideoAsset`
- * in `@/features/shared/upload-rules` and `apps/web/features/projects/README.md`. */
-function mimeFromDesignPath(path: string): UploadMime {
-  const extension = path.split(".").pop()?.toLowerCase();
-  if (extension === "webm") return "video/webm";
-  if (extension === "mp4") return "video/mp4";
-  return "image/png";
-}
-
-/**
- * One album per (deliverable, version) pair that has at least one design with a stored asset,
- * ordered by the deliverable's canvas order then version number. `versions`/`designs` come from
- * `useProjectDetail`'s already-unified `CanvasVersion[]`/`CanvasDesign[]` (the same shape whether
- * the hook read `design_versions`/`designs` or `published_versions`/`published_designs`), so this
- * function needs no role branching of its own — see the "role-to-channel mapping" Global Constraint.
- * `channel` is stamped onto every resulting file's source because the copy step (Task 4) must know
- * which bucket to download from, a fact `CanvasDesign` itself no longer carries once unified.
- */
-export function buildProjectAlbums(
-  deliverables: Pick<TableRow<"deliverables">, "id" | "name" | "sort_order">[],
-  versions: CanvasVersion[],
-  designs: CanvasDesign[],
-  channel: ProjectChannel,
-): Album[] {
-  const albums: Album[] = [];
-  for (const deliverable of [...deliverables].sort((a, b) => a.sort_order - b.sort_order)) {
-    const deliverableVersions = versions
-      .filter((version) => version.deliverableId === deliverable.id)
-      .sort((a, b) => a.number - b.number);
-    for (const version of deliverableVersions) {
-      const files = designs
-        .filter(
-          (design): design is CanvasDesign & { assetPath: string } =>
-            design.versionId === version.id && !!design.assetPath,
-        )
-        .sort((a, b) => a.order - b.order)
-        .map((design): AlbumFile => {
-          const mimeType = mimeFromDesignPath(design.assetPath);
-          return {
-            id: design.id,
-            title: design.title,
-            mimeType,
-            sizeBytes: null,
-            disabledReason: computeDisabledReason(mimeType, null),
-            source: { kind: "design", channel, assetPath: design.assetPath },
-          };
-        });
-      if (files.length)
-        albums.push({
-          id: `version-${version.id}`,
-          group: "project",
-          label: `${deliverable.name} · V${version.number}`,
-          files,
-        });
-    }
-  }
-  return albums;
-}
-
 /** The viewer's own Playground images, newest first, for the Miro asset strip. */
 export function buildPlaygroundAlbum(items: PlaygroundItem[]): Album | null {
   const files = items
@@ -214,7 +148,6 @@ export function clipboardDisabledReason(file: AlbumFile): string | undefined {
 
 export type CopyDependencies = {
   downloadBrand: (storagePath: string) => Promise<Blob>;
-  downloadDesign: (assetPath: string, channel: ProjectChannel) => Promise<Blob>;
 };
 
 export type CopyStatus =
@@ -243,12 +176,10 @@ export async function copyAlbumFilesToBoard(
     try {
       if (file.source.kind === "playground")
         throw new Error("A Playground file is already on the board.");
-      const path = file.source.kind === "brand" ? file.source.storagePath : file.source.assetPath;
-      const blob =
-        file.source.kind === "brand"
-          ? await deps.downloadBrand(file.source.storagePath)
-          : await deps.downloadDesign(file.source.assetPath, file.source.channel);
-      const copied = new File([blob], fileNameFor(file.title, path), { type: file.mimeType });
+      const blob = await deps.downloadBrand(file.source.storagePath);
+      const copied = new File([blob], fileNameFor(file.title, file.source.storagePath), {
+        type: file.mimeType,
+      });
       onStatus({ id, file, point, state: "done" });
       return copied;
     } catch (error) {

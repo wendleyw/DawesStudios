@@ -93,20 +93,15 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
        * every surface.
        */}
       <div className="nodrag board-card-body" onDoubleClick={() => data.onOpen(data.project.id)}>
-        <ProjectThumbnail src={data.artwork.url ?? undefined} video={data.artwork.isVideo} />
+        <ProjectThumbnail src={data.artwork.url ?? undefined} />
         <div className="board-card-head">
           {/* The full title stays the card's accessible name and its tooltip. */}
           <h2 title={data.project.title}>{distinctTitle(data.project.title, data.titlePrefix)}</h2>
         </div>
-        {/* The version names the artwork above it, never the newest version that exists: a card
-            claiming V2 over a V1 image is worse than a card that says nothing. Both come from one
-            query, so they cannot drift apart. The type is shown even with no artwork. */}
-        {(data.artwork.version !== null || data.artwork.typeLabel) && (
+        {/* The leading deliverable's type, shown even without a cover. */}
+        {data.artwork.typeLabel && (
           <p className="board-card-meta">
-            {data.artwork.version !== null && (
-              <span className="board-card-version">V{data.artwork.version}</span>
-            )}
-            {data.artwork.typeLabel && <span>{data.artwork.typeLabel}</span>}
+            <span>{data.artwork.typeLabel}</span>
           </p>
         )}
         <div className="board-card-footer">

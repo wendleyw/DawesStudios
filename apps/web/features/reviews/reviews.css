@@ -41,7 +41,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.review-row-deliverable,
+.review-row-label,
 .review-row-note,
 .review-date {
   overflow: hidden;
@@ -70,7 +70,7 @@
   .review-card h2 {
     grid-row: 1;
   }
-  .review-row-deliverable {
+  .review-row-label {
     grid-row: 2;
   }
   .review-card .status-badge {

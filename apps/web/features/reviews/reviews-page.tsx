@@ -97,9 +97,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
                 className="review-card"
               >
                 <h2>{row.title}</h2>
-                <span className="review-row-deliverable">
-                  {row.deliverable} · V{row.version}
-                </span>
+                <span className="review-row-label">{row.label}</span>
                 <span className="review-row-note" title={row.note ?? undefined}>
                   {decision ?? row.note}
                 </span>

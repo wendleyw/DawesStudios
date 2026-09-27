@@ -1,11 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { ARTWORK_MAX_BYTES } from "@/features/shared/upload-rules";
 import type { BrandAsset, BrandAssetFolder } from "@/features/brand/brand-data";
-import type { CanvasDesign, CanvasVersion, TableRow } from "@/features/projects/project-data";
 import {
   buildBrandAlbums,
   buildPlaygroundAlbum,
-  buildProjectAlbums,
   clipboardDisabledReason,
   CLIPBOARD_ONLY_IMAGES,
   computeDisabledReason,
@@ -17,7 +14,6 @@ import {
   isPreviewableImage,
   PLAYGROUND_ALBUM_DRAG_TYPE,
 } from "./playground-albums";
-import { PLAYGROUND_MAX_FILE_BYTES } from "./playground-types";
 import type { PlaygroundItem } from "./playground-types";
 
 describe("isPreviewableImage", () => {
@@ -51,13 +47,6 @@ describe("computeDisabledReason", () => {
     expect(computeDisabledReason("image/png", 26 * 1024 * 1024)).toBe(
       "Choose a file no larger than 25 MB.",
     );
-  });
-  // A stored design's image can never hit the branch above: `sanitizeArtwork` already enforces
-  // this exact ceiling before the file is ever stored (`artwork-files.ts`), so `buildProjectAlbums`
-  // always passes `sizeBytes: null` for a design. This equality is the guardrail against the two
-  // ceilings silently drifting apart later.
-  it("keeps the design-upload ceiling equal to the Playground's own ceiling", () => {
-    expect(ARTWORK_MAX_BYTES).toBe(PLAYGROUND_MAX_FILE_BYTES);
   });
 });
 
@@ -154,120 +143,13 @@ describe("buildBrandAlbums", () => {
   });
 });
 
-const deliverables: Pick<TableRow<"deliverables">, "id" | "name" | "sort_order">[] = [
-  { id: "d-square", name: "Campaign square", sort_order: 0 },
-  { id: "d-story", name: "Campaign story", sort_order: 1 },
-];
-const versions: CanvasVersion[] = [
-  {
-    id: "v1",
-    projectId: "project-1",
-    deliverableId: "d-square",
-    boardId: null,
-    number: 1,
-    note: "",
-    status: "draft",
-    date: "",
-  },
-  {
-    id: "v2",
-    projectId: "project-1",
-    deliverableId: "d-square",
-    boardId: null,
-    number: 2,
-    note: "",
-    status: "draft",
-    date: "",
-  },
-  {
-    id: "v3",
-    projectId: "project-1",
-    deliverableId: "d-story",
-    boardId: null,
-    number: 1,
-    note: "",
-    status: "draft",
-    date: "",
-  },
-];
-const designs: CanvasDesign[] = [
-  {
-    id: "design-1",
-    versionId: "v1",
-    title: "Square A",
-    content: {},
-    assetPath: "project-1/design-1.png",
-    order: 0,
-  },
-  {
-    id: "design-2",
-    versionId: "v2",
-    title: "Square B",
-    content: {},
-    assetPath: "project-1/design-2.png",
-    order: 0,
-  },
-  {
-    id: "design-3",
-    versionId: "v2",
-    title: "Square B video",
-    content: {},
-    assetPath: "project-1/design-3.mp4",
-    order: 1,
-  },
-  { id: "design-4", versionId: "v3", title: "Story A", content: {}, assetPath: null, order: 0 },
-];
-
-describe("buildProjectAlbums", () => {
-  it("builds one chip per deliverable version that has at least one stored design, ordered by deliverable then version", () => {
-    const albums = buildProjectAlbums(deliverables, versions, designs, "internal");
-    expect(albums.map((album) => album.label)).toEqual([
-      "Campaign square · V1",
-      "Campaign square · V2",
-    ]);
-  });
-
-  it("drops a version whose only design has no stored asset", () => {
-    const albums = buildProjectAlbums(deliverables, versions, designs, "internal");
-    expect(albums.some((album) => album.label.startsWith("Campaign story"))).toBe(false);
-  });
-
-  it("orders a version's designs by sort order and marks a video design disabled", () => {
-    const albums = buildProjectAlbums(deliverables, versions, designs, "internal");
-    const v2 = albums.find((album) => album.label === "Campaign square · V2")!;
-    expect(v2.files.map((file) => file.title)).toEqual(["Square B", "Square B video"]);
-    expect(v2.files[0].disabledReason).toBeUndefined();
-    expect(v2.files[1].disabledReason).toBe("Stays in the project.");
-  });
-
-  it("tags every design file's source with the given channel", () => {
-    const albums = buildProjectAlbums(deliverables, versions, designs, "client");
-    expect(albums[0].files[0].source).toEqual({
-      kind: "design",
-      channel: "client",
-      assetPath: "project-1/design-1.png",
-    });
-  });
-
-  it("returns no chips for empty version/design input", () => {
-    // A client viewer's `useProjectDetail` call resolves `versions`/`designs` from
-    // `published_versions`/`published_designs`, never `design_versions`/`designs` -- that channel
-    // coercion is `useProjectDetail`'s own existing behavior (`project-data.ts:105`), not this
-    // function's. What this function guarantees is the other half: given nothing, it shows nothing.
-    expect(buildProjectAlbums(deliverables, [], [], "client")).toEqual([]);
-  });
-});
-
-function albumFile(id: string, kind: "brand" | "design" = "brand"): AlbumFile {
+function albumFile(id: string): AlbumFile {
   return {
     id,
     title: `File ${id}`,
     mimeType: "image/png",
     sizeBytes: null,
-    source:
-      kind === "brand"
-        ? { kind: "brand", storagePath: `client-1/${id}.png` }
-        : { kind: "design", channel: "internal", assetPath: `project-1/${id}.png` },
+    source: { kind: "brand", storagePath: `client-1/${id}.png` },
   };
 }
 
@@ -276,7 +158,6 @@ describe("copyAlbumFilesToBoard", () => {
     const statuses: CopyStatus[] = [];
     const deps: CopyDependencies = {
       downloadBrand: async (path) => new Blob([path]),
-      downloadDesign: async () => new Blob(["x"]),
     };
     const files = await copyAlbumFilesToBoard(
       [albumFile("a"), albumFile("b")],
@@ -296,7 +177,6 @@ describe("copyAlbumFilesToBoard", () => {
         if (path.includes("/b.")) throw new Error("network error");
         return new Blob([path]);
       },
-      downloadDesign: async () => new Blob(["x"]),
     };
     const files = await copyAlbumFilesToBoard(
       [albumFile("a"), albumFile("b"), albumFile("c")],
@@ -321,7 +201,6 @@ describe("copyAlbumFilesToBoard", () => {
         active--;
         return new Blob(["x"]);
       },
-      downloadDesign: async () => new Blob(["x"]),
     };
     await copyAlbumFilesToBoard(
       [albumFile("a"), albumFile("b"), albumFile("c"), albumFile("d"), albumFile("e")],
@@ -332,17 +211,26 @@ describe("copyAlbumFilesToBoard", () => {
     expect(peak).toBe(3);
   });
 
-  it("calls downloadDesign with the file's own channel for a design source, never downloadBrand", async () => {
-    const downloadDesign = vi.fn(async () => new Blob(["x"]));
+  it("refuses a Playground file, which is already on the board", async () => {
     const downloadBrand = vi.fn(async () => new Blob(["x"]));
-    await copyAlbumFilesToBoard(
-      [albumFile("a", "design")],
+    const statuses: CopyStatus[] = [];
+    const files = await copyAlbumFilesToBoard(
+      [
+        {
+          id: "pg",
+          title: "Moodboard",
+          mimeType: "image/png",
+          sizeBytes: null,
+          source: { kind: "playground", assetPath: "b/1/m.png" },
+        },
+      ],
       { x: 0, y: 0 },
-      { downloadBrand, downloadDesign },
-      () => {},
+      { downloadBrand },
+      (status) => statuses.push(status),
     );
-    expect(downloadDesign).toHaveBeenCalledWith("project-1/a.png", "internal");
+    expect(files).toEqual([]);
     expect(downloadBrand).not.toHaveBeenCalled();
+    expect(statuses.at(-1)?.state).toBe("error");
   });
 });
 

@@ -4,15 +4,15 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   initialUploadProject,
-  publishedDesignAsset,
   useAssetPreviews,
+  useProjectAssets,
   type ProjectAsset,
 } from "./asset-data";
 
-const storage = vi.hoisted(() => ({ createSignedUrls: vi.fn(), from: vi.fn() }));
+const storage = vi.hoisted(() => ({ createSignedUrls: vi.fn(), from: vi.fn(), table: vi.fn() }));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({
-    database: { storage: { from: storage.from } },
+    database: { from: storage.table, storage: { from: storage.from } },
     session: { user: { id: "viewer" } },
     profile: { role: "agency" },
   }),
@@ -61,28 +61,6 @@ function asset(id: string, bucket: ProjectAsset["bucket"], mime: string): Projec
   };
 }
 
-describe("a shared design's type", () => {
-  it("comes from its stored file, so a shared video is never called an image", () => {
-    const row = {
-      id: "design-1",
-      title: "Launch cut",
-      project_id: "project-1",
-      asset_path: "project-1/v2/launch.mp4",
-      publication_id: "publication-1",
-      published_versions: { published_at: "2026-09-23T12:00:00Z" },
-    };
-    expect(publishedDesignAsset(row, new Set(["publication-1"]))).toMatchObject({
-      mime: "video/mp4",
-      bucket: "published-assets",
-      category: "Shared design",
-      approved: true,
-    });
-    expect(
-      publishedDesignAsset({ ...row, asset_path: "project-1/v2/square.png" }, new Set()).mime,
-    ).toBe("image/png");
-  });
-});
-
 describe("Files grid previews", () => {
   it("signs raster images only, one request per bucket, for ten minutes", async () => {
     storage.createSignedUrls.mockImplementation(async (paths: string[]) => ({
@@ -111,5 +89,58 @@ describe("Files grid previews", () => {
       "internal-assets",
     ]);
     expect(storage.createSignedUrls).toHaveBeenCalledWith(["project-1/working.png"], 600);
+  });
+});
+
+describe("useProjectAssets", () => {
+  it("lists working files and deliveries only, never a design copy", async () => {
+    const file = (id: string) => ({
+      id,
+      name: id,
+      project_id: "project-1",
+      storage_path: `project-1/${id}.pdf`,
+      mime_type: "application/pdf",
+      file_size: 3,
+      created_at: id === "final" ? "2026-09-24T00:00:00Z" : "2026-09-23T00:00:00Z",
+    });
+    const rows: Record<string, unknown[]> = {
+      projects: [
+        {
+          id: "project-1",
+          title: "Launch",
+          status: "approved",
+          campaign_id: null,
+          campaigns: null,
+        },
+      ],
+      delivery_files: [file("final")],
+      project_assets: [file("working")],
+    };
+    storage.table.mockImplementation((table: string) => {
+      const chain = {
+        select: () => chain,
+        eq: () => Promise.resolve({ data: rows[table], error: null }),
+        in: () => Promise.resolve({ data: rows[table], error: null }),
+      };
+      return chain;
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useProjectAssets("client-1"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(
+      result.current.data?.assets.map((item) => [item.id, item.category, item.bucket]),
+    ).toEqual([
+      ["final", "Delivery", "delivery-files"],
+      ["working", "Working file", "internal-assets"],
+    ]);
+    expect(storage.table.mock.calls.map(([table]) => table).toSorted()).toEqual([
+      "delivery_files",
+      "project_assets",
+      "projects",
+    ]);
   });
 });

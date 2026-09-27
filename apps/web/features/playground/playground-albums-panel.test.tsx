@@ -22,63 +22,33 @@ const backend = vi.hoisted(() => ({
 }));
 vi.mock("@/features/brand/brand-data", () => backend);
 
-const projectBackend = vi.hoisted(() => ({
-  useProjectDetail: vi.fn(),
-  useDesignAssetUrl: vi.fn(),
-}));
-vi.mock("@/features/projects/project-data", () => projectBackend);
+type BrandFile = { id: string; name: string; mime?: string; folder?: string };
 
-const auth = vi.hoisted(() => ({ profile: { role: "agency" } }));
-vi.mock("@/features/auth/auth-provider", () => ({ useAuth: () => auth }));
+const squareFolder = { id: "f-square", name: "Campaign square" };
+const storyFolder = { id: "f-story", name: "Campaign story" };
 
-function projectDetail(
-  overrides: Partial<{ deliverables: unknown[]; versions: unknown[]; designs: unknown[] }> = {},
-) {
-  return {
-    data: {
-      deliverables: [{ id: "d-square", name: "Campaign square", sort_order: 0 }],
-      versions: [
-        {
-          id: "v1",
-          projectId: "project-1",
-          deliverableId: "d-square",
-          number: 1,
-          note: "",
-          status: "draft",
-          date: "",
-        },
-      ],
-      designs: [
-        {
-          id: "design-1",
-          versionId: "v1",
-          title: "Square A",
-          content: {},
-          assetPath: "p/design-1.png",
-          order: 0,
-        },
-        {
-          id: "design-2",
-          versionId: "v1",
-          title: "Square B",
-          content: {},
-          assetPath: "p/design-2.png",
-          order: 1,
-        },
-      ],
-      ...overrides,
-    },
-  };
+/** Brand Hub files for the panel to build its albums from, each in the "Campaign square" folder
+ * unless told otherwise. */
+function brandFiles(files: BrandFile[], folders = [squareFolder]) {
+  backend.useBrandAssetFolders.mockReturnValue({ data: folders });
+  backend.useBrandAssets.mockReturnValue({
+    data: files.map((file) => ({
+      id: file.id,
+      name: file.name,
+      folder_id: file.folder ?? squareFolder.id,
+      mime_type: file.mime ?? "image/png",
+      storage_path: `c/${file.id}`,
+    })),
+  });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  auth.profile = { role: "agency" };
-  backend.useBrandAssetFolders.mockReturnValue({ data: [] });
-  backend.useBrandAssets.mockReturnValue({ data: [] });
   backend.useBrandAssetPreviewUrl.mockReturnValue({ data: undefined });
-  projectBackend.useDesignAssetUrl.mockReturnValue({ data: undefined });
-  projectBackend.useProjectDetail.mockReturnValue(projectDetail());
+  brandFiles([
+    { id: "design-1", name: "Square A" },
+    { id: "design-2", name: "Square B" },
+  ]);
 });
 
 function panel(overrides: BoardOverrides = {}) {
@@ -89,7 +59,6 @@ function panel(overrides: BoardOverrides = {}) {
   render(
     <PlaygroundAlbumsPanel
       clientId="client-1"
-      projectId="project-1"
       canAdd
       viewCenter={viewCenter}
       onAdd={onAdd}
@@ -104,37 +73,19 @@ function panel(overrides: BoardOverrides = {}) {
 describe("PlaygroundAlbumsPanel", () => {
   it("opens an album's thumbnail row on click and closes it on a second click", () => {
     panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     expect(screen.getByTitle("Square A")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     expect(screen.queryByTitle("Square A")).not.toBeInTheDocument();
   });
 
   it("shows no chip for an album with no storable files, but a disabled file still appears dimmed inside an open one", () => {
-    projectBackend.useProjectDetail.mockReturnValue(
-      projectDetail({
-        designs: [
-          {
-            id: "design-1",
-            versionId: "v1",
-            title: "Square A",
-            content: {},
-            assetPath: "p/design-1.png",
-            order: 0,
-          },
-          {
-            id: "design-2",
-            versionId: "v1",
-            title: "Square video",
-            content: {},
-            assetPath: "p/design-2.mp4",
-            order: 1,
-          },
-        ],
-      }),
-    );
+    brandFiles([
+      { id: "design-1", name: "Square A" },
+      { id: "design-2", name: "Square video", mime: "video/mp4" },
+    ]);
     panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     const disabled = screen.getByRole("button", { name: "Square video" });
     expect(disabled).toHaveAttribute("aria-disabled", "true");
     expect(disabled).toHaveAttribute("draggable", "false");
@@ -142,64 +93,25 @@ describe("PlaygroundAlbumsPanel", () => {
 });
 describe("PlaygroundAlbumsPanel selection and keyboard", () => {
   it("switching to another album clears the selection", () => {
-    projectBackend.useProjectDetail.mockReturnValue(
-      projectDetail({
-        deliverables: [
-          { id: "d-square", name: "Campaign square", sort_order: 0 },
-          { id: "d-story", name: "Campaign story", sort_order: 1 },
-        ],
-        versions: [
-          {
-            id: "v1",
-            projectId: "project-1",
-            deliverableId: "d-square",
-            number: 1,
-            note: "",
-            status: "draft",
-            date: "",
-          },
-          {
-            id: "v2",
-            projectId: "project-1",
-            deliverableId: "d-story",
-            number: 1,
-            note: "",
-            status: "draft",
-            date: "",
-          },
-        ],
-        designs: [
-          {
-            id: "design-1",
-            versionId: "v1",
-            title: "Square A",
-            content: {},
-            assetPath: "p/design-1.png",
-            order: 0,
-          },
-          {
-            id: "design-3",
-            versionId: "v2",
-            title: "Story A",
-            content: {},
-            assetPath: "p/design-3.png",
-            order: 0,
-          },
-        ],
-      }),
+    brandFiles(
+      [
+        { id: "design-1", name: "Square A" },
+        { id: "design-3", name: "Story A", folder: storyFolder.id },
+      ],
+      [squareFolder, storyFolder],
     );
     panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.click(screen.getByTitle("Square A"));
     expect(screen.getByTitle("Square A")).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Campaign story · V1" }));
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     expect(screen.getByTitle("Square A")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("Shift+click selects a range", () => {
     panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.click(screen.getByTitle("Square A"));
     fireEvent.click(screen.getByTitle("Square B"), { shiftKey: true });
     expect(screen.getByTitle("Square A")).toHaveAttribute("aria-pressed", "true");
@@ -208,7 +120,7 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
 
   it("Enter on a focused thumbnail adds only that file, at the view center", () => {
     const { onAdd, viewCenter } = panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.click(screen.getByTitle("Square B")); // select a different file first
     fireEvent.keyDown(screen.getByTitle("Square A"), { key: "Enter" });
     expect(viewCenter).toHaveBeenCalled();
@@ -220,7 +132,7 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
 
   it("dragging an unselected thumbnail drags only that file and resets the selection to it", () => {
     const { onDragStart } = panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.click(screen.getByTitle("Square B")); // select a different file first
     const dataTransfer = { effectAllowed: "", setData: vi.fn() };
     fireEvent.dragStart(screen.getByTitle("Square A"), { dataTransfer });
@@ -231,7 +143,7 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
 
   it("dragging a thumbnail that is part of the current selection drags the whole selection", () => {
     const { onDragStart } = panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.click(screen.getByTitle("Square A"));
     fireEvent.click(screen.getByTitle("Square B"), { shiftKey: true });
     onDragStart.mockClear();
@@ -244,22 +156,9 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
   });
 
   it("a disabled thumbnail ignores Enter and never starts a drag", () => {
-    projectBackend.useProjectDetail.mockReturnValue(
-      projectDetail({
-        designs: [
-          {
-            id: "design-1",
-            versionId: "v1",
-            title: "Square video",
-            content: {},
-            assetPath: "p/design-1.mp4",
-            order: 0,
-          },
-        ],
-      }),
-    );
+    brandFiles([{ id: "design-1", name: "Square video", mime: "video/mp4" }]);
     const { onAdd, onDragStart } = panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     const thumb = screen.getByRole("button", { name: "Square video" });
     fireEvent.keyDown(thumb, { key: "Enter" });
     expect(onAdd).not.toHaveBeenCalled();
@@ -269,50 +168,17 @@ describe("PlaygroundAlbumsPanel selection and keyboard", () => {
 
   it("canAdd=false leaves Enter a no-op", () => {
     const { onAdd } = panel({ canAdd: false });
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     fireEvent.keyDown(screen.getByTitle("Square A"), { key: "Enter" });
     expect(onAdd).not.toHaveBeenCalled();
   });
 });
 
-describe("PlaygroundAlbumsPanel role-to-channel mapping", () => {
-  // This is the mechanism the spec's "a client never sees, and never requests, an internal
-  // design" success criterion rests on: `useProjectDetail` itself coerces to the published
-  // projection whenever the signed-in profile is a client (`project-data.ts:105`), but only if
-  // this panel ever calls it with a channel a client viewer could plausibly need. Mirrors the same
-  // role-to-channel mapping `project-page.tsx:47-52` already uses (minus its agency toggle, which
-  // the Playground has none of).
-  it("reads the client's published projection for a client viewer", () => {
-    auth.profile = { role: "client" };
-    panel();
-    expect(projectBackend.useProjectDetail).toHaveBeenCalledWith("project-1", "client");
-  });
-
-  it("reads working versions for a designer viewer, same as for the agency", () => {
-    auth.profile = { role: "designer" };
-    panel();
-    expect(projectBackend.useProjectDetail).toHaveBeenCalledWith("project-1", "internal");
-  });
-});
-
 describe("PlaygroundAlbumsPanel reasons a person can read", () => {
   it("describes a disabled thumbnail's reason to keyboard and screen-reader users, not only on hover", () => {
-    projectBackend.useProjectDetail.mockReturnValue(
-      projectDetail({
-        designs: [
-          {
-            id: "design-1",
-            versionId: "v1",
-            title: "Square video",
-            content: {},
-            assetPath: "p/design-1.mp4",
-            order: 0,
-          },
-        ],
-      }),
-    );
+    brandFiles([{ id: "design-1", name: "Square video", mime: "video/mp4" }]);
     panel();
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     const thumb = screen.getByRole("button", { name: "Square video" });
     expect(thumb).toHaveAttribute("aria-disabled", "true");
     // A `title` tooltip never appears on keyboard focus, so the reason is rendered text that the
@@ -327,7 +193,7 @@ describe("PlaygroundAlbumsPanel reasons a person can read", () => {
       canAdd: false,
       blockedReason: "This Playground holds 500 items. Remove an item before adding more.",
     });
-    fireEvent.click(screen.getByRole("button", { name: "Campaign square · V1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Campaign square" }));
     const thumb = screen.getByRole("button", { name: "Square A" });
     expect(thumb).toHaveAttribute("aria-disabled", "true");
     expect(thumb).toHaveAttribute("draggable", "false");
@@ -374,7 +240,6 @@ function renderClipboardPanel({
     <PlaygroundAlbumsPanel
       mode="clipboard"
       clientId="c"
-      projectId="p"
       extraAlbums={[clipboardAlbum]}
       onCopy={onCopy}
       onDownload={onDownload}
@@ -449,7 +314,6 @@ describe("clipboard mode", () => {
       <PlaygroundAlbumsPanel
         mode="clipboard"
         clientId="c"
-        projectId="p"
         extraAlbums={[twoImageAlbum]}
         onCopy={onCopy}
         onDownload={vi.fn().mockResolvedValue(undefined)}

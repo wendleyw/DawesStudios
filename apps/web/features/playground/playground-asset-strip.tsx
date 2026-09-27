@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/features/auth/auth-provider";
 import { downloadBrandAssetFile } from "@/features/brand/brand-data";
-import { downloadDesignAssetFile } from "@/features/projects/project-data";
 import { saveBlob } from "@/features/shared/save-blob";
 import { copyImageToClipboard } from "./album-clipboard";
 import { buildPlaygroundAlbum, fileNameFor, type AlbumFile } from "./playground-albums";
@@ -29,11 +28,6 @@ export function PlaygroundAssetStrip({
   async function download(file: AlbumFile): Promise<Blob> {
     if (file.source.kind === "brand")
       return downloadBrandAssetFile(database, { path: file.source.storagePath });
-    if (file.source.kind === "design")
-      return downloadDesignAssetFile(database, {
-        assetPath: file.source.assetPath,
-        channel: file.source.channel,
-      });
     const response = await fetch(await getPlaygroundDownload(database, file.source.assetPath));
     if (!response.ok) throw new Error("The image could not be downloaded.");
     return response.blob();
@@ -44,7 +38,6 @@ export function PlaygroundAssetStrip({
       <PlaygroundAlbumsPanel
         mode="clipboard"
         clientId={clientId}
-        projectId={projectId}
         extraAlbums={playgroundAlbum ? [playgroundAlbum] : []}
         onCopy={(file) => copyImageToClipboard(() => download(file))}
         onDownload={async (file) => {
