@@ -91,7 +91,12 @@ select lives_ok($$select pg_temp.remember('round-a2',public.send_board_round(pg_
   'https://miro.com/app/board/uXjVAlpha01=/?moveToWidget=22'))$$,'A second round with its own frame');
 select throws_ok($$select public.send_board_round(pg_temp.k('board-a'),'x','https://evil.example/app/board/uXjVAlpha01=/')$$,
   '22023',null,'A round with an invalid frame link is refused');
-select throws_ok($$select public.send_board_round(pg_temp.k('board-delivered'),'late')$$,'P0001','Delivered projects cannot receive new rounds','A delivered project refuses rounds');
+select throws_ok($$select public.send_board_round(pg_temp.k('board-delivered'),'late')$$,'22023','Delivered projects cannot receive new rounds','A delivered project refuses rounds');
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.send_board_round(pg_temp.k('board-b'),'x',null,md5('mw:key-a1')::uuid)$$,
+  '23505',null,'A reused idempotency key for a different board is refused');
 reset role;
 select is((select array_agg(version_number order by version_number) from public.design_versions where board_id=pg_temp.k('board-a')),array[1,2],'Rounds are numbered per board, once each');
 select is((select notes from public.design_versions where id=pg_temp.k('round-a1')),'First pass','The note is trimmed');
@@ -222,8 +227,10 @@ select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https:
 select is((select count(*)::int from public.published_versions where project_id=pg_temp.k('project')),0,'A refused share wrote nothing');
 select lives_ok($$select pg_temp.remember('shared-1',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=5',' First look ',pg_temp.k('round-a1'),md5('mw:share-1')::uuid))$$,'The agency shares a round');
 select is(public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=5',' First look ',pg_temp.k('round-a1'),md5('mw:share-1')::uuid),pg_temp.k('shared-1'),'A retry returns the same version');
-select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','other',null,md5('mw:share-1')::uuid)$$,'P0001','Idempotency key conflicts with a different version','A reused key for another share is refused');
-select throws_ok($$select public.share_miro_version(pg_temp.k('delivered'),'https://miro.com/app/board/uXjVClient1=/','late')$$,'P0001','Delivered projects cannot publish new revisions','A delivered project refuses sharing');
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient9=/?moveToWidget=5',' First look ',pg_temp.k('round-a1'),md5('mw:share-1')::uuid)$$,
+  '23505','Idempotency key conflicts with a different version','A retry with the same key but a different board link is refused');
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','other',null,md5('mw:share-1')::uuid)$$,'23505','Idempotency key conflicts with a different version','A reused key for another share is refused');
+select throws_ok($$select public.share_miro_version(pg_temp.k('delivered'),'https://miro.com/app/board/uXjVClient1=/','late')$$,'22023','Delivered projects cannot publish new revisions','A delivered project refuses sharing');
 reset role;
 select is((select deliverable_id from public.published_versions where id=pg_temp.k('shared-1')),null,'A shared version belongs to the project, not a deliverable');
 select is((select version_number from public.published_versions where id=pg_temp.k('shared-1')),1,'The first shared version is V1');
@@ -234,6 +241,12 @@ select is((select internal_version_id from private.publication_sources where pub
 select is((select status from public.design_versions where id=pg_temp.k('round-a1')),'reviewed','The round is marked shared');
 select is((select status::text from public.projects where id=pg_temp.k('project')),'client_review','The project waits for the client');
 select ok(exists(select 1 from public.notifications where client_id=pg_temp.k('client-org') and project_id=pg_temp.k('project') and title='New designs ready for review'),'The client is notified');
+
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=9','Reshare',pg_temp.k('round-a1'))$$,
+  '23505','This round is already shared','A round already shared cannot be shared again');
+reset role;
 
 select pg_temp.act_as('agency');
 set local role authenticated;
@@ -295,6 +308,59 @@ select throws_ok($$select created_by from public.designs limit 1$$,'42501',null,
 select throws_ok($$select * from public.design_versions limit 1$$,'42501',null,'A whole-row read is refused rather than leaking the author');
 select lives_ok($$select version_id, board_id, widget_id, updated_at from public.design_version_miro_links limit 1$$,'Designer B reads the link columns');
 select lives_ok($$select id, version_id, title, content, internal_asset_path, sort_order from public.designs limit 1$$,'Designer B reads the design columns');
+reset role;
+
+-- Sharing: a round from another project is refused; the anon role has no access at all; and an
+-- idempotency key already used by a different publication_sources row (as publish_version writes
+-- one) is refused with a clean message, not a raw unique-constraint error.
+insert into public.projects(id,client_id,title,service_type,status) values
+  (pg_temp.remember('other-project',md5('mw:other-project')::uuid),pg_temp.k('client-org'),'MW other project','ai','in_progress');
+insert into public.project_assignments(project_id,designer_id) values (pg_temp.k('other-project'),pg_temp.k('designer-a'));
+select pg_temp.act_as('agency');
+set local role authenticated;
+select pg_temp.remember('other-board',public.create_design_board(pg_temp.k('other-project'),'Other board','https://miro.com/app/board/uXjVOther01=/',pg_temp.k('designer-a')));
+reset role;
+select pg_temp.act_as('designer-a');
+set local role authenticated;
+select pg_temp.remember('other-round',public.send_board_round(pg_temp.k('other-board'),'Other round'));
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=11','x',pg_temp.k('other-round'))$$,
+  'P0002',null,'Sharing a round from another project is refused');
+reset role;
+set local role anon;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/','x')$$,
+  '42501',null,'The anon role cannot share a version');
+reset role;
+
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+select pg_temp.remember('round-a3',public.send_board_round(pg_temp.k('board-a'),'Third pass'));
+reset role;
+select pg_temp.remember('fixture-publication',md5('mw:fixture-publication')::uuid);
+insert into public.published_versions(id,project_id,deliverable_id,version_number,release_note) values
+  (pg_temp.k('fixture-publication'),pg_temp.k('project'),null,500,'fixture');
+insert into private.publication_sources(publication_id,internal_version_id,published_by,request_key,request_note) values
+  (pg_temp.k('fixture-publication'),pg_temp.k('round-a1'),pg_temp.k('agency'),md5('mw:foreign-key')::uuid,'fixture');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=12','Reuse',pg_temp.k('round-a3'),md5('mw:foreign-key')::uuid)$$,
+  '23505','Idempotency key conflicts with a different version','A key already used by another publication_sources row is refused, not a raw unique violation');
+select is((select count(*)::int from public.published_versions where project_id=pg_temp.k('project') and version_number>500),0,'The failed share left no extra published version');
+reset role;
+
+-- Delivered projects: only the agency may relink a round once the project is delivered.
+update public.projects set status='delivered' where id=pg_temp.k('project');
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+select throws_ok($$select public.set_version_miro_link(pg_temp.k('round-a1'),'https://miro.com/app/board/uXjVAlpha01=/?moveToWidget=99')$$,
+  '22023','Delivered projects cannot change links','The board''s designer cannot relink a round once the project is delivered');
+reset role;
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select public.set_version_miro_link(pg_temp.k('round-a1'),'https://miro.com/app/board/uXjVAlpha01=/?moveToWidget=99')$$,
+  'The agency can still relink a round after delivery');
 reset role;
 
 select * from finish();
