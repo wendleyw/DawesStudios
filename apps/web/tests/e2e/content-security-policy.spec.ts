@@ -1,9 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { credentials, localAdmin, localCaller, signIn } from "./test-support";
+import { cleanupTestProject, createProductionFixture } from "./project-fixture";
+import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 
-// Read-only: loads the primary surfaces as each role and fails on any Content-Security-Policy
+// Loads the primary surfaces as each role and fails on any Content-Security-Policy
 // violation, so a policy that blocks signed Storage images, the Miro embed, media-service calls or
-// Realtime is caught before release. This one creates and changes no data.
+// Realtime is caught before release. It changes no existing data; when no client project has a
+// shared Miro link, it adds one disposable project for the embed and removes it afterwards.
 
 declare global {
   interface Window {
@@ -59,7 +61,19 @@ test("primary surfaces load without Content-Security-Policy violations for every
     .in("project_id", ids)
     .limit(1);
   expect(sharedError).toBeNull();
-  const clientProject = shared?.[0]?.project_id ?? ids[0];
+  // Without one, a disposable project gets a client version, so the embed path always runs.
+  let fixtureProject: string | null = null;
+  if (!shared?.length) {
+    const agency = await localAgency();
+    fixtureProject = (await createProductionFixture(agency)).projectId;
+    const version = await agency.rpc("share_miro_version", {
+      p_project_id: fixtureProject,
+      p_url: "https://miro.com/app/board/uXjVCspE2E=/",
+      p_note: "Content-Security-Policy check.",
+    });
+    expect(version.error).toBeNull();
+  }
+  const clientProject = fixtureProject ?? shared![0].project_id;
 
   const designer = await localCaller(credentials.designer);
   const { data: assignment } = await designer
@@ -74,7 +88,7 @@ test("primary surfaces load without Content-Security-Policy violations for every
       credentials.agency,
       [
         `/clients/${clientId}/board`,
-        `/projects/${clientProject}`,
+        `/projects/${clientProject}?channel=client`,
         `/clients/${clientId}/brand/assets`,
         `/clients/${clientId}/briefings`,
       ],
@@ -89,12 +103,16 @@ test("primary surfaces load without Content-Security-Policy violations for every
       ],
     ],
   ];
-  for (const [email, paths] of surfaces) {
-    const context = await browser.newContext();
-    try {
-      await expectCleanSurfaces(await context.newPage(), email, paths);
-    } finally {
-      await context.close();
+  try {
+    for (const [email, paths] of surfaces) {
+      const context = await browser.newContext();
+      try {
+        await expectCleanSurfaces(await context.newPage(), email, paths);
+      } finally {
+        await context.close();
+      }
     }
+  } finally {
+    if (fixtureProject) await cleanupTestProject(fixtureProject);
   }
 });
