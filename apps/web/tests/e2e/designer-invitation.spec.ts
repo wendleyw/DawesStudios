@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { latestAuthEmail } from "./intake-fixture";
+import { cleanupDesignerInvitationMail, latestAuthEmail } from "./intake-fixture";
 import {
   credentials,
   localAdmin,
@@ -60,7 +60,23 @@ test("a named designer accepts the captured invitation and can sign in with thei
     const context = await browser.newContext();
     try {
       const designer = await context.newPage();
-      await designer.goto((await latestAuthEmail(email, "invite"))!);
+      const link = (await latestAuthEmail(email, "invite"))!;
+      const invalidLink = new URL(link);
+      invalidLink.searchParams.set("token", "0".repeat(64));
+      await designer.goto(invalidLink.href);
+      await expect(
+        designer.getByRole("heading", { name: "This invitation link is unavailable." }),
+      ).toBeVisible();
+      await expect(designer.getByRole("button", { name: "Sign in to accept" })).toHaveCount(0);
+      expect((await new AxeBuilder({ page: designer }).analyze()).violations).toEqual([]);
+      await designer.setViewportSize({ width: 1280, height: 800 });
+      await designer.screenshot({
+        path: `${screenshotDirectory}/invitation-invalid-desktop.png`,
+      });
+      await designer.setViewportSize({ width: 390, height: 844 });
+      await designer.screenshot({ path: `${screenshotDirectory}/invitation-invalid-mobile.png` });
+      await designer.goto(link);
+      await expect(designer.getByRole("heading", { name: "Welcome to the studio." })).toBeVisible();
       await designer.getByLabel("Password", { exact: true }).fill(password);
       await designer.getByLabel("Confirm password", { exact: true }).fill(password);
       await designer.getByRole("button", { name: "Accept invitation", exact: true }).click();
@@ -76,6 +92,13 @@ test("a named designer accepts the captured invitation and can sign in with thei
       const projects = await caller.from("projects").select("id");
       expect(projects.error).toBeNull();
       expect(projects.data).toEqual([]);
+      await designer.goto(link);
+      await expect(
+        designer.getByRole("heading", { name: "This invitation link is unavailable." }),
+      ).toBeVisible();
+      await expect(designer.getByLabel("Password", { exact: true })).toHaveCount(0);
+      await designer.getByRole("link", { name: "Back to sign in" }).click();
+      await expect(designer).toHaveURL(/\/home$/);
       await page.reload();
       await expect(page.getByText(name, { exact: true })).toBeVisible();
     } finally {
@@ -109,5 +132,7 @@ test("a named designer accepts the captured invitation and can sign in with thei
       const removed = await localAdmin.auth.admin.deleteUser(userId);
       if (removed.error) throw removed.error;
     }
+    await cleanupDesignerInvitationMail(email);
+    expect(await latestAuthEmail(email, "invite")).toBeNull();
   }
 });

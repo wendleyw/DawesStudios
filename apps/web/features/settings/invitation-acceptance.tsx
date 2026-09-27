@@ -18,10 +18,15 @@ export function InvitationAcceptance() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const token = params.get("token") ?? "";
+  const [verificationFailed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const callback = new URLSearchParams(window.location.hash.slice(1));
+    return ["error", "error_code", "error_description"].some((key) => callback.has(key));
+  });
   const setup = useInvitationPasswordRequirement(database, {
     token,
     userId: session?.user.id ?? null,
-    enabled: !!session && /^[a-f0-9]{64}$/i.test(token),
+    enabled: !verificationFailed && !!session && /^[a-f0-9]{64}$/i.test(token),
   });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +76,18 @@ export function InvitationAcceptance() {
       <div className="account-flow-card">
         {loading ? (
           <p role="status">Checking your invitation…</p>
+        ) : verificationFailed ? (
+          <>
+            <h1>This invitation link is unavailable.</h1>
+            <p>
+              It may have expired or already been used. Open the latest invitation sent to your
+              email address, or ask the studio for a new one.
+            </p>
+            <p>If you already accepted your invitation, sign in to continue.</p>
+            <Link href="/login" className="button primary">
+              Back to sign in
+            </Link>
+          </>
         ) : !/^[a-f0-9]{64}$/i.test(token) ? (
           <>
             <h1>Invitation unavailable.</h1>

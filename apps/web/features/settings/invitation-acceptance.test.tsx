@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   passwordRequired: false,
   forgedExistingHint: false,
   setupError: null as Error | null,
+  signedIn: true,
   accept: vi.fn(),
   updateUser: vi.fn(),
   replace: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({
     database: { auth: { updateUser: state.updateUser, signOut: vi.fn() } },
-    session: { user: { email: "person@fixture.local" } },
+    session: state.signedIn ? { user: { email: "person@fixture.local" } } : null,
     loading: false,
   }),
 }));
@@ -51,11 +52,45 @@ beforeEach(() => {
   state.passwordRequired = false;
   state.forgedExistingHint = false;
   state.setupError = null;
+  state.signedIn = true;
+  window.history.replaceState(null, "", "/auth/invite");
   state.accept.mockResolvedValue(undefined);
   state.updateUser.mockResolvedValue({ error: null });
 });
 
 describe("InvitationAcceptance", () => {
+  it.each([true, false])(
+    "explains failed email verification without asking for a password (signed in: %s)",
+    (signedIn) => {
+      state.signedIn = signedIn;
+      window.history.replaceState(
+        null,
+        "",
+        "/auth/invite#error=access_denied&error_code=otp_expired&error_description=Untrusted+message",
+      );
+      renderInvitation();
+
+      expect(
+        screen.getByRole("heading", { name: "This invitation link is unavailable." }),
+      ).toBeVisible();
+      expect(screen.queryByLabelText("Password", { exact: true })).not.toBeInTheDocument();
+      expect(screen.queryByText("Untrusted message")).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Back to sign in" })).toHaveAttribute(
+        "href",
+        "/login",
+      );
+      expect(state.accept).not.toHaveBeenCalled();
+      expect(state.updateUser).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps sign-in available for an existing account with an unverified application link", () => {
+    state.signedIn = false;
+    renderInvitation();
+
+    expect(screen.getByRole("button", { name: "Sign in to accept" })).toBeVisible();
+  });
+
   it("accepts an existing account without updating its password", async () => {
     renderInvitation();
 

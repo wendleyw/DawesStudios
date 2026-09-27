@@ -144,6 +144,30 @@ export async function latestAuthEmail(
   return null;
 }
 
+export async function cleanupDesignerInvitationMail(email: string) {
+  if (!/^acceptance-designer-[a-f0-9-]{36}@dawes\.local$/.test(email))
+    throw new Error("Refusing to remove mail for a non-fixture designer.");
+  const mailUrl = acceptanceMailUrl();
+  const response = await fetch(
+    `${mailUrl}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
+  );
+  if (!response.ok) throw new Error("Could not read fixture mail for cleanup.");
+  const list = (await response.json()) as {
+    messages: { ID: string; To?: { Address: string }[] }[];
+  };
+  const ids = list.messages
+    .filter((message) => message.To?.length === 1 && message.To[0].Address.toLowerCase() === email)
+    .map((message) => message.ID);
+  // An empty IDs array means delete all in some mail capture APIs. Never submit it.
+  if (!ids.length) return;
+  const removed = await fetch(`${mailUrl}/api/v1/messages`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ IDs: ids }),
+  });
+  if (!removed.ok) throw new Error("Could not remove fixture invitation mail.");
+}
+
 function acceptanceMailUrl(): string {
   const backend = process.env.ACCEPTANCE_SUPABASE_URL;
   const localBackend =

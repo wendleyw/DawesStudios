@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; sidebar and named invitations integrated, no active delegated writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no active delegated writers**.
 
 ## Objective and accepted decisions
 
@@ -9,9 +9,9 @@ Updated: 2026-09-27 EDT. Owner: **Codex; sidebar and named invitations integrate
   only viewport width up to 900 px moves them below. Height alone no longer changes orientation.
 - User approved the compact campaign/title/due header for project pages only. `44dba3b` makes it
   the default for all roles; the preview flag and old layout branch are removed.
-- Latest task: fix the clipped sidebar control, add a designer invitation name, and test delivery.
-  Resend remains unconfigured; local Auth captures mail. User's existing Gmail invitation remains
-  pending and requires password setup. Do not consume its verification link in automation.
+- Latest task: user reached sign-in from an invalid Auth invitation link. The screen now explains
+  failed verification; named designer tests remove their captured mail. The user's original Gmail
+  invitation remains pending and needs password setup. Never consume its link in automation.
 - Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
 - Resend is the selected production email provider, through Supabase Auth SMTP. No direct SDK.
 - Server, public domain, verified sender and credentials remain unknown. No push/deployment or
@@ -69,14 +69,14 @@ Updated: 2026-09-27 EDT. Owner: **Codex; sidebar and named invitations integrate
   user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;
   [review-control evidence](../verification/compact-miro-review-2026-09-27.md) records scope and captures.
 
-- Current task: sidebar control remains fully clickable when expanded/collapsed at1512px wide
-  and900/696/600px tall. Optional full name reaches new Auth profiles; existing names stay intact.
-- Web gate:128files/1259tests, types/lint/format pass. New Chromium designer invite→local mail→
-  password→acceptance→fresh sign-in passes; no projects visible before assignment. Dialog Axe0.
-  All118FK pass; live10/68/50 preserved; disposable designer removed.
-- [Invitation/sidebar evidence](../verification/team-invitation-and-sidebar-2026-09-27.md).
-  User tests the existing invitation from local inbox55424 in a separate/private browser session.
-  External Gmail delivery requires Resend credentials and a verified sender on the host.
+- Sidebar control and optional new-account full name: [prior evidence](../verification/team-invitation-and-sidebar-2026-09-27.md).
+- Current web gate:128files/1262tests, types/lint/format pass. Chromium designer invitation passes
+  invalid link→correct link→password→acceptance→fresh sign-in→reused link; unassigned projects hidden.
+  Invalid-link Axe0 and desktop/phone visuals pass. All118FK and live10/68/50 preserved.
+- [Callback evidence](../verification/invitation-link-errors-2026-09-27.md). Actual clicked message
+  unknown; Auth rejected three links, while the original recipient's token still matched. A newer
+  retired test message was archived/removed. User received their specific inbox message link.
+  Manual acceptance is pending; Resend delivery still requires sender and host credentials.
 
 - Current toolbar checks: web gate127files/1249tests and Chromium search/filter/focus/Axe across
   five sizes, including1512×696 and1440×600, pass. Desktop captures inspected; live10/68/50 and

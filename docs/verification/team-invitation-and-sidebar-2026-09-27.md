@@ -40,6 +40,9 @@ open its link in a separate/private browser session. Set a password and accept. 
 delivery is untested and unavailable until Resend SMTP is configured with a verified sender and
 host-only credentials; follow the [email runbook](../operations/email.md).
 
+Follow-up: [invalid invitation links](invitation-link-errors-2026-09-27.md) records the subsequent
+manual-test failure, explicit callback error handling and disposable-mail cleanup.
+
 Project-header edits belong to the separate UI thread and were preserved. The unrelated
 `login.png` deletion remains untouched. Working images and sidebar geometry are under the ignored
 `outputs/team-invitation-2026-09-27/` directory. No push or deployment was performed.

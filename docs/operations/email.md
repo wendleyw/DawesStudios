@@ -13,6 +13,13 @@ external inbox received it. Open the captured invitation in a separate browser p
 window, set the password when requested, and accept it; an existing agency session cannot accept
 an invitation addressed to a different email. Do not paste verification tokens into logs or docs.
 
+Check the **To** address before opening a message: automated acceptance fixtures also use this
+inbox. The designer invitation journey removes its own captured messages during cleanup so links
+to deleted fixture accounts are not offered for manual testing. Auth email links are single-use
+and expire after one hour in the local configuration; the application's pending invitation has
+its own seven-day expiry. An invalid or consumed Auth link shows an explanation, not a password
+form. Use the latest message for the intended recipient, or ask the studio for a new invitation.
+
 Team → Invite someone accepts an optional full name for a new account. Existing accounts keep
 their profile name. A pending invitation can already have an Auth identity without studio access;
 its designer role is granted only after the intended recipient accepts it.
