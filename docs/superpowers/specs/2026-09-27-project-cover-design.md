@@ -59,8 +59,9 @@ Success means three things:
     `prepared_by = auth.uid()`. It upserts the row and returns the previous `storage_path`, or
     null.
   - `set_project_cover_visibility(p_project_id, p_client_visible)` changes visibility only.
-  - `clear_project_cover(p_project_id) → text` deletes the row and returns its path. The web then
-    asks the media worker (`/assets/discard`) to delete the object.
+  - `clear_project_cover(p_project_id) → text` deletes the row and returns its path. The media
+    worker's `POST /covers/clear?projectId=<uuid>` calls it with the caller's token and deletes the
+    returned object; the existing `/assets/discard` only covers publication copies.
 - Every RPC writes an audit event. None of them notifies anyone.
 
 ### Web
@@ -77,7 +78,7 @@ Success means three things:
   board, in `features/board/board-data.ts`, next to the thumbnail read, as a batched read by
   project IDs with signed URLs.
 - `apps/web/features/projects/media-client.ts` gains `prepareProjectCover(database, mediaUrl,
-  projectId, file)`.
+  projectId, file)` and `clearProjectCover(database, mediaUrl, projectId)`.
 
 ## Versions only for existing projects
 
