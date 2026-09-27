@@ -509,7 +509,7 @@
   }
 }
 /* On phones the bar keeps touch-sized buttons and moves right, clear of the zoom pill. */
-@media (max-width: 639px) {
+@media (max-width: 640px) {
   .project-tool-bar {
     right: 12px;
     bottom: 12px;
@@ -900,12 +900,12 @@
   }
 }
 /*
- * The client's Miro review bar sits where the tool bar was, and the tool bar rises above it. Both
- * follow the same centring, including beside an open side panel.
+ * The review bar overlaps the tool bar's lower padding to form one compact stack. Both follow
+ * the same centring, including beside an open side panel; controls and focus rings stay clear.
  */
 .miro-review-bar {
   position: absolute;
-  z-index: 6;
+  z-index: 7;
   bottom: 16px;
   left: 50%;
   display: flex;
@@ -941,7 +941,8 @@
   flex-shrink: 0;
 }
 .project-canvas:has(> .miro-review-bar) > .project-tool-bar {
-  bottom: calc(16px + var(--control-height) + 18px + 8px);
+  bottom: calc(16px + var(--control-height) + 18px - 6px);
+  padding-bottom: 12px;
 }
 .project-workspace:has(> .project-inspector) .miro-review-bar {
   left: calc(200px + (100% - 200px - min(380px, 100% - 32px) - 32px) / 2);
@@ -951,7 +952,7 @@
     display: none;
   }
 }
-@media (max-width: 639px) {
+@media (max-width: 640px) {
   .miro-review-bar {
     right: 12px;
     bottom: 12px;
@@ -967,15 +968,18 @@
     display: none;
   }
   .project-canvas:has(> .miro-review-bar) > .project-tool-bar {
-    bottom: calc(12px + var(--control-height) + 18px + 8px);
+    bottom: calc(12px + var(--control-height-touch) + 18px - 6px);
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .project-canvas:has(> .miro-review-bar) .miro-view {
-    padding-bottom: calc(2 * var(--control-height) + 72px);
+    padding-bottom: calc(2 * var(--control-height-touch) + 44px);
   }
 }
 /* On phones the tool bar moves to the right edge, over Miro's own zoom controls; the embed stops
    above it instead. */
-@media (max-width: 639px) {
+@media (max-width: 640px) {
   .miro-view {
     padding-bottom: calc(var(--control-height) + 36px);
   }

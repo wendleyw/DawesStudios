@@ -80,8 +80,11 @@ layout; re-check it if Miro changes its bar). The sidebar folds while a link is 
 (`useFoldSidebarWhile`). `frame-src https://miro.com` is the one Content-Security-Policy exception
 this feature requires (`apps/web/next.config.ts`). A client whose shown client version awaits their
 decision (`canReviewShared`: the latest shared version, pending, project not delivered) gets
-`MiroReviewBar` at the bottom, with the tool bar raised above it; **Request changes** and
-**Approve** open `project-action-review.tsx` with that decision preselected.
+`MiroReviewBar` at the bottom, with the tool bar tucked behind its top edge as one compact,
+centred stack. The 6 px overlap covers padding only, preserving complete buttons and keyboard
+focus rings. On phones both bars remain centred, with 44 px touch controls and less reserved
+space below the embed. **Request changes** and **Approve** open `project-action-review.tsx`
+with that decision preselected.
 
 `miro-workspace.ts` holds the pure rules: `boardRounds` (a board's rounds with a link, newest
 first), `sharedVersions` (the project-level client versions, which have no board), `pickById`,

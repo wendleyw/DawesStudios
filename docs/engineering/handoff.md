@@ -65,6 +65,10 @@ Updated: 2026-09-27 EDT. Owner: **Codex; sidebar and named invitations integrate
 
 ## Environment and next concrete work
 
+- Compact Miro review controls now overlap padding and stay centred on phones; next UI action:
+  user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;
+  [review-control evidence](../verification/compact-miro-review-2026-09-27.md) records scope and captures.
+
 - Current task: sidebar control remains fully clickable when expanded/collapsed at1512px wide
   and900/696/600px tall. Optional full name reaches new Auth profiles; existing names stay intact.
 - Web gate:128files/1259tests, types/lint/format pass. New Chromium designer invite→local mail→
