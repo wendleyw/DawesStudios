@@ -65,9 +65,16 @@ test("the agency controls a project cover and each role sees what it may", async
   const studio = await session(browser, credentials.agency);
   const client = await session(browser, credentials.client);
   const designer = await session(browser, designerEmail);
-  // Every request the client's pages make, to prove no cover object is fetched while it is hidden.
-  const clientRequests: string[] = [];
-  client.on("request", (request) => clientRequests.push(request.url()));
+  // Every cover request the client's pages make that names this project's cover — in the URL or,
+  // for a batch signing request, in its body — to prove the hidden cover is never fetched. Other
+  // projects' covers are not counted: the canonical seed shows the client its own visible covers.
+  const hiddenCoverRequests: string[] = [];
+  client.on("request", (request) => {
+    const url = request.url();
+    if (!url.includes("project-covers")) return;
+    if (`${url} ${request.postData() ?? ""}`.includes(`${projectId}/`))
+      hiddenCoverRequests.push(url);
+  });
 
   // 1. The agency sets a cover from Project details.
   await studio.goto(`/projects/${projectId}`);
@@ -91,13 +98,13 @@ test("the agency controls a project cover and each role sees what it may", async
   await expect(cardImage(studio)).toBeVisible();
   await expect(cardImage(studio)).toHaveAttribute("src", /project-covers/);
 
-  // 3. The client's card does not, and the client never fetches a cover object.
+  // 3. The client's card does not, and the client never fetches this project's cover object.
   await openBoard(client);
   await expect(client.locator(`.react-flow__node[data-id="${projectId}"]`)).toContainText(
     "No cover yet",
   );
   await expect(cardImage(client)).toHaveCount(0);
-  expect(clientRequests.filter((url) => url.includes("project-covers"))).toEqual([]);
+  expect(hiddenCoverRequests).toEqual([]);
 
   // 4. Visible to the client: the client's card shows it.
   await studio.goto(`/projects/${projectId}`);
