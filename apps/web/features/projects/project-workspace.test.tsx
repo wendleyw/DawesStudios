@@ -241,6 +241,32 @@ describe("ProjectWorkspace", () => {
     expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
   });
 
+  it("opens a notification's exact authorized board and round", () => {
+    renderWorkspace({
+      boards: [board, { ...board, id: "b2", name: "Second direction" }],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round, { ...round, id: "r2", boardId: "b2", number: 2 }],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+      initialSelection: { board: "b2", round: "r2", version: null },
+    });
+    expect(screen.getByRole("combobox", { name: "Design board" })).toHaveValue("b2");
+    expect(screen.getByRole("button", { name: "Round 2" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("ignores unavailable notification targets without exposing another board", () => {
+    renderWorkspace({
+      boards: [board],
+      initialSelection: { board: "private-board", round: "private-round", version: null },
+    });
+    expect(screen.queryByText("private-board")).toBeNull();
+    expect(screen.getByTitle("Miro board Alpha")).toHaveAttribute(
+      "src",
+      expect.stringContaining("uXjVBoard01"),
+    );
+  });
+
   it("falls back to the designer's empty state once their reassigned board vanishes from the list", () => {
     state.role = "designer";
     const ownBoard: DesignBoard = { ...board, designerId: "viewer-1" };

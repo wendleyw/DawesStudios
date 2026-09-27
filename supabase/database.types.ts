@@ -1937,7 +1937,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      action_notifications: {
+        Row: {
+          board_id: string | null
+          client_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          id: string | null
+          kind: string | null
+          project_id: string | null
+          subject: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_briefing: {

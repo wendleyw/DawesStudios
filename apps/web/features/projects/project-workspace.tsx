@@ -47,6 +47,8 @@ export type ProjectWorkspaceProps = {
    * remount `useProjectDetail` causes while the other channel's data loads.
    */
   panels: ReturnType<typeof usePanelFocusReturn<ProjectPanelKind>>;
+  /** URL hints are resolved against authorized rows only; they grant no access. */
+  initialSelection?: { board: string | null; round: string | null; version: string | null };
 };
 
 /**
@@ -60,15 +62,16 @@ export function ProjectWorkspace({
   data,
   boards,
   panels,
+  initialSelection,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
   const clients = useClients();
   const { formatDate } = useDateFormat();
   const role = profile?.role ?? "client";
   const { project, versions, deliverables } = data;
-  const [boardId, setBoardId] = useState<string | null>(null);
-  const [roundId, setRoundId] = useState<string | null>(null);
-  const [versionId, setVersionId] = useState<string | null>(null);
+  const [boardId, setBoardId] = useState<string | null>(initialSelection?.board ?? null);
+  const [roundId, setRoundId] = useState<string | null>(initialSelection?.round ?? null);
+  const [versionId, setVersionId] = useState<string | null>(initialSelection?.version ?? null);
   const { panel, setPanel, closePanel, changePanel } = panels;
   const [action, setAction] = useState<ProjectAction | null>(null);
   const [assetStripOpen, setAssetStripOpen] = useState(false);

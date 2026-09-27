@@ -34,8 +34,8 @@ export function useFocusReturn() {
  * A project page's side panel, with focus returned on close to whatever opened it. Owned by
  * `project-page.tsx` and used by the Miro workspace (`project-workspace.tsx`).
  */
-export function usePanelFocusReturn<Kind>() {
-  const [panel, setPanel] = useState<Kind | null>(null);
+export function usePanelFocusReturn<Kind>(initialPanel: Kind | null = null) {
+  const [panel, setPanel] = useState<Kind | null>(initialPanel);
   const trigger = useRef<HTMLElement | null>(null);
   const returnFocus = useFocusReturn();
   function closePanel() {

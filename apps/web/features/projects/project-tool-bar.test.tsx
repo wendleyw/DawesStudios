@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 // The animated mark is decorative and needs a browser's matchMedia; its own test covers it.
@@ -11,6 +11,24 @@ const playground = (
     P
   </button>
 );
+
+it("records the trigger even when pointer activation does not focus it", () => {
+  let focusedWhenOpened: Element | null = null;
+  render(
+    <ProjectToolBar
+      panel={null}
+      onPanel={() => {
+        focusedWhenOpened = document.activeElement;
+      }}
+      disabled={false}
+    >
+      {playground}
+    </ProjectToolBar>,
+  );
+  const trigger = screen.getByRole("button", { name: "Comments" });
+  fireEvent.click(trigger);
+  expect(focusedWhenOpened).toBe(trigger);
+});
 
 describe("ProjectToolBar", () => {
   it("groups details, comments and the page's own actions in that order", () => {

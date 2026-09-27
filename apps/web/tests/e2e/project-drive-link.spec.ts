@@ -107,7 +107,9 @@ test("the agency sets one Drive link per channel, and each role sees only its ow
   // 2. A valid internal link saves, and Details switches to Edit with the open link.
   await internalDialog.getByRole("textbox", { name: "Drive link", exact: true }).fill(internalUrl);
   await internalDialog.getByRole("button", { name: "Save link" }).click();
-  await expect(studio.getByRole("button", { name: "Edit Internal Drive link" })).toBeVisible();
+  await expect(
+    studio.getByRole("button", { name: "Edit Internal Drive link", exact: true }),
+  ).toBeVisible();
   await expect(studio.getByRole("link", { name: "Open internal Drive folder" })).toHaveAttribute(
     "href",
     internalUrl,
@@ -118,7 +120,9 @@ test("the agency sets one Drive link per channel, and each role sees only its ow
   const clientDialog = studio.getByRole("dialog", { name: "Add Client Drive link" });
   await clientDialog.getByRole("textbox", { name: "Drive link", exact: true }).fill(clientUrl);
   await clientDialog.getByRole("button", { name: "Save link" }).click();
-  await expect(studio.getByRole("button", { name: "Edit Client Drive link" })).toBeVisible();
+  await expect(
+    studio.getByRole("button", { name: "Edit Client Drive link", exact: true }),
+  ).toBeVisible();
   await expect(studio.getByRole("link", { name: "Open client Drive folder" })).toHaveAttribute(
     "href",
     clientUrl,
@@ -202,12 +206,15 @@ test("the agency sets one Drive link per channel, and each role sees only its ow
   // was visible.
   await studio.goto(`/projects/${projectId}`);
   await openProjectDetails(studio);
-  await studio.getByRole("button", { name: "Edit Internal Drive link" }).click();
-  const editInternal = studio.getByRole("dialog", { name: "Edit Internal Drive link" });
+  await studio.getByRole("button", { name: "Edit Internal Drive link", exact: true }).click();
+  const editInternal = studio.getByRole("dialog", {
+    name: "Edit Internal Drive link",
+    exact: true,
+  });
   await editInternal.getByRole("textbox", { name: "Drive link", exact: true }).fill("");
   await editInternal.getByRole("button", { name: "Save link" }).click();
-  await studio.getByRole("button", { name: "Edit Client Drive link" }).click();
-  const editClient = studio.getByRole("dialog", { name: "Edit Client Drive link" });
+  await studio.getByRole("button", { name: "Edit Client Drive link", exact: true }).click();
+  const editClient = studio.getByRole("dialog", { name: "Edit Client Drive link", exact: true });
   await editClient.getByRole("textbox", { name: "Drive link", exact: true }).fill("");
   await editClient.getByRole("button", { name: "Save link" }).click();
   await expect(studio.getByText("No link yet.")).toHaveCount(2);

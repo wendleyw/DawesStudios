@@ -94,6 +94,9 @@ export async function signIn(page: Page, email: string) {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/(home|clients\/[^/]+\/(board|overview))$/);
+  // A single-workspace client briefly visits /home before its membership read redirects it.
+  // Wait for the destination content before a test starts another navigation.
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 }
 
 /** The visible name of each brand section, which is what the navigation row is driven by. */

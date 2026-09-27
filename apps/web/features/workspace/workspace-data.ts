@@ -211,6 +211,39 @@ export type WorkspaceNotification = {
 
 /** The feed lists the latest notifications only; the unread count below covers all of them. */
 export const NOTIFICATION_FEED_LIMIT = 100;
+export const ACTION_NOTIFICATION_LIMIT = 100;
+
+export type ActionNotification = {
+  id: string;
+  kind: string;
+  client_id: string;
+  project_id: string | null;
+  entity_id: string;
+  board_id: string | null;
+  subject: string;
+  created_at: string;
+};
+
+/** Current workflow obligations are separate from read/unread activity. */
+export function useActionNotifications(page = 0) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["action-notifications", session?.user.id, page],
+    enabled: !!session,
+    refetchInterval: 15_000,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data, count, error } = await database
+        .from("action_notifications")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(page * ACTION_NOTIFICATION_LIMIT, (page + 1) * ACTION_NOTIFICATION_LIMIT - 1);
+      if (error) throw new Error(describeSupabaseError(error));
+      return { items: (data ?? []) as ActionNotification[], count: count ?? 0 };
+    },
+  });
+}
 
 export function useNotifications() {
   const { database, session } = useAuth();

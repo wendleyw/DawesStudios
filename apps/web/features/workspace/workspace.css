@@ -848,7 +848,7 @@ img.client-switcher-mark {
   overflow-y: auto;
 }
 .notifications-popover .notification-feed-heading {
-  padding: 0 20px 16px;
+  padding: 0 20px 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -858,11 +858,6 @@ img.client-switcher-mark {
   margin: 0;
   color: var(--muted);
   font-size: var(--text-sm);
-}
-.notifications-popover .notification-feed-heading .button {
-  padding: 5px 8px;
-  font-size: var(--text-xs);
-  flex-shrink: 0;
 }
 .notifications-popover .notification-list {
   border: 0;
@@ -887,6 +882,94 @@ img.client-switcher-mark {
 .notifications-popover .notification-item .icon-button {
   width: 30px;
   height: 30px;
+}
+
+.action-notifications,
+.notification-activity {
+  margin-top: 20px;
+}
+.notification-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.notification-section-heading h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.notification-section-heading .button {
+  margin-left: auto;
+}
+.notification-section-count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.action-notifications-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.action-notification-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+.action-notification-item:last-child {
+  border-bottom: 0;
+}
+a.action-notification-item:hover,
+a.action-notification-item:focus-visible {
+  background: var(--surface-hover);
+}
+.action-notification-item svg {
+  flex-shrink: 0;
+}
+.action-notification-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.action-notification-content strong {
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.action-notification-content span,
+.action-notifications-empty,
+.action-notifications-limit {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.action-notifications-limit {
+  margin-top: 10px;
+}
+.notifications-popover .action-notifications,
+.notifications-popover .notification-activity {
+  margin-top: 12px;
+}
+.notifications-popover .action-notifications {
+  padding: 0 20px;
+}
+.notifications-popover .action-notification-item {
+  padding: 12px;
+}
+.notifications-popover .notification-activity > .notification-section-heading,
+.notifications-popover .notification-activity > p {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+.notifications-popover .notification-section-heading .button {
+  padding: 5px 8px;
+  font-size: var(--text-xs);
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

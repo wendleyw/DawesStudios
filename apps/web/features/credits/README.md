@@ -36,3 +36,6 @@ npm run typecheck
 ```
 
 Focused tests cover UTC month math, plan resolution, the expiry window, error wording, combined filters by credit month, signed activity, CSV scope/columns/escaping and formula injection, the month forms and their idempotency keys, and the account menu's expiry signal. `tests/e2e/monthly-credits.spec.ts` drives the full path through the UI on a disposable fixture client: the agency sets a plan and accepts a briefing into a future month, the client sees that month's balance drop and its expiring notice, the agency moves the project to a later month, and settles its final credits with a reason both roles read. Account reconciliation, role isolation, concurrent acceptance/adjustment and authenticated request fulfillment require the separate database/browser evidence tracked in the [acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+
+Pending credit-request notifications link to the `#credit-requests` section of the client’s Credits
+page. Existing agency-only review permissions and request decisions remain unchanged.

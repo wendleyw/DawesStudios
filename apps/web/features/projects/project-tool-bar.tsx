@@ -102,6 +102,8 @@ export function ProjectToolButton({
       ref={ref}
       className={`icon-button project-tool-button${active ? " selected" : ""}${className ? ` ${className}` : ""}`}
       onClick={(event) => {
+        // Safari does not focus buttons on pointer activation; panels remember this trigger.
+        event.currentTarget.focus({ preventScroll: true });
         replay(edge.current, "is-firing", ["project-tool-fire", "project-tool-fire-out"]);
         onClick?.(event);
       }}

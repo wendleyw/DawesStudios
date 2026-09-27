@@ -92,7 +92,8 @@ embed, which narrows to leave room for it. `project-page.tsx` owns the open pane
 (`usePanelFocusReturn`, `use-panel-focus-return.ts`) above its early returns, because the
 `useProjectDetail(projectId, channel)` read goes pending and unmounts the workspace on every channel
 switch. Close/Escape returns focus to the control that opened the panel; `useFocusReturn` also
-returns focus to the Playground button after the closing render commits. The panel stays open
+returns focus to the Playground button after the closing render commits. Pointer activation
+explicitly focuses its trigger so Safari can restore focus too. The panel stays open
 across channel switches, while its view resets to All activity and loads the new channel's draft.
 This version follows version selection, remounting only the thread to isolate pending writes;
 without a selected version the effective view and composer return to project scope. Filters remain
@@ -262,3 +263,11 @@ rows, and checks that client/designer RPC writes are denied.
 
 The Cover block's browser pass is recorded in
 [the verification record](../../../../docs/verification/project-cover-2026-09-27.md).
+
+### Action notification links
+
+Notifications can open a project with `channel`, `board`, `round`, `version`, and `panel` hints.
+The page resets its local selection when the URL changes, including another notification for the
+same project. It resolves identifiers only against authorized query results; a client remains on
+the client channel and a designer on Working files regardless of URL hints. `panel` accepts only
+`details` or `comments`. An unavailable target falls back to the current authorized workspace.

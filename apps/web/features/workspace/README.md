@@ -66,11 +66,17 @@ sticky containers. It is anchored below the account card, bounded to the viewpor
 briefly (no animation with reduced motion). Escape/close returns focus; an outside click dismisses
 without stealing focus, and route changes close it. The scrolling feed reuses recipient-scoped reads
 and explicit read mutations from `workspace-data.ts`; opening alone does not mark activity as read.
-The full notifications page remains available from its footer. No new notification backend exists.
+The full notifications page remains available from its footer. "Needs your action" reads the
+RLS-scoped `action_notifications` view, which derives current workflow obligations. It appears above
+Activity in both surfaces. Each row opens the relevant briefing, project board, client version or
+credit requests section. Delivery actions open Files filtered to the approved project, where the
+agency uploads final files and completes delivery. Actions remain until the underlying workflow advances; marking Activity
+read does not dismiss them.
 The unread count comes from `useUnreadNotificationCount`, an exact head-only count of the caller's
 unread rows, so the bell's label and the feed's heading report every unread notification rather than
-the unread share of the loaded page. The feed lists the latest `NOTIFICATION_FEED_LIMIT` (100), and
-the full page says so when the list reaches it.
+the unread share of the loaded page. The action count is also exact, independent of the current 100-action page. Previous/Next actions keeps older pending work reachable. The bell displays unread activity and pending actions as separate counts and
+remains highlighted when either is positive. The feed lists the latest `NOTIFICATION_FEED_LIMIT`
+(100) activity rows, and the full page says so when the list reaches it.
 
 ## Visual layout and active navigation
 
@@ -300,11 +306,13 @@ Current navigation and creation-card evidence: [verification record](../../../..
 
 ## Notification surfaces
 
-`notification-feed.tsx` owns the list, loading/retry and authenticated read mutations. The full
-notifications page and compact account popover consume it. `notifications-bell.tsx` retains a link
+`notification-feed.tsx` owns the activity list, loading/retry and authenticated read mutations.
+`action-notifications.tsx` owns the workflow-action links and its independent loading/retry state.
+`workspace-data.ts` polls the action view every 15 seconds and refreshes it on mount. The full
+notifications page and compact account popover consume the feed. `notifications-bell.tsx` retains a link
 on non-client topbars and accepts a callback/ref for the account popover. Shared feed styles live
-in `app/globals.css`; popover layout stays in `workspace.css`. Backend RLS scopes the latest 100
-notifications to the signed-in viewer. Opening the popover does not mark them read.
+in `app/globals.css`; action and popover layout stay in `workspace.css`. Backend RLS scopes the latest
+100 activity rows and each page of actions to the signed-in viewer. Opening the popover does not mark activity read.
 
 Who receives a client notification is decided in `private.notify_client`
 (`supabase/migrations/202609250003_client_notification_routing.sql`): a project update reaches the
@@ -312,3 +320,6 @@ project's requester (its briefing's `requested_by`), everyone who chose **All <c
 and, for a studio reply in the client conversation, the client people who wrote there. With no
 requester left, or with no project (credit updates), it reaches every person at the client. The
 actor and removed people never receive one.
+
+The role/state matrix and RLS contract are documented in
+[action notifications](../../../../docs/architecture/action-notifications.md).

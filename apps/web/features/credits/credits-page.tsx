@@ -422,7 +422,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           ))}
         </div>
       )}
-      <section className="credit-requests">
+      <section id="credit-requests" className="credit-requests">
         <h2>Credit requests</h2>
         {requests.isPending ? (
           <p role="status">Loading requests…</p>

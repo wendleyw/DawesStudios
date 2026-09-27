@@ -13,13 +13,22 @@ import { type ProjectPanelKind } from "./project-panel";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
+  const parameters = useSearchParams();
+  // A notification may open a different board or version on this same project route.
+  return <ProjectPageContent key={`${projectId}:${parameters.toString()}`} projectId={projectId} />;
+}
+
+function ProjectPageContent({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
   useProjectEvents(projectId);
+  const parameters = useSearchParams();
+  const requestedPanel = parameters.get("panel");
   // The open panel is kept here, above the early returns that follow: `useProjectDetail` unmounts
   // the workspace while the other channel's data loads, and state that lived inside it would be
   // lost on every channel switch.
-  const panels = usePanelFocusReturn<ProjectPanelKind>();
-  const parameters = useSearchParams();
+  const panels = usePanelFocusReturn<ProjectPanelKind>(
+    requestedPanel === "comments" || requestedPanel === "details" ? requestedPanel : null,
+  );
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
     parameters.get("channel") === "client" ? "client" : "internal",
   );
@@ -77,6 +86,11 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       data={data.data}
       boards={boards.data ?? []}
       panels={panels}
+      initialSelection={{
+        board: parameters.get("board"),
+        round: parameters.get("round"),
+        version: parameters.get("version"),
+      }}
     />
   );
 }

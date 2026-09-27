@@ -3,7 +3,7 @@
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import type { Ref } from "react";
-import { useUnreadNotificationCount } from "./workspace-data";
+import { useActionNotifications, useUnreadNotificationCount } from "./workspace-data";
 
 /** Shared unread indicator for the account popover and global notification page link. */
 export function NotificationsBell({
@@ -20,12 +20,13 @@ export function NotificationsBell({
   controls?: string;
 }) {
   const unread = useUnreadNotificationCount().data ?? 0;
-  const classNames = `icon-button notifications-bell ${className} ${unread ? "has-unread" : ""} ${expanded ? "selected" : ""}`;
-  const label = unread ? `Notifications, ${unread} unread` : "Notifications";
+  const actions = useActionNotifications().data?.count ?? 0;
+  const classNames = `icon-button notifications-bell ${className} ${unread || actions ? "has-unread" : ""} ${expanded ? "selected" : ""}`;
+  const label = `Notifications${unread ? `, ${unread} unread` : ""}${actions ? `, ${actions} action${actions === 1 ? "" : "s"} needed` : ""}`;
   const icon = (
     <>
       <Bell size={17} />
-      {unread > 0 && <span className="unread-dot" aria-hidden="true" />}
+      {(unread > 0 || actions > 0) && <span className="unread-dot" aria-hidden="true" />}
     </>
   );
   return onClick ? (

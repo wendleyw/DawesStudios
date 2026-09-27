@@ -1,13 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectWorkspaceProps } from "./project-workspace";
 
+const route = vi.hoisted(() => ({ query: "", role: "agency" }));
 vi.mock("@/features/auth/auth-provider", () => ({
-  useAuth: () => ({ profile: { id: "viewer-1", role: "agency" } }),
+  useAuth: () => ({ profile: { id: "viewer-1", role: route.role } }),
 }));
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(route.query),
 }));
 vi.mock("./project-events", () => ({ useProjectEvents: () => {} }));
 
@@ -30,8 +31,9 @@ vi.mock("./project-data", async (importOriginal) => ({
 }));
 
 vi.mock("./project-workspace", () => ({
-  ProjectWorkspace: ({ panels, onChannel }: ProjectWorkspaceProps) => (
+  ProjectWorkspace: ({ panels, onChannel, channel, initialSelection }: ProjectWorkspaceProps) => (
     <div>
+      <p>{`Channel: ${channel}; round: ${initialSelection?.round ?? "none"}`}</p>
       <p>{panels.panel ? `${panels.panel} panel open` : "no panel open"}</p>
       <button onClick={() => panels.changePanel("comments")}>Open comments</button>
       <button onClick={() => onChannel("client")}>Switch to Shared with client</button>
@@ -42,6 +44,32 @@ vi.mock("./project-workspace", () => ({
 import { ProjectPage } from "./project-page";
 
 describe("ProjectPage", () => {
+  beforeEach(() => {
+    route.query = "";
+    route.role = "agency";
+    pendingChannel.current = null;
+  });
+
+  it("opens the notification target and updates it for a new link on the same project", () => {
+    route.query = "channel=client&panel=comments";
+    const { rerender } = render(<ProjectPage projectId="p" />);
+    expect(screen.getByText("comments panel open")).toBeInTheDocument();
+    expect(screen.getByText("Channel: client; round: none")).toBeInTheDocument();
+    route.query = "channel=internal&round=r2&panel=details";
+    rerender(<ProjectPage projectId="p" />);
+    expect(screen.getByText("details panel open")).toBeInTheDocument();
+    expect(screen.getByText("Channel: internal; round: r2")).toBeInTheDocument();
+  });
+
+  it.each(["designer", "client"])("keeps the %s channel fixed despite URL hints", (role) => {
+    route.role = role;
+    route.query = role === "client" ? "channel=internal" : "channel=client";
+    render(<ProjectPage projectId="p" />);
+    expect(
+      screen.getByText(`Channel: ${role === "client" ? "client" : "internal"}; round: none`),
+    ).toBeInTheDocument();
+  });
+
   it("keeps the open panel across a channel switch that unmounts the body while it loads", async () => {
     const user = userEvent.setup();
     pendingChannel.current = null;
