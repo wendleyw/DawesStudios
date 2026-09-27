@@ -76,6 +76,14 @@ export type ProjectVersionsCanvasProps = {
   /** Whether the channel already uses the Miro workspace; decides the "Miro workspace" control. */
   workspace: boolean;
   onOpenWorkspace: () => void;
+  /**
+   * The open side panel, owned by `project-page.tsx` (above its early returns) so it survives the
+   * remount `useProjectDetail` causes while the other channel's data loads.
+   */
+  panels: ReturnType<typeof usePanelFocusReturn<ProjectPanelKind>>;
+  /** The deliverable filter, also owned by `project-page.tsx` for the same reason. */
+  format: string;
+  onFormat: (format: string) => void;
 };
 
 /**
@@ -93,22 +101,19 @@ export function ProjectVersionsCanvas({
   workingVersions,
   workspace,
   onOpenWorkspace,
+  panels,
+  format,
+  onFormat,
 }: ProjectVersionsCanvasProps) {
   const { profile } = useAuth();
   const clients = useClients();
   const commentCounts = useVersionCommentCounts(projectId, channel);
-  const {
-    panel,
-    setPanel,
-    closePanel,
-    changePanel: switchPanel,
-  } = usePanelFocusReturn<ProjectPanelKind>();
+  const { panel, setPanel, closePanel, changePanel: switchPanel } = panels;
   function changePanel(next: ProjectPanelKind | null) {
     if (next) setAssetStripOpen(false);
     switchPanel(next);
   }
   const [selected, setSelected] = useState<{ designId?: string; versionId: string } | null>(null);
-  const [format, setFormat] = useState("");
   // Images dropped on the canvas in Working files; the dialog is mounted once per drop.
   const [bulkDropFiles, setBulkDropFiles] = useState<File[] | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -416,7 +421,7 @@ export function ProjectVersionsCanvas({
           setAssetStripOpen(false);
           onChannel(next);
         }}
-        onFormat={setFormat}
+        onFormat={onFormat}
         playgroundOpen={playgroundOpen}
         reviewing={!!selected?.designId}
         chromeRef={setChrome}

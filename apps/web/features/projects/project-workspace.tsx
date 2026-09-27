@@ -42,6 +42,11 @@ export type ProjectWorkspaceProps = {
   /** Exactly what `useDesignBoards` returns: RLS limits a designer to their own boards. */
   boards: DesignBoard[];
   viewControl: ReactNode;
+  /**
+   * The open side panel, owned by `project-page.tsx` (above its early returns) so it survives the
+   * remount `useProjectDetail` causes while the other channel's data loads.
+   */
+  panels: ReturnType<typeof usePanelFocusReturn<ProjectPanelKind>>;
 };
 
 /**
@@ -56,6 +61,7 @@ export function ProjectWorkspace({
   data,
   boards,
   viewControl,
+  panels,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
   const clients = useClients();
@@ -65,7 +71,7 @@ export function ProjectWorkspace({
   const [boardId, setBoardId] = useState<string | null>(null);
   const [roundId, setRoundId] = useState<string | null>(null);
   const [versionId, setVersionId] = useState<string | null>(null);
-  const { panel, setPanel, closePanel, changePanel } = usePanelFocusReturn<ProjectPanelKind>();
+  const { panel, setPanel, closePanel, changePanel } = panels;
   const [action, setAction] = useState<ProjectAction | null>(null);
   const [assetStripOpen, setAssetStripOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -112,7 +118,11 @@ export function ProjectWorkspace({
       agency
       channel={channel}
       onChannel={(option) => {
-        setPanel(null);
+        // Feedback is scoped to a round or a client version, which the other channel does not
+        // share, so it closes on a channel switch same as before; Conversation and Details carry
+        // no such scope and stay open, as they did on the legacy page before the channel switch
+        // could unmount this component.
+        if (panel === "feedback") setPanel(null);
         setAssetStripOpen(false);
         onChannel(option);
       }}

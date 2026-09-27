@@ -12,10 +12,17 @@ import { PageStatus } from "@/features/shared/page-status";
 import { usesWorkspace } from "./miro-workspace";
 import { ProjectWorkspace } from "./project-workspace";
 import { ProjectVersionsCanvas } from "./project-versions-canvas";
+import { type ProjectPanelKind } from "./project-panel";
+import { usePanelFocusReturn } from "./use-panel-focus-return";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const { profile } = useAuth();
   useProjectEvents(projectId);
+  // Both bodies below share one panel and deliverable filter, kept here above the early returns
+  // that follow: `useProjectDetail` unmounts whichever body is showing while the other channel's
+  // data loads, and state that lived inside that body would be lost on every channel switch.
+  const panels = usePanelFocusReturn<ProjectPanelKind>();
+  const [format, setFormat] = useState("");
   const parameters = useSearchParams();
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
     parameters.get("channel") === "client" ? "client" : "internal",
@@ -108,6 +115,7 @@ export function ProjectPage({ projectId }: { projectId: string }) {
         onChannel={switchChannel}
         data={data.data}
         boards={boards.data ?? []}
+        panels={panels}
         viewControl={
           profile?.role === "agency" && legacyAvailable ? (
             <button className="button quiet" onClick={() => setLegacyChosen(true)}>
@@ -126,6 +134,9 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       data={data.data}
       workingVersions={working.data?.versions}
       workspace={workspace}
+      panels={panels}
+      format={format}
+      onFormat={setFormat}
       onOpenWorkspace={() => {
         setWorkspaceChosen(true);
         setLegacyChosen(false);

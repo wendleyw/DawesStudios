@@ -43,6 +43,8 @@ vi.mock("./project-data", async (importOriginal) => ({
 }));
 
 import { ProjectWorkspace, type ProjectWorkspaceProps } from "./project-workspace";
+import { usePanelFocusReturn } from "./use-panel-focus-return";
+import type { ProjectPanelKind } from "./project-panel";
 
 const link = { boardId: "uXjVBoard01=", widgetId: null };
 const board: DesignBoard = {
@@ -64,8 +66,15 @@ const round = {
   deliverableId: null,
 } satisfies CanvasVersion;
 
+// `project-page.tsx` owns `panels` above its own early returns; this harness stands in for it so
+// the hook's state (like `project-page.tsx`'s) survives a rerender of the same tree.
+function Harness(props: Omit<ProjectWorkspaceProps, "panels">) {
+  const panels = usePanelFocusReturn<ProjectPanelKind>();
+  return <ProjectWorkspace {...props} panels={panels} />;
+}
+
 function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
-  const props: ProjectWorkspaceProps = {
+  const props: Omit<ProjectWorkspaceProps, "panels"> = {
     projectId: "p",
     channel: "internal",
     onChannel: vi.fn(),
@@ -85,7 +94,7 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
     viewControl: null,
     ...overrides,
   };
-  return render(<ProjectWorkspace {...props} />);
+  return render(<Harness {...props} />);
 }
 
 beforeEach(() => {
@@ -173,7 +182,7 @@ describe("ProjectWorkspace", () => {
   it("falls back to the designer's empty state once their reassigned board vanishes from the list", () => {
     state.role = "designer";
     const ownBoard: DesignBoard = { ...board, designerId: "viewer-1" };
-    const props: ProjectWorkspaceProps = {
+    const props: Omit<ProjectWorkspaceProps, "panels"> = {
       projectId: "p",
       channel: "internal",
       onChannel: vi.fn(),
@@ -186,11 +195,11 @@ describe("ProjectWorkspace", () => {
       boards: [ownBoard],
       viewControl: null,
     };
-    const { rerender } = render(<ProjectWorkspace {...props} />);
+    const { rerender } = render(<Harness {...props} />);
     expect(screen.getByRole("button", { name: "Send to studio" })).toBeInTheDocument();
 
     // The agency reassigned the board away: `useDesignBoards`' poll refetches an empty list.
-    rerender(<ProjectWorkspace {...props} boards={[]} />);
+    rerender(<Harness {...props} boards={[]} />);
     expect(screen.getByText("The studio has not set up your board yet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
   });

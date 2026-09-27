@@ -385,7 +385,19 @@ workspace reuses `ProjectBackLink` and `ProjectChannelControl` from `project-hea
 designer to anyone but the agency and that designer, matching the client-privacy pattern above: the
 bar's own markup carries no designer identity at all. An empty board or channel shows an inline
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
-message to everyone else. `useDesignBoards` polls every 30s (`project-data.ts`, the same convention
+message to everyone else.
+
+`project-page.tsx` calls `usePanelFocusReturn` and owns the deliverable filter (`format`) itself,
+above its own early returns, and passes the panel state down as one `panels` prop to both
+`ProjectVersionsCanvas` and `ProjectWorkspace` (neither calls the hook on its own anymore). Its
+`useProjectDetail(projectId, channel)` read goes pending and unmounts whichever body is showing on
+every channel switch, so any state that lived inside that body — the open Conversation/Details
+panel among it — would otherwise be lost on the switch, as it was before this state moved up.
+`ProjectWorkspace`'s own channel control still closes the **Feedback** panel on a channel switch,
+because Feedback is scoped to a round or a client version the other channel does not share;
+Conversation and Details carry no such scope and stay open across the switch, matching the legacy
+page's behavior before the Miro workspace and its own canvas were split into separate components.
+`useDesignBoards` polls every 30s (`project-data.ts`, the same convention
 as `useProjectComments`'s 15s poll) so a board the agency reassigns away from a designer drops out of
 that designer's list, and their still-open workspace falls back to the plain waiting message, without
 a reload; if that designer's **Send to studio** is already in flight when the reassignment lands, the
