@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createBackend } from './supabase.js';
-import { LIMITS, MediaError, probeVideo, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
+import { LIMITS, MediaError, probeVideo, sanitizeCover, sanitizeDelivery, sanitizeRaster, sanitizeVideo } from './sanitize.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // `.raw` only, deliberately narrower than `supabase.js`'s `VIDEO_ASSET_PATH`. This is the shape a
@@ -90,7 +90,7 @@ export function createMediaServer(config) {
     }
     const url = new URL(request.url, 'http://media.local');
     if (request.method === 'GET' && url.pathname === '/health') return send(200, { status: 'ok', service: 'dawes-media' });
-    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard', '/designs/sanitize-video', '/designs/discard-raw'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
+    if (request.method !== 'POST' || !['/publications/prepare', '/deliveries/prepare', '/assets/discard', '/designs/sanitize-video', '/designs/discard-raw', '/covers/prepare', '/covers/clear'].includes(url.pathname)) { request.resume(); return send(404, { error: 'Endpoint not found.' }); }
     let acquired = false;
     try {
       const token = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]+)$/)?.[1];
@@ -276,6 +276,42 @@ export function createMediaServer(config) {
         } finally {
           await rm(directory, { recursive: true, force: true });
         }
+      }
+      // Both cover routes are agency-only (enforced above by `backend.authenticate`) and, like
+      // `set_project_cover`/`clear_project_cover` themselves, take `projectId` as a query
+      // parameter rather than a JSON body — there is no other field to carry for `/covers/clear`,
+      // and `/covers/prepare` carries the image as a raw body, the same shape `/deliveries/prepare`
+      // below already uses.
+      if (url.pathname === '/covers/clear') {
+        const projectId = validId(url.searchParams.get('projectId'));
+        const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id`, { token });
+        if (projects.length !== 1) throw new MediaError('Project not found.', 404);
+        const removedPath = await backend.rpc('clear_project_cover', { p_project_id: projectId }, token);
+        // A cleared row no longer references its object, so `discard_sanitized_asset` (called
+        // inside `backend.discard`) no longer refuses it as a live cover — see
+        // `202609270001_project_covers.sql`'s comment on cleanup order.
+        if (removedPath) await backend.discard('project-covers', removedPath);
+        return send(200, { cleared: Boolean(removedPath) });
+      }
+      if (url.pathname === '/covers/prepare') {
+        const projectId = validId(url.searchParams.get('projectId'));
+        const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id`, { token });
+        if (projects.length !== 1) throw new MediaError('Project not found.', 404);
+        const type = request.headers['content-type']?.split(';')[0];
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(type)) throw new MediaError('Covers support PNG, JPEG and WebP images only.', 415);
+        // `sanitizeCover`, not `sanitizeDelivery`/`sanitizeRaster`: a cover must always come back
+        // as PNG, and `sanitizeRaster`'s JPEG fallback for a large opaque photo would otherwise
+        // produce a mime type `register_sanitized_asset` refuses for the `project-covers` bucket.
+        const sanitized = await sanitizeCover(await readBody(request, LIMITS.bytes));
+        const path = await backend.saveSanitized(projectId, 'project-covers', sanitized, userId);
+        // `set_project_cover` defaults `p_client_visible` to false, so the current visibility (on
+        // a replace) or the chosen one (on a first upload) must be passed through explicitly.
+        const visible = url.searchParams.get('visible') === 'true';
+        try {
+          const previousPath = await backend.rpc('set_project_cover', { p_project_id: projectId, p_storage_path: path, p_client_visible: visible }, token);
+          if (previousPath) await backend.discard('project-covers', previousPath);
+          return send(201, { path, clientVisible: visible });
+        } catch (error) { await backend.discard('project-covers', path); throw error; }
       }
       const projectId = validId(url.searchParams.get('projectId'));
       const projects = await backend.json(`/rest/v1/projects?id=eq.${projectId}&select=id,status`, { token });

@@ -64,6 +64,30 @@ export async function sanitizeRaster(bytes) {
   return { bytes: output, mimeType, extension };
 }
 
+/**
+ * Re-encodes a PNG, JPEG or WebP source to PNG, unconditionally. `sanitizeRaster` above falls back
+ * to JPEG for a large opaque photo whose PNG re-encode would exceed the byte limit, which is right
+ * for a delivery but wrong for a cover: the `project-covers` bucket and `register_sanitized_asset`
+ * accept only `image/png` for that bucket (`202609270001_project_covers.sql`). A cover this large
+ * is refused rather than silently regenerated in a format the database would then reject.
+ */
+export async function sanitizeCover(bytes) {
+  validateSize(bytes);
+  const pipeline = sharp(bytes, { limitInputPixels: LIMITS.pixels, failOn: 'warning', sequentialRead: true });
+  let metadata;
+  try { metadata = await pipeline.metadata(); } catch { throw new MediaError('The image is invalid or exceeds the pixel limit.'); }
+  if (!['png', 'jpeg', 'webp'].includes(metadata.format) || (metadata.pages ?? 1) > 1) throw new MediaError('Use a single-frame PNG, JPEG or WebP image.');
+  if (!metadata.width || !metadata.height || metadata.width * metadata.height > LIMITS.pixels) throw new MediaError('The image exceeds the 40 megapixel limit.', 413);
+  let output;
+  try {
+    output = await pipeline.rotate().toColourspace('srgb').png().timeout({ seconds: 30 }).toBuffer();
+  } catch { throw new MediaError('The image could not be safely regenerated.'); }
+  if (!output.length) throw new MediaError('The image could not be safely regenerated.');
+  if (output.length > LIMITS.bytes)
+    throw new MediaError('The regenerated image is larger than 50 MiB. Reduce its dimensions and upload again.', 413);
+  return { bytes: output, mimeType: 'image/png', extension: 'png' };
+}
+
 async function runPdfTool(tool, args) {
   try {
     return await execFileAsync(tool, args, { timeout: LIMITS.processMs, maxBuffer: 256 * 1024, env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' }, windowsHide: true });
