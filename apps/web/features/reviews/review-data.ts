@@ -48,14 +48,14 @@ type ReviewVersion = VersionRow & {
 /**
  * What a version already shared with the client means, now that the client has had its turn.
  *
- * `design_versions.status` stops at `reviewed` — "Sent to client" — and never records the
+ * `design_versions.status` stops at `reviewed` — "Shared" — and never records the
  * decision that followed, which lives in `publication_reviews`. A designer cannot read that table
  * (`reviews_read` admits the agency and the client alone) and cannot reach it from an internal
  * version either, because the record joining the two is `private.publication_sources` in the
  * unexposed `private` schema. The one projection of the client's decision a designer *can* read is
  * the project's own status, which `review_publication` writes in the same transaction as the
  * review. A published version therefore takes its outcome from the project it belongs to, and stays
- * "Sent to client" while the client is still deciding.
+ * "Shared" while the client is still deciding.
  */
 export function publishedVersionStatus(versionStatus: string, projectStatus: string): string {
   if (versionStatus !== "reviewed") return versionStatus;
@@ -68,7 +68,7 @@ export function publishedVersionStatus(versionStatus: string, projectStatus: str
  * A version that is finished: it has been through review and nothing further is waiting on anyone.
  *
  * Of the six statuses `versionStatusLabels` names, only `approved` qualifies. `reviewed` reads
- * "Sent to client" — it is `design_versions.status` recording that a version was published, not
+ * "Shared" — it is `design_versions.status` recording that a version was published, not
  * that the client accepted it, and a version the client then rejected keeps it. Treating it as
  * finished filed rejected work under Approved for the designer who had to revise it. `pending` and
  * `draft`/`submitted` are waiting on the client and on the studio, and `changes_requested` is

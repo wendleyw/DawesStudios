@@ -27,7 +27,7 @@ describe("which version statuses are finished", () => {
    */
   it("does not read a version merely shared with the client as finished", () => {
     expect(isFinished("reviewed")).toBe(false);
-    expect(versionStatusLabels.reviewed).toBe("Sent to client");
+    expect(versionStatusLabels.reviewed).toBe("Shared");
   });
 });
 
