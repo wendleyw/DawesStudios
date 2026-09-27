@@ -5,32 +5,68 @@ import type { Profile } from "@/lib/supabase";
 import { CreditMeterPanel, useCreditMeter, type CreditMeter } from "./credit-meter";
 
 const fixture = vi.hoisted(() => ({
-  balance: 120,
-  topUp: 200 as number | null,
+  available: 120,
+  received: 200,
+  expiring: 120,
+  month: "",
   isPending: false,
   isError: false,
 }));
 vi.mock("./credit-data", () => ({
-  useCreditAccount: () => ({
-    isPending: fixture.isPending,
-    isError: fixture.isError,
-    data: fixture.isPending || fixture.isError ? undefined : { balance: fixture.balance },
-  }),
-  useLatestTopUp: () => ({ data: fixture.topUp }),
+  useCreditMonthSummary: (_clientId: string, month: string) => {
+    fixture.month = month;
+    return {
+      isPending: fixture.isPending,
+      isError: fixture.isError,
+      data:
+        fixture.isPending || fixture.isError
+          ? undefined
+          : {
+              month,
+              status: "open",
+              available: fixture.available,
+              allowance: fixture.received,
+              extras: 0,
+              used: 0,
+              transferred: 0,
+              expiring: fixture.expiring,
+              expired: 0,
+              expires_on: "2026-09-30",
+            },
+    };
+  },
+}));
+vi.mock("@/features/workspace/workspace-data", () => ({
+  useDateFormat: () => ({ formatDateLong: (date: string) => `long:${date}` }),
 }));
 
 function viewer(role: Profile["role"]): Profile {
   return { id: "viewer-1", display_name: "Ada Lovelace", role, avatar_url: null };
 }
 
-const meterFor = (profile: Profile | null) =>
-  renderHook(() => useCreditMeter("client-1", profile)).result.current;
+const midMonth = new Date("2026-09-15T12:00:00Z");
+const meterFor = (profile: Profile | null, now = midMonth) =>
+  renderHook(() => useCreditMeter("client-1", profile, now)).result.current;
 
 describe("useCreditMeter", () => {
-  it("measures the balance against the balance after the latest top-up", () => {
-    fixture.balance = 50;
-    fixture.topUp = 200;
-    expect(meterFor(viewer("client"))).toEqual({ balance: 50, ratio: 0.25, attention: false });
+  it("reads the current UTC month and measures it against what the month received", () => {
+    fixture.available = 50;
+    fixture.expiring = 50;
+    fixture.received = 200;
+    expect(meterFor(viewer("client"))).toEqual({
+      balance: 50,
+      ratio: 0.25,
+      attention: false,
+      expiring: null,
+    });
+    expect(fixture.month).toBe("2026-09-01");
+  });
+
+  it("carries the expiring amount in the month's last 7 days", () => {
+    expect(meterFor(viewer("client"), new Date("2026-09-25T09:00:00Z"))?.expiring).toEqual({
+      amount: 50,
+      on: "2026-09-30",
+    });
   });
 
   it("is null for a designer, a missing viewer, while loading and on error", () => {
@@ -44,15 +80,21 @@ describe("useCreditMeter", () => {
     fixture.isError = false;
   });
 
-  it("keeps the amount without a ratio when there was never a top-up", () => {
-    fixture.balance = 0;
-    fixture.topUp = null;
-    expect(meterFor(viewer("client"))).toEqual({ balance: 0, ratio: null, attention: true });
+  it("keeps the amount without a ratio when the month received nothing", () => {
+    fixture.available = 0;
+    fixture.expiring = 0;
+    fixture.received = 0;
+    expect(meterFor(viewer("client"))).toEqual({
+      balance: 0,
+      ratio: null,
+      attention: true,
+      expiring: null,
+    });
   });
 });
 
 describe("CreditMeterPanel", () => {
-  const meter: CreditMeter = { balance: 532, ratio: 0.5, attention: false };
+  const meter: CreditMeter = { balance: 532, ratio: 0.5, attention: false, expiring: null };
 
   it("links the amount left to the credit history and offers a client request", () => {
     const onAction = vi.fn();
@@ -66,7 +108,7 @@ describe("CreditMeterPanel", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: "Credits: 532 left. Open credit history" }),
+      screen.getByRole("link", { name: "Credits: 532 left this month. Open credit history" }),
     ).toHaveAttribute("href", "/clients/client-1/credits");
     expect(document.querySelectorAll(".credit-meter-dots .is-filled")).toHaveLength(12);
     screen.getByRole("button", { name: "Request credits" }).click();
@@ -93,11 +135,34 @@ describe("CreditMeterPanel", () => {
       <CreditMeterPanel
         clientId="client-1"
         role="client"
-        meter={{ balance: 10, ratio: null, attention: false }}
+        meter={{ balance: 10, ratio: null, attention: false, expiring: null }}
         onNavigate={vi.fn()}
         onAction={vi.fn()}
       />,
     );
     expect(document.querySelector(".credit-meter-dots")).toBeNull();
+  });
+
+  it("names what expires and when, only when the meter carries it", () => {
+    const { rerender } = render(
+      <CreditMeterPanel
+        clientId="client-1"
+        role="client"
+        meter={meter}
+        onNavigate={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(document.querySelector(".credit-meter-expiring")).toBeNull();
+    rerender(
+      <CreditMeterPanel
+        clientId="client-1"
+        role="client"
+        meter={{ ...meter, expiring: { amount: 1, on: "2026-09-30" } }}
+        onNavigate={vi.fn()}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("1 credit expires on long:2026-09-30")).toBeTruthy();
   });
 });

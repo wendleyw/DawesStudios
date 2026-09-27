@@ -4,39 +4,56 @@ import Link from "next/link";
 import { ChevronRight, Coins } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Profile } from "@/lib/supabase";
-import { useCreditAccount, useLatestTopUp } from "./credit-data";
-import { creditRemainingRatio, formatCredits } from "./credit-model";
+import { useDateFormat } from "@/features/workspace/workspace-data";
+import { useCreditMonthSummary } from "./credit-data";
+import {
+  creditMonthOf,
+  creditRemainingRatio,
+  expiringNotice,
+  formatCredits,
+  monthCreditsReceived,
+} from "./credit-model";
 import "./credit-meter.css";
 
 export type CreditMeter = {
+  /** The current month's available credits. */
   balance: number;
-  /** Share of the balance after the latest top-up still left, or null without one. */
+  /** Share of what the current month received that is still left, or null when it received none. */
   ratio: number | null;
   /** A zero or negative balance. */
   attention: boolean;
+  /** What expires when the current month ends, only during its last 7 days. */
+  expiring: { amount: number; on: string } | null;
 };
 
 const DOT_COUNT = 24;
 
 /**
- * The viewer's credit state for the account menu in `features/workspace/account-menu.tsx`. Null for
- * designers, a missing viewer, and while the account is loading or failed, so the menu never shows
- * a stale or placeholder amount. The ratio waits on its own read and stays null until it resolves.
+ * The viewer's credit state for the account menu in `features/workspace/account-menu.tsx`, from the
+ * current UTC month's summary. Null for designers, a missing viewer, and while the month is loading
+ * or failed, so the menu never shows a stale or placeholder amount.
  */
-export function useCreditMeter(clientId: string, viewer: Profile | null): CreditMeter | null {
-  const account = useCreditAccount(clientId);
-  const topUp = useLatestTopUp(clientId);
+export function useCreditMeter(
+  clientId: string,
+  viewer: Profile | null,
+  now: Date = new Date(),
+): CreditMeter | null {
+  const summary = useCreditMonthSummary(clientId, creditMonthOf(now));
   if (!viewer || viewer.role === "designer") return null;
-  if (account.isPending || account.isError || !account.data) return null;
-  const balance = account.data.balance;
+  if (summary.isPending || summary.isError || !summary.data) return null;
+  const balance = summary.data.available;
   return {
     balance,
-    ratio: creditRemainingRatio(balance, topUp.data ?? null),
+    ratio: creditRemainingRatio(balance, monthCreditsReceived(summary.data)),
     attention: balance <= 0,
+    expiring: expiringNotice(summary.data, now),
   };
 }
 
-/** A ring around the avatar showing how much of the latest top-up is left. */
+/**
+ * A ring around the avatar showing how much of the current month's credits is left; its track turns
+ * to the attention tone when the balance is spent or credits expire within the month's last 7 days.
+ */
 export function CreditRing({
   meter,
   size,
@@ -49,7 +66,7 @@ export function CreditRing({
   const ratio = meter?.ratio;
   return (
     <span
-      className={`credit-ring${meter?.attention ? " credit-ring-attention" : ""}`}
+      className={`credit-ring${meter?.attention ? " credit-ring-attention" : ""}${meter?.expiring ? " credit-ring-expiring" : ""}`}
       style={{ width: size, height: size }}
     >
       {ratio != null && (
@@ -71,8 +88,9 @@ export function CreditRing({
 }
 
 /**
- * The Credits block inside the account menu: what is left, a dot bar for the same share as the ring,
- * a link to the history and one role-specific action the menu opens as a dialog.
+ * The Credits block inside the account menu: what is left this month, a dot bar for the same share
+ * as the ring, the expiring amount in the month's last 7 days, a link to the history and one
+ * role-specific action the menu opens as a dialog.
  */
 export function CreditMeterPanel({
   clientId,
@@ -87,7 +105,9 @@ export function CreditMeterPanel({
   onNavigate: () => void;
   onAction: (mode: "request" | "adjust") => void;
 }) {
+  const { formatDateLong } = useDateFormat();
   const { amount } = formatCredits(meter.balance);
+  const expiring = meter.expiring && formatCredits(meter.expiring.amount);
   const filled =
     meter.ratio == null
       ? 0
@@ -102,9 +122,9 @@ export function CreditMeterPanel({
         className="credit-meter-summary"
         href={`/clients/${clientId}/credits`}
         onClick={onNavigate}
-        aria-label={`Credits: ${amount} left. Open credit history`}
+        aria-label={`Credits: ${amount} left this month. Open credit history`}
       >
-        <span>Credits</span>
+        <span>Credits this month</span>
         <span className="credit-meter-left">
           {amount} left
           <ChevronRight size={15} aria-hidden="true" />
@@ -116,6 +136,12 @@ export function CreditMeterPanel({
             <span key={index} className={index < filled ? "is-filled" : undefined} />
           ))}
         </span>
+      )}
+      {expiring && meter.expiring && (
+        <p className="credit-meter-expiring">
+          {expiring.amount} {expiring.word} {meter.expiring.amount === 1 ? "expires" : "expire"} on{" "}
+          {formatDateLong(meter.expiring.on)}
+        </p>
       )}
       <button type="button" className="credit-meter-action" onClick={() => onAction(mode)}>
         <Coins size={16} aria-hidden="true" />

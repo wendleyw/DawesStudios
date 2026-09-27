@@ -18,6 +18,36 @@
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
+.credit-month-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.credit-month-switcher,
+.credit-month-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.credit-month-switcher select {
+  min-width: 200px;
+}
+.credit-overview[aria-busy="true"] {
+  opacity: 0.7;
+}
+.credit-overview > .form-error {
+  grid-column: 1/-1;
+}
+.credit-overview .credit-expiry {
+  color: var(--tone-attention-fg);
+}
+.credit-month-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
 .credit-overview > section + section {
   border-left: 1px solid var(--border);
   padding-left: 32px;
@@ -93,6 +123,8 @@
   font-weight: 500;
 }
 .credit-filters select,
+.credit-month-switcher select,
+.credit-form select,
 .credit-form input,
 .credit-form textarea {
   background: var(--surface);

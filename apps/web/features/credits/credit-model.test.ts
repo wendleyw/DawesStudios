@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCreditMonths,
   creditCsv,
+  creditEntryNote,
+  creditMonthOf,
+  creditMonthRange,
   creditRemainingRatio,
   csvCell,
+  daysLeftInMonth,
+  describeCreditError,
+  expiringNotice,
   filterCreditEntries,
   formatCredits,
+  monthCreditsReceived,
+  planForMonth,
   projectCreditsUsed,
-  type CreditEntry,
+  writableCreditMonths,
   type CreditFilters,
+  type CreditLedgerEntry,
 } from "./credit-model";
 import type { Project } from "@/features/workspace/workspace-data";
 import type { Briefing } from "@/features/briefings/briefing-model";
@@ -28,7 +38,7 @@ const project: Project = {
   created_at: "2026-09-20T00:00:00Z",
   updated_at: "2026-09-20T00:00:00Z",
 };
-const entries: CreditEntry[] = [
+const entries: CreditLedgerEntry[] = [
   {
     id: "opening",
     client_id: "client",
@@ -38,6 +48,7 @@ const entries: CreditEntry[] = [
     kind: "allocation",
     description: "Opening allocation",
     created_at: "2026-08-31T23:59:00Z",
+    month: "2026-08-01",
   },
   {
     id: "debit",
@@ -48,6 +59,7 @@ const entries: CreditEntry[] = [
     kind: "project_debit",
     description: "Launch",
     created_at: "2026-09-01T00:01:00Z",
+    month: "2026-09-01",
   },
   {
     id: "addition",
@@ -58,6 +70,8 @@ const entries: CreditEntry[] = [
     kind: "adjustment",
     description: "Approved addition",
     created_at: "2026-09-15T12:00:00Z",
+    // Written in September for October: the credit month, not the day, decides where it counts.
+    month: "2026-10-01",
   },
 ];
 const allFilters: CreditFilters = {
@@ -72,7 +86,7 @@ describe("credit report filtering", () => {
   it("combines month, campaign, project and search without changing ledger balances", () => {
     const filtered = filterCreditEntries(entries, [project], {
       ...allFilters,
-      month: "2026-09",
+      month: "2026-09-01",
       campaignId: "campaign",
       projectId: "project",
       search: "LAUNCH",
@@ -87,12 +101,27 @@ describe("credit report filtering", () => {
       ),
     ).toEqual(["opening", "addition"]);
   });
-  it("uses UTC month boundaries and returns a genuine empty result", () => {
+  it("filters by the credit month an entry counts against, not the day it was written", () => {
+    const ids = (month: string) =>
+      filterCreditEntries(entries, [project], { ...allFilters, month }).map((item) => item.id);
+    expect(ids("2026-08-01")).toEqual(["opening"]);
+    expect(ids("2026-09-01")).toEqual(["debit"]);
+    expect(ids("2026-10-01")).toEqual(["addition"]);
+  });
+  it("counts a settlement and a refund as project activity", () => {
+    const settlement: CreditLedgerEntry = {
+      ...entries[1],
+      id: "settlement",
+      kind: "final_adjustment",
+      amount: -2,
+    };
     expect(
-      filterCreditEntries(entries, [project], { ...allFilters, month: "2026-08" }).map(
+      filterCreditEntries([...entries, settlement], [project], { ...allFilters, kind: "used" }).map(
         (item) => item.id,
       ),
-    ).toEqual(["opening"]);
+    ).toEqual(["debit", "settlement"]);
+  });
+  it("returns a genuine empty result", () => {
     expect(
       filterCreditEntries(entries, [project], { ...allFilters, campaignId: "another-campaign" }),
     ).toEqual([]);
@@ -143,8 +172,9 @@ describe("credit CSV export", () => {
       briefings: [briefing],
     });
     expect(csv).toContain(
-      '"Client","Date (UTC)","Project","Campaign","Activity","Credits","Balance after activity","Deliverable breakdown","Agency adjustment"',
+      '"Client","Month","Date (UTC)","Project","Campaign","Activity","Credits","Balance after activity","Deliverable breakdown","Note"',
     );
+    expect(csv).toContain('"Example","2026-09","2026-09-01T00:01:00Z"');
     expect(csv).toContain('"Launch, ""considered""","Fall campaign","Project debit","-5","95"');
     expect(csv).toContain("Feed (1080 × 1350 px): 1 original");
     expect(csv).toContain("Additional retouching approved.");
@@ -188,9 +218,112 @@ describe("projectCreditsUsed", () => {
     ).toBe(5);
   });
 
+  it("nets a refund from a move and adds the final settlement", () => {
+    expect(
+      projectCreditsUsed([
+        { amount: -5, kind: "project_debit" },
+        { amount: 5, kind: "project_refund" },
+        { amount: -5, kind: "project_debit" },
+        { amount: -2, kind: "final_adjustment" },
+      ]),
+    ).toBe(7);
+  });
+
   it("is null when the project has no debit", () => {
     expect(projectCreditsUsed([])).toBeNull();
     expect(projectCreditsUsed([{ amount: 100, kind: "allocation" }])).toBeNull();
+  });
+});
+
+describe("credit months", () => {
+  it("takes the month from the UTC calendar, whatever the local zone", () => {
+    expect(creditMonthOf(new Date("2026-08-31T23:59:59Z"))).toBe("2026-08-01");
+    expect(creditMonthOf(new Date("2026-09-01T00:00:00Z"))).toBe("2026-09-01");
+  });
+
+  it("steps across year boundaries in both directions", () => {
+    expect(addCreditMonths("2026-12-01", 1)).toBe("2027-01-01");
+    expect(addCreditMonths("2026-01-01", -1)).toBe("2025-12-01");
+    expect(addCreditMonths("2026-09-01", 11)).toBe("2027-08-01");
+  });
+
+  it("offers 11 months either side for reading and the next 11 for writing", () => {
+    const range = creditMonthRange("2026-09-01", 11, 11);
+    expect(range).toHaveLength(23);
+    expect(range[0]).toBe("2025-10-01");
+    expect(range.at(-1)).toBe("2027-08-01");
+    expect(writableCreditMonths("2026-09-01")).toEqual(creditMonthRange("2026-09-01", 0, 11));
+    expect(writableCreditMonths("2026-09-01")).toHaveLength(12);
+  });
+
+  it("finds the plan in force: the latest start on or before the month", () => {
+    const plans = [
+      { monthly_credits: 100, starts_on: "2026-09-01" },
+      { monthly_credits: 150, starts_on: "2026-12-01" },
+    ];
+    expect(planForMonth(plans, "2026-08-01")).toBeNull();
+    expect(planForMonth(plans, "2026-11-01")?.monthly_credits).toBe(100);
+    expect(planForMonth(plans, "2027-01-01")?.monthly_credits).toBe(150);
+  });
+
+  it("counts the days left in the month, today included", () => {
+    expect(daysLeftInMonth(new Date("2026-09-30T23:00:00Z"))).toBe(1);
+    expect(daysLeftInMonth(new Date("2026-09-24T00:00:00Z"))).toBe(7);
+    expect(daysLeftInMonth(new Date("2026-02-01T00:00:00Z"))).toBe(28);
+  });
+
+  it("warns about expiring credits only in a month's last 7 days and only when some are left", () => {
+    const summary = { status: "open", expiring: 12, expires_on: "2026-09-30" };
+    expect(expiringNotice(summary, new Date("2026-09-23T12:00:00Z"))).toBeNull();
+    expect(expiringNotice(summary, new Date("2026-09-24T00:00:00Z"))).toEqual({
+      amount: 12,
+      on: "2026-09-30",
+    });
+    expect(
+      expiringNotice({ ...summary, expiring: 0 }, new Date("2026-09-30T00:00:00Z")),
+    ).toBeNull();
+    expect(expiringNotice(null, new Date("2026-09-30T00:00:00Z"))).toBeNull();
+  });
+
+  it("measures a month against everything it received", () => {
+    expect(monthCreditsReceived({ allowance: 100, extras: 20, transferred: -30 })).toBe(90);
+  });
+});
+
+describe("describeCreditError", () => {
+  it("names the writable range for a month outside it", () => {
+    expect(
+      describeCreditError({ message: "Choose a month within the next 11 months", code: "22023" }),
+    ).toBe("Choose the current month or one of the next 11 months.");
+    expect(describeCreditError({ message: "A month is required", code: "22023" })).toBe(
+      "Choose a month.",
+    );
+  });
+
+  it("states a short month's figures", () => {
+    expect(
+      describeCreditError({
+        message: "insufficient_month_credits",
+        code: "P0001",
+        details: JSON.stringify({ month: "2026-09-01", available: 3, required: 10, shortfall: 7 }),
+      }),
+    ).toBe("That month has 3 credits available, 7 short.");
+    expect(describeCreditError({ message: "insufficient_month_credits", details: null })).toBe(
+      "That month does not have enough credits.",
+    );
+  });
+
+  it("keeps any other message", () => {
+    expect(describeCreditError({ message: "Choose two different months" })).toBe(
+      "Choose two different months",
+    );
+  });
+});
+
+describe("creditEntryNote", () => {
+  it("is the scope note for a project debit and the recorded reason otherwise", () => {
+    expect(creditEntryNote(entries[1], undefined)).toBe("");
+    expect(creditEntryNote({ ...entries[2], kind: "extra" }, undefined)).toBe("Approved addition");
   });
 });
 

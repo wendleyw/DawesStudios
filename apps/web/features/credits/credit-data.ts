@@ -1,9 +1,33 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
-import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
-import { projectCreditsUsed, type CreditEntry, type CreditRequest } from "./credit-model";
+import { assertResult, describeSupabaseError, type SupabaseDatabase } from "@/lib/supabase";
+import {
+  describeCreditError,
+  projectCostKinds,
+  projectCreditsUsed,
+  type CreditEntry,
+  type CreditLedgerEntry,
+  type CreditMonthSummary,
+  type CreditPlan,
+  type CreditRequest,
+} from "./credit-model";
+
+/**
+ * `assertResult` for the monthly credit procedures: it keeps the error's code and details, so a
+ * month outside the writable range (errcode 22023) or a short month reads as a sentence.
+ */
+function assertCreditResult<T>(result: {
+  data: T | null;
+  error: { message: string; code?: string; details?: string | null } | null;
+}): T {
+  if (result.error)
+    throw new Error(
+      describeCreditError({ ...result.error, message: describeSupabaseError(result.error) }),
+    );
+  return result.data as T;
+}
 
 export function useCreditAccount(clientId: string) {
   const { database, session, profile } = useAuth();
@@ -21,28 +45,74 @@ export function useCreditAccount(clientId: string) {
   });
 }
 
-export function useCreditLedger(clientId: string) {
+/**
+ * The client's ledger, newest first, in bounded pages. With a `month` (`YYYY-MM-01`) it reads only
+ * the entries that count against that credit month; without one, every month.
+ */
+export function useCreditLedger(clientId: string, month?: string) {
   const { database, session, profile } = useAuth();
   return useQuery({
-    queryKey: ["credit-ledger", session?.user.id, clientId],
+    queryKey: ["credit-ledger", session?.user.id, clientId, ...(month ? ["month", month] : [])],
     enabled: !!session && profile?.role !== "designer",
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
-      const entries: CreditEntry[] = [];
+      const entries: CreditLedgerEntry[] = [];
       for (let offset = 0; ; offset += 500) {
+        let query = database
+          .from("credit_ledger")
+          .select("id,client_id,project_id,amount,balance_after,kind,description,created_at,month")
+          .eq("client_id", clientId);
+        if (month) query = query.eq("month", month);
         const page = assertResult(
-          await database
-            .from("credit_ledger")
-            .select("id,client_id,project_id,amount,balance_after,kind,description,created_at")
-            .eq("client_id", clientId)
+          await query
             .order("created_at", { ascending: false })
             .order("id")
             .range(offset, offset + 499)
             .abortSignal(signal),
-        ) as CreditEntry[];
+        ) as CreditLedgerEntry[];
         entries.push(...page);
         if (page.length < 500) return entries;
       }
     },
+  });
+}
+
+/**
+ * One credit month's figures from `credit_month_summary`: available, allowance, extras, used,
+ * transferred, expiring and the day it expires. A month that has not started yet shows its plan's
+ * projected allowance. Keyed under `credit-account`, so every write that already refreshes the
+ * balance (accepting a briefing, a settlement, an adjustment) refreshes the month too.
+ */
+export function useCreditMonthSummary(clientId: string, month: string) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: ["credit-account", session?.user.id, clientId, "month", month],
+    enabled: !!session && !!profile && profile.role !== "designer" && !!month,
+    // Switching months keeps the previous figures on screen until the next ones arrive.
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const rows = assertCreditResult(
+        await database.rpc("credit_month_summary", { p_client_id: clientId, p_month: month }),
+      ) as CreditMonthSummary[];
+      return rows[0] ?? null;
+    },
+  });
+}
+
+/** The client's monthly plans, oldest first. A client reads only the amount and start month. */
+export function useCreditPlans(clientId: string) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: ["credit-account", session?.user.id, clientId, "plans"],
+    enabled: !!session && !!profile && profile.role !== "designer",
+    queryFn: async () =>
+      assertResult(
+        await database
+          .from("credit_plans")
+          .select("monthly_credits,starts_on")
+          .eq("client_id", clientId)
+          .order("starts_on"),
+      ) as CreditPlan[],
   });
 }
 
@@ -63,37 +133,9 @@ export function useProjectCreditUse(projectId: string) {
             .from("credit_ledger")
             .select("amount,kind")
             .eq("project_id", projectId)
-            .eq("kind", "project_debit"),
+            .in("kind", projectCostKinds),
         ) as Pick<CreditEntry, "amount" | "kind">[],
       ),
-  });
-}
-
-/**
- * The balance right after the client's most recent top-up, the "full" mark for the account menu's
- * ring. A top-up is any positive entry: the initial `allocation` or a positive `adjustment` (agency
- * allocations and fulfilled requests are both recorded as adjustments). Null when the client has
- * never received credits. Keyed under `credit-ledger`, so every write that refreshes the ledger
- * refreshes this too.
- */
-export function useLatestTopUp(clientId: string) {
-  const { database, session, profile } = useAuth();
-  return useQuery({
-    queryKey: ["credit-ledger", session?.user.id, clientId, "latest-top-up"],
-    enabled: !!session && !!profile && profile.role !== "designer",
-    queryFn: async () => {
-      const rows = assertResult(
-        await database
-          .from("credit_ledger")
-          .select("balance_after")
-          .eq("client_id", clientId)
-          .in("kind", ["allocation", "adjustment"])
-          .gt("amount", 0)
-          .order("created_at", { ascending: false })
-          .limit(1),
-      ) as Pick<CreditEntry, "balance_after">[];
-      return rows[0]?.balance_after ?? null;
-    },
   });
 }
 
@@ -170,5 +212,63 @@ export async function reviewCreditRequest(
       input.decision === "fulfill" ? "fulfill_credit_request" : "reject_credit_request",
       { p_request_id: input.requestId, p_note: input.note },
     ),
+  );
+}
+
+/** Sets the client's monthly plan from a start month (the current month or a later one). */
+export async function setCreditPlan(
+  database: SupabaseDatabase,
+  input: { clientId: string; monthlyCredits: number; startsOn: string },
+) {
+  assertCreditResult(
+    await database.rpc("set_credit_plan", {
+      p_client_id: input.clientId,
+      p_monthly_credits: input.monthlyCredits,
+      p_starts_on: input.startsOn,
+    }),
+  );
+}
+
+export async function addMonthExtra(
+  database: SupabaseDatabase,
+  input: {
+    clientId: string;
+    month: string;
+    amount: number;
+    reason: string;
+    idempotencyKey: string;
+  },
+) {
+  assertCreditResult(
+    await database.rpc("add_month_extra", {
+      p_client_id: input.clientId,
+      p_month: input.month,
+      p_amount: input.amount,
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+    }),
+  );
+}
+
+export async function transferMonthCredits(
+  database: SupabaseDatabase,
+  input: {
+    clientId: string;
+    fromMonth: string;
+    toMonth: string;
+    amount: number;
+    reason: string;
+    idempotencyKey: string;
+  },
+) {
+  assertCreditResult(
+    await database.rpc("transfer_month_credits", {
+      p_client_id: input.clientId,
+      p_from_month: input.fromMonth,
+      p_to_month: input.toMonth,
+      p_amount: input.amount,
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+    }),
   );
 }

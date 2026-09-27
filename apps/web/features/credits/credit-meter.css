@@ -27,7 +27,8 @@
   stroke-linecap: round;
   transition: stroke-dasharray 240ms ease-out;
 }
-.credit-ring-attention .credit-ring-track {
+.credit-ring-attention .credit-ring-track,
+.credit-ring-expiring .credit-ring-track {
   stroke: var(--tone-attention-border);
 }
 
@@ -75,6 +76,11 @@
 }
 .credit-meter-dots > .is-filled {
   background: var(--ink);
+}
+.credit-meter-expiring {
+  margin: 0;
+  color: var(--tone-attention-fg);
+  font-size: var(--text-sm);
 }
 .credit-meter-action {
   display: flex;

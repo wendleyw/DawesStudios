@@ -7,13 +7,16 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { CreditActionDialog } from "@/features/credits/credit-actions";
 import { CreditMeterPanel, CreditRing, useCreditMeter } from "@/features/credits/credit-meter";
+import { formatCredits } from "@/features/credits/credit-model";
 import type { Profile } from "@/lib/supabase";
 
 const HOVER_OPEN_DELAY = 120;
 const HOVER_CLOSE_DELAY = 220;
 
 /**
- * The signed-in viewer's avatar in the shared header, ringed by the client's remaining credits, with
+ * The signed-in viewer's avatar in the shared header, ringed by the current month's remaining
+ * credits (the header's credits chip; the ring turns to the attention tone when credits expire
+ * within the month's last 7 days), with
  * a menu that opens on hover (mouse) or click/tap/Enter: profile, the Credits block, account
  * settings and sign out. Designers get the same menu without the ring or the Credits block. It is a
  * native nonmodal popover, like the notifications feed, so it stays above the canvas.
@@ -39,6 +42,9 @@ export function AccountMenu({ clientId, viewer }: { clientId: string; viewer: Pr
     .slice(0, 2)
     .map((part) => part[0])
     .join("");
+  // In the current month's last 7 days the trigger also says what is about to expire.
+  const expiring = meter?.expiring && formatCredits(meter.expiring.amount);
+  const triggerLabel = `Account menu: ${name}${expiring ? `. ${expiring.amount} ${expiring.word} expiring this month` : ""}`;
   const roleLabel =
     viewer?.role === "agency" ? "Studio team" : viewer?.role === "designer" ? "Designer" : "Client";
 
@@ -117,7 +123,7 @@ export function AccountMenu({ clientId, viewer }: { clientId: string; viewer: Pr
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={id}
-        aria-label={`Account menu: ${name}`}
+        aria-label={triggerLabel}
         onClick={() => {
           window.clearTimeout(hoverTimer.current);
           if (open && fromHover.current) fromHover.current = false;

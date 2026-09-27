@@ -4,13 +4,17 @@ import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
+import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
+  addMonthExtra,
   adjustCredits,
   requestCredits,
   reviewCreditRequest,
+  setCreditPlan,
+  transferMonthCredits,
   useInvalidateCredits,
 } from "./credit-data";
-import type { CreditRequest } from "./credit-model";
+import { writableCreditMonths, type CreditRequest } from "./credit-model";
 import { FormError } from "@/features/shared/form-error";
 
 /**
@@ -193,6 +197,178 @@ export function CreditRequestReview({
           </button>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+export type CreditMonthAction = "plan" | "extra" | "transfer";
+
+const monthActionCopy: Record<
+  CreditMonthAction,
+  { title: string; description: string; submit: string }
+> = {
+  plan: {
+    title: "Set plan",
+    description:
+      "The monthly credits the client receives from a start month on. Months that already received their allowance keep it.",
+    submit: "Save plan",
+  },
+  extra: {
+    title: "Add extra",
+    description: "Credits added to one month, on top of its plan. The client sees the reason.",
+    submit: "Add credits",
+  },
+  transfer: {
+    title: "Transfer between months",
+    description: "Move available credits from one month to another. The client sees the reason.",
+    submit: "Transfer credits",
+  },
+};
+
+/**
+ * The agency's month actions on the Credits page: set the monthly plan, add an extra to a month, or
+ * transfer credits between months. Only the current month and the next 11 can be chosen, as the
+ * backend requires. Validation and trimming happen here; an extra or a transfer keeps one
+ * idempotency key per payload, so a retry of the same form never writes twice.
+ */
+export function CreditMonthDialog({
+  clientId,
+  mode,
+  currentMonth,
+  month,
+  monthlyCredits,
+  onClose,
+}: {
+  clientId: string;
+  mode: CreditMonthAction;
+  /** The current credit month (`YYYY-MM-01`); the first month offered. */
+  currentMonth: string;
+  /** The month the page is showing, preselected when it can be written to. */
+  month: string;
+  /** The plan currently in force, to prefill Set plan. */
+  monthlyCredits: number | null;
+  onClose: () => void;
+}) {
+  const { database } = useAuth();
+  const { formatMonth } = useDateFormat();
+  const invalidateCredits = useInvalidateCredits();
+  const months = writableCreditMonths(currentMonth);
+  const selected = months.includes(month) ? month : currentMonth;
+  const [amount, setAmount] = useState(
+    mode === "plan" && monthlyCredits != null ? String(monthlyCredits) : "",
+  );
+  const [fromMonth, setFromMonth] = useState(selected);
+  const [toMonth, setToMonth] = useState(
+    mode === "transfer" ? (months.find((item) => item !== selected) ?? selected) : selected,
+  );
+  const [reason, setReason] = useState("");
+  const attempt = useRef<{ payload: string; key: string } | null>(null);
+  const keyFor = (payload: string) => {
+    if (attempt.current?.payload !== payload)
+      attempt.current = { payload, key: `${mode}:${crypto.randomUUID()}` };
+    return attempt.current.key;
+  };
+  const save = useMutation({
+    mutationFn: async () => {
+      const quantity = Number(amount);
+      const note = reason.trim();
+      if (mode === "plan") {
+        if (amount.trim() === "" || !Number.isSafeInteger(quantity) || quantity < 0)
+          throw new Error("Enter a whole number of credits, 0 or more.");
+        await setCreditPlan(database, { clientId, monthlyCredits: quantity, startsOn: fromMonth });
+        return;
+      }
+      if (!Number.isSafeInteger(quantity) || quantity <= 0)
+        throw new Error("Enter a positive whole number of credits.");
+      if (!note) throw new Error("Add a reason the client will see.");
+      if (mode === "extra") {
+        await addMonthExtra(database, {
+          clientId,
+          month: toMonth,
+          amount: quantity,
+          reason: note,
+          idempotencyKey: keyFor(`${clientId}:${toMonth}:${quantity}:${note}`),
+        });
+        return;
+      }
+      if (fromMonth === toMonth) throw new Error("Choose two different months.");
+      await transferMonthCredits(database, {
+        clientId,
+        fromMonth,
+        toMonth,
+        amount: quantity,
+        reason: note,
+        idempotencyKey: keyFor(`${clientId}:${fromMonth}:${toMonth}:${quantity}:${note}`),
+      });
+    },
+    onSuccess: async () => {
+      await invalidateCredits();
+      onClose();
+    },
+  });
+  const copy = monthActionCopy[mode];
+  const monthSelect = (label: string, value: string, onChange: (next: string) => void) => (
+    <label>
+      {label}
+      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+        {months.map((item) => (
+          <option key={item} value={item}>
+            {formatMonth(item)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <Modal open onClose={onClose} title={copy.title} description={copy.description}>
+      <form
+        className="credit-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+      >
+        {mode === "plan" && monthSelect("Starts in", fromMonth, setFromMonth)}
+        {mode === "extra" && monthSelect("Month", toMonth, setToMonth)}
+        {mode === "transfer" && (
+          <div className="credit-month-pair">
+            {monthSelect("From", fromMonth, setFromMonth)}
+            {monthSelect("To", toMonth, setToMonth)}
+          </div>
+        )}
+        <label>
+          {mode === "plan" ? "Credits per month" : "Credits"}
+          <input
+            type="number"
+            inputMode="numeric"
+            min={mode === "plan" ? 0 : 1}
+            step={1}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </label>
+        {mode !== "plan" && (
+          <label>
+            Reason
+            <textarea
+              rows={3}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              required
+            />
+          </label>
+        )}
+        {save.error && <FormError>{save.error.message}</FormError>}
+        <div className="credit-dialog-actions">
+          <button type="button" className="button" onClick={onClose} disabled={save.isPending}>
+            Cancel
+          </button>
+          <button className="button primary" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : copy.submit}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
