@@ -169,4 +169,29 @@ describe("ProjectWorkspace", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "New client version" }));
     expect(dialog.action).toMatchObject({ kind: "share", round: null, prefill: sharedLink });
   });
+
+  it("falls back to the designer's empty state once their reassigned board vanishes from the list", () => {
+    state.role = "designer";
+    const ownBoard: DesignBoard = { ...board, designerId: "viewer-1" };
+    const props: ProjectWorkspaceProps = {
+      projectId: "p",
+      channel: "internal",
+      onChannel: vi.fn(),
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [],
+        designs: [],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+      boards: [ownBoard],
+      viewControl: null,
+    };
+    const { rerender } = render(<ProjectWorkspace {...props} />);
+    expect(screen.getByRole("button", { name: "Send to studio" })).toBeInTheDocument();
+
+    // The agency reassigned the board away: `useDesignBoards`' poll refetches an empty list.
+    rerender(<ProjectWorkspace {...props} boards={[]} />);
+    expect(screen.getByText("The studio has not set up your board yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
+  });
 });

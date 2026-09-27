@@ -448,7 +448,14 @@ export type DesignBoard = {
   miro: MiroLink;
 };
 
-/** The project's design boards the viewer may see: all for the agency, their own for a designer. */
+/**
+ * The project's design boards the viewer may see: all for the agency, their own for a designer.
+ *
+ * Polls every 30s, like `useProjectComments`' 15s interval above: RLS hides a board's row the
+ * instant the agency reassigns it away from a designer, and that designer's open realtime
+ * subscription never learns of the row's disappearance, so without a poll a reassigned board would
+ * linger in a designer's workspace until they reloaded the page.
+ */
 export function useDesignBoards(projectId: string, enabled: boolean) {
   const { database, session } = useAuth();
   return useQuery({
@@ -468,6 +475,7 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
         designerId: row.designer_id,
         miro: { boardId: row.board_id, widgetId: row.widget_id },
       })),
+    refetchInterval: 30_000,
   });
 }
 

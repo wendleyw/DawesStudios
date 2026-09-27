@@ -12,6 +12,7 @@ const writes = vi.hoisted(() => ({
   shareMiroVersion: vi.fn(),
 }));
 const assignments = vi.hoisted(() => ({ error: null as Error | null }));
+const invalidateProject = vi.hoisted(() => vi.fn());
 const latestShared = vi.hoisted(() => ({
   state: { data: undefined, isPending: true, fetchStatus: "fetching" } as {
     data: { boardId: string; widgetId: string | null } | null | undefined;
@@ -40,7 +41,7 @@ vi.mock("./project-data", async (original) => ({
           error: null,
           isPending: false,
         },
-  useInvalidateProject: () => vi.fn(),
+  useInvalidateProject: () => invalidateProject,
   useLatestSharedMiroLink: latestShared.useLatestSharedMiroLink,
 }));
 // jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
@@ -70,6 +71,7 @@ const board = {
 
 beforeEach(() => {
   assignments.error = null;
+  invalidateProject.mockReset();
   latestShared.state = { data: undefined, isPending: true, fetchStatus: "fetching" };
   latestShared.useLatestSharedMiroLink.mockReset().mockImplementation(() => latestShared.state);
   Object.values(writes).forEach((write) => write.mockReset().mockResolvedValue("new-id"));
@@ -161,6 +163,25 @@ describe("round dialog", () => {
     const [first, second] = writes.sendBoardRound.mock.calls.map((call) => call[1]);
     expect(first.idempotencyKey).toBe(second.idempotencyKey);
     expect(first).toMatchObject({ boardId: "b1", note: "Ready", frameUrl: "" });
+  });
+
+  it("shows a plain message and refreshes the boards once the board is no longer the designer's", async () => {
+    const user = userEvent.setup();
+    writes.sendBoardRound.mockRejectedValueOnce(new Error('Board access required (42501): "b1"'));
+    wrap(
+      <ProjectActionDialog
+        action={{ kind: "round", board }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByLabelText("Note for the studio"), "Ready");
+    await user.click(screen.getByRole("button", { name: "Send to studio" }));
+    expect(await screen.findByText("This board is no longer assigned to you.")).toBeInTheDocument();
+    expect(screen.queryByText(/42501/)).toBeNull();
+    await waitFor(() => expect(invalidateProject).toHaveBeenCalled());
   });
 });
 

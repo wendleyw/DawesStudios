@@ -385,7 +385,13 @@ workspace reuses `ProjectBackLink` and `ProjectChannelControl` from `project-hea
 designer to anyone but the agency and that designer, matching the client-privacy pattern above: the
 bar's own markup carries no designer identity at all. An empty board or channel shows an inline
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
-message to everyone else.
+message to everyone else. `useDesignBoards` polls every 30s (`project-data.ts`, the same convention
+as `useProjectComments`'s 15s poll) so a board the agency reassigns away from a designer drops out of
+that designer's list, and their still-open workspace falls back to the plain waiting message, without
+a reload; if that designer's **Send to studio** is already in flight when the reassignment lands, the
+server's `send_board_round` refusal ("Board access required") is shown as "This board is no longer
+assigned to you." instead of the raw error, and invalidates the same cached boards so the fallback
+does not wait for the next poll (`project-action-round.tsx`).
 
 The workspace's **Feedback** tool bar button (a clipboard-and-pen icon, distinct from
 **Conversation**'s speech bubble) opens the same `CommentPanel`/`ProjectPanel` the legacy
