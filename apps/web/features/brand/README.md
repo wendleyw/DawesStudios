@@ -9,6 +9,9 @@ Assets. They share the
 floating client navigation/account card, a white title card and the plain page background. The title
 card is one row: **Brand Hub** with the section links beside it, which scroll sideways when they do
 not fit and move under the title below 640 px; client navigation wraps above.
+The active section link is the only visible name of the section: each section's `h2` (and the
+Files heading) is visually hidden for assistive technology, and the agency's **Edit** action sits
+alone at the right above the content.
 Notifications open beside the signed-in profile, using the shared account popover.
 
 The Logos section shows the client's Logo-category files under **Logo files**, each with the

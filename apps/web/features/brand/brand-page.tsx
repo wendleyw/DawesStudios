@@ -67,7 +67,8 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
       {/* Files renders its own heading, with its upload actions and campaign back link. */}
       {section !== "files" && (
         <div className="brand-section-heading">
-          <h2>{title}</h2>
+          {/* The active tab already names the section; the heading stays for assistive technology. */}
+          <h2 className="visually-hidden">{title}</h2>
           {agency && editable && (
             <button className="button quiet" onClick={() => setEditing(section)}>
               <Pencil size={14} />

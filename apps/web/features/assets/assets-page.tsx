@@ -179,7 +179,9 @@ export function AssetsPage({ clientId }: { clientId: string }) {
               <h2>{campaignTitle}</h2>
             </div>
           ) : (
-            <h2>Files</h2>
+            // The Brand Hub's active tab already reads "Files"; the heading stays for assistive
+            // technology.
+            <h2 className="visually-hidden">Files</h2>
           )}
           <p className="brand-muted">
             {campaignId !== null

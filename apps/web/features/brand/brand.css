@@ -32,12 +32,14 @@
 
   border-top: 0;
 }
-.brand-section-heading h2 {
-  font-size: var(--text-section);
-
-  font-weight: 600;
-
-  letter-spacing: -0.02em;
+/* The section's heading is visually hidden, so its edit action keeps the right-hand side. */
+.brand-section-heading > .button {
+  margin-left: auto;
+}
+/* Without an edit action the row holds only the hidden heading and takes no space. */
+.brand-section-heading:not(:has(> button)) {
+  margin: 0;
+  padding: 0;
 }
 /*
  * One scale for every Brand Hub section: 14px gaps, 20px panel padding, 15px panel titles and
@@ -690,9 +692,6 @@
     padding-top: 22px;
     margin-bottom: 20px;
     gap: 12px;
-  }
-  .brand-section-heading h2 {
-    font-size: 20px;
   }
   .brand-section-heading > .button {
     padding-inline: 8px;
