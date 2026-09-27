@@ -14,9 +14,10 @@ function projectViewport(
   view: { width: number; height: number },
   topInset: number,
 ) {
+  // The tool bar floats over the bottom of the pane, so the frames fit above it.
   const viewport = canvasFit(content, {
     width: view.width,
-    height: Math.max(1, view.height - topInset),
+    height: Math.max(1, view.height - topInset - TOOL_BAR_SPACE),
   });
   return { ...viewport, y: viewport.y + topInset };
 }
@@ -48,10 +49,9 @@ export function ProjectCanvasControls({
 /**
  * Places the opening view once the canvas knows how wide it is.
  *
- * xyflow's own Fit View is not used on load: a project with several deliverables is a tall list, and
- * fitting its full height would centre it at a scale where nothing can be read and hide its first
- * version above the pane. The view is computed from the frames instead, so it does not depend on
- * xyflow having finished rendering. A header-height change reapplies it; a pane resize such as
+ * xyflow's own Fit View is not used on load: the view is computed from the frames instead (see
+ * `canvasFit`), so every frame opens in view above the tool bar, down to a readable floor past which
+ * a long project scrolls, and it does not depend on xyflow having finished rendering. A header-height change reapplies it; a pane resize such as
  * opening the conversation panel must not drag the canvas out from under the viewer. The Fit View control
  * remains for anyone who does want the whole project at once.
  */

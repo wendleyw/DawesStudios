@@ -274,31 +274,30 @@ export function canvasBounds(frames: CanvasFrame[]): { width: number; height: nu
 
 /** Padding between the canvas edge and the content when the canvas opens. */
 export { FIT_PAD } from "@/features/shared/canvas-fit";
+/** The opening view's breathing room: wider than the shared FIT_PAD, so frames never touch the pane. */
+export const OPENING_PAD = 48;
 /**
- * The zoom the opening view never falls below.
- *
- * TILE_W times this floor is ARTWORK_MIN_H, the same size below which the module refuses to draw a
- * preview at all: a view that shows every version of a many-deliverable project at once is a view in
- * which none of them can be read. Past the floor the list scrolls instead, the way a document does.
+ * The zoom the opening view may shrink to so every frame is in view. Past it the list scrolls, the
+ * way a document does, rather than shrinking a long project until nothing can be read.
  */
-export const MIN_FIT_ZOOM = ARTWORK_MIN_H / TILE_W;
+export const OPENING_MIN_ZOOM = 0.5;
 
 /**
- * The viewport a project opens with: the list pinned to the top of the canvas, centred across it,
- * at a zoom that fits the width but never magnifies and never shrinks past the floor.
+ * The viewport a project opens with: every frame in view with room around it, centred across the
+ * pane and pinned to the top, at a zoom that never magnifies and never falls below the opening
+ * floor.
  *
  * Computed from the frames rather than from a rendered canvas, so a project opens on the same view
- * every time. The shared fit maths lives in `features/shared/canvas-fit.ts` (`fitToContent`), used
- * here and by `boardFit` in `features/board/board-layout.ts`; the two differ only in `MIN_FIT_ZOOM`
- * (this canvas's zoom floor is derived from its own tile and minimum-height constants, not the
- * board's) and in `constrainHeight`, which is `false` here — a tall list of version rows scrolls
- * past the bottom rather than shrinking to fit, unlike the board's stack.
+ * every time. The shared fit maths lives in `features/shared/canvas-fit.ts` (`fitToContent`), also
+ * used by `boardFit` in `features/board/board-layout.ts`.
  */
 export function canvasFit(
   content: { width: number; height: number },
   view: { width: number; height: number },
 ): { x: number; y: number; zoom: number } {
-  // Version rows stack into a tall list, so height must not constrain the fit: the top is pinned
-  // and the rest scrolls, rather than the whole canvas shrinking to make the list fit.
-  return fitToContent(content, view, { minZoom: MIN_FIT_ZOOM, constrainHeight: false });
+  return fitToContent(content, view, {
+    minZoom: OPENING_MIN_ZOOM,
+    constrainHeight: true,
+    pad: OPENING_PAD,
+  });
 }

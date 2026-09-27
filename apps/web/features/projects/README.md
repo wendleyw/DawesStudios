@@ -25,8 +25,9 @@ The Playground (or, in Miro mode, its asset strip) and the side panels do not st
 Playground closes an open panel, and opening a panel closes the asset strip.
 The canvas fills the viewport beneath these cards. The shell has no duplicate desktop topbar or client sidebar links.
 The header's measured height keeps the first deliverable, Fit View and secondary panels
-clear of the floating controls. Playground independently fills the entire viewport above the app. Opening preserves a readable width-based zoom; Fit View includes
-height with the existing 20% project zoom floor. On phones and short windows the design viewer
+clear of the floating controls. Playground independently fills the entire viewport above the app. Opening fits every frame (width and height) above the tool bar with a 48 px margin, never past
+100% and never below 50% (`canvasFit`, `OPENING_MIN_ZOOM`); a longer project stays at 50% pinned to the top
+and scrolls. Fit View includes height with the existing 20% project zoom floor. On phones and short windows the design viewer
 scrolls its artwork/feedback body while keeping the header and viewer controls accessible.
 
 Conversation and Project details open one floating inspector beneath the project controls.

@@ -7,14 +7,14 @@ import {
   EMPTY_H,
   EMPTY_SLOTS,
   FEEDBACK_LINK_H,
-  FIT_PAD,
   FOOTER_H,
   FRAME_BAR_H,
   FRAME_PAD,
   HEADER_H,
   LABEL_W,
   MAX_ROW_DESIGNS,
-  MIN_FIT_ZOOM,
+  OPENING_MIN_ZOOM,
+  OPENING_PAD,
   MORE_W,
   ROW_PAD,
   SECTION_GAP,
@@ -363,39 +363,46 @@ describe("opening view", () => {
     // The list is taller than the pane, so centring would hide its first version above the edge.
     const view = { width: 1360, height: 760 };
     expect(canvasBounds(frames).height).toBeGreaterThan(view.height);
-    expect(canvasFit(canvasBounds(frames), view).y).toBe(FIT_PAD);
+    expect(canvasFit(canvasBounds(frames), view).y).toBe(OPENING_PAD);
   });
 
-  it("fits the width, never magnifies, and stops at the readable floor", () => {
-    const wide = { width: 1378, height: 400 };
-    // A pane that can show the widest line keeps the canvas at natural size.
-    expect(canvasFit(wide, { width: 1600, height: 900 }).zoom).toBe(1);
-    // A narrower pane scales down to the width it does have.
-    expect(canvasFit(wide, { width: 1200, height: 900 }).zoom).toBeCloseTo(
-      (1200 - FIT_PAD * 2) / 1378,
+  it("opens with every frame in view, never magnified, down to the opening floor", () => {
+    const view = { width: 1400, height: 900 };
+    // Content that already fits stays at natural size.
+    expect(canvasFit({ width: 1000, height: 400 }, view).zoom).toBe(1);
+    // A second version below the first shrinks the view until both fit, with room around them.
+    expect(canvasFit({ width: 1000, height: 1200 }, view).zoom).toBeCloseTo(
+      (900 - OPENING_PAD * 2) / 1200,
       5,
     );
-    // A phone cannot show the line at the floor either, and the canvas stops there and pans.
-    expect(canvasFit(wide, { width: 390, height: 540 }).zoom).toBe(MIN_FIT_ZOOM);
-    expect(MIN_FIT_ZOOM).toBe(ARTWORK_MIN_H / TILE_W);
+    // A narrower pane fits the width it has.
+    expect(canvasFit({ width: 1378, height: 400 }, { width: 1200, height: 900 }).zoom).toBeCloseTo(
+      (1200 - OPENING_PAD * 2) / 1378,
+      5,
+    );
+    // A very long project stops at the floor and scrolls instead of becoming unreadable.
+    expect(canvasFit({ width: 1000, height: 4000 }, view).zoom).toBe(OPENING_MIN_ZOOM);
+    expect(OPENING_MIN_ZOOM).toBe(0.5);
   });
 
   it("centres the content across the pane without pulling it off the left edge", () => {
     expect(canvasFit({ width: 634, height: 400 }, { width: 1360, height: 760 }).x).toBe(
       Math.round((1360 - 634) / 2),
     );
-    expect(canvasFit({ width: 1378, height: 400 }, { width: 390, height: 540 }).x).toBe(FIT_PAD);
+    expect(canvasFit({ width: 1378, height: 400 }, { width: 390, height: 540 }).x).toBe(
+      OPENING_PAD,
+    );
   });
 
   it("falls back to the origin before the canvas has a size", () => {
     expect(canvasFit({ width: 0, height: 0 }, { width: 1360, height: 760 })).toEqual({
-      x: FIT_PAD,
-      y: FIT_PAD,
+      x: OPENING_PAD,
+      y: OPENING_PAD,
       zoom: 1,
     });
     expect(canvasFit({ width: 634, height: 400 }, { width: 0, height: 0 })).toEqual({
-      x: FIT_PAD,
-      y: FIT_PAD,
+      x: OPENING_PAD,
+      y: OPENING_PAD,
       zoom: 1,
     });
   });

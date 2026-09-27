@@ -7,10 +7,9 @@
  * canvas that changed this padding or started magnifying small content in one surface and not the
  * other would be a difference nobody chose.
  *
- * The two surfaces differ in exactly two ways, which are the parameters: how far they may zoom out
- * before the content stops being legible, and whether height constrains the fit at all. The board
- * fits both axes and lets the remainder pan. The project canvas is a tall list of version rows, so
- * constraining by height would shrink it to nothing; it fits the width and pins the top.
+ * The surfaces differ only through the parameters: how far they may zoom out before the content
+ * stops being legible, whether height constrains the fit, and how much room surrounds the content.
+ * Both fit both axes today; each stops at its own floor and lets the remainder pan.
  */
 
 /** Breathing room kept around the content on every canvas. */
@@ -26,20 +25,23 @@ export function fitToContent(
     minZoom: number;
     /** False when the content is a list that is meant to scroll rather than shrink. */
     constrainHeight: boolean;
+    /** Room kept around the content; FIT_PAD unless a surface wants more. */
+    pad?: number;
   },
 ): Viewport {
+  const pad = options.pad ?? FIT_PAD;
   // Called before anything has been measured, which happens on the first render of every canvas.
-  if (content.width <= 0 || view.width <= 0) return { x: FIT_PAD, y: FIT_PAD, zoom: 1 };
-  const room = Math.max(1, view.width - FIT_PAD * 2);
+  if (content.width <= 0 || view.width <= 0) return { x: pad, y: pad, zoom: 1 };
+  const room = Math.max(1, view.width - pad * 2);
   const byHeight =
     options.constrainHeight && content.height > 0
-      ? Math.max(1, view.height - FIT_PAD * 2) / content.height
+      ? Math.max(1, view.height - pad * 2) / content.height
       : Infinity;
   // Never magnify past 1: small content at natural size reads better than content blown up.
   const zoom = Math.max(options.minZoom, Math.min(1, room / content.width, byHeight));
   return {
-    x: Math.max(FIT_PAD, Math.round((view.width - content.width * zoom) / 2)),
-    y: FIT_PAD,
+    x: Math.max(pad, Math.round((view.width - content.width * zoom) / 2)),
+    y: pad,
     zoom,
   };
 }
