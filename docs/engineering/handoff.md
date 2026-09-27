@@ -1,10 +1,12 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; recovery/Resend integrated, no active delegated writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex UI integration; no active delegated writers**.
 
 ## Objective and accepted decisions
 
 - Continue production preparation and preserve role-specific workflow notifications.
+- Latest UI request: compact project-header preview with campaign above the title and a due-date
+  badge beside it. Keep the preview opt-in via `?layout=compact-header`, pending visual approval.
 - Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
 - Resend is the selected production email provider, through Supabase Auth SMTP. No direct SDK.
 - Server, public domain, verified sender and credentials remain unknown. No push/deployment or
@@ -18,6 +20,9 @@ Updated: 2026-09-27 EDT. Owner: **Codex; recovery/Resend integrated, no active d
   [Prior checkpoint](history/handoff-2026-09-27-before-recovery.md) retains their detailed evidence.
 - Separate UI thread committed `f845a5d`, opt-in compact project header preview. Preserve it;
   its own [report](handoffs/2026-09-27-compact-project-header.md) owns the visual evidence.
+- Preview follow-up: campaign via the existing authorized hook and role-specific due badge;
+  no duplicated project date below. Opened the shared browser at its native size after a fixed
+  test viewport clipped the user's window. Future size matrices run in isolated browsers.
 - Resend host SMTP fragment and [email runbook](../operations/email.md) prepared. Invitation and
   recovery APIs stay in Supabase Auth; actual delivery is still a target-environment gate.
 - Backup format2 retains owners/ACLs, checks all foreign keys, records image versions and binds
@@ -30,7 +35,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex; recovery/Resend integrated, no active d
   removed. Fixed fixture-dependent cleanup, including Playground Storage objects. SABRE checkpoint
   untouched. Added safety tests, fixture regressions and final CI foreign-key audit.
 
-## Checks executed in this task
+## Recovery/Resend evidence (prior task)
 
 - Web gate: 127 files / 1,249 unit tests; types/lint/format pass.
 - Recovery safety: 11 tests pass. CI guard tests:4 pass. Proxy render:3 pass; Docker proxy checks
@@ -53,11 +58,16 @@ Updated: 2026-09-27 EDT. Owner: **Codex; recovery/Resend integrated, no active d
 
 ## Environment and next concrete work
 
+- Current UI checks: web gate 127 files / 1,249 tests; six Chromium widths 320–1600 px,
+  campaign/date placement, channel/round actions, More/Escape and Details pass; header Axe0.
+  Native shared tab1512×696: account, project bar and bottom tools entirely visible, no overflow.
+  Final desktop/mobile preview captures inspected. See the linked UI report.
+
 - Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
 - Filesystem staging remains stopped with data/volumes retained. When resumed:
   API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.
-- Recovery/Resend task is verified and committed separately from the compact-header preview.
-  The unrelated `login.png` deletion and that thread's pending preview docs are preserved.
+- Recovery/Resend is verified in `a7b35e5`; its owner released this checkpoint before UI integration.
+  The unrelated `login.png` deletion is preserved. Next UI action: user reviews the updated preview.
 - Then obtain target server/domain/sender configuration and use the [production runbook](../operations/production.md)
   when deployment is explicitly requested. Verify Resend delivery with controlled recipients.
 - Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,

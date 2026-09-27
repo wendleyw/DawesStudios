@@ -147,9 +147,10 @@ The eight sections are a row of links under the title, in the order of their gro
 
 ### Canvas identity header
 
-**Temporary project-header preview (2026-09-27):** `?layout=compact-header` places only the
-project title in a neutral card between navigation and account controls, and combines the Miro
-controls into one full-width, channel-tinted bar below. At 1100 px of work area or less, the title
+**Temporary project-header preview (2026-09-27):** `?layout=compact-header` places the project
+title in a neutral card between navigation and account controls, with the campaign in small muted
+text above and a due-date badge beside the title. The date is not repeated in the lower bar. The
+Miro controls share one full-width, channel-tinted bar below. At 1100 px of work area or less, the title
 moves to its own row. This is an opt-in visual experiment; removing the parameter restores the
 layout described below. [Verification](../verification/compact-project-header-2026-09-27.md).
 

@@ -74,7 +74,7 @@ export function MiroBarShell({
   link,
   menu,
 }: {
-  /** The title is supplied by the header above; combine the remaining controls into one row. */
+  /** Title and due date are in the header above; combine the remaining controls into one row. */
   compact?: boolean;
   back: ReactNode;
   title: string;
@@ -93,7 +93,6 @@ export function MiroBarShell({
 }) {
   const actions = (
     <div className="miro-bar-actions">
-      {compact && <span className="miro-bar-due">{due}</span>}
       {link && (
         <a className="button" href={miroBoardUrl(link)} target="_blank" rel="noopener noreferrer">
           Open in Miro

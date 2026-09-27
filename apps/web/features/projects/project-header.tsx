@@ -1,8 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Eye, Lock } from "lucide-react";
+import { ArrowLeft, CalendarDays, Eye, Lock } from "lucide-react";
+import { useCampaigns } from "@/features/briefings/briefing-data";
 import type { ProjectChannel } from "./project-data";
+
+/** The opt-in header's campaign, project title and role-appropriate due date. */
+export function ProjectTitlePreview({
+  clientId,
+  campaignId,
+  title,
+  dueLabel,
+}: {
+  clientId: string;
+  campaignId: string | null;
+  title: string;
+  dueLabel: string;
+}) {
+  const campaigns = useCampaigns(clientId);
+  const campaign = campaigns.data?.find((item) => item.id === campaignId);
+  return (
+    <div className="project-title-preview">
+      {campaign && (
+        <p className="project-title-preview-campaign" title={campaign.title}>
+          {campaign.title}
+        </p>
+      )}
+      <div className="project-title-preview-row">
+        <h1 title={title}>{title}</h1>
+        <span className="project-title-preview-due">
+          <CalendarDays size={12} aria-hidden="true" />
+          {dueLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /** The way back from a project to its client's board. */
 export function ProjectBackLink({ clientId }: { clientId: string }) {

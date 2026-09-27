@@ -15,9 +15,13 @@ channel, with Supabase policies rather than the interface deciding what each one
 ## Page and chrome
 
 **Temporary layout preview (2026-09-27):** add `?layout=compact-header` to a project URL
-(or `&layout=compact-header` when it already has parameters). The title occupies a separate card
-between client navigation and the account card. Back, channels, rounds/versions, dates and actions
-share the full-width bar immediately below. At work-area widths of 1100 px or less, the title
+(or `&layout=compact-header` when it already has parameters). A separate card between client
+navigation and the account card shows the campaign above the project title, with the due date
+in a small badge beside the title. `ProjectTitlePreview` reuses the authorized `useCampaigns`
+read; absent campaign data does not invent a label. The due badge retains the viewer's existing
+date rule (the board's internal deadline for a designer). Back, channels, rounds/versions, the
+agency's board due date and actions share the full-width bar immediately below. The project due
+date appears once in the header. At work-area widths of 1100 px or less, the title
 gets its own row and the controls wrap. This URL-only preview saves no preference and makes no
 data changes; remove the parameter to restore the normal layout. See the
 [visual verification](../../../../docs/verification/compact-project-header-2026-09-27.md).

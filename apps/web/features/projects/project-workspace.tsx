@@ -11,7 +11,7 @@ import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-str
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
-import { ProjectBackLink, ProjectChannelLead } from "./project-header";
+import { ProjectBackLink, ProjectChannelLead, ProjectTitlePreview } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
@@ -117,6 +117,7 @@ export function ProjectWorkspace({
       ? designerDueDate(project.due_date, board?.dueDate ?? null)
       : project.due_date;
   const shownProject = dueDate === project.due_date ? project : { ...project, due_date: dueDate };
+  const dueLabel = dueDate ? `Due ${formatDate(dueDate)}` : "No due date";
   const shownLink = internal ? (round?.miro ?? board?.miro ?? null) : (version?.miro ?? null);
   const commentTarget = internal ? round : version;
   const commentLabels = Object.fromEntries(
@@ -176,9 +177,12 @@ export function ProjectWorkspace({
             viewer={profile}
             center={
               titleInHeader ? (
-                <h1 className="project-title-preview" title={project.title}>
-                  <span>{project.title}</span>
-                </h1>
+                <ProjectTitlePreview
+                  clientId={project.client_id}
+                  campaignId={project.campaign_id}
+                  title={project.title}
+                  dueLabel={dueLabel}
+                />
               ) : undefined
             }
           />
@@ -191,7 +195,7 @@ export function ProjectWorkspace({
           role={role}
           delivered={project.status === "delivered"}
           viewerId={profile?.id ?? ""}
-          dueLabel={dueDate ? `Due ${formatDate(dueDate)}` : "No due date"}
+          dueLabel={dueLabel}
           boardDueLabel={
             role === "agency" && board?.dueDate
               ? `Board due ${formatDate(board.dueDate)}`
