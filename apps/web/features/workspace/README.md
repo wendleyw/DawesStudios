@@ -39,9 +39,11 @@ All client routes share `canvas-header.tsx`: floating client identity/navigation
 and, in one account card, the notification bell and the signed-in viewer’s avatar and name. The
 avatar is the trigger of `account-menu.tsx`, a native nonmodal popover that opens on mouse hover
 (a click pins it open; tap, Enter and Space open it too; Escape and outside clicks close it). For
-clients and the studio a ring around the avatar shows how much of the client's latest top-up is
-left, and the menu holds the Credits block from `features/credits/credit-meter.tsx` (amount left,
-dot bar, Request or Adjust credits); then Account settings and Sign out. Designers get the same
+clients and the studio a ring around the avatar shows how much of the current month's credits
+(its plan allowance, extras and net transfers) is left, its track in an attention tone when
+credits are about to expire, and the menu holds the Credits block from
+`features/credits/credit-meter.tsx` (amount left, dot bar, expiry notice, Request or Adjust
+credits); then Account settings and Sign out. Designers get the same
 menu without the ring or the Credits block, since credits stay out of that role's view everywhere else. Only the board supplies the quarter control.
 Projects own a compact title/status/date card and separate contextual control groups below this header. Briefings,
 Reviews, Brand Hub and Credits receive the same header from the shell, positioned sticky

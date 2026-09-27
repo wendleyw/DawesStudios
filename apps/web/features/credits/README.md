@@ -30,9 +30,9 @@ Verification from `apps/web`:
 
 ```sh
 npm run test -- features/credits features/workspace/account-menu.test.tsx
-npm run test:e2e -- tests/e2e/intake-admin.spec.ts tests/e2e/project-credits.spec.ts
+npm run test:e2e -- tests/e2e/intake-admin.spec.ts tests/e2e/project-credits.spec.ts tests/e2e/monthly-credits.spec.ts
 npm run typecheck
 ./node_modules/.bin/eslint features/credits 'app/(workspace)/clients/[clientId]/credits'
 ```
 
-Focused tests cover UTC month math, plan resolution, the expiry window, error wording, combined filters by credit month, signed activity, CSV scope/columns/escaping and formula injection, the month forms and their idempotency keys, and the account menu's expiry signal. Account reconciliation, role isolation, concurrent acceptance/adjustment and authenticated request fulfillment require the separate database/browser evidence tracked in the [acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+Focused tests cover UTC month math, plan resolution, the expiry window, error wording, combined filters by credit month, signed activity, CSV scope/columns/escaping and formula injection, the month forms and their idempotency keys, and the account menu's expiry signal. `tests/e2e/monthly-credits.spec.ts` drives the full path through the UI on a disposable fixture client: the agency sets a plan and accepts a briefing into a future month, the client sees that month's balance drop and its expiring notice, the agency moves the project to a later month, and settles its final credits with a reason both roles read. Account reconciliation, role isolation, concurrent acceptance/adjustment and authenticated request fulfillment require the separate database/browser evidence tracked in the [acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
