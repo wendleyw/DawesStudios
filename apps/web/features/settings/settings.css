@@ -90,11 +90,23 @@
 }
 .account-flow-brand {
   display: block;
+  position: relative;
   width: 220px;
 }
+.account-flow-brand::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--foreground);
+  mask: url("/brand/logo.webp") center / contain no-repeat;
+  pointer-events: none;
+}
 .account-flow-brand img {
+  display: block;
   width: 100%;
   height: auto;
+  /* Keep its accessible name and aspect ratio; the mask follows the current theme's ink. */
+  opacity: 0;
 }
 .account-flow-card {
   max-width: 460px;

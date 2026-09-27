@@ -12,7 +12,7 @@ roster, invitations, role changes and removal. It uses `/team`, with `/settings/
 - `client-settings.tsx` creates a client and opening credit account through `create_client`, edits client details, sets the client's workspace logo (the avatar beside each client name opens the logo dialog), and opens the client's **People** dialog (`features/team/client-people-dialog.tsx`: people, pending invitations, invite and remove) and campaign forms. The logo is uploaded to `brand-assets` under the client's scope and stored in `clients.logo_path` (`supabase/migrations/202609230010_client_logo.sql`, raster-only since `202609230012_client_logo_raster.sql`); `uploadClientLogoFile`, `saveClientLogo` and `removeClientLogoFile` in `settings-data.ts` are its writes. A retried upload reuses its opaque path, and the replaced file is removed only after the client points at the new one. `campaign-settings.tsx` saves campaign goals and validated date ranges.
 - `preset-settings.tsx` creates immutable service-preset revisions. New briefing estimates and timing use the current preset; accepted quotes remain unchanged. The Other service keeps a custom estimate and timing. The list merges presets with `catalogWithPresets` and words each estimate with `estimateLabel`, exactly as the briefing editor does, so a fixed estimate reads **12 credits** rather than a 12–12 range.
 - `account-recovery.tsx` sends a real Supabase recovery email and sets a new Auth password after its verification redirect. Invalid or expired links provide a path to request another email.
-- `invitation-acceptance.tsx` uses the invitation's opaque token and email-confirmed Auth session. It sets the user's password and calls `accept_invitation`; the backend verifies role, scope, expiry, replay, and existing access before granting membership.
+- `invitation-acceptance.tsx` uses the invitation's opaque token and email-confirmed Auth session. It validates invitation setup against the backend before showing password controls. New accounts set a password; existing accounts retain theirs. `accept_invitation` verifies role, scope, expiry, replay, and existing access before granting membership.
 
 Routes are `/settings/{workspace,clients,presets,account}`, `/team` (a separate feature with a legacy `/settings/team` redirect, see `features/team/README.md`), `/auth/recovery`, and `/auth/invite`. `/settings` defaults to Workspace for agency users and displays authorized account settings for other roles.
 
@@ -26,7 +26,8 @@ profile update), `preset-settings.tsx` (1: `save_service_preset`), `workspace-se
 `update_workspace_settings`), and `invitation-acceptance.tsx` (1: `accept_invitation`). Team's own
 three call sites (the roster read, the invitation-history read, and `revoke_invitation`) relocated a
 second time, out of `settings-data.ts` into `features/team/team-data.ts`, when Team became its own
-feature; see that feature's README for their current table.
+feature; see that feature's README for their current table. The later invitation setup read
+`useInvitationPasswordRequirement` also lives here and keys its cache by authenticated user and token.
 
 | Source (component)                                                 | Destination in `settings-data.ts`       | Table/procedure                                                                            | Unchanged?                                                                                                                                                         |
 | ------------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -134,11 +135,37 @@ class, which is the resting `neutral` tone.) No file was moved or split for this
 
 ## Invitation delivery
 
-`app/api/invitations/route.ts` accepts an authenticated Bearer token, validates it with Auth `getUser`, reads the caller's protected agency role, validates a bounded request body and same-origin browser requests, then creates the invitation through the caller-scoped RPC. The service credential is used only on the server for `inviteUserByEmail`; role metadata never authorizes membership. The backend serializes rate limits of 20 creations per sender per hour and 50 unexpired pending invitations per installation.
+Invitation and recovery screens render the studio logo in the theme's foreground color, retaining
+the original image's accessible name and aspect ratio so the white source remains legible in light mode.
+
+`app/api/invitations/route.ts` accepts an authenticated Bearer token, validates it with Auth `getUser`, reads the caller's protected agency role, validates a bounded request body and same-origin browser requests, then creates the invitation through the caller-scoped RPC. The service credential remains server-only: new accounts receive `inviteUserByEmail`; existing eligible client accounts receive `signInWithOtp` with account creation disabled. Role metadata never authorizes membership. The backend serializes rate limits of 20 creations per sender per hour and 50 unexpired pending invitations per installation.
 
 The request body cap (4096 bytes) is enforced by `readCappedBody` (`invitation-body.ts`), which reads the stream incrementally and cancels it as soon as the cap is crossed. A `Content-Length` precheck alone cannot catch a chunked-encoded request (no `Content-Length` header), and measuring `request.text()`'s result after the fact means the oversized body was already fully buffered; `readCappedBody` mirrors `readBody` in `apps/media/src/server.js` for the same reason.
 
-Email failure revokes the pending database invitation and returns an explicit failure. Existing Auth accounts are not silently reassigned or elevated. The interface reports that their access needs studio administration; it does not claim an email was delivered. A revocation failure is surfaced for manual cleanup.
+An active client can accept an invitation to another client while keeping current memberships.
+Inviting someone already active in that same client is rejected before sending mail. Removed clients
+may return through an explicit client invitation: the route unblocks Auth sign-in, but `removed_at`
+continues denying application access until acceptance atomically removes stale memberships, clears
+the removal markers and adds only the invited client. Removed staff remain blocked. Invitations
+cannot promote an existing client member into staff.
+
+Creation, setup and acceptance refuse a return while the earlier Auth removal is still pending.
+`useInvitationPasswordRequirement` reads `invitation_requires_password` with the authenticated
+identity and token in its cache key. The RPC validates token ownership and email confirmation, then
+returns only the private per-token setup flag recorded before Auth identity creation. GoTrue fills
+a temporary password hash when confirming a new invitation, so hash presence cannot identify a
+user-chosen password. The acceptance form rechecks immediately before
+any password write. URL query hints cannot skip setup or overwrite an existing password, and a link
+opened under the wrong account is rejected before password mutation.
+
+Email failure revokes the pending database invitation and returns an explicit failure. A revocation
+failure is surfaced for manual cleanup. An unblocked Auth login may remain after failed delivery;
+the removal marker still denies application access. The route does not re-ban in compensation,
+because doing so could block a concurrent successful invitation. Browser journeys in
+`client-invitations.spec.ts` cover both return flows with real local mail, password preservation
+and negative scope assertions. Invitations prepared before migration `202609270016` default to
+no password setup to protect existing passwords; password recovery provides the setup path for any
+older invitation account that still needs a password. Reissuing does not imply a new Auth identity.
 
 The server needs `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_INTERNAL_URL` (or `NEXT_PUBLIC_SUPABASE_URL` as fallback). Inside Docker, the internal URL must resolve the backend from the application container; the public URL remains browser-reachable. Never prefix the service credential with `NEXT_PUBLIC_` or expose it in a browser bundle. Supabase Auth's redirect allowlist must include the deployed `/auth/invite?token=...` and `/auth/recovery?mode=update` URLs. The local inbox is available at `http://127.0.0.1:55424`; production email delivery requires configured SMTP.
 

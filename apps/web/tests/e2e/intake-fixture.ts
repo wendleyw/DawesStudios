@@ -121,7 +121,7 @@ commit;`;
 
 export async function latestAuthEmail(
   email: string,
-  kind: "invite" | "recovery",
+  kind: "invite" | "recovery" | "magiclink",
 ): Promise<string | null> {
   const list = (await fetch("http://127.0.0.1:55424/api/v1/messages").then((response) =>
     response.json(),

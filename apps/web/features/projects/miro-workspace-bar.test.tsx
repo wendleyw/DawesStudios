@@ -41,6 +41,7 @@ function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps
     title: "Campaign",
     channel: "internal",
     role: "agency",
+    delivered: false,
     viewerId: "agency",
     dueLabel: "Due Sep 30",
     boards: [boardA, boardB],
@@ -92,6 +93,17 @@ describe("MiroWorkspaceBar in Working files", () => {
     render(<MiroWorkspaceBar {...props({ boards: [], board: null, rounds: [] })} />);
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
   });
+  it("offers no new round or share action after delivery", () => {
+    const { rerender } = render(
+      <MiroWorkspaceBar {...props({ role: "designer", viewerId: "d1", delivered: true })} />,
+    );
+    expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
+    rerender(<MiroWorkspaceBar {...props({ delivered: true, round })} />);
+    expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+    rerender(<MiroWorkspaceBar {...props({ delivered: true, channel: "client" })} />);
+    expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
+    expect(screen.getByRole("group", { name: "Client versions" })).toBeInTheDocument();
+  });
   it("shows the agency the board's internal due date on the board's row", () => {
     const { container } = render(
       <MiroWorkspaceBar {...props({ boardDueLabel: "Board due Oct 3" })} />,
@@ -101,6 +113,12 @@ describe("MiroWorkspaceBar in Working files", () => {
   it("hides Share with client until a round is shown", () => {
     render(<MiroWorkspaceBar {...props({ round: null })} />);
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+  });
+  it("keeps an already shared round readable without offering to share it again", () => {
+    render(<MiroWorkspaceBar {...props({ round: { ...round, status: "reviewed" } })} />);
+    expect(screen.getByText("Shared")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Round 1" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 

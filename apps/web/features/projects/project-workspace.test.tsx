@@ -203,6 +203,44 @@ describe("ProjectWorkspace", () => {
     expect(dialog.action).toMatchObject({ kind: "share", round: null, prefill: sharedLink });
   });
 
+  it("closes a pending round dialog when the project becomes delivered", async () => {
+    state.role = "designer";
+    const data = {
+      project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+      versions: [round],
+      deliverables: [],
+    } as unknown as ProjectWorkspaceProps["data"];
+    const props: Omit<ProjectWorkspaceProps, "panels"> = {
+      projectId: "p",
+      channel: "internal",
+      onChannel: vi.fn(),
+      data,
+      boards: [{ ...board, designerId: "viewer-1" }],
+    };
+    const { rerender } = render(<Harness {...props} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send to studio" }));
+    expect(dialog.action).toMatchObject({ kind: "round" });
+    rerender(
+      <Harness {...props} data={{ ...data, project: { ...data.project, status: "delivered" } }} />,
+    );
+    expect(dialog.action).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
+    expect(screen.getByRole("group", { name: "Rounds" })).toBeInTheDocument();
+  });
+
+  it("offers no first client version for a delivered project", () => {
+    renderWorkspace({
+      channel: "client",
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "delivered" },
+        versions: [],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    expect(screen.getByText("No client version was shared.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
+  });
+
   it("falls back to the designer's empty state once their reassigned board vanishes from the list", () => {
     state.role = "designer";
     const ownBoard: DesignBoard = { ...board, designerId: "viewer-1" };

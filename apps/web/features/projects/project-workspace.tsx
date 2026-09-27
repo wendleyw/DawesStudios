@@ -146,14 +146,16 @@ export function ProjectWorkspace({
           onClick: () => setAction({ kind: "board", projectId, projectDueDate: project.due_date }),
         }
       : { text: "The studio has not set up your board yet." }
-    : role === "agency"
-      ? {
-          text: "Nothing shared yet. Share a round or add a version.",
-          action: "New client version",
-          onClick: () =>
-            setAction({ kind: "share", projectId, round: null, prefill: sharePrefill }),
-        }
-      : { text: "Nothing shared yet. Your studio will share designs here." };
+    : project.status === "delivered"
+      ? { text: "No client version was shared." }
+      : role === "agency"
+        ? {
+            text: "Nothing shared yet. Share a round or add a version.",
+            action: "New client version",
+            onClick: () =>
+              setAction({ kind: "share", projectId, round: null, prefill: sharePrefill }),
+          }
+        : { text: "Nothing shared yet. Your studio will share designs here." };
 
   return (
     <div
@@ -167,6 +169,7 @@ export function ProjectWorkspace({
           title={project.title}
           channel={channel}
           role={role}
+          delivered={project.status === "delivered"}
           viewerId={profile?.id ?? ""}
           dueLabel={dueDate ? `Due ${formatDate(dueDate)}` : "No due date"}
           boardDueLabel={
@@ -328,7 +331,11 @@ export function ProjectWorkspace({
       </div>
       <ProjectActionDialog
         key={projectActionKey(action)}
-        action={action}
+        action={
+          project.status === "delivered" && (action?.kind === "round" || action?.kind === "share")
+            ? null
+            : action
+        }
         onClose={() => setAction(null)}
       />
     </div>

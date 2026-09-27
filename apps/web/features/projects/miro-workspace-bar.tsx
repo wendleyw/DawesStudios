@@ -12,6 +12,7 @@ export type MiroWorkspaceBarProps = {
   title: string;
   channel: ProjectChannel;
   role: "agency" | "designer" | "client";
+  delivered: boolean;
   viewerId: string;
   dueLabel: string;
   /** The agency's view of the shown board's internal due date, e.g. "Board due Oct 3". */
@@ -55,12 +56,16 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
   const ownBoard = props.board?.designerId === props.viewerId;
   // One action at most: the board's designer sends a round, the agency shares the round on screen.
   const primary =
-    internal && props.board && props.role === "designer" && ownBoard ? (
+    !props.delivered && internal && props.board && props.role === "designer" && ownBoard ? (
       <button className="button primary" onClick={props.onSendRound}>
         <Send size={13} aria-hidden="true" />
         Send to studio
       </button>
-    ) : internal && agency && props.round ? (
+    ) : !props.delivered &&
+      internal &&
+      agency &&
+      props.round &&
+      props.round.status !== "reviewed" ? (
       <button className="button primary" onClick={props.onShareRound}>
         <Share2 size={13} aria-hidden="true" />
         Share with client
@@ -183,7 +188,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
             ))}
           </div>
           {/* With nothing shared yet, the empty state's own call to action is the one control. */}
-          {agency && (
+          {agency && !props.delivered && (
             <button
               className="icon-button"
               aria-label="New client version"

@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useInvalidateAssets } from "@/features/assets/asset-data";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useBriefingRequester } from "@/features/briefings/briefing-data";
+import { services } from "@/features/briefings/briefing-model";
 import { useCreditMonthSummaries } from "@/features/credits/credit-data";
 import {
   creditMonthLabel,
@@ -172,7 +173,10 @@ export function ProjectDetails({
         <p>{project.description || "No additional project notes yet."}</p>
         <dl>
           <dt>Service</dt>
-          <dd>{project.service_type.replaceAll("-", " ")}</dd>
+          <dd>
+            {services.find((service) => service.id === project.service_type)?.name ??
+              project.service_type.replaceAll("-", " ")}
+          </dd>
           {requesterName && (
             <>
               <dt>Requested by</dt>

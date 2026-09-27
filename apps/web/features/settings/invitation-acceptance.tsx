@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { callAuth, describeSupabaseError } from "@/lib/supabase";
 import { validatePassword } from "./settings-model";
-import { acceptInvitation } from "./settings-data";
+import { acceptInvitation, useInvitationPasswordRequirement } from "./settings-data";
 import "./settings.css";
 import { FormError } from "@/features/shared/form-error";
 
@@ -18,6 +18,11 @@ export function InvitationAcceptance() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const token = params.get("token") ?? "";
+  const setup = useInvitationPasswordRequirement(database, {
+    token,
+    userId: session?.user.id ?? null,
+    enabled: !!session && /^[a-f0-9]{64}$/i.test(token),
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -35,10 +40,16 @@ export function InvitationAcceptance() {
   });
   const accept = useMutation({
     mutationFn: async () => {
-      const error = validatePassword(password, confirmation);
-      if (error) throw new Error(error);
-      const result = await callAuth(database.auth.updateUser({ password }));
-      if (result.error) throw new Error(describeSupabaseError(result.error));
+      // Recheck with the current Auth session before any password mutation. A copied link opened
+      // under another email must fail here even if the URL claims to be a new-account invite.
+      const requirement = await setup.refetch();
+      if (!requirement.isSuccess) throw requirement.error;
+      if (requirement.data) {
+        const error = validatePassword(password, confirmation);
+        if (error) throw new Error(error);
+        const result = await callAuth(database.auth.updateUser({ password }));
+        if (result.error) throw new Error(describeSupabaseError(result.error));
+      }
       await acceptInvitation(database, { token });
     },
     onSuccess: async () => {
@@ -110,10 +121,28 @@ export function InvitationAcceptance() {
               </button>
             </form>
           </>
+        ) : setup.isPending ? (
+          <p role="status">Checking your invitation…</p>
+        ) : setup.isError || setup.data === undefined ? (
+          <>
+            <h1>Invitation unavailable.</h1>
+            <p>
+              Open the invitation with the email address it was sent to, or ask the studio for a new
+              one.
+            </p>
+            <button className="button quiet" onClick={() => void database.auth.signOut()}>
+              Use a different account
+            </button>
+          </>
         ) : (
           <>
             <h1>Welcome to the studio.</h1>
-            <p>Joining as {session.user.email}. Set your password to complete your invitation.</p>
+            <p>
+              Joining as {session.user.email}.
+              {setup.data
+                ? " Set your password to complete your invitation."
+                : " Accept this invitation to join the client workspace."}
+            </p>
             <form
               className="settings-form"
               onSubmit={(event) => {
@@ -121,28 +150,32 @@ export function InvitationAcceptance() {
                 accept.mutate();
               }}
             >
-              <label>
-                Password
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
-              <label>
-                Confirm password
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  required
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                />
-              </label>
+              {setup.data && (
+                <>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={12}
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Confirm password
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={12}
+                      required
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                    />
+                  </label>
+                </>
+              )}
               {accept.error && <FormError>{accept.error.message}</FormError>}
               <button className="button primary" disabled={accept.isPending}>
                 {accept.isPending ? "Joining…" : "Accept invitation"}

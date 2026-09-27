@@ -64,7 +64,7 @@ non-delivered assignment. No change to the query shape was needed.
 
 `profiles.removed_at` revokes the member's role-based authorization immediately. Existing access tokens cannot read project/brand/internal-channel data or receive new studio notifications. Auth then blocks future sign-ins, and the server writes `removal_completed_at`. Historical profiles, authored comments, versions, and audits remain intact. Already-issued signed file URLs retain their existing expiration; removing membership prevents new authorized reads and URL issuance.
 
-Role changes, removal, assignment, and invitation acceptance serialize membership decisions with one transaction lock. The last-agency guard counts only active profiles. Removed members cannot change their role, accept another invitation, clear their marker, or receive new project assignments.
+Role changes, removal, assignment, and invitation acceptance serialize membership decisions with one transaction lock. The last-agency guard counts only active profiles. Removed staff cannot change their role, accept another invitation, clear their marker, or receive new project assignments. A removed client may accept an explicit new client invitation; acceptance discards stale memberships before restoring only the invited client. See [invitation delivery](../settings/README.md#invitation-delivery).
 
 A partial removal remains visible as `Access removed · Account block pending`, with `Finish removal` available after reload. Retries keep the original removal time and do not repeat the removal audit. Completed removals disappear from the roster. Member/invitation queries run only for an agency profile, and project assignment options exclude removed designers.
 

@@ -98,7 +98,8 @@ async function capture(
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
   );
-  const axe = await new AxeBuilder({ page }).analyze();
+  // Miro owns the cross-origin board document; audit the application's surrounding UI.
+  const axe = await new AxeBuilder({ page }).exclude(".miro-view-frame").analyze();
   const index = String(surfaces.length + 1).padStart(3, "0");
   await page.screenshot({
     path: `${outputRoot}${role}/${index}-${name}-${width}.png`,
@@ -237,6 +238,8 @@ for (const role of ["agency", "designer", "client"] as const) {
       const playground = page.getByRole("button", { name: "Playground", exact: true });
       if (await playground.isVisible().catch(() => false)) {
         await playground.click();
+        const fullPlayground = page.getByRole("button", { name: "Open full Playground" });
+        if (await fullPlayground.isVisible()) await fullPlayground.click();
         await expect(page.getByRole("dialog", { name: "Playground" })).toBeVisible();
         await capture(page, role, "playground", surfaces, watcher);
         await page

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
@@ -316,14 +316,22 @@ export async function updateProfile(
   );
 }
 
-/**
- * Accepts an invitation by its opaque token.
- *
- * Extracted alone, not alongside the `database.auth.updateUser({ password })` call it follows in
- * `invitation-acceptance.tsx`'s mutation: that call is Supabase Auth, not a `.from(`/`.rpc(`/
- * `.storage.` query, so it is outside this module's contract and stays in the component. Only the
- * `accept_invitation` RPC and its `assertResult(...)` move here.
- */
+/** Reads the verified invitation owner's password-setup state without exposing an Auth hash. */
+export function useInvitationPasswordRequirement(
+  database: SupabaseDatabase,
+  input: { token: string; userId: string | null; enabled: boolean },
+) {
+  return useQuery({
+    queryKey: ["invitation-password-requirement", input.userId, input.token],
+    enabled: input.enabled,
+    retry: false,
+    gcTime: 0,
+    queryFn: async () =>
+      assertResult(await database.rpc("invitation_requires_password", { p_token: input.token })),
+  });
+}
+
+/** The Auth password write remains in the component; this function owns only the acceptance RPC. */
 export async function acceptInvitation(database: SupabaseDatabase, input: { token: string }) {
   assertResult(await database.rpc("accept_invitation", { p_token: input.token }));
 }

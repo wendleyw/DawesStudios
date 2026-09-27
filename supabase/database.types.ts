@@ -2100,6 +2100,10 @@ export type Database = {
           path: string
         }[]
       }
+      invitation_requires_password: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       list_stale_sanitized_assets: {
         Args: never
         Returns: {

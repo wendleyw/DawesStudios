@@ -22,6 +22,15 @@ See the [operations runbook](../operations/README.md) for repeatable lifecycle c
 
 `profiles.role` is a protected database value (`agency`, `client`, `designer`). Auth signup metadata cannot choose a role. New accounts start without client membership. Invitations attach an authenticated, email-confirmed account to an administrator-chosen role/client; invitation tokens are stored as hashes. Profiles expose only the caller's own record to non-agency users. Team removal preserves that historical row and sets `removed_at`; `private.current_role()` then returns no role. The authenticated caller cannot write removal markers. `removal_completed_at` is written by the server after a successful Auth ban, leaving partial removals retryable. See [Team](../../apps/web/features/team/README.md).
 
+Client invitation return flows (`202609270013`–`202609270016`) preserve active memberships when a client
+accepts another client workspace. Removed clients can accept a new client invitation only after
+email/token validation; stale memberships are deleted before clearing the removal markers. The
+agency-only delivery route unblocks Auth sign-in for that return flow, while RLS continues denying
+all application data until acceptance. Removed staff retain their existing early denial. Existing
+passwords are preserved, and token setup is validated before a new account sets a password. See
+[invitation delivery](../../apps/web/features/settings/README.md#invitation-delivery).
+
+
 `clients → campaigns → briefings → projects → deliverables` captures what was ordered, and `projects → design_boards → design_versions` (rounds) captures production. `project_assignments`, `design_boards`, `design_versions`, `internal_comments` and `project_assets` are unreadable to clients. Designers see assigned projects and brand data; they cannot read credit data or client conversations.
 
 Designers cannot select raw briefing rows because those contain budgets and requester IDs. `get_assigned_briefings(p_client_id=null)` returns an allowlisted production brief without financial/author fields, restricted to accepted briefs for assigned projects. Assignment revocation removes project, brief, file and internal-channel access on subsequent authenticated reads; repeating an existing assignment does not notify twice.
@@ -123,8 +132,9 @@ All arguments use the `p_` prefix. Functions return a UUID unless another return
 | `set_project_drive_link` (void) | `p_project_id`, `p_channel` (`internal`/`client`), `p_url`; agency only; unknown channel refused; `https://drive.google.com/...` only, an empty/blank value clears that channel's link |
 | `post_comment` | `p_project_id`, `p_channel` (`internal`/`client`), `p_body`, `p_version_id=null`, `p_idempotency_key=null` |
 | `resolve_comment` (void) | `p_comment_id`, `p_channel`, `p_resolved=true` |
-| `create_invitation` (JSON) | `p_email`, `p_role`, `p_client_id=null`; returns `{id,token}` once |
+| `create_invitation` (JSON) | `p_email`, `p_role`, `p_client_id=null`; returns `{id,token,existing_user_id,existing_removed}` to the agency caller |
 | `accept_invitation` (void) | `p_token` |
+| `invitation_requires_password` (boolean) | `p_token`; validates caller, confirmed email, pending token and completed removal before returning whether the caller still needs a password; no hash is exposed |
 | `revoke_invitation` (void) | `p_invitation_id` |
 | `update_workspace_settings` (timestamptz revision) | `p_studio_name`, `p_timezone` (valid IANA name), `p_expected_updated_at=null` (the revision the form was read on; a mismatch is `PT409`) |
 | `save_service_preset` (integer revision) | `p_service_type`, `p_min_credits`, `p_max_credits`, `p_due_days`, `p_expected_revision=null` (the revision the editor opened on; a mismatch is `PT409`) |

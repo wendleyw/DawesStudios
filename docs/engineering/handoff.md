@@ -22,20 +22,24 @@ Updated: 2026-09-27 EDT. Owner: **Codex**, taking over both interrupted Claude t
   navigation/Files journeys 8; canonical seed; canonical pgTAP 1,020; canonical browser 7; container build.
 - [Integration evidence](../verification/drive-links-recovery-2026-09-27.md) records corrections and limits.
 
-## Active task 2 — All-role functional and visual audit
+## Completed task 2 — All-role audit
 
 - Recovered directive: audit every role, action, text, badge, status and layout, then fix findings.
-- Claude's agency/client auditors stopped early; designers had not started. Working artifacts are
-  under ignored `outputs/audit/`; the recovered brief is `.superpowers/sdd/all-roles-audit/brief.md`.
-- Retire-Versions acceptance already ran after a reset approved in that Claude conversation:
-  [record](../verification/retire-versions-acceptance-2026-09-27.md). Do not repeat that reset.
-- Current canonical checks pass (seed, 1,020 pgTAP assertions and seven browser tests).
-  The remaining 98 browser tests are running on the live overlay with disposable fixtures.
-- Client/designer read-only audit completed 130 route visits and REST scope checks. Confirmed findings:
-  designers can open Send to studio on delivered projects; service labels show raw catalog codes.
-- Agency audit is finishing; collect its report, fix verified findings and repeat affected checks.
-- SABRE guarded removal currently refuses newer credit timestamps and a lazily created Playground
-  board. Diagnose and preserve genuine changes; do not weaken rollback guards or reset the overlay.
+- Agency audit: 86 route/viewport visits and 14 axe samples. Client/designers: 130 route visits,
+  network role checks and mobile/dark inspection. System tour: 147 surfaces, zero overflow,
+  serious/critical accessibility violations or uncaught exceptions in the application.
+- Broad browser pass: 95/95 active overlay tests plus 7/7 canonical tests. The three optional
+  system-tour tests were then enabled explicitly and passed. Miro regression: 2/2.
+- Fixed delivered-project Send/Share/New version controls, repeated sharing of an already-shared
+  round, and raw service names in Details. Desktop/mobile rechecks passed for agency and both designers.
+- Also fixed existing-client and removed-client invitations. Forward migrations 0013–0016 are applied
+  locally and in staging; trusted token metadata preserves passwords and validates email before mutation.
+  Return waits for completed Auth removal; stale memberships are deleted before restoring access.
+- Final gate: source 1,206 tests; canonical pgTAP 1,052; corrected invitation/intake/Miro browser 10/10;
+  container build; SABRE HTTP 42/42; canonical seed. Dependency audit and history secret scan passed.
+- [Audit evidence](../verification/all-roles-recovery-2026-09-27.md) records scope, screenshots and limits.
+- SABRE removal guard deliberately refuses the old snapshot: missing Drive table coverage plus
+  newer credit timestamps and Playground data. Preserve both live state and ignored checkpoint.
 
 ## Accepted decisions
 
@@ -56,20 +60,21 @@ Updated: 2026-09-27 EDT. Owner: **Codex**, taking over both interrupted Claude t
 - Next.js dev server: `http://localhost:3003`; local Supabase ports 55421–55424; media port 55430.
 - No competing dev server. Never `supabase migration down` or `supabase db reset`.
 - Correct applied migrations forward. A fresh reset would need new explicit user approval.
-- Existing disposable MinIO staging is running at web 3103, gateway 56010, database 56011 and media 56014
-  for canonical checks; it does not verify the revised production filesystem Storage target.
+- Disposable MinIO staging was stopped after the final production-image browser pass (7/7), with
+  containers/volumes retained. It does not verify the production filesystem Storage target.
 - No push, PR or deployment requested. Complete each integrated task with a gate and Conventional Commit.
 
 ## Verification still required
 
-- Finish all-role audit fixes and the 98-test overlay browser run; rerun SABRE HTTP/count checks
-  after disposable browser fixtures have been cleaned up, then record the final gate.
+- Application audit is complete within its documented browser/dataset scope. No reset was performed;
+  final local counts are 10/68/50, with zero Acceptance clients/projects or orphan Drive rows.
 - Real deployment remains deferred: persistent Storage/restore, TLS, SMTP and proxy rate limiting.
 - J10 remains open. Prior matrix rows describing retired designs/video/Versions are historical.
-- Existing known gaps include client re-invitation/multiple-client invitations, unknown-route HTTP 200,
-  Safari/Firefox coverage and browser CI. Reconcile against current behavior during the audit.
+- Known limits: dummy Miro boards are not live creative content; unknown routes can stream the
+  unavailable page with HTTP 200; Safari/Firefox coverage and browser CI remain outside this pass.
 
 ## Next concrete action
 
-Commit the verified Drive integration, then fix the delivered-action/service-label audit findings and
-complete the all-role gate. Keep reconstructed Claude evidence separate from checks executed now.
+Both recovered tasks are integrated. Drive is `85d0a6f`; the following audit commit contains its
+verification record and current checkpoint. Further work is the explicitly separate production
+readiness gate; no push or production release is authorized.

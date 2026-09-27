@@ -200,7 +200,7 @@ Supabase policies, database constraints/transactions, API authorization, and sto
 
 Agency members manage Team at `/team`. Removing a member first sets `profiles.removed_at` in a transaction that revokes every assignment and records one audit event. Role-based database access ends immediately, including for existing JWTs; notification generation and read policies exclude removed members. Auth banning follows through the trusted server route, and only its successful completion sets `removal_completed_at`. A failed second step leaves a visible, retryable pending removal.
 
-The last-agency guard counts active members only. Role changes, removal, assignment and invitation acceptance share a transaction lock and recheck caller access after waiting. Removed profiles cannot be reactivated through those operations. Profiles and authored history are preserved. Previously issued signed file URLs remain valid until their existing expiry; this change does not claim to revoke already-delivered bytes or signed URLs.
+The last-agency guard counts active members only. Role changes, removal, assignment and invitation acceptance share a transaction lock and recheck caller access after waiting. Removed agency/designer profiles cannot be reactivated through those operations. A removed client may return through an explicit client invitation: authenticated acceptance first deletes stale memberships, then restores only the invited client. Active clients can accept additional client memberships without changing their role. Profiles and authored history are preserved. Previously issued signed file URLs remain valid until their existing expiry; this change does not claim to revoke already-delivered bytes or signed URLs.
 
 ## Client people
 

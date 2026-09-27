@@ -105,6 +105,8 @@ test("agency, designer and client complete a round trip in Miro", async ({ brows
   await shareDialog.getByLabel("Note for the client").fill("First look");
   await shareDialog.getByRole("button", { name: "Share with client" }).click();
   await expect(studio.getByRole("dialog")).toHaveCount(0);
+  await expect(studio.getByRole("button", { name: "Share with client" })).toHaveCount(0);
+  await expect(studio.locator(".miro-bar-status")).toHaveText("Shared");
 
   // The client requests changes, the agency adds V2 directly, the client approves.
   const client = await (await browser.newContext()).newPage();

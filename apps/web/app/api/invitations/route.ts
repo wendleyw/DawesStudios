@@ -73,7 +73,9 @@ export async function POST(request: Request) {
     typeof invitation !== "object" ||
     Array.isArray(invitation) ||
     typeof invitation.id !== "string" ||
-    typeof invitation.token !== "string"
+    typeof invitation.token !== "string" ||
+    !(invitation.existing_user_id === null || typeof invitation.existing_user_id === "string") ||
+    typeof invitation.existing_removed !== "boolean"
   )
     return Response.json({ error: "The invitation could not be prepared." }, { status: 500 });
   const admin = createClient<Database>(url, serviceKey, {
@@ -82,22 +84,29 @@ export async function POST(request: Request) {
   try {
     const redirectTo = new URL("/auth/invite", origin);
     redirectTo.searchParams.set("token", invitation.token);
-    const { error } = await admin.auth.admin.inviteUserByEmail(input.email, {
-      redirectTo: redirectTo.toString(),
-    });
+    if (invitation.existing_user_id && invitation.existing_removed) {
+      const { error } = await admin.auth.admin.updateUserById(invitation.existing_user_id, {
+        ban_duration: "none",
+      });
+      if (error) throw error;
+    }
+    const { error } = invitation.existing_user_id
+      ? await admin.auth.signInWithOtp({
+          email: input.email,
+          options: { shouldCreateUser: false, emailRedirectTo: redirectTo.toString() },
+        })
+      : await admin.auth.admin.inviteUserByEmail(input.email, {
+          redirectTo: redirectTo.toString(),
+        });
     if (error) throw error;
     return Response.json({ id: invitation.id, delivered: true });
-  } catch (error) {
+  } catch {
     const { error: revokeError } = await caller.rpc("revoke_invitation", {
       p_invitation_id: invitation.id,
     });
-    const reason =
-      error instanceof Error && /already.*(registered|exists)/i.test(error.message)
-        ? "This email already has an account. Its access must be managed by the studio."
-        : "The invitation email could not be sent. Please try again.";
     return Response.json(
       {
-        error: `${reason}${revokeError ? " The pending invitation could not be revoked; revoke it in Team settings before retrying." : " No workspace access was granted."}`,
+        error: `The invitation email could not be sent. Please try again.${revokeError ? " The pending invitation could not be revoked; revoke it in Team settings before retrying." : " No workspace access was granted."}`,
       },
       { status: 502 },
     );

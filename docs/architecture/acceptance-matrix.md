@@ -8,6 +8,11 @@ The additional 2026-09-23 [Playground and board widgets request](playground-and-
 
 The subsequent project-only Playground and video efficiency revision was also verified in its [integration report](../verification/project-playground-video-2026-09-23.md): all six bounded acceptance checks were satisfied at the time, including role isolation, animation, preserved uploads/data and measured reductions in video network/file reads. **Superseded**: the video-design feature that report covers no longer exists. Migrations `202609270007`/`202609270008` retired the legacy per-deliverable Versions model — designs, pins, uploaded/published copies and video designs — in favor of the Miro workspace (design boards, rounds and project-level client versions; see [backend.md](backend.md)). Rows below that describe `designs`, `design pins`, `published_designs` or per-deliverable V1/V2 publication document that retired schema as it stood when each was verified; they are historical evidence, not current behavior. [`backend.md`](backend.md) and [`permissions.md`](permissions.md) describe the current Miro-model contracts, and the retirement's own [acceptance run](../superpowers/plans/2026-09-27-retire-versions-phase-5.md) re-verifies the canonical counts and workflows against it.
 
+The 2026-09-27 [recovered all-role audit](../verification/all-roles-recovery-2026-09-27.md) records fresh
+functional/visual evidence for the current model, the separate Drive channels and corrected client
+invitation flows. Canonical and live-overlay checks run in separate environments; J10 still requires
+the real production operational checks listed in that record.
+
 ## How to use this matrix
 
 The [711 reference captures](../ref/manifest.json), representing 499 base states, are an inventory and design reference. They are **not** a requirement to reproduce 711 screenshots, 499 UI states, identical modal counts, or a pixel-for-pixel prototype. The current product direction is minimal, lightweight, and modern. Consolidate duplicate views and controls while preserving meaningful tasks, role boundaries, and durable data.

@@ -646,11 +646,10 @@ test.describe("Briefing intake, credits, and account administration", () => {
       headers: { Authorization: `Bearer ${agencyToken}` },
       data: { email: fixture.email, role: "client", clientId: fixture.clientId },
     });
-    expect(existingAccount.status()).toBe(502);
+    expect(existingAccount.status()).toBe(400);
     expect(
-      (await localAdmin.from("invitations").select("status").eq("email", fixture.email).single())
-        .data?.status,
-    ).toBe("revoked");
+      (await localAdmin.from("invitations").select("status").eq("email", fixture.email)).data,
+    ).toEqual([]);
     expect(
       (
         await localAdmin
@@ -662,7 +661,12 @@ test.describe("Briefing intake, credits, and account administration", () => {
     const context = await browser.newContext();
     const invitedPage = await context.newPage();
     try {
-      await invitedPage.goto(link);
+      // A URL hint must not bypass password setup for a new account.
+      const tamperedLink = new URL(link);
+      const invitationRedirect = new URL(tamperedLink.searchParams.get("redirect_to")!);
+      invitationRedirect.searchParams.set("existing", "1");
+      tamperedLink.searchParams.set("redirect_to", invitationRedirect.toString());
+      await invitedPage.goto(tamperedLink.toString());
       await expect(
         invitedPage.getByRole("heading", { name: "Welcome to the studio." }),
       ).toBeVisible();
