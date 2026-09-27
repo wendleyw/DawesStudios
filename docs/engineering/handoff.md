@@ -26,8 +26,8 @@ Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 2,4,9,18,32,54 — the confirmed SABRE-overlay count baseline. An interrupted Playground e2e run can
 leave an "Acceptance Playground …" client behind (unattested published designs), which briefly also
 failed 1, 41 and `published_asset_attestation_invariant` 1; remove it with the fixture's own cleanup
-rather than editing the assertions. `playground.spec` focus-return and
-`workspace-actions`:14/`design-audit`:18 fail on `main` too (all SABRE-overlay).
+rather than editing the assertions. `playground.spec` focus-return is a pre-existing focus issue
+that also fails on `main`; `workspace-actions`:14/`design-audit`:18 also fail on `main` (SABRE-overlay).
 **Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden,
 AGENTS.md/CLAUDE.md); rebuilt via `local_stack.py reset` + the SABRE `apply`; the prior checkpoint
 is kept at `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. Earlier:

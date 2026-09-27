@@ -278,7 +278,10 @@ version dialog below, by saving that dialog's field empty. That dialog (`project
 dispatched for `kind: "miro"`, titled **Add a Miro link.** or **Change the Miro link.** depending on
 whether the version already has one) sets or clears a single version's link on whichever channel
 opened it, prefilling from that version's own existing link, or otherwise the deliverable's newest
-link on that channel; saving it empty clears the link (`clearMiroLink`).
+link on that channel; saving it empty clears the link (`clearMiroLink`). A shared version of the
+Miro workspace (client channel, no deliverable and no board) is the exception: it is nothing but its
+link, so its field is required (labelled **Miro frame**, not "optional"), saving it empty is refused
+in the dialog, and `clear_publication_miro_link` itself refuses project-level publications.
 
 On the version card, only an agency session sees the `Link2` icon button beside the card's comment
 shortcut (`canManageMiro: profile?.role === "agency"` in `project-page.tsx`), `aria-label`
@@ -303,7 +306,8 @@ reload or a shared link returns to the same frame. `project-page.tsx` mounts `Mi
 (`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`opacity: 0`
 and `inert`; not `visibility: hidden`, which React Flow's per-node `visibility: visible` overrides)
 rather than unmounting, so switching back to **Versions** is instant. The
-header folds into one compact bar, `MiroBar` (same file), so the board keeps the height: back, `Project
+header folds into one compact bar, `MiroBar` (same file, built on the `MiroBarShell`/`MiroBarMenu`
+it shares with the workspace's bar; Escape on the More menu returns focus to **More**), so the board keeps the height: back, `Project
 title / Deliverable`, a **Miro version** toggle (`V1`, `V2`, … — the linked versions of the shown
 deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miroBoardUrl`,
 `target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
@@ -364,12 +368,16 @@ has rounds, and the round's status; in Shared with client it shows a **V1, V2…
 version's status and the project's due date. Actions follow the role and what is shown: the board's
 own designer gets **Send to studio** (`project-action-round.tsx`, `kind: "round"`, an optional note
 and frame link, defaulting to the board's own link, sent through the idempotent `send_board_round`);
-the agency gets **Share with client** on a round (`project-action-share.tsx`, `kind: "share"`, the
-client board link prefilled from the deliverable-less channel's newest link) and, in Shared with
-client, **+ New client version** to add one directly with no round; the agency's **More** menu also
-holds **Add design board** / **Edit board** (`project-action-board.tsx`, `kind: "board"`, name, Miro
-link and one designer chosen from the project's assignments) and, on a shown client version, **Edit
-Miro link** (the existing `kind: "miro"` dialog). No board name, round or client version ever names a
+the agency gets **Share with client** on a round (`project-action-share.tsx`, `kind: "share"`) and,
+in Shared with client, **+ New client version** to add one directly with no round; both prefill the
+client board link from `useLatestSharedMiroLink` (the newest project-level client version's link,
+read for the agency alone, so it works from Working files too). Once a board exists, the bar's
+**+** icon (**Add design board**) adds another, and the agency's **More** menu holds **Edit board**
+(`project-action-board.tsx`, `kind: "board"`, name, Miro link and one designer chosen from the
+project's assignments; if the designers fail to load, the dialog shows that error) and, on a shown
+client version, **Edit Miro link** (the `kind: "miro"` dialog, where a shared version's link is
+required). `MiroWorkspaceBar` is built on `MiroBarShell`/`MiroBarMenu` from `miro-view.tsx`, and the
+workspace reuses `ProjectBackLink` and `ProjectChannelControl` from `project-header.tsx`. No board name, round or client version ever names a
 designer to anyone but the agency and that designer, matching the client-privacy pattern above: the
 bar's own markup carries no designer identity at all. An empty board or channel shows an inline
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
@@ -387,12 +395,20 @@ a board or version has a link, exactly as in Miro mode.
 The agency alone can step back to the legacy canvas on a project that still has per-deliverable
 versions: `viewControl`'s **Versions** button (only rendered when `legacyAvailable`) sets
 `legacyChosen`, which lasts until the channel switch resets it (`switchChannel`). Opening the URL
-with `?view=versions` forces the legacy canvas for every role on load (`legacyRequested`, read once);
+with `?view=versions` forces the legacy canvas for every role on load (`legacyRequested`, read once).
+The other way, the agency's legacy canvas always offers **Miro workspace** (`offersWorkspace`): back
+to a workspace the channel already uses, or, on Working files of a project with only per-deliverable
+versions, into an empty workspace (`workspaceChosen`, also reset by `switchChannel`) where the agency
+adds the first design board. Designers and clients never get this control;
 `miro-workspace.spec.ts`'s fixtures rely on this to exercise the older per-deliverable flows on a
 seeded project without disturbing its workspace state. Designer privacy for boards and rounds —
 RLS on `design_boards`/`design_versions`/`internal_comments`, enforced on both read and write — is
 described in [the backend contract](../../../../docs/architecture/backend.md); this feature's own
 part is simply that the interface never has another designer's identity to leak in the first place.
+The author columns (`created_by` on `design_versions` and `designs`, `updated_by` on
+`design_version_miro_links`) are not selectable by any API role, so reads on those tables name their
+columns (`internalVersionColumns`/`internalDesignColumns` in `project-data.ts`); a `select("*")`
+there is refused.
 
 ## Deviation from the data-access contract: reads that are not hooks
 
