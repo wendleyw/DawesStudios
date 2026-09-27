@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useInvalidateAssets } from "@/features/assets/asset-data";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useBriefingRequester } from "@/features/briefings/briefing-data";
 import { useCreditMonthSummaries } from "@/features/credits/credit-data";
@@ -58,6 +59,7 @@ export function ProjectDetails({
   const { database, profile } = useAuth();
   const { formatDate } = useDateFormat();
   const invalidate = useInvalidateProject();
+  const invalidateAssets = useInvalidateAssets();
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
@@ -133,7 +135,10 @@ export function ProjectDetails({
       await setProjectDriveLink(database, { projectId: project.id, url: parsed });
     },
     onSuccess: async () => {
-      await invalidate();
+      // Files (`assets-page.tsx`) shows the same Drive icon beside a project's file group; without
+      // this, a save here would leave that icon stale there for up to the assets query's own cache
+      // time. Non-widening: `assets-page.tsx`'s own writes already invalidate this same key.
+      await Promise.all([invalidate(), invalidateAssets()]);
       setEditingDriveLink(false);
     },
   });

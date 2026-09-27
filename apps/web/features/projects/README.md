@@ -163,7 +163,11 @@ board dialog. `projectQueryKeys` lists the keys every project write invalidates;
 `useInvalidateComments` refreshes only `comments`. `setProjectDriveLink` calls
 `set_project_drive_link`; `drive_url` is part of `useProjectDetail`'s plain `select("*")` project
 row (and of `workspace-data.ts`'s `Project` type, and `assets/asset-data.ts`'s explicit column
-list), so no extra read or query key was needed for it.
+list), so no extra read was needed for it. The Drive-link mutation in `project-details.tsx` does
+call `assets/asset-data.ts`'s `useInvalidateAssets()` alongside `useInvalidateProject()`, though:
+Files (`assets-page.tsx`) shows the same icon beside a project's file group from its own `assets`
+query, and that call is non-widening because `assets-page.tsx`'s own writes already invalidate the
+same key (rule 5, [data-access.md](../../../../docs/architecture/data-access.md)).
 
 Miro links are kept per channel in their own tables under their own RLS:
 `publication_miro_links` (client) and `design_version_miro_links` (internal). `readMiroLinks` takes

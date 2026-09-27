@@ -23,6 +23,9 @@ const state = vi.hoisted(() => ({
   },
   move: vi.fn(),
   settle: vi.fn(),
+  setDriveLink: vi.fn(),
+  invalidateProject: vi.fn(),
+  invalidateAssets: vi.fn(),
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ database: {}, profile: { id: "viewer-1", role: state.role } }),
@@ -38,11 +41,15 @@ vi.mock("./project-data", async (importOriginal) => ({
     error: null,
     refetch: vi.fn(),
   }),
-  useInvalidateProject: () => vi.fn(),
+  useInvalidateProject: () => state.invalidateProject,
   useInvalidateProjectCredits: () => vi.fn(),
   useProjectCredits: () => ({ data: state.role === "designer" ? undefined : state.credits }),
   moveProjectMonth: state.move,
   settleProjectCredits: state.settle,
+  setProjectDriveLink: state.setDriveLink,
+}));
+vi.mock("@/features/assets/asset-data", () => ({
+  useInvalidateAssets: () => state.invalidateAssets,
 }));
 vi.mock("@/features/briefings/briefing-data", () => ({
   useBriefingRequester: () => ({ data: state.role === "designer" ? undefined : state.requester }),
@@ -122,6 +129,9 @@ beforeEach(() => {
   state.credits = null;
   state.move.mockResolvedValue("entry-1");
   state.settle.mockResolvedValue({});
+  state.setDriveLink.mockResolvedValue(undefined);
+  state.invalidateProject.mockResolvedValue(undefined);
+  state.invalidateAssets.mockResolvedValue(undefined);
 });
 
 describe("ProjectDetails requester", () => {
@@ -403,5 +413,43 @@ describe("ProjectDetails Drive link", () => {
     expect(
       await screen.findByText("Paste a Google Drive link (https://drive.google.com/…)."),
     ).toBeInTheDocument();
+    expect(state.setDriveLink).not.toHaveBeenCalled();
+  });
+
+  it("sends the trimmed URL and refreshes both the project and Files caches", async () => {
+    const user = userEvent.setup();
+    renderDetails();
+    await user.click(screen.getByRole("button", { name: "Add Drive link" }));
+    await user.type(
+      screen.getByLabelText("Drive link"),
+      "  https://drive.google.com/drive/folders/1  ",
+    );
+    await user.click(screen.getByRole("button", { name: "Save link" }));
+    await waitFor(() =>
+      expect(state.setDriveLink).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({
+          projectId: "p1",
+          url: "https://drive.google.com/drive/folders/1",
+        }),
+      ),
+    );
+    await waitFor(() => expect(state.invalidateProject).toHaveBeenCalled());
+    expect(state.invalidateAssets).toHaveBeenCalled();
+  });
+
+  it("clears the link by sending url: null for a blank value", async () => {
+    const user = userEvent.setup();
+    renderDetails([], { drive_url: "https://drive.google.com/drive/folders/1" });
+    await user.click(screen.getByRole("button", { name: "Edit Drive link" }));
+    await user.clear(screen.getByLabelText("Drive link"));
+    await user.click(screen.getByRole("button", { name: "Save link" }));
+    await waitFor(() =>
+      expect(state.setDriveLink).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({ projectId: "p1", url: null }),
+      ),
+    );
+    await waitFor(() => expect(state.invalidateAssets).toHaveBeenCalled());
   });
 });

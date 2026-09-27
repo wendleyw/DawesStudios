@@ -21,6 +21,8 @@ describe("parseDriveUrl", () => {
     "http://drive.google.com/drive/folders/1",
     "https://drive.google.com.evil.example/drive/folders/1",
     "https://evil.example/drive.google.com",
+    "https://drive.google.com@evil.com/x",
+    "https://drive.google.com./x",
     "javascript:alert(1)",
     "not a url",
   ])("refuses %s", (url) => {

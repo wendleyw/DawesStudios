@@ -63,6 +63,10 @@ select throws_ok($$select public.set_project_drive_link(pg_temp.k('project'),'ht
   '22023',null,'A lookalike host is refused');
 select throws_ok($$select public.set_project_drive_link(pg_temp.k('project'),'javascript:alert(1)')$$,
   '22023',null,'A javascript: URL is refused');
+select throws_ok($$select public.set_project_drive_link(pg_temp.k('project'),'https://drive.google.com@evil.com/x')$$,
+  '22023',null,'A userinfo lookalike host is refused');
+select throws_ok($$select public.set_project_drive_link(pg_temp.k('project'),'https://drive.google.com./x')$$,
+  '22023',null,'A trailing-dot lookalike host is refused');
 select is((select drive_url from public.projects where id=pg_temp.k('project')),null,'No invalid attempt stored a link');
 
 -- 1. The agency sets a link, then clears it with an empty string.
@@ -73,6 +77,14 @@ select lives_ok($$select public.set_project_drive_link(pg_temp.k('project'),'')$
 select is((select drive_url from public.projects where id=pg_temp.k('project')),null,'Clearing stores null, never an empty string');
 select lives_ok($$select public.set_project_drive_link(pg_temp.k('project'),'https://drive.google.com/drive/folders/2')$$,
   'The agency sets the link again');
+-- A whitespace-only value (tabs/newlines, not just spaces) clears the link, same as an empty string.
+select lives_ok($$select public.set_project_drive_link(pg_temp.k('project'), e'\t\n \r')$$,
+  'A whitespace-only value clears the link');
+select is((select drive_url from public.projects where id=pg_temp.k('project')),null,'Whitespace-only clears, never stores blank');
+-- A value with a trailing newline (e.g. pasted from some clients) is trimmed and stored, not refused.
+select lives_ok($$select public.set_project_drive_link(pg_temp.k('project'), e'https://drive.google.com/drive/folders/3\n')$$,
+  'A value with a trailing newline is accepted');
+select is((select drive_url from public.projects where id=pg_temp.k('project')),'https://drive.google.com/drive/folders/3','The trailing newline is trimmed before storing');
 reset role;
 select ok(exists(select 1 from private.audit_events where event='project.drive_link_set' and entity_id=pg_temp.k('project')),'Setting a link is audited');
 select ok(exists(select 1 from private.audit_events where event='project.drive_link_cleared' and entity_id=pg_temp.k('project')),'Clearing a link is audited');
@@ -80,7 +92,7 @@ select ok(exists(select 1 from private.audit_events where event='project.drive_l
 -- 2. A client reads drive_url on its own project only.
 select pg_temp.act_as('client');
 set local role authenticated;
-select is((select drive_url from public.projects where id=pg_temp.k('project')),'https://drive.google.com/drive/folders/2','The client reads the link on its own project');
+select is((select drive_url from public.projects where id=pg_temp.k('project')),'https://drive.google.com/drive/folders/3','The client reads the link on its own project');
 select is((select count(*)::int from public.projects where id=pg_temp.k('other-project')),0,'The client cannot see a project of another client');
 select throws_ok($$select public.set_project_drive_link(pg_temp.k('project'),'https://drive.google.com/drive/folders/3')$$,
   '42501',null,'The client still cannot write the link');

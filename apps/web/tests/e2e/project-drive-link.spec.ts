@@ -23,6 +23,11 @@ test.beforeAll(async () => {
   // so this fixture stores a delivery file instead, uploaded directly with the service role. A
   // client reads a delivery file only once the project is delivered (`private.delivery_released`),
   // which this disposable fixture is marked as directly, skipping the full delivery workflow.
+  // Consequence: step 5 below (the client's Files path) is proven only for a delivered project —
+  // it is the only status under which a client's Files group renders at all, so there is no
+  // non-delivered variant of that assertion to add. The agency's Files path (step 4) and the More
+  // menu (steps 3/5) do not depend on delivery status; only the client's `assets-page.tsx` read
+  // does.
   const objectPath = `${projectId}/drive-link-fixture.png`;
   const bytes = readFileSync(png);
   const uploaded = await localAdmin.storage
