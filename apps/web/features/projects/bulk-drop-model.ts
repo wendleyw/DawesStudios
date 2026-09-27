@@ -186,7 +186,7 @@ export function buildDesignContent(title: string): Record<string, string> {
 
 export type CurrentVersionInfo = { deliverableId: string; versionId: string; number: number };
 
-/** The highest `number` version per deliverable, mirroring `versionsByDeliverable.get(...).at(-1)` in `project-page.tsx`. */
+/** The highest `number` version per deliverable, mirroring `versionsByDeliverable.get(...).at(-1)` in `project-versions-canvas.tsx`. */
 export function latestVersionPerDeliverable(
   versions: { id: string; deliverableId: string; number: number }[],
 ): CurrentVersionInfo[] {

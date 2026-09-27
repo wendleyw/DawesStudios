@@ -47,7 +47,7 @@ export type ProjectWorkspaceProps = {
 /**
  * The project in the Miro workspace: the board, round or client version on Miro, with the
  * product's own controls around it. Replaces the Versions canvas for a channel that uses the
- * workspace (`usesWorkspace`); the legacy canvas stays in `project-page.tsx`.
+ * workspace (`usesWorkspace`); the legacy canvas stays in `project-versions-canvas.tsx`.
  */
 export function ProjectWorkspace({
   projectId,
@@ -97,7 +97,7 @@ export function ProjectWorkspace({
   const feedbackTarget = internal ? round : version;
   // Feedback belongs to the round or version on screen; once none is (back to the board, another
   // board), the panel closes rather than holding feedback for something no longer shown. Adjusted
-  // during render, as `project-page.tsx` does for its own derived state.
+  // during render, as `project-versions-canvas.tsx` does for its own derived state.
   if (panel === "feedback" && !feedbackTarget) setPanel(null);
   function closePlayground() {
     setPlaygroundOpen(false);

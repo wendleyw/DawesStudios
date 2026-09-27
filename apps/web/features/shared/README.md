@@ -58,7 +58,7 @@ screens; a null target waits for the dock to mount, and omitting it keeps the in
 for the other consumers.
 
 Consumers: `board/board-page` and `board/board-canvas-controls`,
-`projects/project-page`, `projects/design-viewer`, `playground/playground-board`.
+`projects/project-versions-canvas`, `projects/design-viewer`, `playground/playground-board`.
 
 These canvases also use `canvasNavigation` (`canvas-navigation.ts`): two-axis
 scroll panning at native delta speed, pinch zoom, and no accidental wheel or

@@ -90,8 +90,9 @@ button. Copying downloads the source file with the viewer's own session —
 Playground-owned image — and hands it to `copyImageToClipboard` (`album-clipboard.ts`), which
 converts it to PNG and writes it with the Clipboard API inside the same click's user activation.
 Download falls back to `saveBlob` with `fileNameFor`'s stored-extension name; a download that fails
-too announces "Couldn't download this file." in the same polite status region. `project-page.tsx`
-mounts this strip above the Miro embed, toggled by the project's own Playground icon button.
+too announces "Couldn't download this file." in the same polite status region.
+`project-versions-canvas.tsx` mounts this strip above the Miro embed, toggled by the project's own
+Playground icon button.
 
 ## Compact header
 

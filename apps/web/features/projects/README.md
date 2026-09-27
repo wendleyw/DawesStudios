@@ -67,7 +67,7 @@ client's review decision and unpinned version discussion) lives in the version's
 the user removed the viewer's **General feedback** tab on 2026-09-24. While the latest client
 publication waits for a decision, the client can **Review version** from the top of the viewer's
 feedback column, from the version panel and from the version card; `reviewFor` in
-`project-page.tsx` is the one rule for all three. Existing release notes and review feedback are
+`project-versions-canvas.tsx` is the one rule for all three. Existing release notes and review feedback are
 rendered in full from their original records, never copied into comments. A version comment has a
 version/publication ID and no design ID; queries filter both that context and the channel. Project
 Conversation retains the existing aggregate of unpinned messages. Draft bodies, pending pins and
@@ -248,7 +248,7 @@ stopped the drop) is discarded. Cancel stops the files still waiting to upload; 
 uploading finishes and is registered. `bulk-drop-dialog.tsx` renders one block per deliverable with
 its size, file count and version choice, the picker for unmatched or tied files, the files that
 cannot be added with their reasons, per-file progress, and **Try again** for the failed files only,
-reusing any version the first attempt created. `project-page.tsx` mounts one dialog per drop.
+reusing any version the first attempt created. `project-versions-canvas.tsx` mounts one dialog per drop.
 Neither `artwork-files.ts` nor `project-action-design.tsx` changed for this feature; only their
 existing exports (`uploadArtwork`, `discardUnreferencedArtwork`) are called. `createDesignVersion`
 now returns the created version's id, which bulk drop needs to register several designs into a
@@ -285,7 +285,7 @@ link, so its field is required (labelled **Miro frame**, not "optional"), saving
 in the dialog, and `clear_publication_miro_link` itself refuses project-level publications.
 
 On the version card, only an agency session sees the `Link2` icon button beside the card's comment
-shortcut (`canManageMiro: profile?.role === "agency"` in `project-page.tsx`), `aria-label`
+shortcut (`canManageMiro: profile?.role === "agency"` in `project-versions-canvas.tsx`), `aria-label`
 "Add/Change Miro link for version N" depending on whether a link already exists; it renders for the
 agency alone in both channels, sized like every other `.icon-button` (`--control-height`). Whenever
 the current channel's version carries a link, every role that can open the project additionally sees
@@ -303,7 +303,7 @@ rules — `linkedVersions` filters the viewer's own channel-specific versions do
 a link (so a client only ever sees client-board links and a designer only internal-board links),
 `pickMiroVersion` resolves the requested version if it is still linked or otherwise the newest linked
 one, and `readProjectView`/`writeProjectView` keep `view=miro` and `version=<id>` in the URL so a
-reload or a shared link returns to the same frame. `project-page.tsx` mounts `MiroView`
+reload or a shared link returns to the same frame. `project-versions-canvas.tsx` mounts `MiroView`
 (`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`opacity: 0`
 and `inert`; not `visibility: hidden`, which React Flow's per-node `visibility: visible` overrides)
 rather than unmounting, so switching back to **Versions** is instant. The
@@ -333,7 +333,7 @@ and paste; the board's menu and sharing are reached through **Open in Miro**. Th
 `project-header.tsx`) only renders when `miroAvailable` — the viewer's channel has at least one
 linked version under the current deliverable filter — and is the other entry point beside a
 version card's **View on Miro**; clicking the option already pressed is a no-op, never a jump back
-to the newest linked version. A reconcile effect in `project-page.tsx` keeps Miro mode from holding
+to the newest linked version. A reconcile effect in `project-versions-canvas.tsx` keeps Miro mode from holding
 a phantom state: whenever the deliverable filter, a channel switch, or an unresolved requested
 version leaves nothing linked to show, it falls back to Versions, and the URL always records the
 version actually resolved and shown, never the raw requested id. Details/Conversation narrow the
@@ -391,7 +391,7 @@ The workspace's **Feedback** tool bar button (a clipboard-and-pen icon, distinct
 **Conversation**'s speech bubble) opens the same `CommentPanel`/`ProjectPanel` the legacy
 canvas uses, scoped to whichever round or client version is shown (`feedbackTarget`); the panel
 closes itself, during render, once nothing is shown to scope it to — the same reconciliation pattern
-`project-page.tsx` uses for Miro mode's phantom-state guard. `usePanelFocusReturn`
+`project-versions-canvas.tsx` uses for Miro mode's phantom-state guard. `usePanelFocusReturn`
 (`use-panel-focus-return.ts`) is the shared hook behind both the legacy canvas's and the workspace's
 side panel, so Escape/close returns focus to whichever control opened it either way. Its
 `useFocusReturn` also returns focus to the Playground button on both pages; it focuses after the
