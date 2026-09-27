@@ -99,6 +99,8 @@ export type Project = {
   /** When the studio marked the project delivered; null until then. */
   delivered_at: string | null;
   start_date: string | null;
+  /** The month (first day, UTC) whose credits the project uses; null until it is accepted. */
+  credit_month?: string | null;
   board_position: { x: number; y: number };
   created_at: string;
   updated_at: string;
