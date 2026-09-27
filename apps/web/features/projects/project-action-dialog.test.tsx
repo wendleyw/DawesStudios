@@ -37,7 +37,7 @@ function renderDialog(action: ProjectAction) {
   const onClose = vi.fn();
   render(
     <QueryClientProvider client={client}>
-      <ProjectActionDialog action={action} suspended={false} onClose={onClose} />
+      <ProjectActionDialog action={action} onClose={onClose} />
     </QueryClientProvider>,
   );
   return { onClose };

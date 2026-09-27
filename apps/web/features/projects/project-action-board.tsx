@@ -31,11 +31,9 @@ export type BoardAction = {
  */
 export function ProjectActionBoard({
   action,
-  suspended,
   onClose,
 }: {
   action: BoardAction;
-  suspended: boolean;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -71,7 +69,7 @@ export function ProjectActionBoard({
   const submitLabel = action.board ? "Save board" : "Add board";
   return (
     <ProjectActionShell
-      open={!suspended}
+      open
       title={action.board ? "Edit the design board." : "A design board."}
       closeDisabled={closeDisabled}
       onModalClose={close}

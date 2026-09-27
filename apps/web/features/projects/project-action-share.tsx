@@ -27,11 +27,9 @@ export type ShareAction = {
  */
 export function ProjectActionShare({
   action,
-  suspended,
   onClose,
 }: {
   action: ShareAction;
-  suspended: boolean;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -62,7 +60,7 @@ export function ProjectActionShare({
   });
   return (
     <ProjectActionShell
-      open={!suspended}
+      open
       title={
         action.round
           ? `Share round ${action.round.number} with the client.`

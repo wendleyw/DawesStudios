@@ -24,11 +24,9 @@ const boardReassignedMessage = "This board is no longer assigned to you.";
 /** "Send to studio": the designer's next round of their board, with a note and an optional frame. */
 export function ProjectActionRound({
   action,
-  suspended,
   onClose,
 }: {
   action: RoundAction;
-  suspended: boolean;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -65,7 +63,7 @@ export function ProjectActionRound({
   });
   return (
     <ProjectActionShell
-      open={!suspended}
+      open
       title={`Send ${action.board.name} to the studio.`}
       closeDisabled={closeDisabled}
       onModalClose={close}

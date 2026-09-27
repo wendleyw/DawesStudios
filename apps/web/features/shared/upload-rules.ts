@@ -23,10 +23,8 @@
  * be added by hand to that test's source list, or the comparison keeps passing against a stale
  * value without any parser being able to notice.
  *
- * The ceiling is expressed per upload path rather than as a single number, because the paths
- * deliberately disagree with each other and with their bucket: see `ARTWORK_MAX_BYTES` (tighter
- * than its bucket, for browser-memory reasons) and `VIDEO_MAX_BYTES` (wider than the default
- * bucket, for storage-cost reasons).
+ * The ceiling is expressed per upload path rather than as a single number, because the paths can
+ * deliberately disagree with each other and with their bucket: see `VIDEO_MAX_BYTES`.
  */
 
 /**
@@ -37,32 +35,14 @@
 export const BUCKET_MAX_BYTES = 50 * 1024 * 1024;
 
 /**
- * The design-artwork path stops at half the bucket limit **on purpose**.
- *
- * `sanitizeArtwork` (`features/projects/artwork-files.ts`) decodes the file with
- * `createImageBitmap` and re-encodes it through a canvas. Its 40-megapixel guard can only run
- * *after* the decode has already allocated the bitmap, so this byte ceiling is the only thing
- * standing between an oversized source and the decode itself. Handing that path the full bucket
- * allowance would give a browser-memory guard 25 MB of headroom it was never sized for.
- *
- * The consequence is recorded rather than accidental: files between this value and
- * `BUCKET_MAX_BYTES` are refused on the design path although `internal-assets` would have stored
- * them. Do not collapse this into `BUCKET_MAX_BYTES`.
- */
-export const ARTWORK_MAX_BYTES = 25 * 1024 * 1024;
-
-/**
- * The design path accepts video up to a gigabyte, matching `internal-assets` and
- * `published-assets` after `supabase/migrations/202609210004_video_storage.sql`.
- *
- * The reason for this ceiling is **remux time and storage cost**, and deliberately not the
- * reason behind `ARTWORK_MAX_BYTES`. Nothing decodes a video frame in the browser: the file is
- * uploaded as-is and `apps/media` strips its metadata with a stream copy. There is no bitmap to
- * allocate, so browser memory does not bound this number. A gigabyte covers ten minutes of
- * 1080p H.264 at roughly 13 Mbit/s.
- *
- * Do not collapse this into `BUCKET_MAX_BYTES` or `ARTWORK_MAX_BYTES`. The three ceilings answer
- * three different questions.
+ * `internal-assets` still carries this gigabyte ceiling from
+ * `supabase/migrations/202609210004_video_storage.sql`, written for the per-deliverable
+ * video-design path that migrations `202609270007`/`202609270008` later retired along with
+ * `published-assets` itself. No current uploader offers this ceiling; it is kept only so a
+ * production `FILE_SIZE_LIMIT` below it does not silently reject the bucket's own configured
+ * value (see `docs/operations/production.md`), and so `upload-rules.test.ts` and
+ * `media-scratch.test.ts` keep asserting the real, still-live bucket/container configuration
+ * rather than a stale copy of it.
  */
 export const VIDEO_MAX_BYTES = 1024 * 1024 * 1024;
 
@@ -131,36 +111,6 @@ export const brandUploadMimes = [
   "image/svg+xml",
   "application/pdf",
 ] as const satisfies readonly UploadMime[];
-
-/**
- * Web-playable video only. The product accepts what a browser can play without transcoding: a
- * `.mov` or ProRes file is refused rather than converted, because converting it would mean an
- * ffmpeg re-encode, a queue, and processing state in the interface for a case a designer can
- * resolve at export time.
- */
-export const videoUploadMimes = [
-  "video/mp4",
-  "video/webm",
-] as const satisfies readonly UploadMime[];
-
-/**
- * What the design uploader accepts: an image to compose or a video to review. The two carry
- * different ceilings and different preparation paths, so `uploadDesignAsset` branches on the
- * file's type rather than treating this as one homogeneous list.
- */
-export const designUploadMimes = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "video/mp4",
-  "video/webm",
-] as const satisfies readonly UploadMime[];
-
-/** Whether a file's declared type takes the video path rather than the image one. */
-export function isVideoUpload(mime: string): boolean {
-  const allowed: readonly string[] = videoUploadMimes;
-  return allowed.includes(mime);
-}
 
 const mimeLabels: Record<UploadMime, string> = {
   "image/png": "PNG",
@@ -242,13 +192,4 @@ export function uploadExtensionAccept(mimes: readonly UploadMime[]): string {
 export function acceptedExtensions(mimes: readonly UploadMime[], mime: string): readonly string[] {
   const allowed: readonly string[] = mimes;
   return allowed.includes(mime) ? uploadExtensions[mime as UploadMime] : [];
-}
-
-/** Stored video extensions come from the media service's verified container type. */
-const videoExtensions = ["mp4", "webm"];
-
-export function isVideoAsset(path: string | null): boolean {
-  if (!path) return false;
-  const extension = path.split(".").pop()?.toLowerCase() ?? "";
-  return videoExtensions.includes(extension);
 }

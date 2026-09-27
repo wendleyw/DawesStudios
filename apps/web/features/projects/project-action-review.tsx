@@ -16,11 +16,9 @@ export type ReviewAction = { kind: "review"; version: CanvasVersion; decision?: 
 /** "Your thoughts make it better." — the client's approve/request-changes decision on a publication. */
 export function ProjectActionReview({
   action,
-  suspended,
   onClose,
 }: {
   action: ReviewAction;
-  suspended: boolean;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -43,7 +41,7 @@ export function ProjectActionReview({
 
   return (
     <ProjectActionShell
-      open={!suspended}
+      open
       title="Your thoughts make it better."
       closeDisabled={closeDisabled}
       onModalClose={close}

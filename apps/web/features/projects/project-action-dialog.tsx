@@ -21,11 +21,9 @@ export type ProjectAction = ReviewAction | MiroAction | BoardAction | RoundActio
  */
 export function ProjectActionDialog({
   action,
-  suspended,
   onClose,
 }: {
   action: ProjectAction | null;
-  suspended: boolean;
   onClose: () => void;
 }) {
   if (!action)
@@ -36,15 +34,15 @@ export function ProjectActionDialog({
     );
   switch (action.kind) {
     case "miro":
-      return <ProjectActionMiro action={action} suspended={suspended} onClose={onClose} />;
+      return <ProjectActionMiro action={action} onClose={onClose} />;
     case "review":
-      return <ProjectActionReview action={action} suspended={suspended} onClose={onClose} />;
+      return <ProjectActionReview action={action} onClose={onClose} />;
     case "board":
-      return <ProjectActionBoard action={action} suspended={suspended} onClose={onClose} />;
+      return <ProjectActionBoard action={action} onClose={onClose} />;
     case "round":
-      return <ProjectActionRound action={action} suspended={suspended} onClose={onClose} />;
+      return <ProjectActionRound action={action} onClose={onClose} />;
     case "share":
-      return <ProjectActionShare action={action} suspended={suspended} onClose={onClose} />;
+      return <ProjectActionShare action={action} onClose={onClose} />;
   }
 }
 

@@ -45,11 +45,7 @@ describe("ProjectActionReview", () => {
     const onClose = vi.fn();
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <ProjectActionReview
-          action={{ kind: "review", version }}
-          suspended={false}
-          onClose={onClose}
-        />
+        <ProjectActionReview action={{ kind: "review", version }} onClose={onClose} />
       </QueryClientProvider>,
     );
 

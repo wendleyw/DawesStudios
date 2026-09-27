@@ -3,17 +3,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  ARTWORK_MAX_BYTES,
   BUCKET_MAX_BYTES,
   VIDEO_MAX_BYTES,
   brandUploadMimes,
-  designUploadMimes,
   standardUploadMimes,
   uploadExtensionMap,
   uploadSizeMessage,
   uploadTypeMessage,
   uploadTypesLabel,
-  videoUploadMimes,
   acceptedExtensions,
   fileTypeLabel,
   mimeForPath,
@@ -183,12 +180,6 @@ describe("the client upload ceiling mirrors the bucket limit", () => {
     expect(effectiveFileSizeCheckMax([sources[0]])).toBe(BUCKET_MAX_BYTES);
     expect(effectiveFileSizeCheckMax(sources)).toBe(VIDEO_MAX_BYTES);
   });
-
-  it("keeps the design-artwork ceiling deliberately below the bucket limit", () => {
-    // Not drift. `sanitizeArtwork` decodes and re-encodes the file through a canvas, and its
-    // megapixel guard can only run after the decode has allocated the bitmap.
-    expect(ARTWORK_MAX_BYTES).toBeLessThan(BUCKET_MAX_BYTES);
-  });
 });
 
 describe("the per-consumer allow-lists mirror their buckets", () => {
@@ -197,8 +188,8 @@ describe("the per-consumer allow-lists mirror their buckets", () => {
       migration("202609200003_storage.sql"),
       migration("202609210004_video_storage.sql"),
     ]);
-    // `internal-assets` is a design bucket: it keeps every standard type and gains video on top,
-    // it does not shrink to `designUploadMimes`.
+    // `internal-assets` keeps every standard type and gains video on top from the retired
+    // per-deliverable video-design path; no current uploader offers video on this bucket.
     expect(mimes.get("internal-assets")).toEqual([
       ...standardUploadMimes,
       "video/mp4",
@@ -237,7 +228,7 @@ describe("the messages each uploader shows", () => {
 
   it("states the ceiling once, in megabytes, from the byte value", () => {
     expect(uploadSizeMessage()).toBe("Choose a file no larger than 50 MB.");
-    expect(uploadSizeMessage(ARTWORK_MAX_BYTES)).toBe("Choose a file no larger than 25 MB.");
+    expect(uploadSizeMessage(VIDEO_MAX_BYTES)).toBe("Choose a file no larger than 1024 MB.");
   });
 });
 
@@ -256,22 +247,6 @@ describe("the extension vocabulary", () => {
     expect(acceptedExtensions(standardUploadMimes, "image/svg+xml")).toEqual([]);
     expect(acceptedExtensions(brandUploadMimes, "image/svg+xml")).toEqual(["svg"]);
     expect(acceptedExtensions(standardUploadMimes, "text/html")).toEqual([]);
-  });
-});
-
-describe("video", () => {
-  it("keeps the artwork ceiling far below the video one", () => {
-    expect(ARTWORK_MAX_BYTES).toBeLessThan(VIDEO_MAX_BYTES);
-  });
-
-  it("offers image and video together on the design path", () => {
-    expect(designUploadMimes).toContain("image/png");
-    expect(designUploadMimes).toContain("video/mp4");
-    expect(designUploadMimes).toContain("video/webm");
-  });
-
-  it("names video types in prose a person can read", () => {
-    expect(uploadTypesLabel(videoUploadMimes)).toBe("MP4, or WebM");
   });
 });
 

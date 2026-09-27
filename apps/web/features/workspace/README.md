@@ -89,7 +89,8 @@ mobile drawer. Inside a client workspace the sidebar's first item is that client
 navigation has no Overview); elsewhere it is the viewer's home (`/home`, also behind the studio
 logo). The client switcher shows the selected client's logo (`ClientMark`) on a light plate. A page can fold the sidebar while it needs the width with `useFoldSidebarWhile(active)`
 (`app-shell.tsx`): it collapses on activation, can still be expanded by hand, and returns to its
-previous state on deactivation or unmount. The project page's Miro mode is the one consumer.
+previous state on deactivation or unmount. The project page's Miro workspace is the one consumer
+(`useFoldSidebarWhile(!!shownLink)` in `project-workspace.tsx`).
 
 The workspace layout also renders the briefing `@modal` slot. In-app New briefing links open the
 shared editor over the current route; direct URL loads use the full page. See the

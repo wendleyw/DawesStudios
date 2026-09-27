@@ -28,12 +28,6 @@ const themeIndependent: Record<string, string> = {
   ".profile-bar strong": "The sidebar is dark in both themes.",
   ".profile-bar .icon-button:hover": "The sidebar is dark in both themes.",
   ".mobile-sidebar-close:hover:not(:disabled)": "The sidebar is dark in both themes.",
-  ".artwork-video": "Video letterboxing is black in any theme.",
-  ".video-pin-marker": "Comment pins keep one look over artwork and on the video track.",
-  ".video-pin-marker.selected": "Comment pins keep one look over artwork and on the video track.",
-  ".artwork-pin": "Comment pins keep one look over artwork.",
-  ".artwork-pin.selected": "Comment pins keep one look over artwork.",
-  ".artwork-pin.pending": "Comment pins keep one look over artwork.",
 };
 
 type Declaration = { selector: string; property: string; value: string };

@@ -31,11 +31,9 @@ function miroTitle(hasLink: boolean) {
  */
 export function ProjectActionMiro({
   action,
-  suspended,
   onClose,
 }: {
   action: MiroAction;
-  suspended: boolean;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -67,7 +65,7 @@ export function ProjectActionMiro({
 
   return (
     <ProjectActionShell
-      open={!suspended}
+      open
       title={miroTitle(!!action.version.miro)}
       closeDisabled={closeDisabled}
       onModalClose={close}

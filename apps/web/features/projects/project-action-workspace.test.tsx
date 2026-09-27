@@ -81,13 +81,7 @@ beforeEach(() => {
 describe("board dialog", () => {
   it("creates a board for an assigned designer only", async () => {
     const user = userEvent.setup();
-    wrap(
-      <ProjectActionDialog
-        action={{ kind: "board", projectId: "p" }}
-        suspended={false}
-        onClose={vi.fn()}
-      />,
-    );
+    wrap(<ProjectActionDialog action={{ kind: "board", projectId: "p" }} onClose={vi.fn()} />);
     expect(screen.getByRole("option", { name: "Alex Morgan" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Sam Lee" })).toBeNull();
     await user.type(screen.getByLabelText("Board name"), "  Alpha  ");
@@ -114,7 +108,6 @@ describe("board dialog", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
-        suspended={false}
         onClose={vi.fn()}
       />,
     );
@@ -139,7 +132,6 @@ describe("board dialog", () => {
     const { container } = wrap(
       <ProjectActionDialog
         action={{ kind: "board", projectId: "p", projectDueDate: "2026-10-10" }}
-        suspended={false}
         onClose={vi.fn()}
       />,
     );
@@ -157,25 +149,13 @@ describe("board dialog", () => {
   });
   it("says why it cannot add a board when the designers fail to load", () => {
     assignments.error = new Error("Designers could not load");
-    wrap(
-      <ProjectActionDialog
-        action={{ kind: "board", projectId: "p" }}
-        suspended={false}
-        onClose={vi.fn()}
-      />,
-    );
+    wrap(<ProjectActionDialog action={{ kind: "board", projectId: "p" }} onClose={vi.fn()} />);
     expect(screen.getByText("Designers could not load")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add board" })).toBeDisabled();
   });
   it("refuses a link that is not a Miro board before calling the server", async () => {
     const user = userEvent.setup();
-    wrap(
-      <ProjectActionDialog
-        action={{ kind: "board", projectId: "p" }}
-        suspended={false}
-        onClose={vi.fn()}
-      />,
-    );
+    wrap(<ProjectActionDialog action={{ kind: "board", projectId: "p" }} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText("Board name"), "Alpha");
     await user.type(screen.getByLabelText("Miro board"), "https://example.com/x");
     await user.click(screen.getByRole("button", { name: "Add board" }));
@@ -188,9 +168,7 @@ describe("round dialog", () => {
   it("reuses its idempotency key when a failed send is retried", async () => {
     const user = userEvent.setup();
     writes.sendBoardRound.mockRejectedValueOnce(new Error("Network down"));
-    wrap(
-      <ProjectActionDialog action={{ kind: "round", board }} suspended={false} onClose={vi.fn()} />,
-    );
+    wrap(<ProjectActionDialog action={{ kind: "round", board }} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
     expect(await screen.findByText("Network down")).toBeInTheDocument();
@@ -204,9 +182,7 @@ describe("round dialog", () => {
   it("shows a plain message and refreshes the boards once the board is no longer the designer's", async () => {
     const user = userEvent.setup();
     writes.sendBoardRound.mockRejectedValueOnce(new Error('Board access required (42501): "b1"'));
-    wrap(
-      <ProjectActionDialog action={{ kind: "round", board }} suspended={false} onClose={vi.fn()} />,
-    );
+    wrap(<ProjectActionDialog action={{ kind: "round", board }} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
     expect(await screen.findByText("This board is no longer assigned to you.")).toBeInTheDocument();
@@ -227,7 +203,6 @@ describe("share dialog", () => {
           round,
           prefill: { boardId: "uXjVClient1=", widgetId: "5" },
         }}
-        suspended={false}
         onClose={vi.fn()}
       />,
     );
@@ -260,7 +235,6 @@ describe("share dialog prefill", () => {
           round: { id: "r1", number: 1 } as never,
           prefill: null,
         }}
-        suspended={false}
         onClose={vi.fn()}
       />
     );
@@ -284,7 +258,6 @@ describe("share dialog prefill", () => {
     wrap(
       <ProjectActionDialog
         action={{ kind: "share", projectId: "p", round: null, prefill: null }}
-        suspended={false}
         onClose={vi.fn()}
       />,
     );
@@ -301,7 +274,6 @@ describe("share dialog prefill", () => {
           round: null,
           prefill: { boardId: "uXjVClient1=", widgetId: null },
         }}
-        suspended={false}
         onClose={vi.fn()}
       />,
     );

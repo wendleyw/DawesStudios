@@ -321,7 +321,6 @@ export function ProjectWorkspace({
       <ProjectActionDialog
         key={projectActionKey(action)}
         action={action}
-        suspended={false}
         onClose={() => setAction(null)}
       />
     </div>
