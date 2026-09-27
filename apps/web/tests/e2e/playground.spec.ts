@@ -31,7 +31,7 @@ test("Playground slides over the entire viewport and preserves the project under
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   const viewport = page.locator(".project-canvas .react-flow__viewport");
   await expect(page.getByRole("button", { name: "New version for Campaign square" })).toBeVisible();
   const initialZoom = await viewport.evaluate(
@@ -121,7 +121,7 @@ for (const role of ["agency", "designer", "client"] as const) {
       page.getByRole("heading", { name: workspace.name, level: 1, exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Playground", exact: true })).toHaveCount(0);
-    await page.goto(`/projects/${workspace.projectId}`);
+    await page.goto(`/projects/${workspace.projectId}?view=versions`);
     await openPlayground(page);
     const title = `${role} project direction`;
     await addNote(page, title);
@@ -131,7 +131,7 @@ for (const role of ["agency", "designer", "client"] as const) {
     await openPlayground(page);
     await expect(playground(page).getByText(title, { exact: true }).first()).toBeVisible();
     await playground(page).getByRole("button", { name: "Back to project", exact: true }).click();
-    await page.goto(`/projects/${workspace.otherProjectId}`);
+    await page.goto(`/projects/${workspace.otherProjectId}?view=versions`);
     await openPlayground(page);
     await expect(playground(page).getByText(title, { exact: true })).toHaveCount(0);
     await addNote(page, `${role} alternate direction`);
@@ -166,7 +166,7 @@ test("upload form survives Playground and still creates the final design", async
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   await page.getByRole("button", { name: "New version for Campaign square" }).click();
   await page.getByLabel("Version note").fill("Explore before uploading.");
   await page.getByRole("button", { name: "Create version", exact: true }).click();
@@ -209,7 +209,7 @@ test("a dropped image/document bundle persists and files remain private", async 
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   await openPlayground(page);
   const transfer = await page.evaluateHandle(
     ({ image }) => {
@@ -304,7 +304,7 @@ test("a dropped image/document bundle persists and files remain private", async 
 
 test("Playground is readable and accessible on desktop and mobile", async ({ page, workspace }) => {
   await signIn(page, workspace.client.email);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   await openPlayground(page);
   await addNote(page, "Campaign mood", "Natural colors, generous space, and a clear message.");
   for (const [width, height] of [
@@ -398,7 +398,7 @@ test("notes can be dragged, resized, edited by keyboard and removed durably", as
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   await openPlayground(page);
   await addNote(page, "Move this idea");
   const dialog = playground(page);
@@ -459,7 +459,7 @@ test("lost save responses retry once and stale edits retain the local draft", as
   workspace,
 }) => {
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   await openPlayground(page);
   let dropped = false;
   await page.route("**/rest/v1/rpc/save_playground_item", async (route) => {
@@ -559,7 +559,7 @@ test("an agency session drags a Brand Hub asset and a working design onto the Pl
   const seed = await seedPlaygroundAlbumsFixture(workspace);
   try {
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${workspace.projectId}`);
+    await page.goto(`/projects/${workspace.projectId}?view=versions`);
     await openPlayground(page);
     const board = playground(page);
 
@@ -620,7 +620,7 @@ test("a client session sees only its shared versions, drags a published design o
     });
 
     await signIn(page, workspace.client.email);
-    await page.goto(`/projects/${workspace.projectId}`);
+    await page.goto(`/projects/${workspace.projectId}?view=versions`);
     await openPlayground(page);
     const board = playground(page);
 

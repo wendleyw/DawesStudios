@@ -108,7 +108,7 @@ test.describe("bulk image drop", () => {
     );
 
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}?view=versions`);
     await expect(
       page.getByRole("button", { name: "New version for Campaign square" }),
     ).toBeVisible();
@@ -191,7 +191,7 @@ test.describe("bulk image drop", () => {
     projectId = fixture.projectId;
 
     await signIn(page, credentials.client);
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}?view=versions`);
     await expect(page.locator(".project-canvas")).toBeVisible();
 
     const prevented = await dropImages(page, ".project-canvas", [
@@ -211,7 +211,7 @@ test.describe("bulk image drop", () => {
     projectId = fixture.projectId;
 
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${projectId}?channel=client`);
+    await page.goto(`/projects/${projectId}?channel=client&view=versions`);
     await expect(page.locator(".project-canvas")).toBeVisible();
 
     const prevented = await dropImages(page, ".project-canvas", [
@@ -228,7 +228,7 @@ test.describe("bulk image drop", () => {
     projectId = fixture.projectId;
 
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}?view=versions`);
     await expect(page.locator(".project-canvas")).toBeVisible();
 
     const prevented = await page.evaluate(() => {
@@ -253,7 +253,7 @@ test.describe("bulk image drop", () => {
     projectId = fixture.projectId;
 
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}?view=versions`);
     await expect(page.locator(".project-canvas")).toBeVisible();
 
     expect(

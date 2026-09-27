@@ -170,7 +170,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
   const client = await clientContext.newPage();
   try {
     await signIn(page, credentials.agency);
-    await page.goto(`/projects/${fixture.projectId}`);
+    await page.goto(`/projects/${fixture.projectId}?view=versions`);
     await page.getByRole("button", { name: "Project details", exact: true }).click();
     await page.getByRole("button", { name: "Edit project details" }).click();
     await page.getByLabel("Start date").fill("2026-10-20");
@@ -257,7 +257,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(page.getByLabel("Your message")).toHaveValue("Shared general draft.");
     await page.getByRole("button", { name: "Send message", exact: true }).click();
     await signIn(client, credentials.client);
-    await client.goto(`/projects/${fixture.projectId}?channel=client`);
+    await client.goto(`/projects/${fixture.projectId}?channel=client&view=versions`);
     await client.getByRole("button", { name: "Conversation", exact: true }).click();
     await expect(client.getByText("Shared general draft.", { exact: true })).toBeVisible();
     await expect(client.getByText("Private general draft.", { exact: true })).toHaveCount(0);
@@ -281,7 +281,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await event.getByRole("link").click();
     await expect(client).toHaveURL(new RegExp(`/projects/${fixture.projectId}$`));
     await client.getByRole("button", { name: "Sign out", exact: true }).click();
-    await client.goto(`/projects/${fixture.projectId}?channel=client`);
+    await client.goto(`/projects/${fixture.projectId}?channel=client&view=versions`);
     await expect(client).toHaveURL(/\/login\?returnTo=/);
     await client.getByLabel("Email address").fill(credentials.client);
     await client.getByLabel("Password", { exact: true }).fill(password);
@@ -321,10 +321,11 @@ test("one click selects and two open the project, on the card and in the calenda
     await expect(node).toHaveAttribute("aria-current", "true");
     expect(new URL(page.url()).pathname).toBe(board);
 
-    // Two open the project's own canvas, full screen, rather than inside the board.
+    // Two open the project's own canvas, full screen, rather than inside the board. A fresh
+    // project opens in the Miro workspace, so the canvas pane is asserted, not the legacy flow.
     await card.dblclick();
     await page.waitForURL(`**/projects/${fixture.projectId}`);
-    await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
+    await expect(page.locator(".project-canvas")).toBeVisible();
 
     // The calendar lane obeys the same rule, so the board reads consistently wherever a project
     // appears.

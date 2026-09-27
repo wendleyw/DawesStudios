@@ -219,7 +219,7 @@ test("two versions with long notes remain separated on the project canvas", asyn
       expect(design.error).toBeNull();
     }
     await signIn(page, credentials.agency);
-    await page.goto("/projects/" + fixture.projectId);
+    await page.goto("/projects/" + fixture.projectId + "?view=versions");
     await expect(page.locator(".version-card")).toHaveCount(2);
     for (const width of [1600, 390]) {
       await page.setViewportSize({ width, height: width === 1600 ? 1000 : 844 });

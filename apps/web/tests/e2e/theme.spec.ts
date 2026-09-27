@@ -67,7 +67,7 @@ test("the project canvas takes the dark canvas colour and dot grid", async ({
 }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await signIn(page, credentials.agency);
-  await page.goto(`/projects/${workspace.projectId}`);
+  await page.goto(`/projects/${workspace.projectId}?view=versions`);
   const background = page.locator(".project-canvas .react-flow__background");
   await expect(background).toBeVisible();
   expect(await background.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(

@@ -120,10 +120,21 @@ test.describe("Miro mode and the deliverable filter", () => {
   // so filtering to "Instagram Story" leaves nothing linked for the client channel. Never the
   // "Personal Alarm Product Story" project — its own link row is the user's, left untouched.
   const filterProjectId = "aea0ccab-ef4b-0ac1-6fec-e17ce156dd19";
-  const linkedPublicationId = "8c37ef7f-c2de-4b7d-b14c-17e6d3b07479";
   const filterBoard = "https://miro.com/app/board/uXjVFilterE2E=/";
+  let linkedPublicationId = "";
 
   test.beforeAll(async () => {
+    // Resolved, not hard-coded: the local SABRE demo overlay reissues publication ids.
+    const feed = await localAdmin
+      .from("published_versions")
+      .select("id, deliverables!inner(name)")
+      .eq("project_id", filterProjectId)
+      .eq("deliverables.name", "Instagram Feed")
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .single();
+    if (feed.error) throw new Error(feed.error.message);
+    linkedPublicationId = feed.data.id;
     const agency = await localAgency();
     const result = await agency.rpc("set_publication_miro_link", {
       p_publication_id: linkedPublicationId,

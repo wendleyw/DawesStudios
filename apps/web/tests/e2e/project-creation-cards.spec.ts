@@ -33,7 +33,7 @@ test("creation cards sit beside designs and below versions, and shared actions k
   try {
     await signIn(studio, credentials.agency);
     await signIn(client, credentials.client);
-    await studio.goto(`/projects/${fixture.projectId}`);
+    await studio.goto(`/projects/${fixture.projectId}?view=versions`);
     const addVersion = studio.getByRole("button", {
       name: "New version for Campaign square",
       exact: true,
@@ -137,7 +137,7 @@ test("creation cards sit beside designs and below versions, and shared actions k
       .order("id");
     expect(after.error).toBeNull();
     expect(after.data).toEqual(snapshot.data);
-    await client.goto(`/projects/${fixture.projectId}`);
+    await client.goto(`/projects/${fixture.projectId}?view=versions`);
     await expect(client.locator(".design-preview")).toHaveCount(2);
     await expect(client.locator(".version-card")).toHaveCount(1);
     await expect(client.locator(".project-add-design, .project-add-version")).toHaveCount(0);

@@ -56,11 +56,11 @@ test("production, private feedback, immutable client revisions, approval and rea
     await signIn(studio, credentials.agency);
     await signIn(designer, credentials.designer);
     await signIn(client, credentials.client);
-    await client.goto(`/projects/${fixture.projectId}`);
+    await client.goto(`/projects/${fixture.projectId}?view=versions`);
     await expect(
       client.getByText("Your studio will share designs here when they’re ready."),
     ).toBeVisible();
-    await designer.goto(`/projects/${fixture.projectId}`);
+    await designer.goto(`/projects/${fixture.projectId}?view=versions`);
     await addVersion(designer);
     await addDesign(designer, "Campaign direction A");
     await addDesign(designer, "Campaign direction B");
@@ -95,7 +95,7 @@ test("production, private feedback, immutable client revisions, approval and rea
     await expect(
       client.getByText("Internal note: refine the composition before sharing."),
     ).toHaveCount(0);
-    await studio.goto(`/projects/${fixture.projectId}`);
+    await studio.goto(`/projects/${fixture.projectId}?view=versions`);
     await studio.getByRole("button", { name: "Share with client", exact: true }).click();
     await studio
       .getByRole("textbox", { name: "A note for the client" })

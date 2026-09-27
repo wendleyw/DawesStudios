@@ -12,7 +12,7 @@ test("failed design registration preserves input, retries one file, and removes 
   const fixture = await createProductionFixture(agency);
   try {
     await signIn(page, credentials.designer);
-    await page.goto(`/projects/${fixture.projectId}`);
+    await page.goto(`/projects/${fixture.projectId}?view=versions`);
     await page.getByRole("button", { name: "New version for Campaign square" }).click();
     await page.getByLabel("Version note").fill("Verify recoverable file registration.");
     await page.getByRole("button", { name: "Create version", exact: true }).click();

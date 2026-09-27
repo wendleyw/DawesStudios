@@ -125,7 +125,7 @@ test("a video design carries pinned time-coded feedback across all three roles, 
     await signIn(designer, credentials.designer);
     await signIn(client, credentials.client);
 
-    await designer.goto(`/projects/${fixture.projectId}`);
+    await designer.goto(`/projects/${fixture.projectId}?view=versions`);
     await designer.getByRole("button", { name: "New version for Campaign square" }).click();
     await designer
       .getByRole("textbox", { name: "Version note" })
@@ -179,7 +179,7 @@ test("a video design carries pinned time-coded feedback across all three roles, 
     expect(Number(internalPin.pin_t)).toBeGreaterThan(0.5);
     expect(Number(internalPin.pin_t)).toBeLessThan(3.5);
 
-    await studio.goto(`/projects/${fixture.projectId}`);
+    await studio.goto(`/projects/${fixture.projectId}?view=versions`);
     await studio.getByRole("button", { name: "Share with client", exact: true }).click();
     await studio
       .getByRole("textbox", { name: "A note for the client" })
@@ -187,7 +187,7 @@ test("a video design carries pinned time-coded feedback across all three roles, 
     await studio.getByRole("button", { name: "Share version", exact: true }).click();
     await expect(studio.getByRole("dialog")).toHaveCount(0);
 
-    await client.goto(`/projects/${fixture.projectId}`);
+    await client.goto(`/projects/${fixture.projectId}?view=versions`);
     await client.getByRole("button", { name: "Open Campaign cut A" }).click();
     const clientVideo = client.locator("video.artwork-video");
     await expect(clientVideo).toBeVisible();
@@ -288,7 +288,7 @@ const hold = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Creates version 1 of the fixture's deliverable and opens its Add design dialog. */
 async function openAddDesign(page: Page, projectId: string) {
-  await page.goto(`/projects/${projectId}`);
+  await page.goto(`/projects/${projectId}?view=versions`);
   await page.getByRole("button", { name: "New version for Campaign square" }).click();
   await page.getByRole("button", { name: "Create version", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
