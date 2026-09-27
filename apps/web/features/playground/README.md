@@ -19,15 +19,25 @@ mounted form and selected file; it reopens after Playground exits. Consumers own
 that round trip. This feature owns fullscreen framing, animation, state, validation, styles and
 data access.
 
-`playground-board.tsx` composes three colocated hooks for its cross-cutting concerns:
+`playground-board.tsx` composes four colocated hooks for its cross-cutting concerns:
 `use-fullscreen-layer.ts` (the dialog's open/close
 animation phase, focus and body-scroll lock/restore), `use-playground-navigation-guard.ts` (the
 unsaved/busy same-tab navigation guard covering Escape, the close button, same-tab link clicks and the browser's
-reload/close prompt, all routed through one `requestClose` gate) and `use-playground-drop.ts`
-(the canvas drop target, file-picker input and the bounded 3-transfer upload queue). Item drafts,
-persistence, selection and the remove/download flows stay in `playground-board.tsx` itself, since
-nearly every action reads or writes them. `playground-node.tsx` renders a canvas item and
-`playground-viewport.tsx` keeps the selected item framed; both are unchanged by this split.
+reload/close prompt, all routed through one `requestClose` gate), `use-playground-drop.ts`
+(the canvas drop target, file-picker input and the bounded 3-transfer upload queue) and
+`use-playground-items.ts` (item drafts, persistence, selection and the remove/download flows,
+kept in one hook since nearly every action reads or writes them). `usePlaygroundItems` and
+`usePlaygroundDrop` need each other's functions — the drop hook's viewport `origin` places a
+dropped batch and the items hook's `writeDraft`/`select`/`persist` save it — so `addNote` and
+`discardAndClose` take the other hook's `origin()` point and the fullscreen layer's `beginExit` as
+plain arguments from `playground-board.tsx` instead of the hooks depending on each other directly.
+Three colocated, presentation-only sub-components render the board's chrome from that state:
+`playground-header.tsx` (title, team-visibility caption, Add note/Add files, save status,
+Refresh and the close icon), `playground-notices.tsx` (album-copy, load-error, cleanup-error,
+rejected-upload and unsaved/busy-close banners) and `playground-inspector.tsx` (the selected
+item's editor, retry/conflict recovery and download/remove actions). `playground-node.tsx` renders
+a canvas item and `playground-viewport.tsx` keeps the selected item framed; both are unchanged by
+this split.
 
 ## Working on the canvas
 
