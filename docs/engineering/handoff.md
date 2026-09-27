@@ -33,7 +33,7 @@ the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/
 **Two-row Miro bar** (channel row tinted amber/blue); no "Miro workspace" button: Add/Earlier in More.
 **Board due dates** (`202609270002`): internal, on or before the project's; designers see the earlier.
 **Account menu:** the credit chip became a ring around the avatar (share of the latest top-up left) and a hover menu with Credits, Request/Adjust, Account settings, Sign out.
-**Tool bar comet:** project tool bar buttons send a light streak around their edge on click; an active one keeps an orbiting comet.
+**Board link names the view:** the top menu's Board link reads the saved view (List by default); the picker lists List first. **Tool bar comet:** project tool bar buttons send a light streak around their edge on click; an active one keeps an orbiting comet.
 
 ## In progress — nothing. J10 staging: 68/72 pass (canonical); only SMTP remains.
 
