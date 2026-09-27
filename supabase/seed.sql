@@ -83,6 +83,7 @@ insert into public.deliverables (id,project_id,name,format,width,height,quantity
 insert into public.credit_ledger (id,client_id,project_id,amount,balance_after,kind,description,idempotency_key,created_at) values ('ec13cd27-d0b7-ddcb-eda5-3b90561a2cd8','f69a2150-613b-3883-906c-738e84007117','e3347e2f-fd33-a8c0-800a-a4af0c224ff0',-4,95,'project_debit','Acme / Blog Design / Infographic','briefing:3f5fd11b-5864-8652-e69c-eeb8cc47ef8a','2026-09-03T12:00:00Z');
 select set_config('request.jwt.claims','{"sub":"374dc241-5bb8-58f3-2fcf-187d011bcfd6","role":"authenticated"}',false);
 select public.create_design_board('e3347e2f-fd33-a8c0-800a-a4af0c224ff0','Blog Design / Infographic','https://miro.com/app/board/uXjV4687ddfe=/','10300a94-2ce5-c5de-d94c-38ebdb270fa9','2026-10-01');
+select public.set_project_drive_link('e3347e2f-fd33-a8c0-800a-a4af0c224ff0','https://drive.google.com/drive/folders/1a447cf5423f15538741988ef90cd91a0');
 select set_config('request.jwt.claims','{"sub":"ba057ab8-3012-618e-fb52-d0f644222cfd","role":"authenticated"}',false);
 select public.post_comment('e3347e2f-fd33-a8c0-800a-a4af0c224ff0','client','The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.',null,'seed:2:context');
 select set_config('request.jwt.claims','',false);
@@ -287,6 +288,7 @@ insert into public.deliverables (id,project_id,name,format,width,height,quantity
 insert into public.credit_ledger (id,client_id,project_id,amount,balance_after,kind,description,idempotency_key,created_at) values ('cd45250e-7149-c43a-d753-7d862ae93622','c8c131b0-5ccd-6495-851f-11baa70b4acd','0124c675-4357-beea-4c83-0870d323acda',-5,95,'project_debit','Northfield Bank / Deck / Presentation Design','briefing:168e2e11-4800-a945-5d89-f6f9bf624678','2026-09-02T12:00:00Z');
 select set_config('request.jwt.claims','{"sub":"374dc241-5bb8-58f3-2fcf-187d011bcfd6","role":"authenticated"}',false);
 select public.create_design_board('0124c675-4357-beea-4c83-0870d323acda','Deck / Presentation Design','https://miro.com/app/board/uXjV7149a936=/','52711616-ca15-f1b7-957f-52b6415dce39','2026-09-10');
+select public.set_project_drive_link('0124c675-4357-beea-4c83-0870d323acda','https://drive.google.com/drive/folders/1e9842a7457b14af4777c87f48189fc0c');
 select set_config('request.jwt.claims','{"sub":"e63fbe85-221b-8e23-72c2-a8216b076464","role":"authenticated"}',false);
 select public.post_comment('0124c675-4357-beea-4c83-0870d323acda','client','The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.',null,'seed:7:context');
 select set_config('request.jwt.claims','{"sub":"52711616-ca15-f1b7-957f-52b6415dce39","role":"authenticated"}',false);
@@ -511,6 +513,7 @@ insert into public.deliverables (id,project_id,name,format,width,height,quantity
 insert into public.credit_ledger (id,client_id,project_id,amount,balance_after,kind,description,idempotency_key,created_at) values ('89b81d1d-8aa6-2b67-fab8-e49a4707d353','bde5d700-7a2e-816b-9b55-d4a78a27d3cc','0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd',-4,90,'project_debit','Rune Fitness / Short Video / Reel','briefing:d59e5010-8583-9adf-89fc-834f04a589f3','2026-09-03T12:00:00Z');
 select set_config('request.jwt.claims','{"sub":"374dc241-5bb8-58f3-2fcf-187d011bcfd6","role":"authenticated"}',false);
 select public.create_design_board('0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd','Short Video / Reel','https://miro.com/app/board/uXjVfa691715=/','10300a94-2ce5-c5de-d94c-38ebdb270fa9','2026-09-16');
+select public.set_project_drive_link('0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd','https://drive.google.com/drive/folders/1c9b055a9c740705cbf2446fecc9e3c8a');
 select set_config('request.jwt.claims','{"sub":"1eaf1b05-9bd9-a73b-24a3-83b048529639","role":"authenticated"}',false);
 select public.post_comment('0d33f7a4-2f69-eafc-8cbb-225ccaa6b0cd','client','The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.',null,'seed:14:context');
 select set_config('request.jwt.claims','{"sub":"10300a94-2ce5-c5de-d94c-38ebdb270fa9","role":"authenticated"}',false);
@@ -623,6 +626,7 @@ insert into public.deliverables (id,project_id,name,format,width,height,quantity
 insert into public.credit_ledger (id,client_id,project_id,amount,balance_after,kind,description,idempotency_key,created_at) values ('ce98e213-20a7-c839-cadb-dd4b7cdaa857','e4401a17-cbe2-1d70-400d-d40f9e6b8632','fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b',-1,87,'project_debit','Email Banner','briefing:d79e9f55-e6b5-d286-a671-c0d707c17db9','2026-09-17T12:00:00Z');
 select set_config('request.jwt.claims','{"sub":"374dc241-5bb8-58f3-2fcf-187d011bcfd6","role":"authenticated"}',false);
 select public.create_design_board('fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b','Email Hero','https://miro.com/app/board/uXjV0540aa51=/','52711616-ca15-f1b7-957f-52b6415dce39','2026-09-24');
+select public.set_project_drive_link('fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b','https://drive.google.com/drive/folders/1f01396f0f984c38e70a6750ee2501820');
 select set_config('request.jwt.claims','{"sub":"0023953f-e0c7-a1db-1cb8-1ae5c8b57020","role":"authenticated"}',false);
 select public.post_comment('fc3cef34-ea15-9c0c-27e7-6723f0ff3f2b','client','The campaign scope is confirmed. Please keep the direction clear and aligned with our brand.',null,'seed:sabre-email-banner:context');
 select set_config('request.jwt.claims','{"sub":"52711616-ca15-f1b7-957f-52b6415dce39","role":"authenticated"}',false);

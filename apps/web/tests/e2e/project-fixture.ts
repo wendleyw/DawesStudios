@@ -87,12 +87,8 @@ export async function cleanupTestProject(projectId: string) {
   );
   if (!project.title.startsWith("Acceptance "))
     throw new Error("Cleanup only accepts explicitly named acceptance projects.");
-  for (const bucket of [
-    "internal-assets",
-    "published-assets",
-    "delivery-files",
-    "project-covers",
-  ]) {
+  // `published-assets` went with the retired Versions (migration 202609270008).
+  for (const bucket of ["internal-assets", "delivery-files", "project-covers"]) {
     const objects = value(await localAdmin.storage.from(bucket).list(projectId, { limit: 1000 }));
     if (objects.length) {
       const result = await localAdmin.storage

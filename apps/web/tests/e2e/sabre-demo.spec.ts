@@ -89,7 +89,7 @@ for (const role of ["agency", "client"] as const) {
     page.on("request", (request) => {
       if (
         role === "client" &&
-        /\/rest\/v1\/(designs|design_versions|project_assignments|internal_comments)\?/.test(
+        /\/rest\/v1\/(design_boards|design_versions|design_version_miro_links|project_assignments|internal_comments)\?/.test(
           request.url(),
         )
       )
@@ -101,18 +101,39 @@ for (const role of ["agency", "client"] as const) {
       "Trail Weekend Social Series",
       "Saturday Run Motion Reel",
     ]) {
-      await page.goto(`/projects/${find(title)}`);
+      const projectId = find(title);
+      const versions = await agency
+        .from("published_versions")
+        .select("version_number")
+        .eq("project_id", projectId);
+      expect(versions.error).toBeNull();
+      await page.goto(`/projects/${projectId}`);
       await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
       if (role === "client") {
         await expect(page.getByRole("button", { name: "Working files" })).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Add design board" })).toHaveCount(0);
+        // The client sees the client versions the studio shared, never a design board.
+        if (versions.data!.length) {
+          await expect(page.getByRole("group", { name: "Client versions" })).toContainText(
+            `V${Math.max(...versions.data!.map((version) => version.version_number))}`,
+          );
+          await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
+        } else
+          await expect(
+            page.getByText("Nothing shared yet. Your studio will share designs here."),
+          ).toBeVisible();
+        await expect(page.getByRole("group", { name: "Rounds" })).toHaveCount(0);
       }
-      if (role === "agency")
+      if (role === "agency") {
         await expect(
           page
             .getByRole("group", { name: "Project channel" })
             .getByRole("button", { name: "Working files", exact: true }),
         ).toBeVisible();
+        // Every demo project has a design board, so the studio opens straight onto it.
+        await expect(page.getByText("No design board yet.", { exact: true })).toHaveCount(0);
+        await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
+      }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
       ).toBe(true);
@@ -154,6 +175,8 @@ for (const role of ["agency", "client"] as const) {
     }
     await page.goto(`/projects/${find("Campus Welcome Campaign")}`);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
+    // Beside the Miro board the Playground is an image strip; its notes live on the full board.
+    await page.getByRole("button", { name: "Open full Playground", exact: true }).click();
     await expect(page.getByText("Creative starting point", { exact: true })).toBeVisible();
     await page.screenshot({ path: `${screenshotDirectory}/sabre-demo-${role}-playground.png` });
     expect(forbidden).toEqual([]);
@@ -178,6 +201,8 @@ test("an assigned designer opens the internal workspace on desktop and mobile", 
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
     await expect(page.getByText("Internal", { exact: true })).toBeVisible();
+    // The designer works on their own design board, embedded from Miro.
+    await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
     await expect(page.getByRole("button", { name: "Shared with client", exact: true })).toHaveCount(
       0,
     );

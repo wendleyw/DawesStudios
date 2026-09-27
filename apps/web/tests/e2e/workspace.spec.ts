@@ -43,6 +43,9 @@ test("agency signs in, sees ten workspaces, and opens a project workspace", asyn
       .getByRole("group", { name: "Project channel" })
       .getByRole("button", { name: "Working files", exact: true }),
   ).toBeVisible();
+  // Every canonical project has a design board, so Working files opens on its Miro embed.
+  await expect(page.getByText("No design board yet.", { exact: true })).toHaveCount(0);
+  await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
   await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/agency-project.png` });
   await page.getByRole("button", { name: "Conversation", exact: true }).click();
@@ -74,6 +77,13 @@ test("client sees only its own workspace and no internal production controls", a
   await expect(page.getByRole("button", { name: "Share with client" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Working files" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add design board" })).toHaveCount(0);
+  // The client's side of the Miro model: its client versions, never the rounds on a design board.
+  await expect(page.getByRole("group", { name: "Rounds" })).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("group", { name: "Client versions" })
+      .or(page.getByText("Nothing shared yet. Your studio will share designs here.")),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Conversation", exact: true }).click();
   await expect(
     page.getByRole("complementary", { name: "Client conversation", exact: true }),

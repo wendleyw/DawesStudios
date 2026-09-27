@@ -50,15 +50,25 @@ class AuthorizationIntegrationTests(unittest.TestCase):
         self.assertEqual(api('/rest/v1/rpc/accept_briefing','POST',{'p_briefing_id':FIXTURES['projects'][0]['briefing_id']})[0],401)
 
     def test_client_wildcard_queries_cannot_reveal_internal_metadata(self):
-        for table in ['project_assignments','design_versions','designs','internal_comments']:
+        # The Miro model's internal side: boards, rounds and their frames, assignments, the studio channel.
+        for table in ['project_assignments','design_boards','internal_comments']:
             code,result=api('/rest/v1/'+table+'?select=*',token=self.tokens['client'])
             self.assertEqual(code,200);self.assertEqual(result,[],table)
+        # A whole-row read of rounds and their frames is refused outright rather than exposing an
+        # author column; a narrow read returns nothing.
+        for table,column in [('design_versions','id'),('design_version_miro_links','version_id')]:
+            self.assertEqual(api('/rest/v1/'+table+'?select=*',token=self.tokens['client'])[0],403,table)
+            code,result=api('/rest/v1/'+table+'?select='+column,token=self.tokens['client']);self.assertEqual((code,result),(200,[]),table)
         code,result=api('/rest/v1/profiles?select=*',token=self.tokens['client']);self.assertEqual(len(result),1)
-        code,result=api('/rest/v1/published_designs?select=*',token=self.tokens['client']);self.assertGreater(len(result),0)
-        serialized=json.dumps(result)
-        self.assertNotIn('internal_author',serialized);self.assertNotIn('internal_note',serialized)
+        # The client's side is the immutable client version, its Miro link and its review.
+        shared=[]
+        for table in ['published_versions','publication_miro_links','publication_reviews']:
+            code,result=api('/rest/v1/'+table+'?select=*',token=self.tokens['client'])
+            self.assertEqual(code,200);self.assertGreater(len(result),0,table);shared.append(result)
+        serialized=json.dumps(shared)
+        self.assertNotIn('created_by',serialized);self.assertNotIn('internal_',serialized)
         for user in FIXTURES['users']:
-            if user['role']=='designer':self.assertNotIn(user['id'],serialized)
+            if user['role']=='designer':self.assertNotIn(user['id'],serialized);self.assertNotIn(user['name'],serialized)
 
     def test_cross_tenant_read_and_credit_mutation_are_rejected(self):
         foreign_project=FIXTURES['projects'][0]['id']
@@ -74,7 +84,7 @@ class AuthorizationIntegrationTests(unittest.TestCase):
     def test_all_resource_families_enforce_cross_client_reads_and_writes(self):
         client=FIXTURES['clients'][7];own_projects=[row['id'] for row in FIXTURES['projects'] if row['client_id']==client['id']]
         client_tables=['campaigns','briefings','brand_sections','brand_assets','brand_templates','template_drafts','credit_accounts','credit_ledger','credit_requests']
-        project_tables=['deliverables','published_versions','published_designs','publication_reviews','client_comments','delivery_files','project_assets']
+        project_tables=['deliverables','published_versions','publication_miro_links','publication_reviews','project_covers','client_comments','delivery_files','project_assets']
         for table,query in [(table,'client_id=neq.'+client['id']) for table in client_tables]+[(table,'project_id=not.in.('+','.join(own_projects)+')') for table in project_tables]+[('notifications','user_id=neq.'+client['user_id'])]:
             code,records=api('/rest/v1/'+table+'?'+query,token=self.tokens['client'])
             self.assertEqual(code,200,table);self.assertEqual(records,[],table)

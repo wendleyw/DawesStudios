@@ -117,6 +117,8 @@ test("representative task surfaces pass responsive layout and accessibility chec
       await page.getByRole("button", { name: "Canvas view", exact: true }).click();
       await page.locator(".react-flow__node-project .board-card-body").first().dblclick();
       await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
+      // The audited project surface is the Miro workspace on its design board, not an empty state.
+      await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
       await capture(page, "project");
       await page.getByRole("button", { name: "Conversation", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Conversation", exact: true })).toBeVisible();

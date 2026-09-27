@@ -8,7 +8,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from sabre_demo_state import ROOT, SCOPES, assert_local, difference, rollback_sql
-from sabre_demo import Demo, PLAN
+from sabre_demo import Demo, PLAN, drive_url
+import inspect
+import re
 
 
 def empty_snapshot():
@@ -32,6 +34,17 @@ class SabreDemoTests(unittest.TestCase):
                 self.assertIn(item['format'], services[project['service']]['formats'])
                 self.assertGreater(item['quantity'], 0)
         self.assertEqual({p['stage'] for p in PLAN['projects']}, {'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'})
+
+    def test_drive_links_are_valid_and_only_added_by_a_fresh_apply(self):
+        # The same pattern as the `project_drive_url_valid` constraint (migration 202609270009).
+        pattern = re.compile(r'^https://drive\.google\.com(/\S*)?$')
+        links = [drive_url(p['key']) for i, p in enumerate(PLAN['projects']) if i % 10 == 3]
+        self.assertGreaterEqual(len(links), 3)
+        self.assertTrue(all(pattern.match(url) for url in links))
+        self.assertEqual(len(set(links)), len(links))
+        self.assertEqual(drive_url('x'), drive_url('x'))
+        self.assertIn('set_project_drive_link', inspect.getsource(Demo.populate_project))
+        self.assertNotIn('drive', inspect.getsource(Demo.backfill) + inspect.getsource(Demo.populate_miro))
 
     def test_only_local_backend_is_allowed(self):
         assert_local('http://127.0.0.1:55421')

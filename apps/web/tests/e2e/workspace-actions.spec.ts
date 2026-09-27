@@ -326,6 +326,11 @@ test("one click selects and two open the project, on the card and in the calenda
     await card.dblclick();
     await page.waitForURL(`**/projects/${fixture.projectId}`);
     await expect(page.locator(".project-canvas")).toBeVisible();
+    // A fresh project has no design board yet, so the studio's one call to action is adding one.
+    await expect(page.getByText("No design board yet.", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Add a design board", exact: true }),
+    ).toBeVisible();
 
     // The calendar lane obeys the same rule, so the board reads consistently wherever a project
     // appears.

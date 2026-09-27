@@ -47,6 +47,11 @@ def miro_url(board_key, frame_key=None):
     return url + '?moveToWidget=3458764' + str(widget).zfill(9)
 
 
+def drive_url(key):
+    """A deterministic placeholder Google Drive folder link for a demo project."""
+    return 'https://drive.google.com/drive/folders/1' + hashlib.sha256((RUN + ':drive:' + key).encode()).hexdigest()[:32]
+
+
 def miro_history(status, index):
     """Rounds per board for a project status: None is a round kept inside the studio; any other
     value is a round shared as a client version with that review. A project in progress has not
@@ -252,6 +257,11 @@ class Demo:
             self.once('dates:' + key, lambda: self.request('/rest/v1/projects?id=eq.' + project,
                 {'start_date': str(start), 'due_date': str(due)}, method='PATCH'))
             self.once('brief-date:' + key, lambda: sql(f"update public.briefings set due_date='{due}' where id='{uuid.UUID(briefing)}' and client_id='{CLIENT_ID}';"))
+            # A few new projects keep a Google Drive backup link, set by the agency through the real
+            # RPC. Only a fresh `apply` adds them; `backfill` never does. The step records the URL.
+            if index % 10 == 3:
+                url = drive_url(key)
+                self.once('drive-link:' + key, lambda: self.rpc('set_project_drive_link', {'p_project_id': project, 'p_url': url}) or url)
         producer = 'designer' if index % 2 == 0 else 'designer2'
         self.once('assign:' + key, lambda: self.rpc('assign_designer', {'p_project_id': project, 'p_designer_id': self.users[producer]}))
         deliverables = self.rows('deliverables', 'project_id=eq.' + project + '&order=sort_order')
@@ -478,6 +488,7 @@ class Demo:
             'design_boards': len(r['public.design_boards']), 'rounds': counts(r['public.design_versions'], 'status'),
             'client_versions': len(r['public.published_versions']), 'reviews': counts(r['public.publication_reviews'], 'status'),
             'miro_links': len(r['public.design_version_miro_links']) + len(r['public.publication_miro_links']),
+            'drive_links': sum(1 for row in r['public.projects'] if row.get('drive_url')),
             'covers': len(r['public.project_covers']), 'client_visible_covers': sum(row['client_visible'] for row in r['public.project_covers']),
             'projects_without': {'board': missing('public.design_boards'), 'cover': missing('public.project_covers'),
                 'round_after_in_progress': len({row['id'] for row in started} - {row['project_id'] for row in r['public.design_versions']})},

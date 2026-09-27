@@ -17,6 +17,14 @@ test("all ten clients and twenty-five projects render with matching records and 
   ).data!;
   expect(clients).toHaveLength(10);
   expect(projects).toHaveLength(25);
+  const shared = assertMiroModel(projects, await readMiroModel(agency));
+  // A few canonical projects keep a Google Drive backup link; every link is a drive.google.com one.
+  const drive = (await agency.from("projects").select("drive_url").not("drive_url", "is", null))
+    .data!;
+  expect(drive.length).toBeGreaterThanOrEqual(3);
+  expect(drive.every((row) => /^https:\/\/drive\.google\.com\/\S*$/.test(row.drive_url!))).toBe(
+    true,
+  );
   const timings: { role: string; projectId: string; milliseconds: number }[] = [];
   const errors: string[] = [];
   const actors = [
@@ -63,6 +71,20 @@ test("all ten clients and twenty-five projects render with matching records and 
           await expect(
             page.getByRole("button", { name: "Working files", exact: true }),
           ).toHaveCount(0);
+          // The client sees the client versions the studio shared, or that nothing is shared yet.
+          if (shared.has(project.id))
+            await expect(page.getByRole("group", { name: "Client versions" })).toContainText(
+              `V${shared.get(project.id)}`,
+            );
+          else
+            await expect(
+              page.getByText("Nothing shared yet. Your studio will share designs here."),
+            ).toBeVisible();
+        } else {
+          // Every canonical project has a design board, so the studio and its designer open on it.
+          await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
+        }
+        if (actor.role === "client") {
           await page.getByRole("button", { name: "Conversation", exact: true }).click();
           await expect(page.locator(".comment-list .comment").first()).toBeVisible();
         }
@@ -128,3 +150,91 @@ test("all ten clients and twenty-five projects render with matching records and 
     ) + "\n",
   );
 });
+
+type MiroModel = {
+  boards: { id: string; project_id: string; designer_id: string }[];
+  assignments: { project_id: string; designer_id: string }[];
+  rounds: { id: string; project_id: string; board_id: string | null; status: string }[];
+  versions: { id: string; project_id: string; version_number: number }[];
+  reviews: { publication_id: string; status: string }[];
+};
+
+async function readMiroModel(agency: Awaited<ReturnType<typeof localAgency>>): Promise<MiroModel> {
+  const read = async <T>(query: PromiseLike<{ data: T | null; error: unknown }>) => {
+    const result = await query;
+    expect(result.error).toBeNull();
+    return result.data!;
+  };
+  return {
+    boards: await read(agency.from("design_boards").select("id,project_id,designer_id")),
+    assignments: await read(agency.from("project_assignments").select("project_id,designer_id")),
+    // The author column is not readable through the API, so rounds are read by named columns.
+    rounds: await read(agency.from("design_versions").select("id,project_id,board_id,status")),
+    versions: await read(agency.from("published_versions").select("id,project_id,version_number")),
+    reviews: await read(agency.from("publication_reviews").select("publication_id,status")),
+  };
+}
+
+/**
+ * The status mapping the seed replays through the real RPCs (`miro_history` in
+ * supabase/scripts/build_seed.py): one design board per assigned designer on every project; planned
+ * and in-progress work holds boards only; internal review keeps one or two rounds per board with
+ * the studio; a later status ends on the client version whose review it names, every earlier
+ * version sent back, and each version shared from one round. Returns each project's latest client
+ * version number.
+ */
+function assertMiroModel(
+  projects: { id: string; title: string; status: string }[],
+  model: MiroModel,
+): Map<string, number> {
+  const latest = new Map<string, number>();
+  const decision: Record<string, string> = {
+    client_review: "pending",
+    changes_requested: "changes_requested",
+    approved: "approved",
+    delivered: "approved",
+  };
+  for (const project of projects) {
+    const boards = model.boards.filter((board) => board.project_id === project.id);
+    const designers = model.assignments
+      .filter((row) => row.project_id === project.id)
+      .map((row) => row.designer_id)
+      .sort();
+    expect(boards.length, project.title).toBeGreaterThan(0);
+    expect(boards.map((board) => board.designer_id).sort(), project.title).toEqual(designers);
+    const rounds = model.rounds.filter((round) => round.project_id === project.id);
+    const perBoard = boards.map(
+      (board) => rounds.filter((round) => round.board_id === board.id).length,
+    );
+    expect(rounds.every((round) => boards.some((board) => board.id === round.board_id))).toBe(true);
+    expect(new Set(perBoard).size, project.title).toBe(1);
+    const versions = model.versions
+      .filter((version) => version.project_id === project.id)
+      .sort((a, b) => a.version_number - b.version_number);
+    const decisions = versions.map(
+      (version) => model.reviews.find((review) => review.publication_id === version.id)?.status,
+    );
+    if (project.status === "planned" || project.status === "in_progress") {
+      expect([rounds.length, versions.length], project.title).toEqual([0, 0]);
+    } else if (project.status === "internal_review") {
+      expect([1, 2], project.title).toContain(perBoard[0]);
+      expect(new Set(rounds.map((round) => round.status)), project.title).toEqual(
+        new Set(["submitted"]),
+      );
+      expect(versions, project.title).toEqual([]);
+    } else {
+      expect(decisions.at(-1), project.title).toBe(decision[project.status]);
+      expect(
+        decisions.slice(0, -1).every((status) => status === "changes_requested"),
+        project.title,
+      ).toBe(true);
+      expect(perBoard[0], project.title).toBe(versions.length);
+      latest.set(project.id, versions.at(-1)!.version_number);
+    }
+    // A round reads "Shared" exactly when a client version was made from it.
+    expect(rounds.filter((round) => round.status === "reviewed").length, project.title).toBe(
+      versions.length,
+    );
+  }
+  return latest;
+}

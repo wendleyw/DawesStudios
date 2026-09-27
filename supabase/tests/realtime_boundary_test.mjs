@@ -20,9 +20,19 @@ const checked = result => { if (result.error) throw new Error(result.error.messa
 function runSql(sql) {
   execFileSync('docker', ['exec', 'supabase_db_dawes-studios', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
 }
+// Removes a test design board with its rounds and their Miro frames, then puts the project's own
+// workflow fields back: sending a round moves a project to internal review.
 function deleteWork(item) {
-  assert.match(item.versionId, /^[0-9a-f-]{36}$/);
-  runSql(`begin; delete from public.designs where version_id='${item.versionId}'; delete from public.design_versions where id='${item.versionId}'; commit;`);
+  assert.match(item.boardId, /^[0-9a-f-]{36}$/);
+  assert.match(item.projectId, /^[0-9a-f-]{36}$/);
+  assert.ok(['planned', 'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'].includes(item.status));
+  assert.match(item.updatedAt, /^[0-9T:.+\- ]+$/);
+  runSql(`begin; set local session_replication_role=replica;
+    delete from public.design_version_miro_links where version_id in (select id from public.design_versions where board_id='${item.boardId}');
+    delete from public.design_versions where board_id='${item.boardId}';
+    delete from public.design_boards where id='${item.boardId}';
+    update public.projects set status='${item.status}', updated_at='${item.updatedAt}' where id='${item.projectId}';
+    commit;`);
 }
 function deleteComment(item) {
   assert.match(item.id, /^[0-9a-f-]{36}$/);
@@ -36,7 +46,7 @@ try {
     checked(await client.auth.signInWithPassword({ email, password: env.DEMO_PASSWORD }));
     clients.push({ name, client });
     const channel = client.channel(marker + name);
-    for (const table of ['internal_comments', 'client_comments', 'design_versions', 'designs']) channel.on('postgres_changes', { event: '*', schema: 'public', table }, payload => received.push({ name, table, type: payload.eventType, id: payload.new.id ?? payload.old.id }));
+    for (const table of ['internal_comments', 'client_comments', 'design_boards', 'design_versions']) channel.on('postgres_changes', { event: '*', schema: 'public', table }, payload => received.push({ name, table, type: payload.eventType, id: payload.new.id ?? payload.old.id }));
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Realtime subscription timed out for ' + name)), 12000);
       channel.subscribe(status => { if (status === 'SUBSCRIBED') { clearTimeout(timer); resolve(); } else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) { clearTimeout(timer); reject(new Error('Realtime subscription failed for ' + name)); } });
@@ -56,17 +66,19 @@ try {
     const authorized = item.channel === 'internal' ? ['agency', 'designer'] : ['agency', 'client'];
     assert.deepEqual(received.filter(event => event.id === item.id && event.type === 'INSERT').map(event => event.name).sort(), authorized.sort(), 'Only authorized sessions receive ' + item.channel + ' events');
   }
-  // Versions and designs drive the project canvas, so an agency watching a project must see a
-  // designer's new work arrive. can_produce gates delivery, so no client may receive either.
-  const deliverableId = checked(await agency.from('deliverables').select('id').eq('project_id', projectId).order('sort_order').limit(1).single()).id;
-  const versionId = checked(await agency.rpc('create_design_version', { p_deliverable_id: deliverableId, p_notes: marker }));
-  createdWork.push({ versionId });
-  const designId = checked(await agency.rpc('add_design', { p_version_id: versionId, p_title: marker, p_content: { headline: marker } }));
+  // Design boards and their rounds drive the project's Miro workspace, so the studio and the board's
+  // designer must see new work arrive. Neither is client-visible, so no client may receive either.
+  const designerId = checked(await clients.find(item => item.name === 'designer').client.auth.getUser()).user.id;
+  const before = checked(await service.from('projects').select('status,updated_at').eq('id', projectId).single());
+  const boardId = checked(await agency.rpc('create_design_board', { p_project_id: projectId, p_name: marker.slice(0, 80), p_url: 'https://miro.com/app/board/uXjVRealtime1=/', p_designer_id: designerId, p_due_date: null }));
+  createdWork.push({ boardId, projectId, status: before.status, updatedAt: before.updated_at });
+  const designer = clients.find(item => item.name === 'designer').client;
+  const roundId = checked(await designer.rpc('send_board_round', { p_board_id: boardId, p_note: marker, p_frame_url: null, p_idempotency_key: randomUUID() }));
   const workDeadline = Date.now() + 10000;
   const producers = ['agency', 'designer'];
   const arrived = id => producers.every(name => received.some(event => event.id === id && event.type === 'INSERT' && event.name === name));
-  while (!(arrived(versionId) && arrived(designId)) && Date.now() < workDeadline) await sleep(100);
-  for (const [label, id] of [['design_versions', versionId], ['designs', designId]])
+  while (!(arrived(boardId) && arrived(roundId)) && Date.now() < workDeadline) await sleep(100);
+  for (const [label, id] of [['design_boards', boardId], ['design_versions', roundId]])
     assert.deepEqual(received.filter(event => event.id === id && event.type === 'INSERT').map(event => event.name).sort(), producers.slice().sort(), 'Only producers receive ' + label + ' events');
 
   for (const item of created) deleteComment(item);
@@ -74,7 +86,7 @@ try {
   await sleep(1500);
   assert.equal(received.filter(event => event.type === 'DELETE').length, 0, 'The dedicated publication must not broadcast deleted private row identifiers');
   assert.equal(received.filter(event => event.name === 'foreign').length, 0, 'A different client must receive no row or event-count signal');
-  process.stdout.write('Realtime boundary PASS: four authenticated subscriptions; internal/client recipients match RLS; version and design events reach producers only; cross-client events absent; deleted-row events disabled.\n');
+  process.stdout.write('Realtime boundary PASS: four authenticated subscriptions; internal/client recipients match RLS; design board and round events reach producers only; cross-client events absent; deleted-row events disabled.\n');
 } finally {
   for (const item of created) deleteComment(item);
   for (const item of createdWork) deleteWork(item);
