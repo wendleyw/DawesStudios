@@ -56,10 +56,12 @@ def answers(service):
     return {q['id']:q['options'][0] if q.get('options') else ('12' if q['id']=='pages' else 'Use the supplied campaign direction and approved brand resources.') for q in service.get('questions',[])}
 
 # Every design board, round frame and client version points at a placeholder Miro board. The ids
-# follow Miro's `uXjV…` shape and are derived from a label, so the file stays byte-identical between
-# builds; the embed simply shows Miro's own "not found" for them.
+# are derived from a label, so the file stays byte-identical between builds, and follow Miro's real
+# shape: 12 characters, `uXjV` + 7 + `=` (base64 of 8 bytes), as `sabre_demo.py` does. Miro frames its
+# own "board not found" page for such an id; a 13-character id is served with
+# `X-Frame-Options: SAMEORIGIN`, so the product would frame a URL Miro refuses.
 def miro_board(label):
-    return 'uXjV'+hashlib.md5(('miro-board:'+label).encode()).hexdigest()[:8]+'='
+    return 'uXjV'+hashlib.md5(('miro-board:'+label).encode()).hexdigest()[:7]+'='
 
 def miro_widget(label):
     return '345876'+str(int(hashlib.md5(('miro-widget:'+label).encode()).hexdigest()[:12],16))[:12]

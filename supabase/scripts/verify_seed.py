@@ -106,7 +106,7 @@ def main():
     reviews = {row['publication_id']: row for row in rows('publication_reviews')}
     assignments = rows('project_assignments')
     covers = {row['project_id']: row for row in rows('project_covers')}
-    miro_id = re.compile(r'^uXjV[0-9a-f]{8}=$')
+    miro_id = re.compile(r'^uXjV[0-9a-f]{7}=$')  # Miro's 12-character board id shape
     manifest_projects = {row['id']: row for row in fixture['projects']}
     shared_rounds = set()
     for project in projects:

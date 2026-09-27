@@ -16,9 +16,10 @@ import { credentials, isDevelopmentTimingNoise, localAdmin, signIn } from "./tes
  *
  * There is **no allow-list**, and there should not be one. The measured count on every surface here
  * is zero, so any entry would be a place to hide a future regression. A real third-party console
- * error belongs in a fix or an explicit, commented exception — not in a silent filter. The one
+ * error belongs in a fix or an explicit, commented exception — not in a silent filter. One
  * explicit exception is React's development-only timing error (`isDevelopmentTimingNoise`), which
- * `sabre-demo` and `system-tour` already make: production builds do not run that instrumentation. Note that a
+ * `sabre-demo` and `system-tour` already make: production builds do not run that instrumentation.
+ * The other is Miro's own document inside the board embed (see `collectErrors`). Note that a
  * browser extension can emit console noise in a human's browser (one was observed calling a
  * third-party endpoint from a real session on 2026-09-21); Playwright runs without extensions, so
  * what this file sees is the application alone.
@@ -26,6 +27,11 @@ import { credentials, isDevelopmentTimingNoise, localAdmin, signIn } from "./tes
 function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("console", (message) => {
+    // The second explicit exception: errors Miro's own document logs inside the board embed. The
+    // seed points boards at placeholder ids, so the embed loads Miro's "board not found" page, whose
+    // 404s are reported from a `https://miro.com/` location. A frame Miro refuses to display is still
+    // caught: Chromium reports that from `chrome-error://chromewebdata/`, not from Miro.
+    if (message.location().url.startsWith("https://miro.com/")) return;
     if (message.type() === "error") errors.push(`console: ${message.text()}`);
   });
   page.on("pageerror", (error) => {
