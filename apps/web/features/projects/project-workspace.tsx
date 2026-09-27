@@ -111,11 +111,14 @@ export function ProjectWorkspace({
       : project.due_date;
   const shownProject = dueDate === project.due_date ? project : { ...project, due_date: dueDate };
   const shownLink = internal ? (round?.miro ?? board?.miro ?? null) : (version?.miro ?? null);
-  const feedbackTarget = internal ? round : version;
-  // Feedback belongs to the round or version on screen; once none is (back to the board, another
-  // board), the panel closes rather than holding feedback for something no longer shown. Adjusted
-  // during render rather than in an effect, so the stale panel never paints.
-  if (panel === "feedback" && !feedbackTarget) setPanel(null);
+  const commentTarget = internal ? round : version;
+  const commentLabels = Object.fromEntries(
+    versions.map((item) => {
+      const label = `${internal ? "Round" : "Version"} ${item.number}`;
+      const boardName = internal ? boards.find((board) => board.id === item.boardId)?.name : null;
+      return [item.id, boardName ? `${label} · ${boardName}` : label];
+    }),
+  );
   function closePlayground() {
     setPlaygroundOpen(false);
     // The button is disabled until this close commits.
@@ -129,10 +132,7 @@ export function ProjectWorkspace({
       role={role}
       channel={channel}
       onChannel={(option) => {
-        // Feedback is scoped to a round or a client version, which the other channel does not
-        // share, so it closes on a channel switch; Conversation and Details carry no such scope and
-        // stay open (`project-page.tsx` keeps them across the remount a channel switch causes).
-        if (panel === "feedback") setPanel(null);
+        // The panel stays open; its thread and drafts remain scoped to the new channel.
         setAssetStripOpen(false);
         onChannel(option);
       }}
@@ -220,14 +220,6 @@ export function ProjectWorkspace({
                   changePanel(next);
                 }}
                 disabled={playgroundOpen}
-                feedback={
-                  feedbackTarget
-                    ? {
-                        open: panel === "feedback",
-                        onToggle: () => changePanel(panel === "feedback" ? null : "feedback"),
-                      }
-                    : undefined
-                }
               >
                 <ProjectToolButton
                   active={shownLink ? assetStripOpen : playgroundOpen}
@@ -292,11 +284,20 @@ export function ProjectWorkspace({
         </div>
         {!playgroundOpen && panel && (
           <ProjectPanel key={panel} onClose={closePanel}>
-            {panel === "conversation" && (
+            {panel === "comments" && (
               <CommentPanel
-                key={channel}
+                key={`${projectId}:${channel}`}
                 projectId={projectId}
                 channel={channel}
+                currentVersion={
+                  commentTarget
+                    ? {
+                        id: commentTarget.id,
+                        label: commentLabels[commentTarget.id],
+                      }
+                    : undefined
+                }
+                versionLabels={commentLabels}
                 onClose={closePanel}
               />
             )}
@@ -305,16 +306,6 @@ export function ProjectWorkspace({
                 project={shownProject}
                 deliverables={deliverables}
                 versions={versions}
-                onClose={closePanel}
-              />
-            )}
-            {panel === "feedback" && feedbackTarget && (
-              <CommentPanel
-                key={`${channel}:${feedbackTarget.id}`}
-                projectId={projectId}
-                channel={channel}
-                versionId={feedbackTarget.id}
-                heading="Feedback"
                 onClose={closePanel}
               />
             )}

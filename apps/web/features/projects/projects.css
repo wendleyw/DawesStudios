@@ -947,3 +947,52 @@
   border: 0;
   background: var(--surface);
 }
+
+.comment-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 16px 12px;
+}
+.comment-scopes {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface-subtle);
+}
+.comment-scopes button {
+  flex: 1;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.comment-scopes button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+}
+.comment-controls .resolved-toggle {
+  align-self: flex-end;
+}
+.comment-scope-label {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.comment-destination {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.comment-destination strong {
+  color: var(--ink);
+  font-weight: 500;
+}

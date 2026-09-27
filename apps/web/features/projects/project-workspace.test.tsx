@@ -21,8 +21,8 @@ vi.mock("@/features/playground/playground-asset-strip", () => ({
   PlaygroundAssetStrip: () => null,
 }));
 vi.mock("./comment-panel", () => ({
-  CommentPanel: ({ heading, versionId }: { heading?: string; versionId?: string }) => (
-    <p>{`${heading ?? "Conversation"} panel ${versionId ?? ""}`}</p>
+  CommentPanel: ({ currentVersion }: { currentVersion?: { id: string } }) => (
+    <p>{`Comments panel ${currentVersion?.id ?? "project"}`}</p>
   ),
 }));
 vi.mock("./project-details", () => ({ ProjectDetails: () => null }));
@@ -153,7 +153,7 @@ describe("ProjectWorkspace", () => {
     expect(screen.queryByRole("group", { name: "Project channel" })).toBeNull();
   });
 
-  it("closes Feedback when the round on screen is cleared", async () => {
+  it("keeps Comments open with project scope when the round on screen is cleared", async () => {
     const user = userEvent.setup();
     renderWorkspace({
       boards: [board],
@@ -166,11 +166,11 @@ describe("ProjectWorkspace", () => {
     });
     const rounds = screen.getByRole("group", { name: "Rounds" });
     await user.click(within(rounds).getByRole("button", { name: "Round 1" }));
-    await user.click(screen.getByRole("button", { name: "Feedback" }));
-    expect(screen.getByText("Feedback panel r1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Comments" }));
+    expect(screen.getByText("Comments panel r1")).toBeInTheDocument();
     await user.click(within(rounds).getByRole("button", { name: "Board" }));
-    expect(screen.queryByText("Feedback panel r1")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+    expect(screen.queryByText("Comments panel r1")).toBeNull();
+    expect(screen.getByText("Comments panel project")).toBeInTheDocument();
   });
 
   it("prefills sharing a round with the latest client link, read from Working files", async () => {

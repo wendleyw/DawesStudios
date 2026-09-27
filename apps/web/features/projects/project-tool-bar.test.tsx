@@ -13,7 +13,7 @@ const playground = (
 );
 
 describe("ProjectToolBar", () => {
-  it("groups details, conversation and the page's own actions in that order", () => {
+  it("groups details, comments and the page's own actions in that order", () => {
     render(
       <ProjectToolBar panel={null} onPanel={vi.fn()} disabled={false}>
         {playground}
@@ -24,7 +24,7 @@ describe("ProjectToolBar", () => {
       within(group)
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label")),
-    ).toEqual(["Project details", "Conversation", "Playground"]);
+    ).toEqual(["Project details", "Comments", "Playground"]);
   });
 
   it("opens a closed panel and closes the open one", async () => {
@@ -35,21 +35,21 @@ describe("ProjectToolBar", () => {
         {playground}
       </ProjectToolBar>,
     );
-    await user.click(screen.getByRole("button", { name: "Conversation" }));
-    expect(onPanel).toHaveBeenLastCalledWith("conversation");
+    await user.click(screen.getByRole("button", { name: "Comments" }));
+    expect(onPanel).toHaveBeenLastCalledWith("comments");
     rerender(
-      <ProjectToolBar panel="conversation" onPanel={onPanel} disabled={false}>
+      <ProjectToolBar panel="comments" onPanel={onPanel} disabled={false}>
         {playground}
       </ProjectToolBar>,
     );
-    const conversation = screen.getByRole("button", { name: "Conversation" });
-    expect(conversation).toHaveAttribute("aria-expanded", "true");
-    expect(conversation).toHaveClass("selected");
+    const comments = screen.getByRole("button", { name: "Comments" });
+    expect(comments).toHaveAttribute("aria-expanded", "true");
+    expect(comments).toHaveClass("selected");
     expect(screen.getByRole("button", { name: "Project details" })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
-    await user.click(conversation);
+    await user.click(comments);
     expect(onPanel).toHaveBeenLastCalledWith(null);
     await user.click(screen.getByRole("button", { name: "Project details" }));
     expect(onPanel).toHaveBeenLastCalledWith("details");
@@ -62,30 +62,17 @@ describe("ProjectToolBar", () => {
       </ProjectToolBar>,
     );
     expect(screen.getByRole("button", { name: "Project details" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Conversation" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Comments" })).toBeDisabled();
   });
 
-  it("shows Feedback only when a workspace item is shown", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-    const { rerender } = render(
+  it("offers one comments tool without a separate Feedback button", () => {
+    render(
       <ProjectToolBar panel={null} onPanel={vi.fn()} disabled={false}>
-        {null}
+        {playground}
       </ProjectToolBar>,
     );
+    expect(screen.getAllByRole("button", { name: "Comments" })).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
-    rerender(
-      <ProjectToolBar
-        panel={null}
-        onPanel={vi.fn()}
-        disabled={false}
-        feedback={{ open: false, onToggle }}
-      >
-        {null}
-      </ProjectToolBar>,
-    );
-    await user.click(screen.getByRole("button", { name: "Feedback" }));
-    expect(onToggle).toHaveBeenCalled();
   });
 });
 

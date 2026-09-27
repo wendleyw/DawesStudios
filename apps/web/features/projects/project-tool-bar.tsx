@@ -1,26 +1,24 @@
 "use client";
 
-import { ClipboardPen, Info, MessageSquare } from "lucide-react";
+import { Info, MessageSquare } from "lucide-react";
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { BrandMark } from "@/features/shared/brand-mark";
 import type { ProjectPanelKind } from "./project-panel";
 
 /**
  * The project's tools float at the bottom of its canvas, as on a design canvas: the studio's
- * animated mark (branding, not a control), the side panels (and, in the Miro workspace, Feedback),
+ * animated mark (branding, not a control), the Details and Comments panels,
  * a divider, then the page's own actions (the Playground).
  */
 export function ProjectToolBar({
   panel,
   onPanel,
   disabled,
-  feedback,
   children,
 }: {
   panel: ProjectPanelKind | null;
   onPanel: (panel: ProjectPanelKind | null) => void;
   disabled: boolean;
-  feedback?: { open: boolean; onToggle: () => void };
   children: ReactNode;
 }) {
   return (
@@ -39,27 +37,15 @@ export function ProjectToolBar({
         <Info size={20} />
       </ProjectToolButton>
       <ProjectToolButton
-        active={panel === "conversation"}
+        active={panel === "comments"}
         disabled={disabled}
-        aria-label="Conversation"
-        title="Conversation"
-        aria-expanded={panel === "conversation"}
-        onClick={() => onPanel(panel === "conversation" ? null : "conversation")}
+        aria-label="Comments"
+        title="Comments"
+        aria-expanded={panel === "comments"}
+        onClick={() => onPanel(panel === "comments" ? null : "comments")}
       >
         <MessageSquare size={20} />
       </ProjectToolButton>
-      {feedback && (
-        <ProjectToolButton
-          active={feedback.open}
-          disabled={disabled}
-          aria-label="Feedback"
-          title="Feedback"
-          aria-expanded={feedback.open}
-          onClick={feedback.onToggle}
-        >
-          <ClipboardPen size={20} />
-        </ProjectToolButton>
-      )}
       <span className="project-tool-bar-divider" aria-hidden="true" />
       {children}
     </div>

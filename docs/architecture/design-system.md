@@ -154,18 +154,18 @@ Canvas has the shared zoom pill (zoom out, zoom level, zoom in, fit) at the bott
 Project pages use the shared floating client identity header, then the project's two-row Miro
 workspace bar (see the Decision above): the first row for navigation and the embedded board's
 controls, the second for the agency's Working files/Shared with client channel (or the designer's
-Internal label) and its rounds or client versions. Details, Conversation, Feedback (once a round or
-client version is open) and Playground sit in a floating tool bar at the bottom centre of the
-embed: a 16 px-radius pill with 40 px buttons, a divider before Playground and the open panel's
+Internal label) and its rounds or client versions. Details, Comments and Playground sit in a
+floating tool bar at the bottom centre of the embed: a 16 px-radius pill with 40 px buttons, a divider before Playground and the open panel's
 button selected, in the product's monochrome palette. On phones it moves to the bottom right. While
 a side panel is open, the bar re-centres in the space between the toolbar and the panel. The
 embedded Miro board fills the remaining canvas; a channel with nothing shared yet shows a text
 prompt and, for the agency, its creation action in place of the embed.
 
-Conversation, details and feedback share a floating inspector with close/Escape and focus return.
-Feedback uses a wider 310–380 px column, compact heading and scope controls, an independently
-scrolling history and a growing 60–120 px composer with adjacent send action. Show privacy context
-once. Preserve scoped drafts, read errors and full historical review notes.
+Comments and details share a floating inspector with close/Escape and focus return.
+Comments uses a 310–380 px column, compact heading and All activity/This version controls, an
+independently scrolling history and a growing 60–120 px composer with adjacent send action. Show
+privacy context once and identify the posting destination above the composer. Preserve drafts by
+project, channel and round/version. Review actions and notes remain in the review controls.
 
 ### Welcome dashboards
 
@@ -216,7 +216,7 @@ A project card selects on one click, with visual selection, `aria-current` and a
 
 The timeline shows an understandable date interval, previous/next interval navigation, Today, date columns, and project bars. Use the current application date; do not copy “Sample today.” The Kanban regroups the same scoped records by status and navigates only: `status` is absent from the single column grant on `public.projects` and no RPC accepts an arbitrary target status, so a drag-to-transition or status menu would fail against the database. Do not ship one until an authorized transition exists; when it does, dragging and the menu must both invoke it and a keyboard-accessible status action must accompany them. The workflow labels are Brief, Designing, Agency review, Client review, Revision, Approved, and Delivered; a visible label and shape accompany every status marker, and the status badge's tone hue (see the Decision above) is additive rather than the only cue. Reuse these semantic states across views without rendering every possible state as persistent chrome.
 
-The project page has no xyflow canvas of its own: it embeds the project's Miro board directly — a design board's rounds for the agency's Working files channel and the designer's Internal view, or a shared client version for the agency's Shared with client channel and the client's own view — framed by the product's own chrome: the two-row Miro workspace bar (see the Decision above), the Details/Conversation/Feedback/Playground tool bar, and, when a channel has nothing shared yet, a text prompt with the agency's own creation action in place of the embed. See [Project pages](#canvas-identity-header) above and the [projects feature README](../../apps/web/features/projects/README.md) for the current layout. The product does not control what the embedded Miro board itself contains; keeping designer identity and unpublished work off the client board is the agency's own responsibility (see [Miro frame links](permissions.md#miro-frame-links)).
+The project page has no xyflow canvas of its own: it embeds the project's Miro board directly — a design board's rounds for the agency's Working files channel and the designer's Internal view, or a shared client version for the agency's Shared with client channel and the client's own view — framed by the product's own chrome: the two-row Miro workspace bar (see the Decision above), the Details/Comments/Playground tool bar, and, when a channel has nothing shared yet, a text prompt with the agency's own creation action in place of the embed. See [Project pages](#canvas-identity-header) above and the [projects feature README](../../apps/web/features/projects/README.md) for the current layout. The product does not control what the embedded Miro board itself contains; keeping designer identity and unpublished work off the client board is the agency's own responsibility (see [Miro frame links](permissions.md#miro-frame-links)).
 
 ## Playground canvas
 
@@ -237,10 +237,14 @@ Internal work on a later round does not silently replace an already-shared clien
 the agency shares; the designer sends a round to the studio, and the client requests changes or
 approves the project's latest shared client version. A comment belongs to its project and,
 optionally, a round (internal channel) or a client version (client channel); there is no design or
-pin anchor. The Feedback panel holds a round's or client version's own studio note, review decision
-and comments; the generic project Conversation holds messages with no round/version scope.
-Existing review records are preserved; drafts and queries distinguish channel and, when relevant,
-round/version.
+pin anchor. One Comments panel replaces the former Conversation and Feedback tools. All activity
+shows general and round/version comments in the current channel; new messages there belong to the
+project. This version shows and writes only to the round or client version currently on screen.
+History entries identify their scope; internal round labels include the board name. The composer
+always states its posting destination. Drafts distinguish project, channel and round/version, and
+an earlier successful request cannot clear a different follow-up draft. Switching channels keeps
+the panel open and resets its filter to All activity. Existing review records, notes and formal
+Approve/Request changes actions remain separate from comments.
 
 Approvals, revision requests, assignments, delivery, uploads, and notifications need pending, success, and actionable failure states. Do not optimistically announce success when persistence has failed. A delivered state must resolve to real authorized files; a share link must resolve to the intended client perspective and access boundary.
 
@@ -266,7 +270,7 @@ No responsive captures exist in the package. These are implementation decisions 
 | 768 × 1024              | Navigation drawer; Brand Hub section links scroll inside their row; briefing summary collapses; metrics wrap to two columns      |
 | 390 × 844 and 320 × 800 | Single-column forms and lists; menus contain secondary actions; controls remain reachable; canvas pans inside its bounded region |
 
-Document-level horizontal overflow is a defect. Timeline and canvas may pan or scroll within a visibly bounded, labeled region. Tables may scroll horizontally within their own region or use equivalent stacked rows while preserving headers and action labels. Never scale the entire application down to fit a phone. At narrow widths, a bounded artwork canvas is followed by the feedback panel in a scrolling viewer body, preserving draft and selection. Short windows also scroll the viewer body to keep the floating header and viewer controls clear. Dialogs fit the viewport and scroll internally when necessary; their close and confirmation actions remain available.
+Document-level horizontal overflow is a defect. Timeline and canvas may pan or scroll within a visibly bounded, labeled region. Tables may scroll horizontally within their own region or use equivalent stacked rows while preserving headers and action labels. Never scale the entire application down to fit a phone. At narrow widths, a bounded artwork canvas is followed by the Comments panel in a scrolling viewer body, preserving draft and selection. Short windows also scroll the viewer body to keep the floating header and viewer controls clear. Dialogs fit the viewport and scroll internally when necessary; their close and confirmation actions remain available.
 
 Use semantic headings, real buttons and links, labeled form fields, table headers, descriptive empty states, and a skip-to-content link. Dialogs manage focus, close with Escape when appropriate, and return focus to their trigger. Interactive canvas controls and pins have accessible names; provide list/thread access that does not require precise pointer input. Focus visibility must survive both white and dark surfaces. Aim for at least 4.5:1 normal-text contrast, 3:1 large text/non-text control contrast, and 44 × 44 px touch targets; the production audit must measure these targets before asserting compliance. A 32–36 px desktop button may have a larger touch hit area without changing its visual dimensions.
 
@@ -478,7 +482,7 @@ For each check, record application revision, environment, seed revision, authent
 - [ ] Accessibility: contrast, focus, keyboard actions, target sizes, announcements, and image/field labels have measured/manual evidence rather than visual assumptions.
 - [ ] Every found defect has a severity, owner, correction, and retest; no unresolved blocking functional, permission, data-integrity, or layout defect is silently waived.
 
-Implementation verification and remaining gates are recorded in the [September 20 design audit](../verification/design-audit.md). On mobile the project's Miro embed and its side panel currently stack vertically in a bounded canvas followed by the feedback panel; this is the implemented responsive consolidation.
+Implementation verification and remaining gates are recorded in the [September 20 design audit](../verification/design-audit.md). On mobile the project's Miro embed and its side panel currently stack vertically in a bounded canvas followed by the Comments panel; this is the implemented responsive consolidation.
 
 ## Canvas grid and navigation
 

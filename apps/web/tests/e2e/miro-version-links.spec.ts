@@ -49,11 +49,11 @@ test("the client works in Miro beside the project's tools", async ({ page, conte
     /live-embed\/uXjVClientE2E%3D\/\?autoplay=true&moveToWidget=111/,
   );
   await expect(page.getByRole("group", { name: "Client versions" })).toContainText("V1");
-  // The project's tools stay: Conversation opens beside Miro.
-  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  // The project's tools stay: Comments opens beside Miro.
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
   await expect(page.locator(".project-inspector").first()).toBeVisible();
   await expect(frame).toBeVisible();
-  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
   await expect(page.locator(".project-inspector")).toHaveCount(0);
   // With a board shown, the Playground opens as the asset strip.
   await page.getByRole("button", { name: "Playground", exact: true }).click();

@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
-export type ProjectPanelKind = "conversation" | "details" | "feedback";
+export type ProjectPanelKind = "comments" | "details";
 
 export function ProjectPanelHeader({
   title,

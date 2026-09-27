@@ -8,8 +8,9 @@ its own search field. `client-mark.tsx` renders a client's mark — the logo the
 Settings > Clients (`clients.logo_path`), else the first Brand Hub Logo image, else initials — and
 is used by this feature's shell, `features/board` and `features/settings`.
 
-The shared Help & support dialog explains project Conversation, feedback on a round or client
-version, and opening the Miro board. It does not refer to the retired in-app design viewer or pins.
+The shared Help & support dialog explains Comments, its All activity / This version scopes,
+the explicit posting destination, and opening the Miro board. It does not refer to the retired
+in-app design viewer or pins.
 
 ## `/home`
 

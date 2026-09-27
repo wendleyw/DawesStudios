@@ -35,6 +35,7 @@ export type CanvasVersion = {
 };
 export type CanvasComment = {
   id: string;
+  versionId: string | null;
   body: string;
   label: string;
   resolved: boolean;
@@ -229,7 +230,7 @@ export function useLatestSharedMiroLink(projectId: string, enabled: boolean) {
 }
 
 /**
- * The four fields a comment has whichever channel it came from. The fifth, `label`, is the one
+ * The comment fields and version scope stay intact across channels. The author `label` is the one
  * thing the two channels must not share: a client comment carries the author label the client
  * wrote it under, while an internal comment resolves to the reader's own name or the anonymous
  * "Studio team" — never a designer's identity. It is passed in, so the two label rules stay
@@ -241,11 +242,14 @@ function toCanvasComment(
     body: string;
     resolved: boolean;
     created_at: string;
+    version_id?: string | null;
+    publication_id?: string | null;
   },
   label: string,
 ): CanvasComment {
   return {
     id: comment.id,
+    versionId: comment.version_id ?? comment.publication_id ?? null,
     body: comment.body,
     label,
     resolved: comment.resolved,

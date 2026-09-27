@@ -224,10 +224,10 @@ for (const role of ["agency", "designer", "client"] as const) {
         await capture(page, role, name, surfaces, watcher);
       }
 
-      // The project's own layers: the Conversation panel, then the Playground.
+      // The project's own layers: the Comments panel, then the Playground.
       await page.goto(`/projects/${ids.projectId}`);
       await settle(page);
-      const conversation = page.getByRole("button", { name: "Conversation", exact: true });
+      const conversation = page.getByRole("button", { name: "Comments", exact: true });
       if (await conversation.isVisible().catch(() => false)) {
         await conversation.click();
         await capture(page, role, "project-conversation", surfaces, watcher);

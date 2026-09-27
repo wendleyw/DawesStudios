@@ -48,9 +48,9 @@ test("agency signs in, sees ten workspaces, and opens a project workspace", asyn
   await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
   await expect(page.getByRole("group", { name: "Project actions" })).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/agency-project.png` });
-  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
   await expect(
-    page.getByRole("complementary", { name: "Studio conversation", exact: true }),
+    page.getByRole("complementary", { name: "Studio comments", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/agency-conversation.png` });
   expect(errors).toEqual([]);
@@ -84,9 +84,9 @@ test("client sees only its own workspace and no internal production controls", a
       .getByRole("group", { name: "Client versions" })
       .or(page.getByText("Nothing shared yet. Your studio will share designs here.")),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
   await expect(
-    page.getByRole("complementary", { name: "Client conversation", exact: true }),
+    page.getByRole("complementary", { name: "Client comments", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: `${screenshotDirectory}/client-project.png` });
 });

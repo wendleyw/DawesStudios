@@ -1,0 +1,11 @@
+# Unified comments read-only review — 2026-09-27
+
+- Scope: `apps/web/features/projects/{comment-panel.tsx,project-workspace.tsx,project-tool-bar.tsx,project-panel.tsx,project-data.ts,projects.css}` and the directly related draft, project-page, policy and test code needed to verify findings.
+- Completed: reviewed the current diff, project/channel/version selection, draft keys, mutation lifetime, focus behavior, comment reads and RLS. No source changes.
+- Resolved [Medium] `comment-panel.tsx:143-158`, `comment-draft.ts:43-46` — Success now clears only when the cached draft still has the submitted trimmed body and attempt key. A distinct follow-up typed during a pending request survives, including after a scope switch; the new component tests exercise both cases. A same-text edit that returns to the submitted trimmed body is still indistinguishable and can be cleared; use a draft revision if every post-submit edit must survive.
+- Resolved [Low] `project-workspace.tsx:115-120,292-300` — The composer now takes the same `Round N · board name` label used by history, so two boards with Round 1 have distinct posting destinations.
+- Role isolation: `useProjectComments` queries one channel; internal comment RLS applies `private.can_read_internal_comment(version_id, author_id)`. The scoped UI adds no verified client/internal or cross-designer read leak.
+- Keyboard: scope controls are native buttons with `aria-pressed`; destination is linked to the textarea with `aria-describedby`; header and controls remain mounted when the thread key changes. No verified keyboard blocker in the reviewed diff.
+- Checks: initial `git diff --check --` the six owned source paths passed; follow-up was static diff inspection only. No DB, browser, Docker, build or test command run by this reviewer; the orchestrator owns those gates.
+- Integration note: an initial missing `setPanel` destructure was reported immediately and was fixed by the orchestrator during review; the latest read confirms it is restored. The outer panel key now includes project and channel.
+- Next action: orchestrator to decide whether the same-text edit limit needs a revision guard, then complete its running full gate and browser verification before integration.

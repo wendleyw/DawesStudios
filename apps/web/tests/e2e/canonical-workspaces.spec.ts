@@ -84,7 +84,7 @@ test("all ten clients and twenty-five projects render with matching records and 
           await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
         }
         if (actor.role === "client") {
-          await page.getByRole("button", { name: "Conversation", exact: true }).click();
+          await page.getByRole("button", { name: "Comments", exact: true }).click();
           await expect(page.locator(".comment-list .comment").first()).toBeVisible();
         }
       }

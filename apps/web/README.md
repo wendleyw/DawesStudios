@@ -143,8 +143,9 @@ The Next.js development indicator is disabled in `next.config.ts` so its fixed o
 
 Client surfaces share a notification bell immediately left of the profile. It opens an animated
 popover below the account card, with recipient-scoped activity and explicit read controls. The
-project page's own floating tool bar carries Details, Conversation, Feedback (once a round or
-client version is open) and Playground, with a compact title showing inline status/date. Assets in
+project page's own floating tool bar carries Details, Comments and Playground, with a compact
+title showing inline status/date. Comments offers All activity and This version with an explicit
+posting destination; project notes and version-specific drafts stay separate. Assets in
 Brand Hub now supports client-scoped folders; Templates is removed from navigation while existing
 data and direct private draft URLs are preserved. See the
 [current verification](../../docs/verification/client-polish-and-brand-folders-2026-09-23.md).

@@ -54,7 +54,7 @@ test("representative task surfaces pass responsive layout and accessibility chec
   await signIn(page, credentials.agency);
   await page.getByRole("button", { name: "Help & support", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Help & support", exact: true })).toContainText(
-    "Open a project to message the studio.",
+    "Open a project and use Comments to message the studio.",
   );
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Help & support", exact: true })).not.toBeVisible();
@@ -120,8 +120,8 @@ test("representative task surfaces pass responsive layout and accessibility chec
       // The audited project surface is the Miro workspace on its design board, not an empty state.
       await expect(page.locator("iframe.miro-view-frame")).toHaveAttribute("src", /miro\.com/);
       await capture(page, "project");
-      await page.getByRole("button", { name: "Conversation", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "Conversation", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Comments", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Comments", exact: true })).toBeVisible();
       await page
         .getByLabel("Your message", { exact: true })
         .fill(

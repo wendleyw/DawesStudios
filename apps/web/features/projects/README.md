@@ -77,32 +77,40 @@ first), `sharedVersions` (the project-level client versions, which have no board
 ## Tools and panels
 
 `project-tool-bar.tsx` is the floating bar (group **Project actions**) centred at the bottom:
-Project details, Conversation, Feedback (once a round or client version is shown) and Playground.
+Project details, Comments and Playground. Comments replaces the separate Conversation and Feedback
+buttons. Its All activity view contains the channel's project notes and version comments; This
+version filters to the round or client version on screen. The composer explicitly names its
+destination: Project, Round N with the board name, or Version N. Each history entry shows its scope.
 Every tool is a `ProjectToolButton`: a click sends a streak of light once around its SVG outline,
 and an active tool keeps a faint outline with a small comet orbiting it. The effect is decoration in
 `projects.css` and stops under reduced motion; `aria-expanded` still carries the state. The bar
 opens with the studio's animated mark (`shared/brand-mark.tsx`). While a side panel is open the bar
 re-centres beside it; on work areas narrower than 800 px it hides until the panel closes.
 
-Conversation, Details and Feedback open one floating inspector (`project-panel.tsx`) beside the
+Comments and Details open one floating inspector (`project-panel.tsx`) beside the
 embed, which narrows to leave room for it. `project-page.tsx` owns the open panel
 (`usePanelFocusReturn`, `use-panel-focus-return.ts`) above its early returns, because the
 `useProjectDetail(projectId, channel)` read goes pending and unmounts the workspace on every channel
 switch. Close/Escape returns focus to the control that opened the panel; `useFocusReturn` also
-returns focus to the Playground button after the closing render commits. Feedback is scoped to the
-round or client version on screen (`feedbackTarget`), so it closes on a channel switch and, during
-render, once nothing is shown to scope it to; Conversation and Details stay open across a switch.
+returns focus to the Playground button after the closing render commits. The panel stays open
+across channel switches, while its view resets to All activity and loads the new channel's draft.
+This version follows version selection, remounting only the thread to isolate pending writes;
+without a selected version the effective view and composer return to project scope. Filters remain
+mounted so switching them preserves keyboard focus. Client review decisions remain separate actions.
 The Playground button opens the full Playground when nothing is on Miro yet, or
 `PlaygroundAssetStrip` over the embed once a link is shown (see
 [the Miro mode strip](../playground/README.md#miro-mode-strip)). The Playground and the side panels
 do not stack. A file dropped anywhere on the page is swallowed, so the browser never navigates away.
 
 `comment-panel.tsx` carries the two comment channels: `useProjectComments` reads
-`internal_comments` or `client_comments`, the whole project's conversation or one version's
-feedback (`versionId`), and labels internal authors as the signed-in person or "Studio team",
+`internal_comments` or `client_comments`, the whole project's comments or one version's
+comments (`versionId`), and labels internal authors as the signed-in person or "Studio team",
 never a designer's identity. `comment-draft.ts` keeps an unsent comment and its retry attempt per viewer, project,
 channel and version, so a retry after a remount replays the same idempotency key
-(`nextCommentAttempt`) and switching versions cannot mix unsent comments.
+(`nextCommentAttempt`) and switching versions cannot mix unsent comments. Successful writes clear only the submitted
+body/attempt still present in that draft, preserving follow-up text entered while a request is pending.
+`CanvasComment.versionId` retains the round/publication scope for labels; channel-specific queries
+and RLS still govern what the viewer receives. These comments live in this application, not Miro.
 
 Details (`project-details.tsx`) keeps real edit, assignment and resource actions. For the studio
 and the client it also shows **Requested by** (`useBriefingRequester`) and a version history naming

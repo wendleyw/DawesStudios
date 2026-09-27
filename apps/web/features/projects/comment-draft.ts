@@ -40,5 +40,15 @@ export function useCommentDraft(projectId: string, channel: ProjectChannel, vers
       ...patch,
     }));
   }
-  return { draft: data, update, clear: () => queryClient.setQueryData(key, emptyDraft) };
+  function clearIfCurrent(body: string, attemptKey: string) {
+    queryClient.setQueryData<CommentDraft>(key, (current) =>
+      current?.body.trim() === body && current.attempt?.key === attemptKey ? emptyDraft : current,
+    );
+  }
+  return {
+    draft: data,
+    update,
+    clearIfCurrent,
+    clear: () => queryClient.setQueryData(key, emptyDraft),
+  };
 }

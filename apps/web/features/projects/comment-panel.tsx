@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { ProjectPanelHeader } from "./project-panel";
 import { Check, MessageSquare, Send } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useDateFormat } from "@/features/workspace/workspace-data";
 import {
@@ -38,27 +38,83 @@ export function nextCommentAttempt(
 export function CommentPanel({
   projectId,
   channel,
-  versionId,
-  heading,
+  currentVersion,
+  versionLabels,
   onClose,
-  notice,
-  context,
 }: {
   projectId: string;
   channel: ProjectChannel;
-  /** Scopes the panel to one round or client version's feedback. */
-  versionId?: string;
-  heading?: string;
+  currentVersion?: { id: string; label: string };
+  versionLabels: Record<string, string>;
   onClose?: () => void;
-  /** A call to action shown under the heading, such as a client's pending review. */
-  notice?: ReactNode;
-  context?: ReactNode;
+}) {
+  const [thisVersion, setThisVersion] = useState(false);
+  const [showResolved, setShowResolved] = useState(false);
+  const target = thisVersion ? currentVersion : undefined;
+  return (
+    <aside
+      className="comment-panel"
+      aria-label={channel === "client" ? "Client comments" : "Studio comments"}
+    >
+      <ProjectPanelHeader
+        title="Comments"
+        subtitle={channel === "client" ? "Shared with the studio" : "Studio team only"}
+        onClose={onClose}
+      />
+      <div className="comment-controls">
+        <div className="comment-scopes" role="group" aria-label="Comment scope">
+          <button type="button" aria-pressed={!target} onClick={() => setThisVersion(false)}>
+            All activity
+          </button>
+          {currentVersion && (
+            <button type="button" aria-pressed={!!target} onClick={() => setThisVersion(true)}>
+              This version
+            </button>
+          )}
+        </div>
+        <label className="resolved-toggle">
+          <input
+            type="checkbox"
+            checked={showResolved}
+            onChange={(event) => setShowResolved(event.target.checked)}
+          />
+          Show resolved
+        </label>
+      </div>
+      <CommentThread
+        key={target?.id ?? "project"}
+        projectId={projectId}
+        channel={channel}
+        versionId={target?.id}
+        destination={target?.label ?? "Project"}
+        versionLabels={versionLabels}
+        showResolved={showResolved}
+      />
+    </aside>
+  );
+}
+
+/** Remounting a thread keeps in-flight writes bound to their original draft and destination. */
+function CommentThread({
+  projectId,
+  channel,
+  versionId,
+  destination,
+  versionLabels,
+  showResolved,
+}: {
+  projectId: string;
+  channel: ProjectChannel;
+  versionId?: string;
+  destination: string;
+  versionLabels: Record<string, string>;
+  showResolved: boolean;
 }) {
   const { database } = useAuth();
   const { formatDate } = useDateFormat();
   const comments = useProjectComments(projectId, channel, versionId);
   const invalidate = useInvalidateComments();
-  const { draft, update, clear } = useCommentDraft(projectId, channel, versionId);
+  const { draft, update, clearIfCurrent } = useCommentDraft(projectId, channel, versionId);
   const body = draft.body;
   const composer = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -82,23 +138,24 @@ export function CommentPanel({
   // unchanged key, and the retry either replays against the wrong content or gets an
   // unrecoverable "Idempotency key conflicts" error the person cannot act on. If the server
   // starts comparing another field, mirror it here too.
-  const [showResolved, setShowResolved] = useState(false);
   const post = useMutation({
     mutationFn: async () => {
-      const payload = JSON.stringify({ body: body.trim(), versionId });
+      const submittedBody = body.trim();
+      const payload = JSON.stringify({ body: submittedBody, versionId });
       const attempt = nextCommentAttempt(draft.attempt, payload);
       update({ attempt });
-      return postComment(database, {
+      await postComment(database, {
         projectId,
         channel,
-        body: body.trim(),
+        body: submittedBody,
         versionId,
         idempotencyKey: attempt.key,
       });
+      return { submittedBody, attemptKey: attempt.key };
     },
-    onSuccess: async () => {
-      // `clear()` resets the whole draft, attempt included, so the next comment starts fresh.
-      clear();
+    onSuccess: async ({ submittedBody, attemptKey }) => {
+      // A follow-up typed during the request, including after remount, must survive its response.
+      clearIfCurrent(submittedBody, attemptKey);
       await invalidate();
     },
   });
@@ -111,33 +168,13 @@ export function CommentPanel({
     comments.data?.filter((comment) => showResolved || !comment.resolved) ?? [];
 
   return (
-    <aside
-      className="comment-panel"
-      aria-label={channel === "client" ? "Client conversation" : "Studio conversation"}
-    >
-      <ProjectPanelHeader
-        title={heading ?? (versionId ? "Feedback" : "Conversation")}
-        subtitle={channel === "client" ? "Shared with the studio" : "Studio team only"}
-        onClose={onClose}
-        actions={
-          <label className="resolved-toggle">
-            <input
-              type="checkbox"
-              checked={showResolved}
-              onChange={(event) => setShowResolved(event.target.checked)}
-            />
-            Show resolved
-          </label>
-        }
-      />
-      {notice}
+    <>
       <div className="comment-list" role="region" aria-label="Comment history" tabIndex={0}>
-        {context}
         {comments.isPending ? (
-          <p role="status">Loading conversation…</p>
+          <p role="status">Loading comments…</p>
         ) : comments.error ? (
           <div role="alert">
-            <p>We couldn’t load the conversation.</p>
+            <p>We couldn’t load the comments.</p>
             <button className="button quiet" onClick={() => void comments.refetch()}>
               Try again
             </button>
@@ -154,6 +191,12 @@ export function CommentPanel({
                 <strong>{comment.label}</strong>
                 <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
               </div>
+              <span className="comment-scope-label">
+                {comment.versionId
+                  ? (versionLabels[comment.versionId] ??
+                    (channel === "internal" ? "Round" : "Version"))
+                  : "Project"}
+              </span>
               <p>{comment.body}</p>
               <button
                 className="comment-resolve"
@@ -168,8 +211,12 @@ export function CommentPanel({
         ) : (
           <div className="empty-state comment-empty">
             <MessageSquare size={25} />
-            <h3>A conversation starts here.</h3>
-            <p>Keep decisions and next steps together.</p>
+            <h3>No comments yet.</h3>
+            <p>
+              {versionId
+                ? `Start the discussion for ${destination.toLowerCase()}.`
+                : "Keep project notes and next steps together."}
+            </p>
           </div>
         )}
       </div>
@@ -180,12 +227,16 @@ export function CommentPanel({
           if (body.trim()) post.mutate();
         }}
       >
+        <p className="comment-destination" id={`comment-destination-${versionId ?? "project"}`}>
+          Posting to <strong>{destination}</strong>
+        </p>
         <label className="visually-hidden" htmlFor={`comment-${versionId ?? "project"}`}>
           Your message
         </label>
         <textarea
           ref={composer}
           id={`comment-${versionId ?? "project"}`}
+          aria-describedby={`comment-destination-${versionId ?? "project"}`}
           value={body}
           onChange={(event) => update({ body: event.target.value })}
           placeholder="Leave a thoughtful note…"
@@ -205,6 +256,6 @@ export function CommentPanel({
           <FormError>{(post.error || resolve.error)?.message}</FormError>
         )}
       </form>
-    </aside>
+    </>
   );
 }

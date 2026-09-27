@@ -258,7 +258,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
       new RegExp(`/projects/${fixture.projectId}\\?channel=client$`),
     );
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByRole("button", { name: "Conversation", exact: true }).click();
+    await page.getByRole("button", { name: "Comments", exact: true }).click();
     await page.getByLabel("Your message").fill("Private general draft.");
     await page.getByRole("button", { name: "Shared with client", exact: true }).click();
     await expect(page.getByLabel("Your message")).toBeEmpty();
@@ -272,7 +272,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await page.getByRole("button", { name: "Send message", exact: true }).click();
     await signIn(client, credentials.client);
     await client.goto(`/projects/${fixture.projectId}?channel=client`);
-    await client.getByRole("button", { name: "Conversation", exact: true }).click();
+    await client.getByRole("button", { name: "Comments", exact: true }).click();
     await expect(client.getByText("Shared general draft.", { exact: true })).toBeVisible();
     await expect(client.getByText("Private general draft.", { exact: true })).toHaveCount(0);
     await client.getByRole("button", { name: "Resolve", exact: true }).click();
@@ -280,7 +280,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await client.getByLabel("Show resolved").check();
     await client.getByRole("button", { name: "Reopen", exact: true }).click();
     await client.reload();
-    await client.getByRole("button", { name: "Conversation", exact: true }).click();
+    await client.getByRole("button", { name: "Comments", exact: true }).click();
     await expect(client.getByText("Shared general draft.", { exact: true })).toBeVisible();
     await client.goto("/notifications");
     const event = client

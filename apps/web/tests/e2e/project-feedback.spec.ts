@@ -1,17 +1,18 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createPlaygroundFixture } from "./playground-fixture";
-import { credentials, localAdmin, localAgency, screenshotDirectory, signIn } from "./test-support";
+import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 
 function value<T>(result: { data: T; error: { message: string } | null }): NonNullable<T> {
   if (result.error) throw new Error(result.error.message);
-  if (result.data === null) throw new Error("Missing feedback fixture result.");
+  if (result.data === null) throw new Error("Missing comments fixture result.");
   return result.data as NonNullable<T>;
 }
 
 const clientBoard = "https://miro.com/app/board/uXjVFeedback1=/";
+const internalBoard = "https://miro.com/app/board/uXjVFeedbackInternal1=/";
 
-async function openPanel(page: Page, tool: "Conversation" | "Feedback" | "Project details") {
+async function openPanel(page: Page, tool: "Comments" | "Project details") {
   await page
     .getByRole("group", { name: "Project actions" })
     .getByRole("button", { name: tool, exact: true })
@@ -25,12 +26,24 @@ async function send(panel: Locator, body: string) {
   await expect(panel.getByRole("textbox", { name: "Your message", exact: true })).toHaveValue("");
 }
 
-test("conversation and client version feedback stay in their channel, with drafts kept per scope", async ({
+async function selectScope(panel: Locator, scope: "All activity" | "This version") {
+  await panel.getByRole("button", { name: scope, exact: true }).click();
+  await expect(panel.getByRole("button", { name: scope, exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+}
+
+test("one Comments panel keeps project, round, and client-version messages and drafts in their scopes", async ({
   browser,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const fixture = await createPlaygroundFixture();
   const agency = await localAgency();
+  const designerCaller = await localCaller(credentials.designer);
+  const designerAccount = await designerCaller.auth.getUser();
+  if (designerAccount.error || !designerAccount.data.user)
+    throw new Error("Designer fixture authentication failed.");
   const contexts = await Promise.all([
     browser.newContext(),
     browser.newContext(),
@@ -45,81 +58,181 @@ test("conversation and client version feedback stay in their channel, with draft
       internalReads.push(request.url());
   });
   try {
-    const version = value(
+    const board = value(
+      await agency.rpc("create_design_board", {
+        p_project_id: fixture.projectId,
+        p_name: "Comments direction",
+        p_url: internalBoard,
+        p_designer_id: designerAccount.data.user.id,
+      }),
+    );
+    const round = value(
+      await designerCaller.rpc("send_board_round", {
+        p_board_id: board,
+        p_note: "Ready for comments.",
+      }),
+    );
+    const version1 = value(
       await agency.rpc("share_miro_version", {
         p_project_id: fixture.projectId,
         p_url: clientBoard,
         p_note: "First look at the campaign.",
       }),
     );
+    const version2 = value(
+      await agency.rpc("share_miro_version", {
+        p_project_id: fixture.projectId,
+        p_url: "https://miro.com/app/board/uXjVFeedback2=/",
+        p_note: "Second look at the campaign.",
+      }),
+    );
 
-    // The client's project conversation and V1's feedback are separate threads of one channel.
     await signIn(client, fixture.client.email);
     await client.goto(`/projects/${fixture.projectId}`);
-    await expect(client.getByRole("group", { name: "Client versions" })).toContainText("V1");
-    const clientPanel = client.getByRole("complementary", { name: "Client conversation" });
-    await openPanel(client, "Conversation");
-    await expect(clientPanel.getByRole("heading", { name: "Conversation" })).toBeVisible();
-    await send(clientPanel, "Client note on the whole project.");
-    await openPanel(client, "Feedback");
-    await expect(clientPanel.getByRole("heading", { name: "Feedback" })).toBeVisible();
-    await expect(clientPanel).not.toContainText("Client note on the whole project.");
-    await send(clientPanel, "Client feedback on V1.");
-    // An unsent draft belongs to its own scope: Conversation keeps it, Feedback never shows it.
-    await openPanel(client, "Conversation");
-    await expect(clientPanel).not.toContainText("Client feedback on V1.");
-    const message = clientPanel.getByRole("textbox", { name: "Your message", exact: true });
-    await message.fill("An unsent project draft");
-    await openPanel(client, "Feedback");
-    await expect(message).toHaveValue("");
-    await openPanel(client, "Conversation");
-    await expect(message).toHaveValue("An unsent project draft");
-    await client.screenshot({ path: `${screenshotDirectory}/project-client-conversation.png` });
-    const saved = value(
-      await localAdmin
-        .from("client_comments")
-        .select("body,publication_id")
-        .eq("project_id", fixture.projectId)
-        .order("created_at"),
+    const clientTools = client.getByRole("group", { name: "Project actions" });
+    await expect(clientTools.getByRole("button", { name: "Comments", exact: true })).toHaveCount(1);
+    await expect(clientTools.getByRole("button", { name: "Feedback", exact: true })).toHaveCount(0);
+    await expect(
+      clientTools.getByRole("button", { name: "Conversation", exact: true }),
+    ).toHaveCount(0);
+    await openPanel(client, "Comments");
+    const clientPanel = client.locator(".comment-panel");
+    await expect(clientPanel.getByRole("heading", { name: "Comments", exact: true })).toBeVisible();
+    await expect(clientPanel.getByRole("button", { name: "All activity" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-    expect(saved).toEqual([
-      { body: "Client note on the whole project.", publication_id: null },
-      { body: "Client feedback on V1.", publication_id: version },
-    ]);
+    await expect(clientPanel).toContainText("Posting to Project");
+    await send(clientPanel, "General client note.");
+    await expect(
+      clientPanel
+        .locator("article")
+        .filter({ hasText: "General client note." })
+        .getByText("Project", {
+          exact: true,
+        }),
+    ).toBeVisible();
+    const clientMessage = clientPanel.getByRole("textbox", { name: "Your message" });
+    await clientMessage.fill("Client project draft");
+    await client
+      .getByRole("group", { name: "Client versions" })
+      .getByRole("button", { name: "V1" })
+      .click();
+    await selectScope(clientPanel, "This version");
+    await expect(clientPanel).toContainText("Posting to Version 1");
+    await expect(clientPanel).not.toContainText("General client note.");
+    await expect(clientMessage).toHaveValue("");
+    await send(clientPanel, "Client note for first version.");
+    await clientMessage.fill("First version draft");
+    await client
+      .getByRole("group", { name: "Client versions" })
+      .getByRole("button", { name: "V2" })
+      .click();
+    await expect(clientPanel).toContainText("Posting to Version 2");
+    await expect(clientMessage).toHaveValue("");
+    await send(clientPanel, "Client note for second version.");
+    await client
+      .getByRole("group", { name: "Client versions" })
+      .getByRole("button", { name: "V1" })
+      .click();
+    await expect(clientMessage).toHaveValue("First version draft");
+    await selectScope(clientPanel, "All activity");
+    await expect(clientMessage).toHaveValue("Client project draft");
+    await expect(clientPanel).toContainText("General client note.");
+    await expect(clientPanel).toContainText("Client note for first version.");
+    await expect(clientPanel).toContainText("Client note for second version.");
+    for (const [body, scope] of [
+      ["Client note for first version.", "Version 1"],
+      ["Client note for second version.", "Version 2"],
+    ]) {
+      await expect(
+        clientPanel.locator("article").filter({ hasText: body }).getByText(scope, { exact: true }),
+      ).toBeVisible();
+    }
 
-    // The studio's internal conversation never reaches the client channel, and back.
     await signIn(studio, credentials.agency);
     await studio.goto(`/projects/${fixture.projectId}`);
-    await openPanel(studio, "Conversation");
-    const studioPanel = studio.getByRole("complementary", { name: "Studio conversation" });
-    await expect(studioPanel).not.toContainText("Client note on the whole project.");
-    await send(studioPanel, "Internal note for the studio only.");
+    await studio
+      .getByRole("group", { name: "Rounds" })
+      .getByRole("button", { name: "Round 1" })
+      .click();
+    await openPanel(studio, "Comments");
+    const studioPanel = studio.locator(".comment-panel");
+    await expect(studioPanel).toContainText("Posting to Project");
+    await expect(studioPanel).not.toContainText("General client note.");
+    await send(studioPanel, "General studio note.");
+    const studioMessage = studioPanel.getByRole("textbox", { name: "Your message" });
+    await studioMessage.fill("Studio project draft");
+    await selectScope(studioPanel, "This version");
+    await expect(studioPanel).toContainText("Posting to Round 1");
+    await expect(studioMessage).toHaveValue("");
+    await send(studioPanel, "Studio note for first round.");
+    await studioMessage.fill("Studio round draft");
     await studio
       .getByRole("group", { name: "Project channel" })
       .getByRole("button", { name: "Shared with client", exact: true })
       .click();
-    const sharedPanel = studio.getByRole("complementary", { name: "Client conversation" });
-    await expect(sharedPanel).toContainText("Client note on the whole project.");
-    await expect(sharedPanel).not.toContainText("Internal note for the studio only.");
-    await send(sharedPanel, "Studio reply to the client.");
+    await expect(studioPanel).toBeVisible();
+    await expect(studioPanel.getByRole("heading", { name: "Comments", exact: true })).toBeVisible();
+    await expect(studioPanel).not.toContainText("General studio note.");
+    await expect(studioPanel).toContainText("Client note for first version.");
+    await expect(studioMessage).toHaveValue("");
+    await studio
+      .getByRole("group", { name: "Project channel" })
+      .getByRole("button", { name: "Working files", exact: true })
+      .click();
+    await expect(studioPanel).toBeVisible();
+    // Channel loading remounts the workspace at its board; select the original round again.
+    await studio
+      .getByRole("group", { name: "Rounds" })
+      .getByRole("button", { name: "Round 1" })
+      .click();
+    await selectScope(studioPanel, "This version");
+    await expect(studioMessage).toHaveValue("Studio round draft");
+    await selectScope(studioPanel, "All activity");
+    await expect(studioMessage).toHaveValue("Studio project draft");
+    await expect(studioPanel).toContainText("General studio note.");
+    await expect(studioPanel).toContainText("Studio note for first round.");
 
-    // The assigned designer reads the internal conversation and nothing of the client's.
     await signIn(designer, credentials.designer);
     await designer.goto(`/projects/${fixture.projectId}`);
-    await openPanel(designer, "Conversation");
-    const designerPanel = designer.getByRole("complementary", { name: "Studio conversation" });
-    await expect(designerPanel).toContainText("Internal note for the studio only.");
-    await expect(designerPanel).not.toContainText("Client note on the whole project.");
-    await expect(designerPanel).not.toContainText("Studio reply to the client.");
+    await openPanel(designer, "Comments");
+    const designerPanel = designer.locator(".comment-panel");
+    await expect(designerPanel).toContainText("General studio note.");
+    await expect(designerPanel).toContainText("Studio note for first round.");
+    await expect(designerPanel).not.toContainText("General client note.");
 
     await client.reload();
-    await openPanel(client, "Conversation");
-    await expect(clientPanel).toContainText("Studio reply to the client.");
-    await expect(clientPanel).not.toContainText("Internal note for the studio only.");
-    const internal = value(
-      await localAdmin.from("internal_comments").select("body").eq("project_id", fixture.projectId),
+    await openPanel(client, "Comments");
+    await expect(clientPanel).toContainText("General client note.");
+    await expect(clientPanel).not.toContainText("General studio note.");
+    const clientRows = value(
+      await localAdmin
+        .from("client_comments")
+        .select("body,publication_id")
+        .eq("project_id", fixture.projectId),
     );
-    expect(internal.map((row) => row.body)).toEqual(["Internal note for the studio only."]);
+    expect(clientRows).toEqual(
+      expect.arrayContaining([
+        { body: "General client note.", publication_id: null },
+        { body: "Client note for first version.", publication_id: version1 },
+        { body: "Client note for second version.", publication_id: version2 },
+      ]),
+    );
+    expect(clientRows).toHaveLength(3);
+    const internalRows = value(
+      await localAdmin
+        .from("internal_comments")
+        .select("body,version_id")
+        .eq("project_id", fixture.projectId),
+    );
+    expect(internalRows).toEqual(
+      expect.arrayContaining([
+        { body: "General studio note.", version_id: null },
+        { body: "Studio note for first round.", version_id: round },
+      ]),
+    );
+    expect(internalRows).toHaveLength(2);
     expect(internalReads).toEqual([]);
     expect(errors).toEqual([]);
   } finally {
@@ -148,6 +261,8 @@ test("floating project chrome and panels fit desktop and mobile", async ({ page 
       ).toHaveCount(0);
       const tools = page.getByRole("group", { name: "Project actions" });
       await expect(tools).toBeVisible();
+      await expect(tools.getByRole("button", { name: "Comments", exact: true })).toHaveCount(1);
+      await expect(tools.getByRole("button", { name: "Feedback", exact: true })).toHaveCount(0);
       await expect
         .poll(() =>
           page.evaluate(() => {
@@ -173,15 +288,24 @@ test("floating project chrome and panels fit desktop and mobile", async ({ page 
         )
         .toBe(true);
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-      await page.screenshot({ path: `${screenshotDirectory}/project-workspace-${width}.png` });
       let panelBounds: { x: number; y: number; width: number; height: number } | null = null;
       for (const [label, content] of [
-        ["Conversation", ".comment-panel"],
+        ["Comments", ".comment-panel"],
         ["Project details", ".project-details"],
       ] as const) {
         const trigger = tools.getByRole("button", { name: label, exact: true });
         await trigger.click();
         await expect(page.locator(content)).toBeInViewport();
+        if (label === "Comments") {
+          const panel = page.locator(".comment-panel");
+          await expect(panel.getByRole("heading", { name: "Comments", exact: true })).toBeVisible();
+          await expect(panel.getByRole("button", { name: "All activity" })).toHaveAttribute(
+            "aria-pressed",
+            "true",
+          );
+          await expect(panel.getByRole("button", { name: "This version" })).toHaveCount(0);
+          await expect(panel).toContainText("Posting to Project");
+        }
         // The bar never sits under the open panel: it re-centres beside it, or steps aside.
         const bar = await page.evaluate(() => {
           const element = document.querySelector<HTMLElement>(".project-tool-bar")!;
@@ -199,9 +323,6 @@ test("floating project chrome and panels fit desktop and mobile", async ({ page 
           page.locator(".project-inspector .project-panel-heading button[aria-label^='Close ']"),
         ).toBeFocused();
         expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-        await page.screenshot({
-          path: `${screenshotDirectory}/project-panel-${label.toLowerCase().replaceAll(" ", "-")}-${width}.png`,
-        });
         await page.keyboard.press("Escape");
         await expect(page.locator(".project-inspector")).toHaveCount(0);
         await expect(trigger).toBeFocused();
