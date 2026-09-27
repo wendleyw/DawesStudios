@@ -929,7 +929,8 @@
   min-height: 38px;
   font-size: var(--text-base);
 }
-@media (max-width: 900px), (max-height: 700px) {
+/* A short desktop window still keeps the view selector on the left. */
+@media (max-width: 900px) {
   .board-tool-dock {
     --board-tool-size: clamp(32px, 9vw, 36px);
     top: auto;

@@ -14,7 +14,7 @@ Board actions live in a floating toolbar on the **left**: Search, Filters, the f
 
 Canvas places Zoom Out, the live zoom level, Zoom In and Fit board to view in the shared zoom pill, anchored to the bottom of the same floating tool dock, left-aligned under the main toolbar. Manual zoom reaches 10%; automatic fitting keeps a readable 40% minimum. Both cards overlay the full canvas grid, with no reserved side strip; the canvas can pan behind them. List, Timeline, Kanban and Calendar keep a gutter clear of content.
 
-At viewport widths up to 900 px or heights up to 700 px, the cards become centered horizontal bars at the bottom, with zoom below the main bar and panels opening above it. Structured views reserve bottom space for their toolbar; Canvas continues beneath the floating cards. The Next.js development indicator is disabled because its fixed mobile overlay covered toolbar actions.
+Only at viewport widths up to 900 px do the cards become centered horizontal bars at the bottom, with zoom below the main bar and panels opening above it. Structured views reserve bottom space for their toolbar; Canvas continues beneath the floating cards. Desktop windows keep the view selector on the left regardless of height. The Next.js development indicator is disabled because its fixed mobile overlay covered toolbar actions.
 
 ## Views and sizing
 

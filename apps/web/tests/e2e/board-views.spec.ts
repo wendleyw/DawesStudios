@@ -548,7 +548,6 @@ test("the live SABRE board fits every view across desktop, tablet and phone size
             zoomAtBottomLeft:
               !zoom ||
               innerWidth <= 900 ||
-              innerHeight <= 700 ||
               (Math.abs(workArea.bottom - 16 - zoom.bottom) <= 1 &&
                 Math.abs(zoom.left - dock.left) <= 1),
             boardBottom: bounds.bottom,
@@ -658,11 +657,20 @@ test("floating tools open usable search and filter panels at desktop and mobile 
     await chooseView(page, "list");
     for (const [width, height] of [
       [1440, 900],
+      [1512, 696],
+      [1440, 600],
       [390, 844],
       [844, 390],
     ]) {
       await page.setViewportSize({ width, height });
       await setBoardSearch(page, "alternate");
+      if (width > 900) {
+        const tools = await page
+          .getByRole("group", { name: "Board tools", exact: true })
+          .boundingBox();
+        expect(tools!.width).toBeLessThan(tools!.height);
+        expect(tools!.x + tools!.width).toBeLessThan(width / 2);
+      }
       await expect(
         page.getByRole("textbox", { name: "Search projects", exact: true }),
       ).toBeFocused();

@@ -1,11 +1,13 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex UI integration; no active delegated writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex; desktop board toolbar restored, no active delegated writers**.
 
 ## Objective and accepted decisions
 
 - Continue production preparation and preserve role-specific workflow notifications.
-- Latest UI request: compact project-header preview with campaign above the title and a due-date
+- Latest correction: keep List/Canvas/Timeline/Kanban/Calendar tools on the desktop left rail;
+  only viewport width up to 900 px moves them below. Height alone no longer changes orientation.
+- Compact project-header preview with campaign above the title and a due-date
   badge beside it. Keep the preview opt-in via `?layout=compact-header`, pending visual approval.
 - Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
 - Resend is the selected production email provider, through Supabase Auth SMTP. No direct SDK.
@@ -58,7 +60,10 @@ Updated: 2026-09-27 EDT. Owner: **Codex UI integration; no active delegated writ
 
 ## Environment and next concrete work
 
-- Current UI checks: web gate 127 files / 1,249 tests; six Chromium widths 320–1600 px,
+- Current toolbar checks: web gate127files/1249tests and Chromium search/filter/focus/Axe across
+  five sizes, including1512×696 and1440×600, pass. Desktop captures inspected; live10/68/50 and
+  all118FK preserved. [Toolbar evidence](../verification/board-left-toolbar-2026-09-27.md).
+- Prior header-preview UI checks: web gate 127 files / 1,249 tests; six Chromium widths 320–1600 px,
   campaign/date placement, channel/round actions, More/Escape and Details pass; header Axe0.
   Native shared tab1512×696: account, project bar and bottom tools entirely visible, no overflow.
   Final desktop/mobile preview captures inspected. See the linked UI report.
@@ -67,7 +72,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex UI integration; no active delegated writ
 - Filesystem staging remains stopped with data/volumes retained. When resumed:
   API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.
 - Recovery/Resend is verified in `a7b35e5`; its owner released this checkpoint before UI integration.
-  The unrelated `login.png` deletion is preserved. Next UI action: user reviews the updated preview.
+  The unrelated `login.png` deletion is preserved. Next UI action: user reviews the restored desktop toolbar and the separate header preview.
 - Then obtain target server/domain/sender configuration and use the [production runbook](../operations/production.md)
   when deployment is explicitly requested. Verify Resend delivery with controlled recipients.
 - Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,
