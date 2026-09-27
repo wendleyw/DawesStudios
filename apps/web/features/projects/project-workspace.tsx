@@ -11,7 +11,7 @@ import { PlaygroundAssetStrip } from "@/features/playground/playground-asset-str
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
-import { ProjectBackLink, ProjectChannelControl } from "./project-header";
+import { ProjectBackLink, ProjectChannelLead } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
@@ -112,10 +112,10 @@ export function ProjectWorkspace({
   }
   useFoldSidebarWhile(!!shownLink);
 
-  // Designers and clients have one channel each, and the workspace does not name it.
-  const channelControl = role === "agency" && (
-    <ProjectChannelControl
-      agency
+  // Only the agency switches; the designer sees an Internal label and the client nothing.
+  const channelLead = (
+    <ProjectChannelLead
+      role={role}
       channel={channel}
       onChannel={(option) => {
         // Feedback is scoped to a round or a client version, which the other channel does not
@@ -181,13 +181,9 @@ export function ProjectWorkspace({
             setAction({ kind: "share", projectId, round: null, prefill: sharePrefill })
           }
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
+          lead={channelLead}
           viewControl={viewControl}
-          menu={
-            <>
-              <ProjectCreditsChip projectId={projectId} viewer={profile} />
-              {channelControl}
-            </>
-          }
+          menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
         />
       </div>
       <div className="project-workspace">

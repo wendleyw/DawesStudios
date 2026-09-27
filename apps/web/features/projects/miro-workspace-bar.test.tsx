@@ -46,6 +46,7 @@ function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps
     onShareRound: vi.fn(),
     onAddVersion: vi.fn(),
     onEditLink: vi.fn(),
+    lead: <span>channel</span>,
     viewControl: null,
     menu: null,
     ...overrides,
@@ -101,5 +102,26 @@ describe("MiroWorkspaceBar in Shared with client", () => {
   it("gives the client no agency controls", () => {
     render(<MiroWorkspaceBar {...props({ channel: "client", role: "client", viewerId: "c" })} />);
     expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
+  });
+});
+
+describe("MiroWorkspaceBar's tint", () => {
+  it("marks Working files and the agency's client view apart, and leaves the client's plain", () => {
+    const { container, rerender } = render(<MiroWorkspaceBar {...props({})} />);
+    const bar = () => container.querySelector(".miro-bar");
+    expect(bar()).toHaveClass("is-internal");
+    rerender(<MiroWorkspaceBar {...props({ channel: "client" })} />);
+    expect(bar()).toHaveClass("is-client");
+    rerender(<MiroWorkspaceBar {...props({ channel: "client", role: "client", lead: null })} />);
+    expect(bar()).not.toHaveClass("is-internal");
+    expect(bar()).not.toHaveClass("is-client");
+  });
+  it("leaves out the second row for a client with nothing shared", () => {
+    const { container } = render(
+      <MiroWorkspaceBar
+        {...props({ channel: "client", role: "client", lead: null, shared: [], version: null })}
+      />,
+    );
+    expect(container.querySelector(".miro-bar-context")).toBeNull();
   });
 });

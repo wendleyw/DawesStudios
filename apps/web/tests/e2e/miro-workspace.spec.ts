@@ -136,8 +136,10 @@ test("agency, designer and client complete a round trip in Miro", async ({ brows
   await requestDialog.getByRole("button", { name: "Send review" }).click();
   await expect(client.getByRole("dialog")).toHaveCount(0);
 
-  await studio.getByRole("button", { name: "More" }).click();
-  await studio.getByRole("button", { name: "Shared with client" }).click();
+  await studio
+    .getByRole("group", { name: "Project channel" })
+    .getByRole("button", { name: "Shared with client" })
+    .click();
   await studio.getByRole("button", { name: "New client version" }).click();
   const versionDialog = studio.getByRole("dialog");
   await expect(versionDialog.getByLabel("Client Miro board")).toHaveValue(/uXjVClient1/);

@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-26 EDT (late night). Owner: **Claude Code**; the session has ended and no session holds the tree.
+Updated: 2026-09-27 EDT. Owner: **Claude Code**; the session has ended and no session holds the tree.
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -21,17 +21,17 @@ designer each) replace Versions in Working files, and per-project client version
 Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 `review_publication` for project-level versions, and designer-to-designer privacy on
 `internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
-`npm run check` 123/1273 passes; `supabase test db` locally fails only `access_and_workflows`
-2,4,9,18,32,54 (SABRE-overlay counts; a left-behind "Acceptance Playground …" client adds more —
-remove it with the fixture's cleanup). **All-roles e2e:** only overlay counts fail
-(`canonical-workspaces`:7, `design-audit`:18, `workspace-actions`:14, `workspace.spec`:25/:48).
+Known overlay-count failures (pgTAP and e2e) are listed in the history.
 **After the merge** (`08a38ed..1100a68`): Versions opens with every frame in view (50–100%); Brand Hub titles hidden; round comments notify only the board's designer (`0012`);
 `project-page.tsx` split into `project-versions-canvas.tsx`; a reassigned board leaves the designer's
 view within 30 s; `0013` tightens retries and sharing; Playground and board pages split into hooks;
 the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/5 (overlay only).
-**Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden);
-rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
-`supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. [History](history/handoff-2026-09-26.md).
+[History](history/handoff-2026-09-26.md) holds the 2026-09-26 database incident and those counts.
+
+## Done (2026-09-27)
+
+**Two-row Miro bar** (option A): row 2 holds the channel (agency tabs, designer **Internal**), tinted
+amber/blue; `reviewed` reads "Sent to client". Unit 389/389, `miro-workspace.spec` 2/2.
 
 ## In progress
 
@@ -48,7 +48,7 @@ rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
 - **Video lifecycle:** resume by choosing the same file again, one automatic retry plus a button,
   a 24-hour retention window, one Cancel in both phases, and approach A (no attempts table).
 - **Themes:** System by default, kept per browser (`dawes-theme`); the canvas follows the theme;
-  chrome stays monochrome. With a panel open the project bar centres beside it (hidden < 800 px).
+  chrome stays monochrome except the Miro bar's channel row. With a panel open the project bar centres beside it (hidden < 800 px).
 - **Dashboards:** clients land on their Overview; the client Overview reads only client-visible data
   for every viewer; designers see assigned work and no credits; relative days follow the studio zone.
 - **Client people:** one login each, managed only by the studio; everyone at a client has the same

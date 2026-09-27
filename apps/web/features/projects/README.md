@@ -307,17 +307,23 @@ reload or a shared link returns to the same frame. `project-versions-canvas.tsx`
 (`miro-view.tsx`) in place of the `ReactFlow` canvas, which stays mounted underneath (`opacity: 0`
 and `inert`; not `visibility: hidden`, which React Flow's per-node `visibility: visible` overrides)
 rather than unmounting, so switching back to **Versions** is instant. The
-header folds into one compact bar, `MiroBar` (same file, built on the `MiroBarShell`/`MiroBarMenu`
-it shares with the workspace's bar; Escape on the More menu returns focus to **More**), so the board keeps the height: back, `Project
-title / Deliverable`, a **Miro version** toggle (`V1`, `V2`, … — the linked versions of the shown
-deliverable, oldest first), the **Project view** switch, **Open in Miro** (`miroBoardUrl`,
-`target="_blank"` — the embed can fail to sign in behind third-party-cookie restrictions, so this link
-is the way through to the real board regardless) and a **More** menu holding the credits the project
-used (`ProjectCreditsChip`) and the agency's channel switch. The deliverable filter stays in
-Versions only: Miro mode shows one deliverable's board, so it offers no deliverable choice. The shown version's status (`versionStatusLabel`) sits beside the version toggle, followed by the
-project's due date (`Due Sep 24` or `No due date`); the project status is left to Versions. When the
-work area is under 1000 px wide (`@container board`), the title keeps the first row beside the back
-arrow and the rest of the bar wraps below it. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
+header folds into the two-row Miro bar, `MiroBar` (same file, built on the `MiroBarShell`/`MiroBarMenu`
+it shares with the workspace's bar; Escape on the More menu returns focus to **More**), so the board
+keeps the height. The first row says where you are: back, `Project title / Deliverable`, the
+project's due date (`Due Sep 24` or `No due date`), the **Project view** switch, **Open in Miro**
+(`miroBoardUrl`, `target="_blank"` — the embed can fail to sign in behind third-party-cookie
+restrictions, so this link is the way through to the real board regardless) and a **More** menu
+holding the credits the project used (`ProjectCreditsChip`). The second row holds the channel
+(`ProjectChannelLead` from `project-header.tsx`: the agency's **Working files / Shared with client**
+tabs, the designer's **Internal** label, nothing for the client), a **Miro version** toggle (`V1`,
+`V2`, … — the linked versions of the shown deliverable, oldest first) and the shown version's status
+(`versionStatusLabel`). `miroBarTone` tints that row by channel for the agency and the designer
+(amber with a hatch for Working files, blue for Shared with client) and leaves the client's plain —
+see the Miro bar Decision in [the design system](../../../../docs/architecture/design-system.md).
+The deliverable filter stays in Versions only: Miro mode shows one deliverable's board, so it offers
+no deliverable choice; the project status is left to Versions too. When the work area is under
+1000 px wide (`@container board`), the title keeps the first row beside the back arrow and the rest
+of that row wraps below it. A client whose shown version awaits their review (the same rule as the canvas's **Review version**:
 their latest pending publication of that deliverable, project not delivered) gets `MiroReviewBar` at
 the bottom of the board, with the tool bar raised above it; **Request changes** and **Approve** open
 the review dialog with that decision preselected (`ReviewAction.decision`). The sidebar folds while Miro mode is shown (`useFoldSidebarWhile` from
@@ -366,8 +372,10 @@ same visit.
 `MiroWorkspaceBar` is the workspace's header, replacing `ProjectHeader`. In Working files it shows a
 compact board picker (only once there is more than one; as tall as the round toggle, sized to the
 chosen name up to 200 px with an ellipsis), a **Board / R1 / R2…** round toggle once the board
-has rounds, and the round's status; in Shared with client it shows a **V1, V2…** toggle, the shown
-version's status and the project's due date. Actions follow the role and what is shown: the board's
+has rounds, and the round's status; in Shared with client it shows a **V1, V2…** toggle and the shown
+version's status. These sit on the bar's second row after the channel, as in `MiroBar`; a client
+with nothing shared yet gets no second row. The primary action ends that row. Actions follow the
+role and what is shown: the board's
 own designer gets **Send to studio** (`project-action-round.tsx`, `kind: "round"`, an optional note
 and frame link, defaulting to the board's own link, sent through the idempotent `send_board_round`);
 the agency gets **Share with client** on a round (`project-action-share.tsx`, `kind: "share"`) and,
@@ -381,7 +389,7 @@ when it arrives, as `MiroField` does. Once a board exists, the bar's
 project's assignments; if the designers fail to load, the dialog shows that error) and, on a shown
 client version, **Edit Miro link** (the `kind: "miro"` dialog, where a shared version's link is
 required). `MiroWorkspaceBar` is built on `MiroBarShell`/`MiroBarMenu` from `miro-view.tsx`, and the
-workspace reuses `ProjectBackLink` and `ProjectChannelControl` from `project-header.tsx`. No board name, round or client version ever names a
+workspace reuses `ProjectBackLink` and `ProjectChannelLead` from `project-header.tsx`. No board name, round or client version ever names a
 designer to anyone but the agency and that designer, matching the client-privacy pattern above: the
 bar's own markup carries no designer identity at all. An empty board or channel shows an inline
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting

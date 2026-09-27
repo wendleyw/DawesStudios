@@ -45,6 +45,8 @@ describe("MiroBar", () => {
         title="Campaign"
         name="Key visual"
         due="Due Nov 29"
+        tone="client"
+        lead={<span>channel tabs</span>}
         linked={linked}
         current={v3}
         onSelect={onSelect}
@@ -90,7 +92,30 @@ describe("MiroBar", () => {
     expect(onSelect).toHaveBeenCalledWith("v2");
   });
 
-  it("keeps the channel switch and filter behind More", () => {
+  it("puts the channel on the tinted second row, with the versions and status", () => {
+    const { container } = render(
+      <MiroBar
+        back={<button>Back</button>}
+        title="Campaign"
+        name="Key visual"
+        due="Due Nov 29"
+        tone="internal"
+        lead={<span>channel tabs</span>}
+        linked={[v3]}
+        current={v3}
+        onSelect={vi.fn()}
+        viewControl={null}
+        menu={null}
+      />,
+    );
+    expect(container.querySelector(".miro-bar")).toHaveClass("is-internal");
+    const context = container.querySelector(".miro-bar-context");
+    expect(context).toHaveTextContent("channel tabs");
+    expect(context).toHaveTextContent("In review");
+    expect(context).not.toHaveTextContent("Due Nov 29");
+  });
+
+  it("keeps secondary items behind More", () => {
     renderBar();
     const more = screen.getByRole("button", { name: "More" });
     expect(screen.queryByText("menu content")).not.toBeInTheDocument();

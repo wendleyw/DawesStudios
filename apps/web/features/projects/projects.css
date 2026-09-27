@@ -29,12 +29,112 @@
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-/* Miro mode folds the header into one compact bar so the board keeps the height. */
+/* Miro mode's bar: where you are on the first row; the channel and what it shows on the second.
+   No `overflow: hidden` here, or the More popover would be clipped; the second row rounds its own
+   bottom corners instead. */
 .project-header.miro-bar {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.miro-bar-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 6px 8px;
+}
+.miro-bar-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 46px;
+  padding: 6px 8px 6px 14px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 11px 11px;
+}
+/* Working files reads as behind the scenes: amber with a faint hatch. The agency's view of what the
+   client sees is a calm blue. The client's own bar stays plain. */
+.miro-bar.is-internal .miro-bar-context {
+  border-top-color: var(--tone-attention-border);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--tone-attention-fg) 7%, transparent) 0 8px,
+      transparent 8px 16px
+    ),
+    var(--tone-attention-bg);
+}
+.miro-bar.is-client .miro-bar-context {
+  border-top-color: var(--tone-active-border);
+  background: var(--tone-active-bg);
+}
+.miro-bar:is(.is-internal, .is-client) .miro-bar-context :is(.segmented-control, .miro-bar-board) {
+  background: var(--surface);
+}
+.miro-bar-primary {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.miro-bar-primary > .button {
+  min-height: 34px;
+  padding: 5px 12px;
+  font-size: var(--text-xs);
+}
+.project-channel-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: 18px;
+  margin-block: -6px;
+  padding-right: 6px;
+  border-right: 1px solid var(--border);
+}
+.miro-bar.is-internal .project-channel-tabs {
+  border-right-color: var(--tone-attention-border);
+}
+.miro-bar.is-client .project-channel-tabs {
+  border-right-color: var(--tone-active-border);
+}
+.project-channel-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 2px 0 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.project-channel-tabs button:hover:not(:disabled) {
+  color: var(--foreground);
+}
+.project-channel-tabs button[aria-pressed="true"] {
+  border-bottom-color: currentColor;
+  color: var(--foreground);
+}
+.miro-bar.is-internal .project-channel-tabs button[aria-pressed="true"] {
+  color: var(--tone-attention-fg);
+}
+.miro-bar.is-client .project-channel-tabs button[aria-pressed="true"] {
+  color: var(--tone-active-fg);
+}
+.project-channel-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--tone-attention-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--tone-attention-fg);
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 .miro-bar-title {
   display: flex;
@@ -52,8 +152,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The project name is muted only when the deliverable's name follows it. */
 .miro-bar-title > span:first-child {
   flex-shrink: 1000;
+}
+.miro-bar-title > span:first-child:not(:last-child) {
   color: var(--muted);
 }
 .miro-bar-title > span:nth-child(2) {
@@ -104,10 +207,9 @@
   font-size: var(--text-sm);
   white-space: nowrap;
 }
-/* The due date follows the version status, split by a hairline like the title's segments. */
-.miro-bar-due {
-  padding-left: 12px;
-  border-left: 1px solid var(--border);
+.miro-bar-status {
+  color: var(--foreground);
+  font-weight: 500;
 }
 .miro-bar-popover > .project-credits-chip {
   align-self: flex-start;
@@ -146,10 +248,10 @@
   padding: 6px 28px 6px 10px;
   font-size: var(--text-xs);
 }
-/* When the work area is too narrow for one row, the title keeps the first row beside the back
-   arrow and the version, status, due date and actions wrap below it. */
+/* When the work area is too narrow for the first row, the title keeps its line beside the back
+   arrow and the due date and actions wrap below it. */
 @container board (max-width: 1000px) {
-  .project-header.miro-bar {
+  .miro-bar-row {
     flex-wrap: wrap;
   }
   .miro-bar-title {

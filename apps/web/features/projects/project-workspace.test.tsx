@@ -116,6 +116,25 @@ describe("ProjectWorkspace", () => {
     expect(screen.getAllByRole("button", { name: /add (a )?design board/i })).toHaveLength(1);
   });
 
+  it("shows the agency's channel tabs in the bar, not behind More", async () => {
+    const onChannel = vi.fn();
+    renderWorkspace({ onChannel });
+    const tabs = screen.getByRole("group", { name: "Project channel" });
+    expect(within(tabs).getByRole("button", { name: "Working files" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.setup().click(within(tabs).getByRole("button", { name: "Shared with client" }));
+    expect(onChannel).toHaveBeenCalledWith("client");
+  });
+
+  it("labels a designer's view Internal without offering a channel switch", () => {
+    state.role = "designer";
+    renderWorkspace();
+    expect(screen.getByText("Internal")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Project channel" })).toBeNull();
+  });
+
   it("never shows a client a design board or Working files", async () => {
     state.role = "client";
     renderWorkspace({ channel: "client" });

@@ -286,7 +286,7 @@ export type VersionStatus =
 export const versionStatusLabels: Record<VersionStatus, string> = {
   draft: "In progress",
   submitted: "Studio review",
-  reviewed: "Shared with client",
+  reviewed: "Sent to client",
   pending: "In review",
   approved: "Approved",
   changes_requested: "Changes requested",

@@ -6,7 +6,7 @@ import { useDismissOnOutsideClick } from "@/features/shared/use-dismiss-on-outsi
 import { miroBoardUrl, miroEmbedUrl, type MiroLink } from "./miro-links";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import { miroVersionLabel } from "./miro-mode";
-import type { CanvasVersion } from "./project-data";
+import type { CanvasVersion, ProjectChannel } from "./project-data";
 import type { ReviewDecision } from "./project-action-review";
 
 export type MiroFrame = CanvasVersion & { miro: MiroLink };
@@ -48,16 +48,34 @@ export function MiroBarMenu({ children }: { children: (close: () => void) => Rea
 }
 
 /**
- * The one-line bar both Miro views share: back, the title (with an optional second name), the
- * caller's own controls, then on the right its actions, "Open in Miro" for the shown link (for when
- * the embed cannot sign in) and the More menu.
+ * Whose view the second row shows: Working files, the agency's view of what the client sees, or
+ * nothing to tell apart (the client has one channel and is never told it has another).
+ */
+export type MiroBarTone = "internal" | "client" | null;
+
+/** The Miro bar's tint for a viewer: the client has one channel, so theirs is left plain. */
+export function miroBarTone(role: string | undefined, channel: ProjectChannel): MiroBarTone {
+  if (role !== "agency" && role !== "designer") return null;
+  return channel === "internal" ? "internal" : "client";
+}
+
+/**
+ * The two-row bar both Miro views share. The first row says where you are: back, the title (with an
+ * optional second name), the due date, then on the right the caller's tools, "Open in Miro" for the
+ * shown link (for when the embed cannot sign in) and the More menu. The second row says what you are
+ * looking at and what you can do there: the channel (`lead`), the caller's controls, and its primary
+ * action; its tint marks Working files apart from what the client sees.
  */
 export function MiroBarShell({
   back,
   title,
   name,
+  due,
+  tone,
+  lead,
   children,
-  actions,
+  primary,
+  tools,
   link,
   menu,
 }: {
@@ -65,53 +83,75 @@ export function MiroBarShell({
   title: string;
   /** A second name after the title, such as the deliverable. */
   name?: string;
-  /** The controls between the title and the actions: versions, rounds, status, due date. */
-  children: ReactNode;
-  actions: ReactNode;
+  /** The project's due date, already formatted ("Due Nov 29" or "No due date"). */
+  due: string;
+  tone: MiroBarTone;
+  /** The channel: the agency's tabs, or the designer's Internal label. */
+  lead?: ReactNode;
+  /** The controls of the channel: board, rounds or versions, and status. */
+  children?: ReactNode;
+  /** The one action the viewer takes on what is shown. */
+  primary?: ReactNode;
+  /** Controls that do not depend on the channel, such as the view switch. */
+  tools?: ReactNode;
   /** The link "Open in Miro" opens; without one the button is left out. */
   link?: MiroLink | null;
   menu: (close: () => void) => ReactNode;
 }) {
   return (
-    <div className="project-header miro-bar">
-      {back}
-      <h1 className="miro-bar-title" title={name ? `${title} / ${name}` : title}>
-        <span>{title}</span>
-        {name && (
-          <>
-            <span aria-hidden="true">/</span>
-            <span>{name}</span>
-          </>
-        )}
-      </h1>
-      {children}
-      <div className="miro-bar-actions">
-        {actions}
-        {link && (
-          <a className="button" href={miroBoardUrl(link)} target="_blank" rel="noopener noreferrer">
-            Open in Miro
-            <ArrowUpRight size={13} aria-hidden="true" />
-          </a>
-        )}
-        <MiroBarMenu>{menu}</MiroBarMenu>
+    <div className={`project-header miro-bar${tone ? ` is-${tone}` : ""}`}>
+      <div className="miro-bar-row">
+        {back}
+        <h1 className="miro-bar-title" title={name ? `${title} / ${name}` : title}>
+          <span>{title}</span>
+          {name && (
+            <>
+              <span aria-hidden="true">/</span>
+              <span>{name}</span>
+            </>
+          )}
+        </h1>
+        <span className="miro-bar-due">{due}</span>
+        <div className="miro-bar-actions">
+          {tools}
+          {link && (
+            <a
+              className="button"
+              href={miroBoardUrl(link)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open in Miro
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </a>
+          )}
+          <MiroBarMenu>{menu}</MiroBarMenu>
+        </div>
       </div>
+      {(lead || children || primary) && (
+        <div className="miro-bar-context">
+          {lead}
+          {children}
+          {primary && <div className="miro-bar-primary">{primary}</div>}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
- * Miro mode's header, folded into one bar so the board gets the height: back, the project and
- * deliverable names, a toggle of the deliverable's linked versions with the shown version's status,
- * the Versions | Miro switch,
- * "Open in Miro" (for when the embed cannot sign in) and a "More" menu holding the credits the
- * project used, the rarely used channel switch and the deliverable filter (which changes the
- * deliverable).
+ * Miro mode's header: back, the project and deliverable names and the due date, then the Versions |
+ * Miro switch, "Open in Miro" (for when the embed cannot sign in) and a "More" menu holding the
+ * credits the project used. The second row holds the channel and a toggle of the deliverable's
+ * linked versions with the shown version's status.
  */
 export function MiroBar({
   back,
   title,
   name,
   due,
+  tone,
+  lead,
   linked,
   current,
   onSelect,
@@ -121,8 +161,10 @@ export function MiroBar({
   back: ReactNode;
   title: string;
   name: string;
-  /** The project's due date, already formatted ("Nov 29" or "No due date"). */
+  /** The project's due date, already formatted ("Due Nov 29" or "No due date"). */
   due: string;
+  tone: MiroBarTone;
+  lead?: ReactNode;
   linked: CanvasVersion[];
   current: MiroFrame;
   onSelect: (versionId: string) => void;
@@ -137,7 +179,10 @@ export function MiroBar({
       back={back}
       title={title}
       name={name}
-      actions={viewControl}
+      due={due}
+      tone={tone}
+      lead={lead}
+      tools={viewControl}
       link={current.miro}
       menu={() => menu}
     >
@@ -156,7 +201,6 @@ export function MiroBar({
         ))}
       </div>
       <span className="miro-bar-status">{versionStatusLabel(current.status)}</span>
-      <span className="miro-bar-due">{due}</span>
     </MiroBarShell>
   );
 }

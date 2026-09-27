@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, Lock } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import type { Profile } from "@/lib/supabase";
 import { CanvasHeader } from "@/features/workspace/canvas-header";
@@ -15,7 +15,7 @@ import { statusToneClass } from "@/features/shared/status-tone";
 import { ProjectCreditsChip } from "@/features/credits/project-credits-chip";
 import type { CanvasVersion, ProjectChannel, TableRow } from "./project-data";
 import type { ProjectView } from "./miro-mode";
-import { MiroBar, type MiroFrame } from "./miro-view";
+import { MiroBar, miroBarTone, type MiroFrame } from "./miro-view";
 
 /** The way back from a project to its client's board. */
 export function ProjectBackLink({ clientId }: { clientId: string }) {
@@ -33,21 +33,27 @@ export function ProjectBackLink({ clientId }: { clientId: string }) {
 
 /**
  * The agency's Working files | Shared with client switch; anyone else sees the name of the one
- * channel they have. The Miro workspace renders it for the agency alone.
+ * channel they have. `tabs` draws it as the Miro bar's channel tabs.
  */
 export function ProjectChannelControl({
   agency,
   channel,
   onChannel,
   disabled = false,
+  tabs = false,
 }: {
   agency: boolean;
   channel: ProjectChannel;
   onChannel: (channel: ProjectChannel) => void;
   disabled?: boolean;
+  tabs?: boolean;
 }) {
   return (
-    <div className="segmented-control" role="group" aria-label="Project channel">
+    <div
+      className={tabs ? "project-channel-tabs" : "segmented-control"}
+      role="group"
+      aria-label="Project channel"
+    >
       {agency ? (
         (["internal", "client"] as const).map((option) => (
           <button
@@ -57,6 +63,12 @@ export function ProjectChannelControl({
             disabled={disabled}
             onClick={() => onChannel(option)}
           >
+            {tabs &&
+              (option === "internal" ? (
+                <Lock size={13} aria-hidden="true" />
+              ) : (
+                <Eye size={13} aria-hidden="true" />
+              ))}
             {option === "internal" ? "Working files" : "Shared with client"}
           </button>
         ))
@@ -65,6 +77,41 @@ export function ProjectChannelControl({
       )}
     </div>
   );
+}
+
+/**
+ * The Miro bar's channel: the agency's tabs, or the Internal label a designer sees in place of a
+ * switch they do not have. The client sees neither.
+ */
+export function ProjectChannelLead({
+  role,
+  channel,
+  onChannel,
+  disabled,
+}: {
+  role: string | undefined;
+  channel: ProjectChannel;
+  onChannel: (channel: ProjectChannel) => void;
+  disabled?: boolean;
+}) {
+  if (role === "agency")
+    return (
+      <ProjectChannelControl
+        agency
+        tabs
+        channel={channel}
+        onChannel={onChannel}
+        disabled={disabled}
+      />
+    );
+  if (role === "designer")
+    return (
+      <span className="project-channel-label">
+        <Lock size={12} aria-hidden="true" />
+        Internal
+      </span>
+    );
+  return null;
 }
 
 export function ProjectHeader({
@@ -164,6 +211,15 @@ export function ProjectHeader({
           back={back}
           title={project.title}
           due={project.due_date ? `Due ${formatDate(project.due_date)}` : "No due date"}
+          tone={miroBarTone(viewer?.role, channel)}
+          lead={
+            <ProjectChannelLead
+              role={viewer?.role}
+              channel={channel}
+              onChannel={onChannel}
+              disabled={playgroundOpen}
+            />
+          }
           {...miro}
           viewControl={
             <>
@@ -171,12 +227,7 @@ export function ProjectHeader({
               {workspaceControl}
             </>
           }
-          menu={
-            <>
-              <ProjectCreditsChip projectId={project.id} viewer={viewer} />
-              {viewer?.role === "agency" && channelControl}
-            </>
-          }
+          menu={<ProjectCreditsChip projectId={project.id} viewer={viewer} />}
         />
       </div>
     );
