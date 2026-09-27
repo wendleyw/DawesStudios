@@ -363,7 +363,8 @@ independently, so the agency can see the workspace on one and the legacy canvas 
 same visit.
 
 `MiroWorkspaceBar` is the workspace's header, replacing `ProjectHeader`. In Working files it shows a
-board picker (only once there is more than one), a **Board / R1 / R2…** round toggle once the board
+compact board picker (only once there is more than one; as tall as the round toggle, sized to the
+chosen name up to 200 px with an ellipsis), a **Board / R1 / R2…** round toggle once the board
 has rounds, and the round's status; in Shared with client it shows a **V1, V2…** toggle, the shown
 version's status and the project's due date. Actions follow the role and what is shown: the board's
 own designer gets **Send to studio** (`project-action-round.tsx`, `kind: "round"`, an optional note
@@ -383,7 +384,8 @@ bar's own markup carries no designer identity at all. An empty board or channel 
 call to action (**Add a design board** / **New client version**) to the agency and a plain waiting
 message to everyone else.
 
-The workspace's **Feedback** tool bar button opens the same `CommentPanel`/`ProjectPanel` the legacy
+The workspace's **Feedback** tool bar button (a clipboard-and-pen icon, distinct from
+**Conversation**'s speech bubble) opens the same `CommentPanel`/`ProjectPanel` the legacy
 canvas uses, scoped to whichever round or client version is shown (`feedbackTarget`); the panel
 closes itself, during render, once nothing is shown to scope it to — the same reconciliation pattern
 `project-page.tsx` uses for Miro mode's phantom-state guard. `usePanelFocusReturn`

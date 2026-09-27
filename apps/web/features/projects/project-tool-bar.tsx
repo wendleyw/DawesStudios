@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, MessageSquare, MessageSquareText } from "lucide-react";
+import { ClipboardPen, Info, MessageSquare } from "lucide-react";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/features/shared/brand-mark";
 import type { ProjectPanelKind } from "./project-panel";
@@ -60,7 +60,7 @@ export function ProjectToolBar({
           aria-expanded={feedback.open}
           onClick={feedback.onToggle}
         >
-          <MessageSquareText size={20} />
+          <ClipboardPen size={20} />
         </button>
       )}
       <span className="project-tool-bar-divider" aria-hidden="true" />
