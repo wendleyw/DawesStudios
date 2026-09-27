@@ -5,6 +5,7 @@ import {
   preserveBoardPreference,
   credentials,
   localAgency,
+  boardLink,
 } from "./test-support";
 
 let restoreViews: (() => Promise<void>)[] = [];
@@ -50,7 +51,7 @@ test("client sees only its own workspace and no internal production controls", a
   await expect(page).toHaveURL(/\/clients\/[^/]+\/overview$/);
   await page
     .getByRole("navigation", { name: "SABRE navigation", exact: true })
-    .getByRole("link", { name: "Board", exact: true })
+    .getByRole("link", { name: boardLink })
     .click();
   await expect(page).toHaveURL(/\/clients\/[^/]+\/board$/);
   await expect(page.getByRole("link", { name: "SABRE workspace", exact: true })).toBeVisible();

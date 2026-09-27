@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import {
   credentials,
   localAgency,
+  boardLink,
   openBoardSearch,
   screenshotDirectory,
   signIn,
@@ -127,7 +128,7 @@ test("client links stay visible at the top across pages without duplicating side
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
-    await expect(menu.getByRole("link", { name: "Board", exact: true })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: boardLink })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -206,7 +207,7 @@ test("client links stay visible at the top across pages without duplicating side
     // A project with a Miro link opens in Miro mode; this checks the header over the Versions canvas.
     await page.goto(`/projects/${project.data!.id}?view=versions`);
     await expect(page.locator(".project-canvas .react-flow")).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Board", exact: true })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: boardLink })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -229,7 +230,7 @@ test("client links stay visible at the top across pages without duplicating side
     await page.screenshot({
       path: `${screenshotDirectory}/project-client-navigation-${width}.png`,
     });
-    await menu.getByRole("link", { name: "Board", exact: true }).click();
+    await menu.getByRole("link", { name: boardLink }).click();
     await expect(page).toHaveURL(`/clients/${result.data!.id}/board`);
   }
 });

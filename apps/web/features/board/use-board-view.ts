@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { SupabaseDatabase } from "@/lib/supabase";
 import { saveBoardView, useBoardPreferences } from "./board-data";
-import type { BoardView } from "./board-views";
+import { defaultBoardView, type BoardView } from "./board-views";
 
 /**
  * Which of the five views the board shows, and persisting a viewer's choice per client.
@@ -24,8 +24,7 @@ export function useBoardView(database: SupabaseDatabase, clientId: string) {
     },
     onSettled: () => setPendingView(null),
   });
-  // A viewer who has never chosen a view opens the board as a list, on every screen size.
-  const layout = pendingView ?? preferences.data ?? "list";
+  const layout = pendingView ?? preferences.data ?? defaultBoardView;
   function chooseLayout(view: BoardView) {
     setPendingView(view);
     persistView.mutate(view);

@@ -146,3 +146,6 @@ export async function openBoardSearch(page: Page) {
 export async function setBoardSearch(page: Page, value: string) {
   await (await openBoardSearch(page)).fill(value);
 }
+
+/** The client navigation's board link, named after the viewer's saved board view. */
+export const boardLink = /^(Canvas|List|Timeline|Kanban|Calendar)$/;

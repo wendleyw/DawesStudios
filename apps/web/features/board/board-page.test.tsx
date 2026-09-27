@@ -167,8 +167,8 @@ describe("BoardPage views", () => {
     const buttons = within(picker).getAllByRole("button");
     expect(buttons).toHaveLength(5);
     expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
-      "Canvas view",
       "List view",
+      "Canvas view",
       "Timeline view",
       "Kanban view",
       "Calendar view",
