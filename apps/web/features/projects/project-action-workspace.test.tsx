@@ -12,6 +12,14 @@ const writes = vi.hoisted(() => ({
   shareMiroVersion: vi.fn(),
 }));
 const assignments = vi.hoisted(() => ({ error: null as Error | null }));
+const latestShared = vi.hoisted(() => ({
+  state: { data: undefined, isPending: true, fetchStatus: "fetching" } as {
+    data: { boardId: string; widgetId: string | null } | null | undefined;
+    isPending: boolean;
+    fetchStatus: string;
+  },
+  useLatestSharedMiroLink: vi.fn(),
+}));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ database: {}, profile: { id: "agency", role: "agency" } }),
 }));
@@ -33,6 +41,7 @@ vi.mock("./project-data", async (original) => ({
           isPending: false,
         },
   useInvalidateProject: () => vi.fn(),
+  useLatestSharedMiroLink: latestShared.useLatestSharedMiroLink,
 }));
 // jsdom has no native dialog/top-layer implementation; real focus isolation is covered in E2E.
 Object.defineProperties(HTMLDialogElement.prototype, {
@@ -61,6 +70,8 @@ const board = {
 
 beforeEach(() => {
   assignments.error = null;
+  latestShared.state = { data: undefined, isPending: true, fetchStatus: "fetching" };
+  latestShared.useLatestSharedMiroLink.mockReset().mockImplementation(() => latestShared.state);
   Object.values(writes).forEach((write) => write.mockReset().mockResolvedValue("new-id"));
 });
 
@@ -187,6 +198,71 @@ describe("share dialog", () => {
         }),
       ),
     );
+  });
+});
+
+describe("share dialog prefill", () => {
+  it("fills the link once the latest client link arrives after the dialog opened", async () => {
+    const dialog = (
+      <ProjectActionDialog
+        action={{
+          kind: "share",
+          projectId: "p",
+          round: { id: "r1", number: 1 } as never,
+          prefill: null,
+        }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    const { rerender } = wrap(dialog);
+    expect(latestShared.useLatestSharedMiroLink).toHaveBeenCalledWith("p", true);
+    expect(screen.getByLabelText("Client Miro board")).toBeDisabled();
+    latestShared.state = {
+      data: { boardId: "uXjVClient1=", widgetId: "5" },
+      isPending: false,
+      fetchStatus: "idle",
+    };
+    rerender(<QueryClientProvider client={new QueryClient()}>{dialog}</QueryClientProvider>);
+    expect(screen.getByLabelText("Client Miro board")).toBeEnabled();
+    expect(screen.getByLabelText("Client Miro board")).toHaveValue(
+      "https://miro.com/app/board/uXjVClient1%3D/?moveToWidget=5",
+    );
+  });
+
+  it("leaves the link empty when nothing has been shared yet", () => {
+    latestShared.state = { data: null, isPending: false, fetchStatus: "idle" };
+    wrap(
+      <ProjectActionDialog
+        action={{ kind: "share", projectId: "p", round: null, prefill: null }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Client Miro board")).toBeEnabled();
+    expect(screen.getByLabelText("Client Miro board")).toHaveValue("");
+  });
+
+  it("does not read the latest link when the action already carries one", () => {
+    wrap(
+      <ProjectActionDialog
+        action={{
+          kind: "share",
+          projectId: "p",
+          round: null,
+          prefill: { boardId: "uXjVClient1=", widgetId: null },
+        }}
+        projectId="p"
+        suspended={false}
+        onOpenPlayground={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(latestShared.useLatestSharedMiroLink).toHaveBeenCalledWith("p", false);
   });
 });
 

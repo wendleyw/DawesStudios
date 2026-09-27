@@ -372,7 +372,9 @@ and frame link, defaulting to the board's own link, sent through the idempotent 
 the agency gets **Share with client** on a round (`project-action-share.tsx`, `kind: "share"`) and,
 in Shared with client, **+ New client version** to add one directly with no round; both prefill the
 client board link from `useLatestSharedMiroLink` (the newest project-level client version's link,
-read for the agency alone, so it works from Working files too). Once a board exists, the bar's
+read for the agency alone, so it works from Working files too). An action opened before that read
+finished carries no prefill; `ProjectActionShare` then reads the link itself and remounts its field
+when it arrives, as `MiroField` does. Once a board exists, the bar's
 **+** icon (**Add design board**) adds another, and the agency's **More** menu holds **Edit board**
 (`project-action-board.tsx`, `kind: "board"`, name, Miro link and one designer chosen from the
 project's assignments; if the designers fail to load, the dialog shows that error) and, on a shown

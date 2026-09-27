@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { shareMiroVersion, type CanvasVersion } from "./project-data";
+import { shareMiroVersion, useLatestSharedMiroLink, type CanvasVersion } from "./project-data";
 import { miroBoardUrl, miroUrlHint, parseMiroBoardUrl, type MiroLink } from "./miro-links";
 import {
   ProjectActionShell,
@@ -16,10 +16,15 @@ export type ShareAction = {
   projectId: string;
   /** The round being shared, or null for a version added directly in Shared with client. */
   round: CanvasVersion | null;
+  /** The client board to start from; null lets the dialog read the latest shared link itself. */
   prefill: MiroLink | null;
 };
 
-/** Shares a client version: the agency pastes the client board's link after copying the design. */
+/**
+ * Shares a client version: the agency pastes the client board's link after copying the design. An
+ * action opened before the page had the latest shared link reads it here, so a quick click still
+ * gets the prefill once it arrives.
+ */
 export function ProjectActionShare({
   action,
   suspended,
@@ -30,6 +35,10 @@ export function ProjectActionShare({
   onClose: () => void;
 }) {
   const { database } = useAuth();
+  const latest = useLatestSharedMiroLink(action.projectId, action.prefill === null);
+  const loading = action.prefill === null && latest.isPending && latest.fetchStatus !== "idle";
+  const prefill = action.prefill ?? latest.data ?? null;
+  const prefillUrl = prefill ? miroBoardUrl(prefill) : "";
   const idempotencyKey = useRef(crypto.randomUUID());
   const { closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({
@@ -76,10 +85,13 @@ export function ProjectActionShare({
       </p>
       <label>
         Client Miro board
+        {/* Remounted once a late prefill arrives, so `defaultValue` takes it (as `MiroField`). */}
         <input
+          key={loading ? "loading" : prefillUrl}
           name="miro"
           required
-          defaultValue={action.prefill ? miroBoardUrl(action.prefill) : ""}
+          defaultValue={prefillUrl}
+          disabled={loading}
         />
       </label>
       <label>
