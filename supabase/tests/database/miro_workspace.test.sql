@@ -231,5 +231,37 @@ select lives_ok($$select public.review_publication(pg_temp.k('shared-3'),'approv
 reset role;
 select is((select status::text from public.projects where id=pg_temp.k('project')),'approved','Approval of the latest project-level version approves the project');
 
+-- A shared version is a Miro link and nothing else: its link can change but never be removed.
+select pg_temp.act_as('agency');
+set local role authenticated;
+select throws_ok($$select public.clear_publication_miro_link(pg_temp.k('shared-3'))$$,
+  '22023','A shared version needs its Miro link','The agency cannot remove a shared version''s link');
+select lives_ok($$select public.set_publication_miro_link(pg_temp.k('shared-3'),'https://miro.com/app/board/uXjVClient1=/?moveToWidget=8')$$,
+  'The agency can still change a shared version''s link');
+select is((select widget_id from public.publication_miro_links where publication_id=pg_temp.k('shared-3')),'8','The shared version keeps a link');
+reset role;
+
+-- Author columns: after a board is reassigned, its new designer reads the earlier rounds but never
+-- who made them. Nobody reads the author columns through the API; only definer functions do.
+insert into public.project_assignments(project_id,designer_id) values (pg_temp.k('project'),pg_temp.k('designer-b'));
+select pg_temp.act_as('agency');
+set local role authenticated;
+select lives_ok($$select public.update_design_board(pg_temp.k('board-a'),'Alpha board','https://miro.com/app/board/uXjVAlpha01=/',pg_temp.k('designer-b'))$$,
+  'The agency hands Designer A''s board to Designer B');
+select throws_ok($$select created_by from public.design_versions limit 1$$,'42501',null,'The agency does not read version authors through the API either');
+select lives_ok($$select id, notes, status, created_at from public.design_versions limit 1$$,'The agency reads every other version column');
+reset role;
+select pg_temp.act_as('designer-b');
+set local role authenticated;
+select is((select count(*)::int from public.design_versions where board_id=pg_temp.k('board-a')),2,'Designer B now reads the board''s earlier rounds');
+select throws_ok($$select created_by from public.design_versions where board_id=pg_temp.k('board-a')$$,'42501',null,'Designer B cannot read who made a round');
+select throws_ok($$select count(*) from public.design_versions where created_by=pg_temp.k('designer-a')$$,'42501',null,'Designer B cannot probe for Designer A''s id');
+select throws_ok($$select updated_by from public.design_version_miro_links where version_id=pg_temp.k('round-a1')$$,'42501',null,'Designer B cannot read who linked a round');
+select throws_ok($$select created_by from public.designs limit 1$$,'42501',null,'Designer B cannot read who made a design');
+select throws_ok($$select * from public.design_versions limit 1$$,'42501',null,'A whole-row read is refused rather than leaking the author');
+select lives_ok($$select version_id, board_id, widget_id, updated_at from public.design_version_miro_links limit 1$$,'Designer B reads the link columns');
+select lives_ok($$select id, version_id, title, content, internal_asset_path, sort_order from public.designs limit 1$$,'Designer B reads the design columns');
+reset role;
+
 select * from finish();
 rollback;
