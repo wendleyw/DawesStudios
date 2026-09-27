@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
-import { versionDate, versionNote, versionStatus } from "@/features/shared/version-row";
+import { versionDate, versionNote, versionStatus } from "@/features/projects/version-row";
 import { assertCreditResult, parseErrorDetails } from "@/features/credits/credit-model";
 import type { MiroLink } from "./miro-links";
 

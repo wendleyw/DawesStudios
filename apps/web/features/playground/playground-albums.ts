@@ -9,7 +9,7 @@
  * docs/superpowers/specs/2026-09-23-playground-albums-design.md
  */
 import type { BrandAsset, BrandAssetFolder } from "@/features/brand/brand-data";
-import { mapWithConcurrency } from "@/features/shared/concurrency";
+import { mapWithConcurrency } from "@/features/playground/concurrency";
 import { uploadSizeMessage } from "@/features/shared/upload-rules";
 import {
   PLAYGROUND_FILE_MIMES,

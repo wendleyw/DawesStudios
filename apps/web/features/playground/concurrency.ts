@@ -1,10 +1,7 @@
 /**
  * Runs `run` over `items`, never more than `limit` at once, resolving to results in the same order
- * as `items` regardless of which one finishes first. The one bounded-concurrency ceiling in the
- * app — `features/projects/bulk-drop-model.ts` (the bulk image drop's dimension-read and upload
- * phases) and `features/playground/` (a canvas drop's persist queue and the album-copy download
- * queue) all call this rather than hand-rolling their own worker loop, so the ceiling cannot
- * silently drift between call sites.
+ * as `items` regardless of which one finishes first. Playground drop uploads and album-copy
+ * downloads share this worker loop.
  *
  * A rejection from `run` propagates immediately through the returned promise, exactly as
  * `Promise.all` would for a hand-rolled loop of this same shape: the other in-flight workers keep

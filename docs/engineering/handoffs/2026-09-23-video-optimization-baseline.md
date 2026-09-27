@@ -14,7 +14,7 @@ Applied codebase-review and first-principles-review to the current browser, medi
 
 The new test creates one uniquely named **Acceptance video loading** client/project, one deliverable, four versions and five distinct video paths per version. It uses the existing agency account and directly inserts service-role fixture records; this tests loading, not production upload/sanitization. The 20 objects contain the same tracked `campaign-clip.mp4` bytes. Cleanup runs in `finally`, uses the existing UUID/title-guarded `cleanupTestProject`, verifies the exact temporary client name, then removes that client. No original membership, design or file is replaced. A follow-up SQL read found zero temporary video clients/projects.
 
-The repeatable test is [video-loading.spec.ts](../../../apps/web/tests/e2e/video-loading.spec.ts). The aggregate results were copied out of transient `test-results` before the orchestrator's next run to [video-loading-baseline-2026-09-23.json](../../verification/video-loading-baseline-2026-09-23.json). It contains counts and timings only, without tokens, signed URLs or private fixture identifiers.
+The historical test was `apps/web/tests/e2e/video-loading.spec.ts` (available before its retirement in commit `13b11bb`); the Miro migration removed this legacy video-loading scenario. The aggregate results were copied out of transient `test-results` before the orchestrator's next run to [video-loading-baseline-2026-09-23.json](../../verification/video-loading-baseline-2026-09-23.json). It contains counts and timings only, without tokens, signed URLs or private fixture identifiers.
 
 ## Measured browser baseline
 

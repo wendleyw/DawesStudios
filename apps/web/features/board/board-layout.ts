@@ -1,4 +1,4 @@
-import { fitToContent } from "@/features/shared/canvas-fit";
+import { fitToContent } from "@/features/board/canvas-fit";
 import type { Project } from "@/features/workspace/workspace-data";
 
 /**
@@ -352,7 +352,7 @@ export function buildStack(input: StackInput): StackFrame[] {
 }
 
 /** Breathing room kept around the board when the view is fitted to it. */
-export { FIT_PAD } from "@/features/shared/canvas-fit";
+export { FIT_PAD } from "@/features/board/canvas-fit";
 /** Automatic framing keeps cards readable; manual zoom can go further, down to 10%. */
 export const MIN_FIT_ZOOM = 0.4;
 

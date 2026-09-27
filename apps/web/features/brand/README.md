@@ -60,6 +60,10 @@ or category filter looks through every folder at once and lists the matches as s
 The tree helpers (`folderPath`, `childFolders`, `folderOptions`, `folderAssetCount`) are pure
 functions in `brand-model.ts`.
 
+`brand-asset-preview.tsx` owns the signed file and link previews shared by the Assets directory,
+Products cards and Logos section. All three consumers import it directly, keeping their dependency
+direction acyclic.
+
 A link is an asset with an HTTPS address instead of a file (`brand-link-dialog.tsx`, category
 Link): its card shows the address's host and its detail dialog offers **Open link** in place of
 **Download file**. Addresses must be complete HTTPS URLs (`safeHttpsUrl` and a database check).

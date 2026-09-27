@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { credentials, evidenceDirectory, localAgency, localCaller, signIn } from "./test-support";
-import { versionGroupKey } from "@/features/shared/version-row";
+import { versionGroupKey } from "@/features/projects/version-row";
 
 test("all ten clients and twenty-five projects render with matching records and scoped navigation", async ({
   browser,

@@ -42,4 +42,4 @@ for (const [type, bytes] of [['image/jpeg', input], ['application/pdf', Buffer.f
   }
 }
 assert.equal((await post(`/deliveries/prepare?projectId=${deliveryProject.id}`, Buffer.from('ZIP'), agency, 'application/zip')).status, 415); assertions++;
-process.stdout.write(`Media HTTP integration passed ${assertions} checks; temporary source, publication and delivery objects were removed.\n`);
+process.stdout.write(`Media HTTP integration passed ${assertions} checks; temporary delivery records and objects were removed.\n`);

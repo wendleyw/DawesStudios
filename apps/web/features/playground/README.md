@@ -19,6 +19,9 @@ mounted form and selected file; it reopens after Playground exits. Consumers own
 that round trip. This feature owns fullscreen framing, animation, state, validation, styles and
 data access.
 
+`concurrency.ts` keeps the bounded worker loop beside its two consumers: canvas drop uploads
+and album-copy downloads. Its colocated tests cover ordering, concurrency limits and failures.
+
 `playground-board.tsx` composes four colocated hooks for its cross-cutting concerns:
 `use-fullscreen-layer.ts` (the dialog's open/close
 animation phase, focus and body-scroll lock/restore), `use-playground-navigation-guard.ts` (the

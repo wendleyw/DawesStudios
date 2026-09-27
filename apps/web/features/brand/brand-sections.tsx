@@ -17,7 +17,7 @@ import {
   type ColorCopyFormat,
   type EditableSectionId,
 } from "./brand-model";
-import { AssetPreview } from "./brand-assets";
+import { AssetPreview } from "./brand-asset-preview";
 import { useBrandAssets, type BrandSection } from "./brand-data";
 import { CopyButton } from "@/features/shared/copy-button";
 

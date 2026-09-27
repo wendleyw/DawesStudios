@@ -9,7 +9,19 @@
 supabase/.temp
 supabase/.branches
 supabase/.local
-docs/ref
-docs/verification/screenshots
+supabase/.restore-drill
+# Local datasets, build evidence and tool sessions are not application inputs.
+outputs
+work
+.playwright-mcp
+.superpowers
+deploy/staging/.upstream
+deploy/staging/.work
+deploy/staging/.work-file
+# The web image copies its runtime assets from apps/web/public.
+docs
+brand
+**/__pycache__
+**/*.pyc
 *.log
 .DS_Store

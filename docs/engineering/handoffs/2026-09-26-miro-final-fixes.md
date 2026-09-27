@@ -4,7 +4,7 @@
 - Objective and owned paths: fix reviewed-out Miro doc claims and the static miro-dialog title;
   capture and verify the open `MiroBoardPanel`. Owned: `apps/web/features/projects/README.md`,
   `project-action-dialog.tsx`, `project-action-dialog.test.tsx`, `docs/verification/
-  miro-version-links-2026-09-26.md`, this report, `outputs/miro/miro-panel-*.png`.
+  miro-version-links-2026-09-26.md`, this report, `docs/verification/screenshots/miro-version-links/miro-panel-*.png`.
 
 ## Changes
 - `project-action-dialog.tsx` — miro dialog title is now "Add a Miro link." or "Change the Miro
@@ -27,7 +27,7 @@
   committed): panel fills viewport at 1440/390 light/dark; header doesn't overflow at 390 (`Desk…`
   truncation); focus lands on heading on open; Escape (focus outside iframe) closes and returns
   focus to **View on Miro**; Playground opened once — still full screen. Screenshots at
-  `outputs/miro/miro-panel-{1440,390}-{light,dark}.png`, force-added (matches the existing
+  `docs/verification/screenshots/miro-version-links/miro-panel-{1440,390}-{light,dark}.png`, preserved at the evidence path (originally force-added; matches the existing
   tracked-despite-ignored pattern in that directory).
 - `docker exec supabase_db_dawes-studios psql` read after capture — 0 rows in
   `publication_miro_links` for the SABRE project: the temporary link was removed.

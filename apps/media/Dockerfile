@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY src ./src
 # `/scratch` is where `compose.yaml`'s disk-backed `media-scratch` volume mounts (see its long
-# comment there for why `/tmp` alone -- RAM tmpfs -- cannot hold a video-sized temp file). An
+# comment there for why `/tmp` alone -- RAM tmpfs -- is reserved for incidental temporary files). An
 # empty named volume is populated from whatever already exists at its mount path in the image,
 # ownership and permissions included, the first time a container using it starts; without this
 # directory existing here, owned by `node` before that `USER node` switch below, Docker

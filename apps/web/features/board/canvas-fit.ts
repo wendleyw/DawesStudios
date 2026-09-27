@@ -1,15 +1,6 @@
 /**
- * How a canvas frames its own content.
- *
- * Both xyflow surfaces — the client board and the project canvas — open by fitting the view to the
- * work rather than asking xyflow to measure it after paint, which is what made the board open at an
- * unreadable scale or not at all. The rule is the same in both places, so it lives here once: a
- * canvas that changed this padding or started magnifying small content in one surface and not the
- * other would be a difference nobody chose.
- *
- * The surfaces differ only through the parameters: how far they may zoom out before the content
- * stops being legible, whether height constrains the fit, and how much room surrounds the content.
- * Both fit both axes today; each stops at its own floor and lets the remainder pan.
+ * Fits the client board to its measured content before paint. The minimum zoom, optional height
+ * constraint and padding keep the board legible while leaving larger content available to pan.
  */
 
 /** Breathing room kept around the content on every canvas. */

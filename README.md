@@ -34,5 +34,6 @@ Keep the terminal running and open `http://localhost:3003`. Edit `apps/web/app` 
 - [Production deployment guide](docs/operations/production.md)
 - [Codex / Claude continuation checkpoint](docs/engineering/handoff.md)
 - [Agent orchestration and handoff procedure](docs/engineering/agent-orchestration.md)
+- [Folder-by-folder repository cleanup audit](docs/engineering/repository-cleanup-2026-09-27.md)
 
 The application is in development and not yet deployed. The acceptance matrix records the remaining verification work, and the [production guide](docs/operations/production.md) lists the release checklist; local checks alone do not establish production readiness.

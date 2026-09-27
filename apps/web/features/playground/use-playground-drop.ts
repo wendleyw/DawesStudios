@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
-import { mapWithConcurrency } from "@/features/shared/concurrency";
+import { mapWithConcurrency } from "@/features/playground/concurrency";
 import {
   batchPosition,
   messageOf,

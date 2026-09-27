@@ -37,8 +37,9 @@ a real board remain unverified.
 
 ## Visual check (Step 4)
 
-Screenshots in the git-ignored `outputs/miro/`; the following are committed because this record
-cites them:
+The following committed screenshots are preserved in
+[`screenshots/miro-version-links/`](screenshots/miro-version-links/). They were moved byte-for-byte
+from `outputs/miro/` during the 2026-09-27 repository cleanup so working captures can remain ignored:
 
 - `agency-card-1440-light.png`, `agency-card-1440-dark.png`, `agency-card-390-light.png` — the
   version card baseline (agency, Working files) at 1440 px and 390 px, light and dark.

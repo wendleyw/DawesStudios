@@ -32,7 +32,7 @@ function displayName(value, extension) {
  * `APP_ORIGIN` names the one canonical workspace origin, which the web application also uses to
  * build invitation links, so it stays a single value. `MEDIA_ALLOWED_ORIGINS` adds the others a
  * machine legitimately serves the same application from — a `next dev` on its own port beside the
- * container — which is what a developer hits when a publication is prepared from port 3010 against
+ * container — which is what a developer hits when a cover is prepared from port 3010 against
  * a service configured for 3003. Entries are compared whole; no origin is ever reflected back
  * merely because it asked.
  */
@@ -107,8 +107,7 @@ export function createMediaServer(config) {
         // the OLD object must never take the NEW, now-live cover down with it, so this runs outside
         // the try above and its own failure is logged, not thrown. The old object stays reachable
         // but unreferenced: no `project_covers` row still names it, so a later sweep or a repeated
-        // discard can still remove it (same "duplicate remains" recovery as the raw-video discard
-        // failure a few lines above).
+        // discard can still remove it without affecting the replacement.
         if (previousPath) {
           try { await backend.discard('project-covers', previousPath); } catch {
             process.stderr.write(`Previous cover discard failed for ${previousPath}; a duplicate remains in project-covers.\n`);

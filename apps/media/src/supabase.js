@@ -23,9 +23,8 @@ export function createBackend(config) {
   }
   async function json(path, options) { const response = await request(path, options); const text = await response.text(); return text ? JSON.parse(text) : null; }
   async function rpc(name, data, token) { return json(`/rest/v1/rpc/${name}`, { method: 'POST', data, token }); }
-  // Establishes who the caller is without deciding what they may do — `authenticate` below stays
-  // the agency-only gate every route used until sanitising a video, which a designer must also be
-  // able to reach, needed a caller identity it could authorize per-project instead.
+  // Resolve the active caller profile; `authenticate` below enforces the agency-only gate
+  // for cover and delivery preparation.
   async function identify(token) {
     if (!token) throw new MediaError('Authentication required.', 401);
     const user = await json('/auth/v1/user', { token });

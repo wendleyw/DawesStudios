@@ -4,7 +4,6 @@ import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
@@ -26,9 +25,8 @@ try {
     const stem = path.join(output, `${job.key}-${digest}`);
     const png = `${stem}.png`;
     const pdf = job.document ? `${stem}.pdf` : null;
-    const video = job.motion ? `${stem}.mp4` : null;
     let ready = true;
-    for (const file of [png, pdf, video].filter(Boolean)) {
+    for (const file of [png, pdf].filter(Boolean)) {
       try { await access(file); } catch { ready = false; }
     }
     if (!ready) {
@@ -78,9 +76,8 @@ try {
       });
       await page.screenshot({ path: png, animations: 'disabled' });
       if(pdf) await page.pdf({ path:pdf, width:`${w}px`, height:`${h}px`, printBackground:true, preferCSSPageSize:true });
-      if(video) execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-loop','1','-i',png,'-vf',`scale=1080:-2,zoompan=z='min(zoom+0.00015,1.05)':d=360:s=${w}x${h}:fps=24,format=yuv420p`,'-t','15','-c:v','libx264','-preset','ultrafast','-crf','25','-movflags','+faststart',video],{stdio:'pipe',timeout:120000});
     }
-    results[job.key] = { png, pdf, video, width:job.width, height:job.height };
+    results[job.key] = { png, pdf, width:job.width, height:job.height };
     if(Object.keys(results).length % 20===0) console.log(`Rendered ${Object.keys(results).length}/${jobs.length} campaign layouts.`);
   }
   await writeFile(path.join(output,'index.json'),JSON.stringify(results,null,2)+'\n');

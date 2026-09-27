@@ -3,7 +3,7 @@
 import { ArrowUpRight, ImageIcon, Pencil } from "lucide-react";
 import type { Json } from "@database";
 import { useBrandAssets } from "./brand-data";
-import { AssetPreview } from "./brand-assets";
+import { AssetPreview } from "./brand-asset-preview";
 import { readProducts, safeHttpsUrl } from "./brand-model";
 
 /**

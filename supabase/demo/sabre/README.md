@@ -62,17 +62,19 @@ image-generation tool; the exact English prompts are in [image-prompts.json](ima
 The personal-alarm products are fictional concepts, not verified product photography or specs.
 
 [render.mjs](render.mjs) composes editable HTML/CSS campaign layouts around those photos and renders
-158 PNG previews, 56 PDF previews and five MP4 motion previews using local Chromium and FFmpeg.
+158 PNG previews and 56 PDF previews using local Chromium.
 The renderer and source photos are reproducible; generated derivatives live in ignored
-`supabase/.local/sabre-demo/rendered/`. PDFs and motion are demonstration design previews, not
+`supabase/.local/sabre-demo/rendered/`. These are demonstration design previews, not
 production-ready print packages, website implementations or editable presentation source files.
-The rendered art supplies covers, briefing references, reference assets and final files; motion
-previews are no longer uploaded, because Versions and the design-video pipeline were retired.
+The rendered art supplies covers, briefing references, reference assets and final files. Motion
+briefings retain their project metadata, but the renderer no longer generates unused MP4 previews
+after retirement of Versions and the design-video pipeline. Existing ignored renders and rollback
+state remain untouched; a future render refreshes PNG/PDF derivatives using its recipe hash.
 
 ## Apply or resume locally
 
 Requires the existing local Supabase project, fixture accounts, trusted media worker and installed
-web dependencies, plus Python 3.11+, Node, Chromium for Playwright and FFmpeg. The URL is restricted
+web dependencies, plus Python 3.11+, Node and Chromium for Playwright. The URL is restricted
 to loopback port 55421 and project `dawes-studios`. Run from the repository root. Do not reset or
 re-provision a populated demonstration.
 

@@ -40,17 +40,14 @@ function websocketOrigin(origin: string): string {
  *
  * Verified against the app's actual runtime endpoints (`rg` across `apps/web/app` and
  * `apps/web/features`), not just the two known services:
- * - `connect-src` needs the Supabase origin for PostgREST/Auth/Storage `fetch` calls (e.g.
- *   `features/projects/artwork-files.ts`'s TUS resumable endpoint at
- *   `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`) and its `ws:`/`wss:` equivalent for
- *   `features/projects/project-events.ts`'s Realtime channel, plus the media origin for
- *   `features/projects/media-client.ts`'s direct `fetch` calls to `NEXT_PUBLIC_MEDIA_URL`.
- * - `img-src`/`media-src` need both origins: `<img>`/`<video>` sources throughout
- *   `features/brand`, `features/workspace` and `features/projects` are short-lived Supabase Storage
- *   `createSignedUrl` results (see `brand-data.ts`, `workspace-data.ts`, `project-data.ts`).
+ * - `connect-src` needs the Supabase origin for PostgREST/Auth/Storage requests and its
+ *   `ws:`/`wss:` equivalent for `features/projects/project-events.ts`'s Realtime channel, plus the
+ *   media origin for `features/projects/media-client.ts`'s direct cover and delivery requests.
+ * - `img-src`/`media-src` need both origins: previews use caller-scoped Supabase Storage signed
+ *   URLs (see `brand-data.ts`, `workspace-data.ts`, `project-data.ts` and `playground-data.ts`).
  * - `font-src 'self' data:` is enough: `next/font/google` (`app/layout.tsx`) self-hosts Geist at
  *   build time, so nothing fetches fonts.googleapis.com/fonts.gstatic.com at runtime.
- * - No other external origin appears anywhere in `apps/web` (no analytics, no other CDN).
+ * - `frame-src` allows the Miro embed; external links open separately from application requests.
  */
 export function buildContentSecurityPolicy(env: NodeJS.ProcessEnv = process.env): string {
   const supabaseOrigin = originFor("NEXT_PUBLIC_SUPABASE_URL", env.NEXT_PUBLIC_SUPABASE_URL);
