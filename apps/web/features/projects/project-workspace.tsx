@@ -13,7 +13,7 @@ import { CommentPanel } from "./comment-panel";
 import { ProjectDetails } from "./project-details";
 import { ProjectBackLink, ProjectChannelLead } from "./project-header";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
-import { ProjectToolBar } from "./project-tool-bar";
+import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { MiroEmbed, MiroReviewBar } from "./miro-view";
@@ -231,8 +231,8 @@ export function ProjectWorkspace({
                     : undefined
                 }
               >
-                <button
-                  className="icon-button"
+                <ProjectToolButton
+                  active={shownLink ? assetStripOpen : playgroundOpen}
                   ref={playgroundTrigger}
                   title="Playground"
                   aria-label="Playground"
@@ -247,7 +247,7 @@ export function ProjectWorkspace({
                   }}
                 >
                   <Lightbulb size={18} />
-                </button>
+                </ProjectToolButton>
               </ProjectToolBar>
               {!internal && version && canReviewShared(version, shared, role, project.status) && (
                 <MiroReviewBar

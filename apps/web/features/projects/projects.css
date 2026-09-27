@@ -679,10 +679,116 @@
   width: 20px;
   height: 20px;
 }
-.project-tool-bar .icon-button.selected {
-  background: var(--surface-subtle);
+/*
+ * A tool's edge is an SVG outline (`ProjectToolButton`): a click sends a streak of light once around
+ * it, and an active tool keeps a faint track with a small comet orbiting it. Turning a tool on also
+ * redraws its icon's strokes. All of it is decoration and stops under reduced motion.
+ */
+.project-tool-button {
+  position: relative;
+}
+.project-tool-button.selected {
   color: var(--foreground);
-  box-shadow: inset 0 0 0 1px var(--border);
+}
+.project-tool-icon {
+  display: flex;
+}
+/* Beats `.project-tool-bar .icon-button svg`, which sizes the icon, not this outline. */
+.project-tool-bar .icon-button .project-tool-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.project-tool-edge rect {
+  fill: none;
+  stroke-width: 1.5;
+}
+.project-tool-track {
+  stroke: var(--border-strong);
+  opacity: 0;
+  transition: opacity 250ms;
+}
+.project-tool-comet {
+  stroke: var(--foreground);
+  stroke-dasharray: 0 100;
+  opacity: 0;
+  filter: drop-shadow(0 0 3px light-dark(rgb(39 42 48 / 45%), rgb(255 255 255 / 70%)));
+}
+.project-tool-button.selected .project-tool-track {
+  opacity: 1;
+}
+.project-tool-button.selected .project-tool-comet {
+  opacity: 0.9;
+  stroke-dasharray: 14 86;
+  animation: project-tool-orbit 3.2s linear infinite;
+}
+.project-tool-button.selected .is-firing .project-tool-comet {
+  opacity: 1;
+  animation:
+    project-tool-fire 650ms cubic-bezier(0.3, 0.7, 0.3, 1),
+    project-tool-orbit 3.2s linear 650ms infinite;
+}
+.project-tool-button:not(.selected) .is-firing .project-tool-comet {
+  stroke-width: 2;
+  animation: project-tool-fire-out 650ms cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
+}
+.project-tool-icon.is-drawing svg * {
+  stroke-dasharray: 1;
+  animation: project-tool-draw 520ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes project-tool-fire {
+  0% {
+    stroke-dasharray: 2 98;
+    stroke-dashoffset: 0;
+  }
+  60% {
+    stroke-dasharray: 40 60;
+  }
+  100% {
+    stroke-dasharray: 14 86;
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes project-tool-fire-out {
+  0% {
+    stroke-dasharray: 2 98;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  60% {
+    stroke-dasharray: 40 60;
+    opacity: 1;
+  }
+  100% {
+    stroke-dasharray: 0 100;
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+@keyframes project-tool-orbit {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+@keyframes project-tool-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-tool-button .project-tool-comet,
+  .project-tool-icon.is-drawing svg * {
+    animation: none !important;
+  }
+  .project-tool-button:not(.selected) .project-tool-comet {
+    opacity: 0;
+  }
 }
 /* The studio's animated mark, white on the menu colour, as a tile beside the first tool. */
 .project-tool-bar-brand {

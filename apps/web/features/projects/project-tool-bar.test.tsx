@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 // The animated mark is decorative and needs a browser's matchMedia; its own test covers it.
 vi.mock("@/features/shared/brand-mark", () => ({ BrandMark: () => null }));
 
-import { ProjectToolBar } from "./project-tool-bar";
+import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 
 const playground = (
   <button type="button" className="icon-button" aria-label="Playground">
@@ -86,5 +86,53 @@ describe("ProjectToolBar", () => {
     );
     await user.click(screen.getByRole("button", { name: "Feedback" }));
     expect(onToggle).toHaveBeenCalled();
+  });
+});
+
+describe("ProjectToolButton", () => {
+  it("sends a streak around its edge on every click", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <ProjectToolButton aria-label="Playground" onClick={onClick}>
+        P
+      </ProjectToolButton>,
+    );
+    const button = screen.getByRole("button", { name: "Playground" });
+    const edge = button.querySelector(".project-tool-edge")!;
+    expect(edge).not.toHaveClass("is-firing");
+    await user.click(button);
+    expect(edge).toHaveClass("is-firing");
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks an active tool and redraws its icon only when it turns on", () => {
+    const icon = (
+      <svg>
+        <path d="M0 0h10" />
+      </svg>
+    );
+    const { rerender } = render(<ProjectToolButton aria-label="Details">{icon}</ProjectToolButton>);
+    const button = screen.getByRole("button", { name: "Details" });
+    const glyph = button.querySelector(".project-tool-icon")!;
+    expect(button).not.toHaveClass("selected");
+    expect(glyph.querySelector("path")).toHaveAttribute("pathLength", "1");
+    rerender(
+      <ProjectToolButton aria-label="Details" active>
+        {icon}
+      </ProjectToolButton>,
+    );
+    expect(button).toHaveClass("selected");
+    expect(glyph).toHaveClass("is-drawing");
+  });
+
+  it("forwards its ref to the button", () => {
+    const ref = { current: null as HTMLButtonElement | null };
+    render(
+      <ProjectToolButton aria-label="Playground" ref={ref}>
+        P
+      </ProjectToolButton>,
+    );
+    expect(ref.current).toBe(screen.getByRole("button", { name: "Playground" }));
   });
 });

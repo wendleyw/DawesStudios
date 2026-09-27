@@ -16,8 +16,12 @@ row places Working files / Shared with client on the left and All deliverables o
 wrap on narrow screens and remain reachable above the canvas. Project details, Conversation and
 Playground live in `project-tool-bar.tsx`, a floating bar (group **Project actions**) centred at the
 bottom of the canvas. While a side panel is open the bar re-centres in the space between the zoom
-pill and the panel; on canvases narrower than 800 px it hides until the panel closes. The open
-panel's button is selected. On phones it moves to the bottom right with touch-sized buttons, clear of
+pill and the panel; on canvases narrower than 800 px it hides until the panel closes. Every tool is
+a `ProjectToolButton` (exported from the same file, and used by `project-workspace.tsx` for the
+Playground): a click sends a streak of light once around the button's SVG outline, and an active
+tool (the open panel, Feedback, or an open Playground/asset strip) keeps a faint outline with a small
+comet orbiting it, its icon redrawing its strokes as it turns on. The effect is decoration in
+`projects.css` and stops under reduced motion; `aria-expanded` still carries the state. On phones it moves to the bottom right with touch-sized buttons, clear of
 the zoom pill. It is not shown while reviewing a design; the viewer keeps its own Playground button.
 The bar opens with the studio's animated mark (`shared/brand-mark.tsx`) in a tile of the menu
 colour, as branding rather than a control.
