@@ -23,6 +23,7 @@ insert into mc_context values
   ('b-nodue', md5('mc:b-nodue')::uuid),
   ('b-past', md5('mc:b-past')::uuid),
   ('b-big', md5('mc:b-big')::uuid),
+  ('b-far', md5('mc:b-far')::uuid),
   ('p-old', md5('mc:p-old')::uuid),
   ('credit-request', md5('mc:credit-request')::uuid);
 create function pg_temp.context(p_key text) returns uuid language sql as $$
@@ -66,7 +67,7 @@ insert into public.briefings(id,client_id,title,service_type,status,overview,goa
 select pg_temp.context(k),pg_temp.context('client-org'),'MC '||k,'social','budget_confirmed','Monthly credits fixture.','Prove monthly credits.',
   '{"source":"brand_hub","questions":{"content":"I’ll provide the content"}}',
   '[{"name":"Launch post","format":"feed","width":1080,"height":1350,"quantity":1,"scope":"original"}]',due,c,c,'Fixture budget.',pg_temp.context('agency')
-from (values ('b-next',pg_temp.m(1)+14,10),('b-explicit',null,10),('b-nodue',null,5),('b-past',null,5),('b-big',null,500)) v(k,due,c);
+from (values ('b-next',pg_temp.m(1)+14,10),('b-explicit',null,10),('b-nodue',null,5),('b-past',null,5),('b-big',null,500),('b-far',pg_temp.m(14)+3,1)) v(k,due,c);
 
 -- 1. Month helpers use UTC month boundaries.
 select is(private.month_of('2026-09-30 23:30:00-04'::timestamptz),'2026-10-01'::date,'month_of(timestamptz) uses the UTC month');
@@ -154,10 +155,12 @@ select throws_ok($$select public.accept_briefing(pg_temp.context('b-past'),pg_te
 select throws_ok($$select public.accept_briefing(pg_temp.context('b-past'),pg_temp.m(-1))$$,'22023','Choose the current month or a later one','A past month refuses an acceptance');
 select throws_ok($$select public.accept_briefing(pg_temp.context('b-big'))$$,'P0001','Insufficient credit balance','An insufficient month balance refuses an acceptance');
 select is(public.accept_briefing(pg_temp.context('b-next'),pg_temp.m(2)),pg_temp.project_of('b-next'),'A repeated acceptance returns the same project');
+select lives_ok($$select public.accept_briefing(pg_temp.context('b-far'))$$,'A briefing due beyond the next 11 months is accepted by default');
 reset role;
 select is((select credit_month from public.projects where id=pg_temp.project_of('b-next')),pg_temp.m(1),'The project belongs to its due-date month');
 select is((select credit_month from public.projects where id=pg_temp.project_of('b-explicit')),pg_temp.m(2),'The project belongs to the chosen month');
 select is((select credit_month from public.projects where id=pg_temp.project_of('b-nodue')),pg_temp.m(0),'The project belongs to the current month');
+select is((select credit_month from public.projects where id=pg_temp.project_of('b-far')),pg_temp.m(11),'A far due date defaults to the last month that can be charged');
 select is(pg_temp.balance('client-org',1),75,'The due-date month is debited');
 select is(pg_temp.balance('client-org',2),50,'The chosen month receives its allowance and is debited');
 select is(pg_temp.balance('client-org',0),65,'The current month is debited');
@@ -230,6 +233,11 @@ select is((select charged_month from public.project_settlements where project_id
 select is((select count(*)::int from public.project_settlements where project_id in (pg_temp.project_of('b-explicit'))),1,'The refused settlement left no row behind');
 select is((select count(*)::int from public.credit_ledger where project_id=pg_temp.project_of('b-nodue') and kind='final_adjustment'),1,'A replayed settlement writes one adjustment');
 select is((select count(*)::int from public.credit_ledger where project_id=pg_temp.context('p-old') and kind='final_adjustment'),0,'Settling at the moved charge refunds nothing');
+select pg_temp.act_as('agency');
+set local role authenticated;
+select is((public.settle_project_credits(pg_temp.context('p-old'),3,'Charged as moved','mc:settle-old',pg_temp.m(1))).difference,0,'An exact retry naming a charge month returns a zero-difference settlement');
+select is((public.settle_project_credits(pg_temp.project_of('b-next'),4,'Fewer formats delivered','mc:settle-3',pg_temp.m(1))).difference,-6,'An exact retry naming a charge month returns a refund settlement');
+reset role;
 
 -- 11. Existing credit functions keep working on the current month.
 insert into public.credit_requests(id,client_id,requested_by,amount,status) values
@@ -242,6 +250,16 @@ reset role;
 select is((select kind||':'||month::text from public.credit_ledger where idempotency_key='credit-request:'||pg_temp.context('credit-request')),'extra:'||pg_temp.m(0)::text,'A fulfilled request becomes an extra in the current month');
 select is(pg_temp.balance('client-org',0),90,'The fulfilled request adds to the current month');
 select is((select balance from public.credit_accounts where client_id=pg_temp.context('client-org')),90,'The account balance still mirrors the current month');
+
+-- 11b. A client created with initial credits has one allocation in its current month.
+select pg_temp.act_as('agency');
+set local role authenticated;
+select public.create_client('MC Created','mc-created','',100) as created_client \gset
+reset role;
+select is((select balance from public.credit_months where client_id=:'created_client'::uuid and month=pg_temp.m(0)),100,'Initial credits open the current month');
+select is((select sum(amount)::int from public.credit_ledger where client_id=:'created_client'::uuid),100,'Initial credits are recorded once');
+select is((select count(*)::int from public.credit_ledger where client_id=:'created_client'::uuid and kind='allocation'),1,'Exactly one allocation records the initial credits');
+select is((select balance from public.credit_accounts where client_id=:'created_client'::uuid),100,'The account mirrors the initial credits');
 
 -- 12. Month summary.
 select pg_temp.act_as('client');
