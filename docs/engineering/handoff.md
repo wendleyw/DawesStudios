@@ -37,8 +37,7 @@ The live overlay's rollback is superseded: `remove` refuses on it (legacy rows g
 the approved fresh reset + SABRE apply makes a new checkpoint. Canonical-count specs fail on the
 overlay only (passed 7/7 on staging). Next: user approves → `local_stack.py reset
 --confirm-local-data-loss`, verify canonical, SABRE apply, `remove --dry-run`, full e2e, record in
-`docs/verification/`. Then the all-roles audit goal.
-J10 staging: 68/72 pass (canonical); only SMTP remains.
+`docs/verification/`. Then the all-roles audit goal. (J10 staging: 68/72; only SMTP remains.)
 
 ## Accepted decisions
 
