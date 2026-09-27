@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Claude Code**; the session has ended and no session holds the tree.
+Updated: 2026-09-27 EDT. Owner: **Claude Code** (active orchestrator session).
 
 This file holds current state only and stays at or under 100 lines. When an entry is superseded,
 move it to [history](history/handoff-2026-09-25.md) (or a newer history file). Read the
@@ -14,28 +14,30 @@ history only when a task needs earlier evidence.
 - To hand over: update this file, commit it, then start the other tool with the prompt in
   [agent orchestration](agent-orchestration.md#codex-and-claude-continuity).
 
-## Done (2026-09-26)
-
-**Miro workspace** (merged into local `main` by fast-forward; `5ecabde..a028f94`, [spec](../superpowers/specs/2026-09-26-miro-workspace-design.md)): named design boards (one
-designer each) replace Versions in Working files, and per-project client versions replace it in
-Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
-`review_publication` for project-level versions, and designer-to-designer privacy on
-`internal_comments` on both read and write (migrations `202609260006`, `0008`, `0009` — no `0007`).
-Known overlay-count failures (pgTAP and e2e) are listed in the history.
-**After the merge** (`08a38ed..1100a68`): Versions opens with every frame in view (50–100%); Brand Hub titles hidden; round comments notify only the board's designer (`0012`);
-`project-page.tsx` split into `project-versions-canvas.tsx`; a reassigned board leaves the designer's
-view within 30 s; `0013` tightens retries and sharing; Playground and board pages split into hooks;
-the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/5 (overlay only).
-[History](history/handoff-2026-09-26.md) holds the 2026-09-26 database incident and those counts.
-
 ## Done (2026-09-27)
 
-**Two-row Miro bar** (channel row tinted amber/blue); no "Miro workspace" button: Add/Earlier in More.
-**Board due dates** (`202609270002`): internal, on or before the project's; designers see the earlier.
-**Account menu:** the credit chip became a ring around the avatar (share of the latest top-up left) and a hover menu with Credits, Request/Adjust, Account settings, Sign out.
-**Board link names the view:** the top menu's Board link reads the saved view (List by default); the picker lists List first. **Tool bar comet:** project tool bar buttons send a light streak around their edge on click; an active one keeps an orbiting comet.
+Earlier entries (Miro merge, Miro bar, board due dates, account ring): [history](history/handoff-2026-09-26.md).
+**Project covers** ([spec](../superpowers/specs/2026-09-27-project-cover-design.md)): agency upload,
+sanitized by the media worker, "Visible to the client" toggle; board cards show cover or placeholder.
+**Retire Versions, phase 1** ([spec](../superpowers/specs/2026-09-27-retire-versions-design.md),
+`5d89e64..cddfa48`): every project renders only the Miro workspace; legacy canvas, uploads, pins and
+media publication routes deleted; e2e rewritten (`project-cover.spec.ts`). The DB was untouched.
+**Monthly credits** ([spec](../superpowers/specs/2026-09-27-monthly-credits-design.md),
+`6fe2291..4f867c9`, migrations `202609270003`–`0006`): per-client monthly plans, extras, transfers,
+lazy expiry; acceptance picks a month (current + 11); agency moves and settles a project's credits
+once with a reason; Credits page month switcher; header ring shows the current month. All four tasks
+reviewed; `monthly-credits.spec.ts` 5/5, `intake-admin` 6/6, unit 1174/1174 (this session).
 
-## In progress — nothing. J10 staging: 68/72 pass (canonical); only SMTP remains.
+## In progress — Retire Versions, phase 2 (database)
+
+[Plan](../superpowers/plans/2026-09-27-retire-versions-phase-2.md). Task 1 (delete legacy rows, drop
+`designs`/`published_designs`, version `deliverable_id`, comment design/pin columns, legacy RPCs)
+dispatched from `4f867c9`; ledger in `.superpowers/sdd/2026-09-27-retire-versions-phase-2/`. Then
+Task 2 (storage cleanup script, drop `published-assets`), phase 3 (seed and SABRE demo in the Miro
+model), phase 4 (Drive link), phase 5 (rules, docs, full e2e, ONE approved reset + SABRE apply).
+After that: the user's all-roles audit goal (every role, text, badge, status, alignment).
+
+J10 staging: 68/72 pass (canonical); only SMTP remains.
 
 ## Accepted decisions
 
@@ -62,8 +64,8 @@ the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/
 - Next.js dev server on `http://localhost:3003`, detached, logging to `/tmp/dawes-next-dev.log`. If
   `globals.css` edits stop showing, clear `apps/web/.next/dev/cache` and restart it on the same port
   (last done 2026-09-26 ~17:30, pid 91871). Never start a competing server.
-- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609260009`, rebuilt
-  2026-09-26 after the incident above); media on 55430. Do not reset or re-provision.
+- Local Supabase `dawes-studios` on ports 55421–55424 (migrations through `202609270006`; rebuilt
+  2026-09-26 after the incident in history); media on 55430. Never `db reset` / `migration down`.
 - Staging rehearsal is **stopped** with its volumes kept (canonical dataset, 10 / 25). Resume it with
   `deploy/staging/scripts/stage.sh up && stage.sh app-up`. It is disposable.
 - `main` has local commits only (not pushed); `feat/miro-workspace` is fully merged into it.
@@ -73,12 +75,10 @@ the open panel and deliverable filter survive a channel switch. Full e2e: 112/3/
 - Real server items: an R2 bucket (object tagging), the TLS proxy, SMTP delivery, a restore
   drill, and rate limiting at the proxy.
 - The notification feed shows only the latest 100 items, with no pagination (product decision).
-- `add_design` computes `sort_order` with an unlocked `count(*)`, so concurrent adds to one version
-  can collide (found while planning bulk drop, which registers sequentially per deliverable).
 - tus termination on Supabase is unverified (a cancelled partial upload relies on the 24-hour window);
   a missing idempotent output reads as "raw upload expired"; Escape mid-upload closes silently.
 - Unknown URLs (now `/search` too) show "page unavailable" with HTTP 200, not 404 (pre-existing).
-  The tracked root `login.png` was deleted in the working tree by someone else; left for the user.
+  The root `login.png` deletion in the working tree is someone else's; left for the user.
 - The browser suite is not in CI. Observation F-5 (an intermittent test flake) is still open.
   Two legacy local Playground boards without `project_id` are unreachable (local data only).
 - Safari and Firefox not run; zoom pill and project bar centres differ by 4–6 px (parked); What's
