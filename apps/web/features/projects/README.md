@@ -386,6 +386,15 @@ See [the verification record](../../../../docs/verification/miro-mode-2026-09-26
 superseded [pre-Miro-mode record](../../../../docs/verification/miro-version-links-2026-09-26.md)
 for the panel this replaced).
 
+`npx playwright test tests/e2e/miro-workspace.spec.ts` verifies the Miro workspace round trip on a
+disposable SABRE acceptance project with no versions: the agency adds a design board for designer A
+beside designer B's, designer A sends round 1, the agency shares it with a client link, the client
+requests changes, the agency adds V2 directly in Shared with client and the client approves (the
+project becomes `approved`). A second test proves, through designer B's own session and page, that
+designer B receives only their own board and none of designer A's rounds, comments or name.
+`cleanupTestProject` deletes the boards, rounds, Miro links and share requests with the project.
+Specs that assert the legacy Versions canvas on a seeded project open it with `?view=versions`.
+
 Video loading and playback-state regressions can be run from `apps/web` with:
 
 ```sh

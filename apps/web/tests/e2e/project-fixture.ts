@@ -110,7 +110,11 @@ delete from public.publication_reviews where project_id in (select id from accep
 delete from public.published_designs where project_id in (select id from acceptance_target);
 delete from public.published_versions where project_id in (select id from acceptance_target);
 delete from public.designs where project_id in (select id from acceptance_target);
+delete from private.miro_share_requests where project_id in (select id from acceptance_target);
+delete from public.publication_miro_links where project_id in (select id from acceptance_target);
+delete from public.design_version_miro_links where project_id in (select id from acceptance_target);
 delete from public.design_versions where project_id in (select id from acceptance_target);
+delete from public.design_boards where project_id in (select id from acceptance_target);
 delete from public.delivery_files where project_id in (select id from acceptance_target);
 delete from public.project_assets where project_id in (select id from acceptance_target);
 delete from public.project_assignments where project_id in (select id from acceptance_target);

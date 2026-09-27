@@ -34,7 +34,7 @@ for (const role of ["client", "agency"] as const) {
   test(`the ${role} sees the credits a project used in its title card`, async ({ page }) => {
     const { projectId, credits } = await debitedProject();
     await signIn(page, credentials[role]);
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/projects/${projectId}?view=versions`);
     const chip = page.locator(".project-header .project-credits-chip");
     await expect(chip).toHaveText(creditsText(credits));
     await expect(chip).toHaveAttribute("title", "Credits used by this project");
@@ -64,7 +64,7 @@ test("a designer's project page neither shows nor reads credits", async ({ page 
     if (request.url().includes("/rest/v1/credit_ledger")) ledgerReads.push(request.url());
   });
   await signIn(page, credentials.designer);
-  await page.goto(`/projects/${projectId}`);
+  await page.goto(`/projects/${projectId}?view=versions`);
   await expect(page.locator(".project-header h1")).toBeVisible();
   await expect(page.locator(".project-credits-chip")).toHaveCount(0);
   expect(ledgerReads).toEqual([]);
@@ -74,7 +74,7 @@ test("on a phone the chip keeps its corner with the icon and number", async ({ p
   const { projectId, credits } = await debitedProject();
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, credentials.client);
-  await page.goto(`/projects/${projectId}`);
+  await page.goto(`/projects/${projectId}?view=versions`);
   const chip = page.locator(".project-header .project-credits-chip");
   await expect(chip).toHaveText(creditsText(credits));
   await expect(chip).toBeInViewport();
