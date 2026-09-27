@@ -47,6 +47,11 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
   const linked = useBriefingProject(briefingId);
   const people = useClientPeople(clientId);
   const [changingRequester, setChangingRequester] = useState(false);
+  // The budget form remounts whenever the briefing row changes (to reload the saved figures), so the
+  // chosen credit month lives here and survives confirming the budget.
+  const [acceptMonth, setAcceptMonth] = useState<{ briefingId: string; month: string } | null>(
+    null,
+  );
   if (briefings.isPending || campaigns.isPending)
     return <PageStatus>Loading the briefing…</PageStatus>;
   const briefing = briefings.data?.find((item) => item.id === briefingId);
@@ -154,7 +159,16 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
               </Link>
             </>
           ) : profile?.role === "agency" ? (
-            <BudgetReview key={`${briefing.id}-${briefing.updated_at}`} briefing={briefing} />
+            <BudgetReview
+              key={`${briefing.id}-${briefing.updated_at}`}
+              briefing={briefing}
+              month={
+                acceptMonth?.briefingId === briefing.id
+                  ? acceptMonth.month
+                  : defaultAcceptanceMonth(briefing.due_date)
+              }
+              onMonthChange={(month) => setAcceptMonth({ briefingId: briefing.id, month })}
+            />
           ) : (
             <>
               <h2>
@@ -246,7 +260,15 @@ function RequesterDialog({
   );
 }
 
-function BudgetReview({ briefing }: { briefing: Briefing }) {
+function BudgetReview({
+  briefing,
+  month,
+  onMonthChange,
+}: {
+  briefing: Briefing;
+  month: string;
+  onMonthChange: (month: string) => void;
+}) {
   const { database } = useAuth();
   const queryClient = useQueryClient();
   const invalidateWorkspace = useInvalidateWorkspace();
@@ -260,7 +282,6 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
   // defaults to (the due-date month, clamped to the open window) and always sends its choice, so
   // the figures shown are the figures the procedure checks.
   const months = useMemo(() => openCreditMonths(), []);
-  const [month, setMonth] = useState(() => defaultAcceptanceMonth(briefing.due_date));
   const summaries = useCreditMonthSummaries(briefing.client_id, months);
   const balance = {
     isPending: summaries.isPending,
@@ -343,7 +364,7 @@ function BudgetReview({ briefing }: { briefing: Briefing }) {
         </label>
         <label>
           Credit month
-          <select value={month} onChange={(event) => setMonth(event.target.value)}>
+          <select value={month} onChange={(event) => onMonthChange(event.target.value)}>
             {months.map((option, index) => {
               const summary = summaries.data?.[index];
               return (

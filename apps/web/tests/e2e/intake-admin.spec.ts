@@ -300,7 +300,15 @@ test.describe("Briefing intake, credits, and account administration", () => {
       await agencyPage
         .getByLabel("Scope note")
         .fill("Additional story adaptation and edit coverage");
+      // Credits are held per month; the fixture's opening credits sit in the current month, while
+      // the briefing's due date defaults the debit to its own (empty) month. The month is chosen
+      // before confirming, so the choice must survive the budget form reloading.
+      const now = new Date();
+      const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      await agencyPage.getByLabel("Credit month").selectOption(currentMonth);
       await agencyPage.getByRole("button", { name: "Confirm budget" }).click();
+      await expect(agencyPage.getByText(/9 credits · one project/)).toBeVisible();
+      await expect(agencyPage.getByLabel("Credit month")).toHaveValue(currentMonth);
       await agencyPage.getByRole("button", { name: /Accept.*project/ }).click();
       await expect(agencyPage).toHaveURL(/\/projects\/[^/]+$/);
       projectId = agencyPage.url().split("/").at(-1)!;
@@ -337,7 +345,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
         await client.from("projects").select("campaign_id").eq("id", projectId).single()
       ).data!;
       const debit = (
-        await client.from("credit_ledger").select("created_at").eq("project_id", projectId).single()
+        await client.from("credit_ledger").select("month").eq("project_id", projectId).single()
       ).data!;
       await expect(page.getByRole("button", { name: "Filters", exact: true })).toHaveAttribute(
         "aria-expanded",
@@ -348,8 +356,8 @@ test.describe("Briefing intake, credits, and account administration", () => {
         .selectOption(reportProject.campaign_id!);
       await page.getByRole("combobox", { name: "Project", exact: true }).selectOption(projectId);
       await page
-        .getByRole("combobox", { name: "Period", exact: true })
-        .selectOption(debit.created_at.slice(0, 7));
+        .getByRole("combobox", { name: "Credit month", exact: true })
+        .selectOption(debit.month);
       await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("added");
       await expect(page.getByRole("heading", { name: "No activity in this view." })).toBeVisible();
       await page.getByRole("combobox", { name: "Activity", exact: true }).selectOption("used");
@@ -365,7 +373,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       expect(csv).toContain(title);
       expect(csv).toContain("-9");
       expect(csv.trim().split("\r\n")).toHaveLength(2);
-      expect(csv.split("\r\n")[0].split(",")).toHaveLength(9);
+      expect(csv.split("\r\n")[0].split(",")).toHaveLength(10);
       expect(csv).toContain("Additional story adaptation and edit coverage");
       expect(csv).toContain("Second audience variation");
       await page.getByLabel("Search credit activity").fill("No matching acceptance activity");

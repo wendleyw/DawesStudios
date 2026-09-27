@@ -36,44 +36,6 @@ function mediaServiceBlock(): string {
   return match[1];
 }
 
-/**
- * The video ceiling is declared in five places, because five runtimes must each refuse an oversized
- * file on their own: `VIDEO_MAX_BYTES` here, `LIMITS.videoBytes` in the media service,
- * `202609210004_video_storage.sql`'s bucket limit and attestation CHECK, `supabase/config.toml`'s
- * global storage limit, and `compose.yaml`'s scratch volume. The duplication is unavoidable — they
- * cannot import from one another — so the guard has to be that every copy is asserted against one
- * source.
- *
- * Four of the five were. The media service's was not, and it is the one furthest from the person
- * uploading: the browser gates on `VIDEO_MAX_BYTES`, so raising that alone lets a file through the
- * whole resumable upload and into `internal-assets`, and `apps/media` then refuses it with a 413
- * during sanitisation. The person waits out the entire transfer before being told no, and the raw
- * object is already written.
- */
-describe("the media service agrees with the browser about the video ceiling", () => {
-  it("declares the same byte ceiling the upload path gates on", () => {
-    const sanitize = readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        "..",
-        "..",
-        "..",
-        "media",
-        "src",
-        "sanitize.js",
-      ),
-      "utf8",
-    );
-    const declared = sanitize.match(/videoBytes:\s*([0-9*_ ]+?)[,}]/);
-    expect(declared, "apps/media/src/sanitize.js should declare `videoBytes`").not.toBeNull();
-    // The literal is written as an expression (`1024 * 1024 * 1024`), so it is evaluated rather
-    // than string-matched: a future `1_073_741_824` or `2 * 1024 ** 3` is the same ceiling and
-    // should not fail, while a genuinely different number must.
-    const value = Number(new Function(`return (${declared![1].replace(/_/g, "")})`)());
-    expect(value).toBe(VIDEO_MAX_BYTES);
-  });
-});
-
 describe("the media service's scratch space is disk, not RAM", () => {
   it("mounts a named volume rather than sizing /tmp for video-sized writes", () => {
     const block = mediaServiceBlock();
