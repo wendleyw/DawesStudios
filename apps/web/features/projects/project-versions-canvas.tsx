@@ -40,7 +40,7 @@ import {
 } from "./project-data";
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectHeader } from "./project-header";
-import { ProjectToolBar } from "./project-tool-bar";
+import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { VersionContext } from "./version-context";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import { PlaygroundBoard } from "@/features/playground/playground-board";
@@ -380,8 +380,8 @@ export function ProjectVersionsCanvas({
 
   const quickActions = (
     <>
-      <button
-        className="icon-button"
+      <ProjectToolButton
+        active={miroActive ? assetStripOpen : playgroundOpen}
         ref={playgroundTrigger}
         title="Playground"
         aria-label="Playground"
@@ -395,7 +395,7 @@ export function ProjectVersionsCanvas({
         }}
       >
         <Lightbulb size={18} />
-      </button>
+      </ProjectToolButton>
     </>
   );
   return (

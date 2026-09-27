@@ -17,8 +17,8 @@ wrap on narrow screens and remain reachable above the canvas. Project details, C
 Playground live in `project-tool-bar.tsx`, a floating bar (group **Project actions**) centred at the
 bottom of the canvas. While a side panel is open the bar re-centres in the space between the zoom
 pill and the panel; on canvases narrower than 800 px it hides until the panel closes. Every tool is
-a `ProjectToolButton` (exported from the same file, and used by `project-workspace.tsx` for the
-Playground): a click sends a streak of light once around the button's SVG outline, and an active
+a `ProjectToolButton` (exported from the same file, and used for the Playground button by both
+`project-versions-canvas.tsx` and `project-workspace.tsx`): a click sends a streak of light once around the button's SVG outline, and an active
 tool (the open panel, Feedback, or an open Playground/asset strip) keeps a faint outline with a small
 comet orbiting it, its icon redrawing its strokes as it turns on. The effect is decoration in
 `projects.css` and stops under reduced motion; `aria-expanded` still carries the state. On phones it moves to the bottom right with touch-sized buttons, clear of
