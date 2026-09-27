@@ -129,15 +129,18 @@ test("video preview loading budget and viewer seeking", async ({ page }, testInf
     // A fixed observation window is part of this performance probe, not an action-readiness wait.
     await page.waitForTimeout(2_000);
     await Promise.all(pending);
-    // Scoped to the project canvas: the sidebar's animated brand mark (`video.brand-mark`) is
-    // chrome, not a design preview, and must never be counted alongside these.
-    const previews = await page.locator(".project-canvas video").evaluateAll((elements) => ({
-      videoElements: elements.length,
-      metadataPreloads: elements.filter(
-        (element) => (element as HTMLVideoElement).preload === "metadata",
-      ).length,
-      assignedSources: elements.filter((element) => !!element.getAttribute("src")).length,
-    }));
+    // Scoped to the project canvas and excluding the animated brand mark (`video.brand-mark`),
+    // which the tool bar renders inside the canvas: it is chrome, not a design preview, and must
+    // never be counted alongside these.
+    const previews = await page
+      .locator(".project-canvas video:not(.brand-mark)")
+      .evaluateAll((elements) => ({
+        videoElements: elements.length,
+        metadataPreloads: elements.filter(
+          (element) => (element as HTMLVideoElement).preload === "metadata",
+        ).length,
+        assignedSources: elements.filter((element) => !!element.getAttribute("src")).length,
+      }));
     const beforeOpen = { ...network, ...previews, observationMs: Date.now() - startedAt };
     if (phase === "after")
       await page.screenshot({ path: `${screenshotDirectory}/video-project-1600.png` });
