@@ -25,10 +25,10 @@ Shared with client, per channel (`usesWorkspace`). Rounds, sharing, a rewritten
 2,4,9,18,32,54 (SABRE-overlay counts; a left-behind "Acceptance Playground …" client adds more —
 remove it with the fixture's cleanup). **All-roles e2e:** only overlay counts fail
 (`canonical-workspaces`:7, `design-audit`:18, `workspace-actions`:14, `workspace.spec`:25/:48).
-**After the merge** (`08a38ed..13fb4fc`): Versions opens with every frame in view (50–100%); Brand Hub
-section titles hidden under the tabs; round comments notify only the board's designer (`0012`);
+**After the merge** (`08a38ed..3a4d0e2`): Versions opens with every frame in view (50–100%); Brand Hub titles hidden; round comments notify only the board's designer (`0012`);
 `project-page.tsx` split into `project-versions-canvas.tsx`; a reassigned board leaves the designer's
-view within 30 s.
+view within 30 s; `0013` tightens retries, one share per round and delivered-project relinks;
+`playground-board.tsx` split into `use-playground-items.ts` + header/notices/inspector (`3a4d0e2`).
 **Incident:** `supabase migration down` wiped the local database on 2026-09-26 (now forbidden);
 rebuilt via `local_stack.py reset` + the SABRE `apply`; prior checkpoint in
 `supabase/.local/sabre-demo/state.pre-incident-2026-09-26.json`. [History](history/handoff-2026-09-26.md).
