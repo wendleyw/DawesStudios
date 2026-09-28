@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, MessageSquare } from "lucide-react";
+import { FileText, Info, MessageSquare } from "lucide-react";
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { BrandMark } from "@/features/shared/brand-mark";
 import type { ProjectPanelKind } from "./project-panel";
@@ -14,11 +14,13 @@ export function ProjectToolBar({
   panel,
   onPanel,
   disabled,
+  briefingFirst = false,
   children,
 }: {
   panel: ProjectPanelKind | null;
   onPanel: (panel: ProjectPanelKind | null) => void;
   disabled: boolean;
+  briefingFirst?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -29,12 +31,12 @@ export function ProjectToolBar({
       <ProjectToolButton
         active={panel === "details"}
         disabled={disabled}
-        aria-label="Project details"
-        title="Project details"
+        aria-label={briefingFirst ? "Briefing" : "Project details"}
+        title={briefingFirst ? "Briefing" : "Project details"}
         aria-expanded={panel === "details"}
         onClick={() => onPanel(panel === "details" ? null : "details")}
       >
-        <Info size={20} />
+        {briefingFirst ? <FileText size={20} /> : <Info size={20} />}
       </ProjectToolButton>
       <ProjectToolButton
         active={panel === "comments"}

@@ -53,7 +53,7 @@ export function ProjectBackLink({ clientId }: { clientId: string }) {
 
 /**
  * The workspace bar's channel: the agency's Working files | Shared with client tabs, or the
- * Internal label a designer sees in place of a switch they do not have. The client sees neither.
+ * Working files label a designer sees in place of a switch they do not have. The client sees neither.
  */
 export function ProjectChannelLead({
   role,
@@ -89,9 +89,9 @@ export function ProjectChannelLead({
     );
   if (role === "designer")
     return (
-      <span className="project-channel-label">
+      <span className="project-channel-label" title="Visible to you and the studio">
         <Lock size={12} aria-hidden="true" />
-        Internal
+        Working files
       </span>
     );
   return null;

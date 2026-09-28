@@ -33,6 +33,16 @@ const state = vi.hoisted(() => ({
   driveRefetch: vi.fn(),
   invalidateProject: vi.fn(),
   invalidateAssets: vi.fn(),
+  cover: vi.fn(),
+}));
+vi.mock("./project-cover", () => ({
+  ProjectCover: () => {
+    state.cover();
+    return <div>Project cover preview</div>;
+  },
+}));
+vi.mock("./project-briefing", () => ({
+  ProjectBriefing: () => <section aria-label="Creative brief">Briefing content</section>,
 }));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ database: {}, profile: { id: "viewer-1", role: state.role } }),
@@ -148,6 +158,42 @@ beforeEach(() => {
   state.driveError = null;
   state.invalidateProject.mockResolvedValue(undefined);
   state.invalidateAssets.mockResolvedValue(undefined);
+});
+
+describe("ProjectDetails designer context", () => {
+  it("opens the brief first and never mounts the cover on either designer tab", async () => {
+    state.role = "designer";
+    renderDetails();
+    expect(screen.getByRole("button", { name: "Briefing" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("region", { name: "Creative brief" })).toBeVisible();
+    expect(state.cover).not.toHaveBeenCalled();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Project info" }));
+    expect(screen.getByText("Service")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Creative brief" })).toBeNull();
+    expect(state.cover).not.toHaveBeenCalled();
+  });
+
+  it("keeps project information accessible when no brief is linked", () => {
+    state.role = "designer";
+    renderDetails([], { briefing_id: null });
+    expect(screen.getByRole("heading", { name: "Project details" })).toBeVisible();
+    expect(screen.getByText("Service")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Briefing" })).toBeNull();
+    expect(state.cover).not.toHaveBeenCalled();
+  });
+
+  it.each(["agency", "client"] as const)("preserves the %s overview and cover", (role) => {
+    state.role = role;
+    renderDetails();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Project cover preview")).toBeVisible();
+  });
 });
 
 describe("ProjectDetails requester", () => {

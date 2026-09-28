@@ -109,6 +109,11 @@ describe("MiroWorkspaceBar in Working files", () => {
     render(<MiroWorkspaceBar {...props({ role: "designer", viewerId: "d1", boards: [boardA] })} />);
     // One board needs no picker.
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
+    expect(screen.getByText("Alpha")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Live board" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(screen.getByRole("button", { name: "Send to studio" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();

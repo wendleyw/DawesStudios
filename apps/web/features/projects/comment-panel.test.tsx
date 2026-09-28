@@ -4,9 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommentPanel } from "./comment-panel";
 
-const mocks = vi.hoisted(() => ({ post: vi.fn(), invalidate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ post: vi.fn(), invalidate: vi.fn(), role: "client" }));
 vi.mock("@/features/auth/auth-provider", () => ({
-  useAuth: () => ({ database: {}, session: { user: { id: "viewer" } } }),
+  useAuth: () => ({
+    database: {},
+    profile: { role: mocks.role },
+    session: { user: { id: "viewer" } },
+  }),
 }));
 vi.mock("@/features/workspace/workspace-data", () => ({
   useDateFormat: () => ({ formatDate: () => "Sep 27" }),
@@ -49,6 +53,7 @@ vi.mock("./project-data", () => ({
 const labels = { v1: "Version 1", v2: "Version 2" };
 function mountPanel(
   currentVersion: { id: string; label: string } | undefined = { id: "v1", label: "Version 1" },
+  channel: "internal" | "client" = "client",
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (version: typeof currentVersion) => (
@@ -56,7 +61,7 @@ function mountPanel(
       <CommentPanel
         projectId="project"
         projectTitle="Campus Welcome"
-        channel="client"
+        channel={channel}
         currentVersion={version}
         versionLabels={labels}
       />
@@ -70,11 +75,37 @@ function mountPanel(
 }
 
 beforeEach(() => {
+  mocks.role = "client";
   mocks.post.mockReset().mockResolvedValue("saved-comment");
   mocks.invalidate.mockReset().mockResolvedValue(undefined);
 });
 
 describe("unified Comments", () => {
+  it("names the designer audience and posts to the selected internal round", async () => {
+    mocks.role = "designer";
+    const user = userEvent.setup();
+    mountPanel({ id: "v1", label: "Round 1 · Concepts" }, "internal");
+    expect(screen.getByText("You and the studio")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "This version" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "This round" }));
+    expect(screen.getByText("Posting to", { exact: false })).toHaveTextContent(
+      "Posting to Campus Welcome [Round 1 · Concepts]",
+    );
+    await user.type(screen.getByRole("textbox", { name: "Your message" }), "Round feedback");
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() =>
+      expect(mocks.post).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({
+          projectId: "project",
+          channel: "internal",
+          versionId: "v1",
+          body: "Round feedback",
+        }),
+      ),
+    );
+  });
+
   it("returns to project scope immediately when no version is shown", async () => {
     const user = userEvent.setup();
     const panel = mountPanel();

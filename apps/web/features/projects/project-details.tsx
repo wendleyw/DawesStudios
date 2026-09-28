@@ -53,7 +53,11 @@ export function ProjectDetails({
   const { formatDate } = useDateFormat();
   const invalidate = useInvalidateProject();
   const invalidateAssets = useInvalidateAssets();
-  const [view, setView] = useState<"overview" | "briefing">("overview");
+  const designer = profile?.role === "designer";
+  const briefingFirst = designer && !!project.briefing_id;
+  const [view, setView] = useState<"overview" | "briefing">(
+    briefingFirst ? "briefing" : "overview",
+  );
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
@@ -140,8 +144,10 @@ export function ProjectDetails({
   return (
     <aside className="project-details" aria-label="Project details">
       <ProjectPanelHeader
-        title="Project details"
-        subtitle="Scope, timing and resources"
+        title={briefingFirst ? "Briefing" : "Project details"}
+        subtitle={
+          designer ? "Creative direction and project resources" : "Scope, timing and resources"
+        }
         onClose={onClose}
         actions={
           profile?.role === "agency" ? (
@@ -161,20 +167,19 @@ export function ProjectDetails({
       />
       {project.briefing_id && (
         <div className="project-details-tabs" role="group" aria-label="Project information">
-          <button
-            type="button"
-            aria-pressed={view === "overview"}
-            onClick={() => setView("overview")}
-          >
-            Overview
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === "briefing"}
-            onClick={() => setView("briefing")}
-          >
-            Briefing
-          </button>
+          {(briefingFirst
+            ? (["briefing", "overview"] as const)
+            : (["overview", "briefing"] as const)
+          ).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={view === tab}
+              onClick={() => setView(tab)}
+            >
+              {tab === "briefing" ? "Briefing" : designer ? "Project info" : "Overview"}
+            </button>
+          ))}
         </div>
       )}
       {view === "briefing" && project.briefing_id && (
@@ -252,7 +257,7 @@ export function ProjectDetails({
             />
           )}
         </nav>
-        <ProjectCover projectId={project.id} />
+        {!designer && <ProjectCover projectId={project.id} />}
         {profile?.role === "agency" && (
           <details className="project-management">
             <summary>Manage project</summary>

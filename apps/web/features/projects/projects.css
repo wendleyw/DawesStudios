@@ -254,6 +254,16 @@
   min-width: 0;
   max-width: 100%;
 }
+.miro-bar-board-name {
+  min-width: 0;
+  max-width: min(28ch, 100%);
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .miro-bar-board-owner > .icon-button {
   flex-shrink: 0;
 }

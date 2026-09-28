@@ -119,6 +119,11 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
     >
       {internal ? (
         <>
+          {props.role === "designer" && props.board && props.boards.length === 1 && (
+            <span className="miro-bar-board-name" title={props.board.name}>
+              {props.board.name}
+            </span>
+          )}
           {props.boards.length > 1 && (
             <select
               className="miro-bar-board"
@@ -161,7 +166,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
                 aria-pressed={!props.round}
                 onClick={() => props.onRound(null)}
               >
-                Board
+                {props.role === "designer" ? "Live board" : "Board"}
               </button>
               {[...props.rounds].reverse().map((round) => (
                 <button

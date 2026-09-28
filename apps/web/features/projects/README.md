@@ -30,7 +30,7 @@ card moves below navigation; the title and date wrap within the card as needed.
 `MiroWorkspaceBar` (`miro-workspace-bar.tsx`, built on `MiroBarShell`/`MiroBarMenu` in
 `miro-view.tsx`) is one full-width wrapping controls bar below the title. It contains Back
 (`ProjectBackLink`), the channel (`ProjectChannelLead`: agency **Working files / Shared with
-client**, designer **Internal**, no channel label for clients), board/round/version controls,
+client**, designer **Working files** without a switch, no channel label for clients), board/round/version controls,
 the agency's board due date, the primary action, **Open in Miro** for the shown link (`miroBoardUrl`,
 `target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions), and
 **More**. The project due date appears only in the title card.
@@ -49,7 +49,9 @@ wraps on narrow screens, preserving all authorized actions. See the
 
 In Working files the bar shows a compact board picker (only with more than one board; sized to the
 chosen name up to 200 px), a **Board / R1 / R2…** round toggle once the board has rounds, and the
-round's status; in Shared with client a **V1, V2…** toggle and the shown version's status. A client
+round's status. Designers also see the board name when only one is assigned, and their base toggle
+reads **Live board** to distinguish it from submitted rounds. In Shared with client a **V1, V2…**
+toggle shows the client versions and the selected version's status. A client
 with nothing shared yet retains Back and More without version controls. The board's own designer gets **Send to studio**
 (`project-action-round.tsx`, `kind: "round"`, an optional note and frame link through the
 idempotent `send_board_round`); the agency gets **Share with client** on a round
@@ -106,9 +108,11 @@ first), `sharedVersions` (the project-level client versions, which have no board
 ## Tools and panels
 
 `project-tool-bar.tsx` is the floating bar (group **Project actions**) centred at the bottom:
-Project details, Comments and Playground. Comments replaces the separate Conversation and Feedback
-buttons. Its All activity view contains the channel's project notes and version comments; This
-version filters to the round or client version on screen. The composer explicitly names its
+Project details, Comments and Playground. For designers with a linked briefing, the first action is
+**Briefing**, with a document icon, opening the same details panel. Comments replaces the separate
+Conversation and Feedback buttons. Its **All activity** view contains the channel's project notes
+and version comments; **This round** filters to the internal round, and **This version** to the client
+version on screen. The designer audience reads **You and the studio**. The composer explicitly names its
 destination: **Posting to <project title>** for project notes, or **Posting to <project title>
 [Version N]** for a client version. Internal rounds retain **[Round N · board name]** so equal round
 numbers on different boards stay distinguishable. Each history entry shows its scope.
@@ -129,7 +133,7 @@ switch. Close/Escape returns focus to the control that opened the panel; `useFoc
 returns focus to the Playground button after the closing render commits. Pointer activation
 explicitly focuses its trigger so Safari can restore focus too. The panel stays open
 across channel switches, while its view resets to All activity and loads the new channel's draft.
-This version follows version selection, remounting only the thread to isolate pending writes;
+The round/version filter follows selection, remounting only the thread to isolate pending writes;
 without a selected version the effective view and composer return to project scope. Filters remain
 mounted so switching them preserves keyboard focus. Client review decisions remain separate actions.
 The Playground button opens the full Playground when nothing is on Miro yet, or
@@ -147,8 +151,11 @@ body/attempt still present in that draft, preserving follow-up text entered whil
 `CanvasComment.versionId` retains the round/publication scope for labels; channel-specific queries
 and RLS still govern what the viewer receives. These comments live in this application, not Miro.
 
-Details (`project-details.tsx`) opens on **Overview**: notes and metadata, a Resources section,
-cover and version history. Agency assignment, credit and Drive actions are grouped under
+Details (`project-details.tsx`) opens on **Overview** for agency and client sessions: notes and
+metadata, a Resources section, cover and version history. Designers with a linked briefing open
+on **Briefing**; **Project info** holds the secondary metadata, resources and round history. Their
+sidebar never mounts the cover, including in Project info. Without a linked briefing, designers
+open project information directly through **Project details**. Agency assignment, credit and Drive actions are grouped under
 **Manage project**. When a briefing exists, **Briefing** opens its saved scope and attachments
 inside the same inspector; **View full briefing** retains the dedicated page. `project-briefing.tsx`
 reuses `useBriefings` (including the designer's assigned-briefing RPC), `useCampaigns`,
@@ -185,14 +192,15 @@ plus any final adjustment. The agency also gets:
 Both writes refresh `credit-account`, `credit-ledger` and the project's keys through
 `useInvalidateProjectCredits`.
 
-**Cover.** Details opens with a Cover block (`project-cover.tsx`): one sanitized PNG per project,
+**Cover.** Agency/client Details includes a Cover block after Resources (`project-cover.tsx`):
+one sanitized PNG per project,
 set by the agency and optionally shown to the client. `useProjectCover` reads
 `public.project_covers` and signs the path from the private `project-covers` bucket (300-second
 URLs, renewed every 240 seconds), keyed under `project-detail` so every project write refreshes it.
 It leans on that table's RLS rather than branching on role: a client with no readable row resolves
 to `null` and the block renders nothing. The agency alone gets Set/Replace (PNG/JPEG/WebP), the
-**Visible to the client** switch and Remove (with a confirm dialog); a designer gets a read-only
-preview once a cover exists. `prepareProjectCover`/`clearProjectCover` (`media-client.ts`) call
+**Visible to the client** switch and Remove (with a confirm dialog). The designer sidebar does not
+render this block; covers on project cards and existing cover read permissions are unchanged. `prepareProjectCover`/`clearProjectCover` (`media-client.ts`) call
 `apps/media`'s `POST /covers/prepare`/`POST /covers/clear`; a Replace sends the row's current
 visibility forward, and toggling it goes through `set_project_cover_visibility`
 (`setProjectCoverVisibility`).

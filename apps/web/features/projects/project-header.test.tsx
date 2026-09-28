@@ -15,9 +15,9 @@ describe("ProjectChannelLead", () => {
     expect(onChannel).toHaveBeenCalledWith("client");
   });
 
-  it("labels a designer's channel Internal without a switch", () => {
+  it("labels a designer's channel Working files without a switch", () => {
     render(<ProjectChannelLead role="designer" channel="internal" onChannel={() => {}} />);
-    expect(screen.getByText("Internal")).toBeInTheDocument();
+    expect(screen.getByText("Working files")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Project channel" })).toBeNull();
   });
 

@@ -31,6 +31,18 @@ it("records the trigger even when pointer activation does not focus it", () => {
 });
 
 describe("ProjectToolBar", () => {
+  it("opens the same details panel through the designer's Briefing action", async () => {
+    const onPanel = vi.fn();
+    render(
+      <ProjectToolBar panel={null} onPanel={onPanel} disabled={false} briefingFirst>
+        {playground}
+      </ProjectToolBar>,
+    );
+    expect(screen.queryByRole("button", { name: "Project details" })).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Briefing" }));
+    expect(onPanel).toHaveBeenCalledWith("details");
+  });
+
   it("groups details, comments and the page's own actions in that order", () => {
     render(
       <ProjectToolBar panel={null} onPanel={vi.fn()} disabled={false}>

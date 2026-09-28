@@ -159,7 +159,7 @@ Canvas has the shared zoom pill (zoom out, zoom level, zoom in, fit) at the bott
 
 Project pages put campaign, title and deadline in the shared floating client identity header,
 then the project's single Miro controls bar (see the Decision above): navigation, the agency's
-Working files/Shared with client channel (or the designer's Internal label), rounds or client
+Working files/Shared with client channel (or the designer's Working files label), rounds or client
 versions, and the embedded board's actions. Details, Comments and Playground sit in a
 floating tool bar at the bottom centre of the embed: a 16 px-radius pill with 40 px buttons, a divider before Playground and the open panel's
 button selected, in the product's monochrome palette. On phones it moves to the bottom right. While
@@ -168,7 +168,12 @@ embedded Miro board fills the remaining canvas; a channel with nothing shared ye
 prompt and, for the agency, its creation action in place of the embed.
 
 Comments and details share a floating inspector with close/Escape and focus return.
-Comments uses a 310–380 px column, compact heading and All activity/This version controls, an
+Designers open **Briefing** directly from the document tool; **Project info** holds secondary
+resources and metadata. The designer inspector omits the project cover. Agency/client sessions
+retain **Project details** and **Overview**. The designer Miro bar identifies the assigned board
+even when there is only one and calls its editable base **Live board**.
+Comments uses a 310–380 px column, compact heading and All activity/This round (internal) or
+This version (client) controls, an
 independently scrolling history and a growing 60–120 px composer with adjacent send action. Show
 privacy context once and identify the posting destination above the composer. Preserve drafts by
 project, channel and round/version. Review actions and notes remain in the review controls.
@@ -234,7 +239,7 @@ A project card selects on one click, with visual selection, `aria-current` and a
 
 The timeline shows an understandable date interval, previous/next interval navigation, Today, date columns, and project bars. Use the current application date; do not copy “Sample today.” The Kanban regroups the same scoped records by status and navigates only: `status` is absent from the single column grant on `public.projects` and no RPC accepts an arbitrary target status, so a drag-to-transition or status menu would fail against the database. Do not ship one until an authorized transition exists; when it does, dragging and the menu must both invoke it and a keyboard-accessible status action must accompany them. The workflow labels are Brief, Designing, Agency review, Client review, Revision, Approved, and Delivered; a visible label and shape accompany every status marker, and the status badge's tone hue (see the Decision above) is additive rather than the only cue. Reuse these semantic states across views without rendering every possible state as persistent chrome.
 
-The project page has no xyflow canvas of its own: it embeds the project's Miro board directly — a design board's rounds for the agency's Working files channel and the designer's Internal view, or a shared client version for the agency's Shared with client channel and the client's own view — framed by the product's own chrome: the title card and Miro controls bar (see the Decision above), the Details/Comments/Playground tool bar, and, when a channel has nothing shared yet, a text prompt with the agency's own creation action in place of the embed. See [Project pages](#canvas-identity-header) above and the [projects feature README](../../apps/web/features/projects/README.md) for the current layout. The product does not control what the embedded Miro board itself contains; keeping designer identity and unpublished work off the client board is the agency's own responsibility (see [Miro frame links](permissions.md#miro-frame-links)).
+The project page has no xyflow canvas of its own: it embeds the project's Miro board directly — a design board's rounds for the agency's Working files channel and the designer's Working files view, or a shared client version for the agency's Shared with client channel and the client's own view — framed by the product's own chrome: the title card and Miro controls bar (see the Decision above), the Details/Comments/Playground tool bar, and, when a channel has nothing shared yet, a text prompt with the agency's own creation action in place of the embed. See [Project pages](#canvas-identity-header) above and the [projects feature README](../../apps/web/features/projects/README.md) for the current layout. The product does not control what the embedded Miro board itself contains; keeping designer identity and unpublished work off the client board is the agency's own responsibility (see [Miro frame links](permissions.md#miro-frame-links)).
 
 ## Playground canvas
 
@@ -246,7 +251,7 @@ Saved content and geometry persist; unsaved local edits have explicit save/disca
 
 ## Information boundaries and review logic
 
-Role differences come from authenticated, server-enforced permissions, not a “Preview as” dropdown. Agency members can use two explicitly labeled channels: **Agency & designer** and **Agency & client**. The designer sees only the internal channel for assigned work; the client sees only the agency/client channel. Client-facing agency messages use the Studio identity. Client responses, notifications, file names, activity items, previews, and accessible labels must not reveal designer names, avatars, assignments, or internal authorship metadata.
+Role differences come from authenticated, server-enforced permissions, not a “Preview as” dropdown. Agency members can use two explicitly labeled channels: **Working files** and **Shared with client**. The designer sees only the internal channel for assigned work; the client sees only the agency/client channel. Client-facing agency messages use the Studio identity. Client responses, notifications, file names, activity items, previews, and accessible labels must not reveal designer names, avatars, assignments, or internal authorship metadata.
 
 The agency shares a client version with a Miro link and a note for the client to review. The
 version's identity, number and note remain immutable; the agency may edit its link after sharing,
@@ -257,7 +262,8 @@ approves the project's latest shared client version. A comment belongs to its pr
 optionally, a round (internal channel) or a client version (client channel); there is no design or
 pin anchor. One Comments panel replaces the former Conversation and Feedback tools. All activity
 shows general and round/version comments in the current channel; new messages there belong to the
-project. This version shows and writes only to the round or client version currently on screen.
+project. **This round** (internal) and **This version** (client) show and write only to the selected
+round or client version. Designers see **You and the studio** as their comment audience.
 History entries identify their scope; internal round labels include the board name. The composer
 always states its posting destination. Drafts distinguish project, channel and round/version, and
 an earlier successful request cannot clear a different follow-up draft. Switching channels keeps

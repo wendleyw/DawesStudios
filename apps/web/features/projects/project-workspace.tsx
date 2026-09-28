@@ -226,6 +226,7 @@ export function ProjectWorkspace({
             <div className="project-canvas">
               <ProjectToolBar
                 panel={panel}
+                briefingFirst={role === "designer" && !!project.briefing_id}
                 onPanel={(next) => {
                   if (next) setAssetStripOpen(false);
                   changePanel(next);

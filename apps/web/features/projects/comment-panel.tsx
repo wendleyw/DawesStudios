@@ -50,6 +50,7 @@ export function CommentPanel({
   versionLabels: Record<string, string>;
   onClose?: () => void;
 }) {
+  const { profile } = useAuth();
   const [thisVersion, setThisVersion] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
   const target = thisVersion ? currentVersion : undefined;
@@ -60,7 +61,13 @@ export function CommentPanel({
     >
       <ProjectPanelHeader
         title="Comments"
-        subtitle={channel === "client" ? "Client and studio" : "Studio team only"}
+        subtitle={
+          channel === "client"
+            ? "Client and studio"
+            : profile?.role === "designer"
+              ? "You and the studio"
+              : "Studio team only"
+        }
         onClose={onClose}
       />
       <div className="comment-controls">
@@ -70,7 +77,7 @@ export function CommentPanel({
           </button>
           {currentVersion && (
             <button type="button" aria-pressed={!!target} onClick={() => setThisVersion(true)}>
-              This version
+              {channel === "internal" ? "This round" : "This version"}
             </button>
           )}
         </div>

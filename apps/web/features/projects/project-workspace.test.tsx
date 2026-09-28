@@ -181,10 +181,10 @@ describe("ProjectWorkspace", () => {
     expect(screen.queryByRole("button", { name: "Earlier versions" })).toBeNull();
   });
 
-  it("labels a designer's view Internal without offering a channel switch", () => {
+  it("labels a designer's view Working files without offering a channel switch", () => {
     state.role = "designer";
     renderWorkspace();
-    expect(screen.getByText("Internal")).toBeInTheDocument();
+    expect(screen.getByText("Working files")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Project channel" })).toBeNull();
   });
 
