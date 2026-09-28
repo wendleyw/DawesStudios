@@ -102,6 +102,7 @@ vi.mock("./project-data", async (importOriginal) => ({
 
 import { ProjectWorkspace, type ProjectWorkspaceProps } from "./project-workspace";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
+import { useProjectSelection, type ProjectSelectionHint } from "./use-project-selection";
 import type { ProjectPanelKind } from "./project-panel";
 
 const link = { boardId: "uXjVBoard01=", widgetId: null };
@@ -125,16 +126,20 @@ const round = {
   boardId: "b1",
 } satisfies CanvasVersion;
 
-// `project-page.tsx` owns `panels` above its own early returns; this harness stands in for it so
-// the hook's state (like `project-page.tsx`'s) survives a rerender of the same tree.
-function Harness(props: Omit<ProjectWorkspaceProps, "panels">) {
+// `project-page.tsx` owns `panels` and `selection` above its own early returns; this harness stands
+// in for it so the hooks' state (like `project-page.tsx`'s) survives a rerender of the same tree.
+type HarnessProps = Omit<ProjectWorkspaceProps, "panels" | "selection"> & {
+  initialSelection?: ProjectSelectionHint;
+};
+function Harness({ initialSelection, ...props }: HarnessProps) {
   const panels = usePanelFocusReturn<ProjectPanelKind>();
-  return <ProjectWorkspace {...props} panels={panels} />;
+  const selection = useProjectSelection(initialSelection);
+  return <ProjectWorkspace {...props} panels={panels} selection={selection} />;
 }
 
-function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
+function renderWorkspace(overrides: Partial<HarnessProps> = {}) {
   workflowState.versions = overrides.channel === "client" ? [] : (overrides.data?.versions ?? []);
-  const props: Omit<ProjectWorkspaceProps, "panels"> = {
+  const props: HarnessProps = {
     projectId: "p",
     channel: "internal",
     onChannel: vi.fn(),
@@ -397,7 +402,7 @@ describe("ProjectWorkspace", () => {
       versions: [round],
       deliverables: [],
     } as unknown as ProjectWorkspaceProps["data"];
-    const props: Omit<ProjectWorkspaceProps, "panels"> = {
+    const props: HarnessProps = {
       projectId: "p",
       channel: "internal",
       onChannel: vi.fn(),
@@ -458,7 +463,7 @@ describe("ProjectWorkspace", () => {
   it("falls back to the designer's empty state once their reassigned board vanishes from the list", () => {
     state.role = "designer";
     const ownBoard: DesignBoard = { ...board, designerId: "viewer-1" };
-    const props: Omit<ProjectWorkspaceProps, "panels"> = {
+    const props: HarnessProps = {
       projectId: "p",
       channel: "internal",
       onChannel: vi.fn(),

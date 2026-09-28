@@ -11,6 +11,7 @@ import { PageStatus } from "@/features/shared/page-status";
 import { ProjectWorkspace } from "./project-workspace";
 import { type ProjectPanelKind } from "./project-panel";
 import { usePanelFocusReturn } from "./use-panel-focus-return";
+import { useProjectSelection } from "./use-project-selection";
 
 export function ProjectPage({ projectId }: { projectId: string }) {
   const parameters = useSearchParams();
@@ -23,12 +24,17 @@ function ProjectPageContent({ projectId }: { projectId: string }) {
   useProjectEvents(projectId);
   const parameters = useSearchParams();
   const requestedPanel = parameters.get("panel");
-  // The open panel is kept here, above the early returns that follow: `useProjectDetail` unmounts
-  // the workspace while the other channel's data loads, and state that lived inside it would be
-  // lost on every channel switch.
+  // The open panel and the selection are kept here, above the early returns that follow:
+  // `useProjectDetail` unmounts the workspace while the other channel's data loads, and state that
+  // lived inside it would be lost on every channel switch.
   const panels = usePanelFocusReturn<ProjectPanelKind>(
     requestedPanel === "comments" || requestedPanel === "details" ? requestedPanel : null,
   );
+  const selection = useProjectSelection({
+    board: parameters.get("board"),
+    round: parameters.get("round"),
+    version: parameters.get("version"),
+  });
   const [agencyChannel, setAgencyChannel] = useState<ProjectChannel>(
     parameters.get("channel") === "client" ? "client" : "internal",
   );
@@ -87,11 +93,7 @@ function ProjectPageContent({ projectId }: { projectId: string }) {
       data={data.data}
       boards={boards.data ?? []}
       panels={panels}
-      initialSelection={{
-        board: parameters.get("board"),
-        round: parameters.get("round"),
-        version: parameters.get("version"),
-      }}
+      selection={selection}
     />
   );
 }

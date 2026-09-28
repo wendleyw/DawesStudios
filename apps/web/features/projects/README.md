@@ -129,11 +129,12 @@ embed, which narrows to leave room for it. The panel heading and comment compose
 only the history or detail body scrolls. Under 800 px of work-area width, the inspector opens over
 the project header to leave enough room for reading and composing. Close/Escape restores the
 original tool. `project-page.tsx` owns the open panel
-(`usePanelFocusReturn`, `use-panel-focus-return.ts`) above its early returns, because the
+(`usePanelFocusReturn`, `use-panel-focus-return.ts`) and the board, round and version on screen
+(`useProjectSelection`, `use-project-selection.ts`) above its early returns, because the
 `useProjectDetail(projectId, channel)` read goes pending and unmounts the workspace on every channel
 switch. Close/Escape returns focus to the control that opened the panel; `useFocusReturn` also
 returns focus to the Playground button after the closing render commits. Pointer activation
-explicitly focuses its trigger so Safari can restore focus too. The panel stays open
+explicitly focuses its trigger so Safari can restore focus too. Returning from Shared with client to Working files keeps the board and round the agency left. The panel stays open
 across channel switches, while its view resets to All activity and loads the new channel's draft.
 The round/version filter follows selection, remounting only the thread to isolate pending writes;
 without a selected version the effective view and composer return to project scope. Filters remain

@@ -16,6 +16,7 @@ import { ProjectBackLink, ProjectChannelLead, ProjectTitle } from "./project-hea
 import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
+import type { useProjectSelection } from "./use-project-selection";
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { MiroEmbed } from "./miro-view";
 import { MiroWorkspaceBar } from "./miro-workspace-bar";
@@ -49,8 +50,8 @@ export type ProjectWorkspaceProps = {
    * remount `useProjectDetail` causes while the other channel's data loads.
    */
   panels: ReturnType<typeof usePanelFocusReturn<ProjectPanelKind>>;
-  /** URL hints are resolved against authorized rows only; they grant no access. */
-  initialSelection?: { board: string | null; round: string | null; version: string | null };
+  /** The board, round and version on screen, owned by `project-page.tsx` for the same reason. */
+  selection: ReturnType<typeof useProjectSelection>;
 };
 
 /**
@@ -64,16 +65,14 @@ export function ProjectWorkspace({
   data,
   boards,
   panels,
-  initialSelection,
+  selection,
 }: ProjectWorkspaceProps) {
   const { profile } = useAuth();
   const clients = useClients();
   const { formatDate } = useDateFormat();
   const role = profile?.role ?? "client";
   const { project, versions, deliverables } = data;
-  const [boardId, setBoardId] = useState<string | null>(initialSelection?.board ?? null);
-  const [roundId, setRoundId] = useState<string | null>(initialSelection?.round ?? null);
-  const [versionId, setVersionId] = useState<string | null>(initialSelection?.version ?? null);
+  const { boardId, setBoardId, roundId, setRoundId, versionId, setVersionId } = selection;
   const { panel, setPanel, closePanel, changePanel } = panels;
   const [action, setAction] = useState<ProjectAction | null>(null);
   const [assetStripOpen, setAssetStripOpen] = useState(false);

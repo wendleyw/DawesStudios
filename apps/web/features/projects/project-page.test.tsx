@@ -31,9 +31,11 @@ vi.mock("./project-data", async (importOriginal) => ({
 }));
 
 vi.mock("./project-workspace", () => ({
-  ProjectWorkspace: ({ panels, onChannel, channel, initialSelection }: ProjectWorkspaceProps) => (
+  ProjectWorkspace: ({ panels, onChannel, channel, selection }: ProjectWorkspaceProps) => (
     <div>
-      <p>{`Channel: ${channel}; round: ${initialSelection?.round ?? "none"}`}</p>
+      <p>{`Channel: ${channel}; round: ${selection.roundId ?? "none"}`}</p>
+      <p>{`Board: ${selection.boardId ?? "first"}`}</p>
+      <button onClick={() => selection.setBoardId("b2")}>Pick the second board</button>
       <p>{panels.panel ? `${panels.panel} panel open` : "no panel open"}</p>
       <button onClick={() => panels.changePanel("comments")}>Open comments</button>
       <button onClick={() => onChannel("client")}>Switch to Shared with client</button>
@@ -70,12 +72,13 @@ describe("ProjectPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the open panel across a channel switch that unmounts the body while it loads", async () => {
+  it("keeps the open panel and board across a channel switch that unmounts the body while it loads", async () => {
     const user = userEvent.setup();
     pendingChannel.current = null;
     const { rerender } = render(<ProjectPage projectId="p" />);
 
     await user.click(screen.getByRole("button", { name: "Open comments" }));
+    await user.click(screen.getByRole("button", { name: "Pick the second board" }));
     expect(screen.getByText("comments panel open")).toBeInTheDocument();
 
     // Switching channel makes the read for "client" pending, which unmounts the body below
@@ -90,5 +93,7 @@ describe("ProjectPage", () => {
     pendingChannel.current = null;
     rerender(<ProjectPage projectId="p" />);
     expect(screen.getByText("comments panel open")).toBeInTheDocument();
+    // Coming back to Working files returns to the board the agency was on, not the first one.
+    expect(screen.getByText("Board: b2")).toBeInTheDocument();
   });
 });
