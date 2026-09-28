@@ -26,6 +26,8 @@ import {
   type TableRow,
   type CanvasVersion,
 } from "./project-data";
+import { ProductionBrief } from "./production-brief";
+import type { DesignBoard } from "./project-data";
 import { ProjectBriefing } from "./project-briefing";
 import { ProjectPanelHeader } from "./project-panel";
 import { ProjectCover } from "./project-cover";
@@ -40,11 +42,15 @@ function historyLabel(version: CanvasVersion): string {
 
 export function ProjectDetails({
   project,
+  board = null,
+  internal = false,
   deliverables,
   versions,
   onClose,
 }: {
   project: TableRow<"projects">;
+  board?: DesignBoard | null;
+  internal?: boolean;
   deliverables: TableRow<"deliverables">[];
   versions: CanvasVersion[];
   onClose?: () => void;
@@ -54,10 +60,12 @@ export function ProjectDetails({
   const invalidate = useInvalidateProject();
   const invalidateAssets = useInvalidateAssets();
   const designer = profile?.role === "designer";
-  const briefingFirst = designer && !!project.briefing_id;
-  const [view, setView] = useState<"overview" | "briefing">(
-    briefingFirst ? "briefing" : "overview",
+  const briefingFirst = designer;
+  const production = designer || (profile?.role === "agency" && internal);
+  const [selectedView, setView] = useState<"overview" | "briefing" | "production">(
+    briefingFirst ? "production" : "overview",
   );
+  const view = selectedView === "production" && !production ? "overview" : selectedView;
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
@@ -165,11 +173,15 @@ export function ProjectDetails({
           ) : undefined
         }
       />
-      {project.briefing_id && (
+      {(project.briefing_id || production) && (
         <div className="project-details-tabs" role="group" aria-label="Project information">
-          {(briefingFirst
-            ? (["briefing", "overview"] as const)
-            : (["overview", "briefing"] as const)
+          {(designer
+            ? (["production", "overview"] as const)
+            : [
+                "overview" as const,
+                ...(project.briefing_id ? ["briefing" as const] : []),
+                ...(production ? ["production" as const] : []),
+              ]
           ).map((tab) => (
             <button
               key={tab}
@@ -177,30 +189,53 @@ export function ProjectDetails({
               aria-pressed={view === tab}
               onClick={() => setView(tab)}
             >
-              {tab === "briefing" ? "Briefing" : designer ? "Project info" : "Overview"}
+              {tab === "production"
+                ? designer
+                  ? "Briefing"
+                  : "Production"
+                : tab === "briefing"
+                  ? profile?.role === "agency"
+                    ? "Client brief"
+                    : "Briefing"
+                  : designer
+                    ? "Project info"
+                    : "Overview"}
             </button>
           ))}
         </div>
       )}
-      {view === "briefing" && project.briefing_id && (
+      {view === "production" && production && (
+        <div
+          className="project-details-content"
+          role="region"
+          aria-label="Production instructions"
+          tabIndex={0}
+        >
+          <ProductionBrief key={board?.id ?? "none"} board={board} project={project} />
+        </div>
+      )}
+      {view === "briefing" && !designer && project.briefing_id && (
         <div className="project-details-content">
           <ProjectBriefing clientId={project.client_id} briefingId={project.briefing_id} />
         </div>
       )}
-      <div
-        className="project-details-content"
-        hidden={view === "briefing" && !!project.briefing_id}
-      >
-        <div className="project-details-overview">
-          <h3>Project overview</h3>
-          <p>{project.description || "No additional project notes yet."}</p>
-        </div>
+      <div className="project-details-content" hidden={view !== "overview"}>
+        {!designer && (
+          <div className="project-details-overview">
+            <h3>Project overview</h3>
+            <p>{project.description || "No additional project notes yet."}</p>
+          </div>
+        )}
         <dl>
-          <dt>Service</dt>
-          <dd>
-            {services.find((service) => service.id === project.service_type)?.name ??
-              project.service_type.replaceAll("-", " ")}
-          </dd>
+          {!designer && (
+            <>
+              <dt>Service</dt>
+              <dd>
+                {services.find((service) => service.id === project.service_type)?.name ??
+                  project.service_type.replaceAll("-", " ")}
+              </dd>
+            </>
+          )}
           {requesterName && (
             <>
               <dt>Requested by</dt>
@@ -211,8 +246,12 @@ export function ProjectDetails({
           <dd>{formatDate(project.start_date, "To be planned")}</dd>
           <dt>Due date</dt>
           <dd>{formatDate(project.due_date, "No due date")}</dd>
-          <dt>Deliverables</dt>
-          <dd>{deliverables.length}</dd>
+          {!designer && (
+            <>
+              <dt>Deliverables</dt>
+              <dd>{deliverables.length}</dd>
+            </>
+          )}
           {creditState && project.credit_month && (
             <>
               <dt>Credits</dt>
@@ -232,8 +271,11 @@ export function ProjectDetails({
         </dl>
         <nav className="project-resources" aria-label="Project resources">
           <h3>Resources</h3>
-          {project.briefing_id && (
-            <button className="button" onClick={() => setView("briefing")}>
+          {(designer || project.briefing_id) && (
+            <button
+              className="button"
+              onClick={() => setView(designer ? "production" : "briefing")}
+            >
               Read briefing
               <ArrowUpRight size={14} />
             </button>

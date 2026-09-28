@@ -168,8 +168,9 @@ embedded Miro board fills the remaining canvas; a channel with nothing shared ye
 prompt and, for the agency, its creation action in place of the embed.
 
 Comments and details share a floating inspector with close/Escape and focus return.
-Designers open **Briefing** directly from the document tool; **Project info** holds secondary
-resources and metadata. The designer inspector omits the project cover. Agency/client sessions
+Designers open the studio's released **Briefing** directly from the document tool; **Project info**
+holds dates and resources. Original client requests/quantities are not rendered. Agency **Production**
+opens the per-board instruction editor, with persistent Save draft/Send to designer actions. The designer inspector omits the project cover. Agency/client sessions
 retain **Project details** and **Overview**. The designer Miro bar identifies the assigned board
 even when there is only one and calls its editable base **Live board**.
 Comments uses a 310–380 px column, compact heading and All activity/This round (internal) or

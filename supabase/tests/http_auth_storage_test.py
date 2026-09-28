@@ -72,7 +72,7 @@ class AuthorizationIntegrationTests(unittest.TestCase):
 
     def test_cross_tenant_read_and_credit_mutation_are_rejected(self):
         foreign_project=FIXTURES['projects'][0]['id']
-        self.assertEqual(api('/rest/v1/projects?id=eq.'+foreign_project,token=self.tokens['client'])[1],[])
+        self.assertEqual(api('/rest/v1/projects?select=id&id=eq.'+foreign_project,token=self.tokens['client'])[1],[])
         code,_=api('/rest/v1/rpc/adjust_credits','POST',{'p_client_id':FIXTURES['clients'][7]['id'],'p_amount':100,'p_description':'Unauthorized','p_idempotency_key':str(uuid.uuid4())},self.tokens['client'])
         self.assertEqual(code,403)
 
@@ -82,10 +82,14 @@ class AuthorizationIntegrationTests(unittest.TestCase):
             self.assertEqual(code,200);self.assertEqual(result,[],table)
 
     def test_all_resource_families_enforce_cross_client_reads_and_writes(self):
-        client=FIXTURES['clients'][7];own_projects=[row['id'] for row in FIXTURES['projects'] if row['client_id']==client['id']]
+        client=FIXTURES['clients'][7]
+        # Include this client's live demo projects while still excluding every foreign workspace.
+        code,projects=api('/rest/v1/projects?select=id&client_id=eq.'+client['id'],token=self.tokens['client'])
+        self.assertEqual(code,200);self.assertTrue(projects)
+        own_projects=[row['id'] for row in projects]
         client_tables=['campaigns','briefings','brand_sections','brand_assets','brand_templates','template_drafts','credit_accounts','credit_ledger','credit_requests']
         project_tables=['deliverables','published_versions','publication_miro_links','publication_reviews','project_covers','client_comments','delivery_files','project_assets']
-        for table,query in [(table,'client_id=neq.'+client['id']) for table in client_tables]+[(table,'project_id=not.in.('+','.join(own_projects)+')') for table in project_tables]+[('notifications','user_id=neq.'+client['user_id'])]:
+        for table,query in [(table,'client_id=neq.'+client['id']) for table in client_tables]+[(table,'select=project_id&project_id=not.in.('+','.join(own_projects)+')') for table in project_tables]+[('notifications','user_id=neq.'+client['user_id'])]:
             code,records=api('/rest/v1/'+table+'?'+query,token=self.tokens['client'])
             self.assertEqual(code,200,table);self.assertEqual(records,[],table)
         foreign=FIXTURES['clients'][0];project=FIXTURES['projects'][0]

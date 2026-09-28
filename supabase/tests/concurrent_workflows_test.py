@@ -111,7 +111,7 @@ class ConcurrentWorkflowTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as pool:results=list(pool.map(lambda briefing:self.rpc('accept_briefing',{'p_briefing_id':briefing}),briefings))
         self.assertEqual(sorted(code for code,_ in results),[200,400]);self.assertEqual(balance(),0)
         rejected=briefings[next(index for index,(code,_) in enumerate(results) if code==400)]
-        self.assertEqual(request('/rest/v1/projects?briefing_id=eq.'+rejected,token=self.agency)[1],[])
+        self.assertEqual(request('/rest/v1/projects?select=id&briefing_id=eq.'+rejected,token=self.agency)[1],[])
         request_id=self.success('request_credits',{'p_client_id':self.client_id,'p_amount':25,'p_note':'Concurrent allocation'},True)
         with ThreadPoolExecutor(max_workers=8) as pool:results=list(pool.map(lambda _:self.rpc('fulfill_credit_request',{'p_request_id':request_id}),range(8)))
         self.assertTrue(all(code==200 for code,_ in results));self.assertEqual(len({value for _,value in results}),1);self.assertEqual(balance(),25)
@@ -143,6 +143,6 @@ class ConcurrentWorkflowTests(unittest.TestCase):
         self.assertEqual(sum(code==204 for code,_ in results),1);self.assertEqual(sum(code==400 for code,_ in results),7)
         notices=request('/rest/v1/notifications?title=eq.Briefing%20ready%20for%20review&body=eq.'+current['title'].replace(' ','%20'),token=self.agency)[1]
         self.assertEqual(len(notices),1)
-        self.assertEqual(request('/rest/v1/projects?briefing_id=eq.'+draft['id'],token=self.agency)[1],[])
+        self.assertEqual(request('/rest/v1/projects?select=id&briefing_id=eq.'+draft['id'],token=self.agency)[1],[])
 
 if __name__=='__main__':unittest.main(verbosity=2)

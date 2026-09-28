@@ -820,7 +820,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
     );
   });
 
-  test("shows assigned designers the accepted direction and attachments without financial fields", async ({
+  test("keeps the original client request and attachments private from assigned designers", async ({
     page,
   }) => {
     const agency = await localAgency();
@@ -831,16 +831,8 @@ test.describe("Briefing intake, credits, and account administration", () => {
         .error,
     ).toBeNull();
     expect((await designer.from("briefings").select("*").eq("id", briefingId)).data).toEqual([]);
-    const assigned = await designer.rpc("get_assigned_briefings", {
-      p_client_id: fixture.clientId,
-    });
-    expect(assigned.error).toBeNull();
-    expect(assigned.data).toHaveLength(1);
-    for (const field of ["author_id", "estimated_credits", "confirmed_credits", "budget_note"])
-      expect(assigned.data![0]).not.toHaveProperty(field);
-    const otherDesigner = await localCaller(credentials.designer2);
     expect(
-      (await otherDesigner.rpc("get_assigned_briefings", { p_client_id: fixture.clientId })).data,
+      (await designer.rpc("get_assigned_briefings", { p_client_id: fixture.clientId })).data,
     ).toEqual([]);
     const attachment = (
       await localAdmin
@@ -851,34 +843,23 @@ test.describe("Briefing intake, credits, and account administration", () => {
     ).data!;
     expect(
       (await designer.storage.from("briefing-files").download(attachment.storage_path)).error,
-    ).toBeNull();
-    expect(
-      (await otherDesigner.storage.from("briefing-files").download(attachment.storage_path)).error,
     ).not.toBeNull();
     await signIn(page, credentials.designer);
     await page.goto(`/clients/${fixture.clientId}/briefings`);
-    await page
-      .getByRole("link", { name: new RegExp(`Acceptance Intake project ${fixture.tag}`) })
-      .click();
     await expect(
-      page.getByRole("heading", { name: "Creative direction", exact: true, level: 2 }),
+      page.getByRole("heading", { name: "Production briefs", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("Collection launch reel", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "No production briefs yet.", exact: true }),
+    ).toBeVisible();
+    await page.goto(`/clients/${fixture.clientId}/briefings/${briefingId}`);
+    await expect(
+      page.getByRole("heading", { name: "Briefing unavailable.", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Collection launch reel", { exact: true })).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "launch-reference.png", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Additional story adaptation and edit coverage", { exact: true }),
     ).not.toBeVisible();
-    await expect(page.getByRole("link", { name: "Credits", exact: true })).not.toBeVisible();
-    await expect(page.getByRole("link", { name: "Open project", exact: true })).toHaveAttribute(
-      "href",
-      `/projects/${projectId}`,
-    );
-    await page.screenshot({
-      path: join(screenshotDirectory, "intake-designer-briefing.png"),
-      fullPage: true,
-    });
   });
 
   test("creates a validated client workspace with opening credits and an empty board", async ({

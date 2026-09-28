@@ -7,6 +7,17 @@ const state = vi.hoisted(() => ({
   briefings: [] as Briefing[],
 }));
 const query = (data: unknown) => ({ data, isPending: false, error: null, refetch: vi.fn() });
+vi.mock("@/features/projects/project-data", () => ({
+  useProductionBriefs: () =>
+    query([
+      {
+        board_id: "board",
+        content: { title: "Studio production" },
+        revision: 1,
+        design_boards: { project_id: "project", name: "Design board" },
+      },
+    ]),
+}));
 vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ profile: { role: state.role } }),
 }));
@@ -106,15 +117,19 @@ describe("BriefingsPage requester column", () => {
   it("shows a designer no requester", () => {
     state.role = "designer";
     render(<BriefingsPage clientId="c1" />);
-    expect(screen.getByText("Autumn launch")).toBeInTheDocument();
+    expect(screen.queryByText("Autumn launch")).toBeNull();
+    expect(screen.getByText("Studio production")).toBeVisible();
     expect(screen.queryByText(/Requested by/)).not.toBeInTheDocument();
   });
 
   it("gives a designer's rows no requester cell, not merely an empty one", () => {
     state.role = "designer";
     const { container } = render(<BriefingsPage clientId="c1" />);
-    expect(container.querySelectorAll(".briefing-list-row").length).toBe(2);
+    expect(container.querySelectorAll(".production-brief-list-item").length).toBe(1);
     expect(container.querySelector(".briefing-list-requester")).toBeNull();
-    expect(container.querySelector(".briefing-list.no-requester")).not.toBeNull();
+    expect(screen.getByRole("link", { name: /Studio production/ })).toHaveAttribute(
+      "href",
+      "/projects/project?panel=details&board=board",
+    );
   });
 });

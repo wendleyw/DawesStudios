@@ -154,7 +154,7 @@ describe("useProjects pagination", () => {
       orders: string[];
     }[] = [];
     auth.database = {
-      from: (table: string) => {
+      rpc: (table: string) => {
         const call: {
           table: string;
           clientId?: string;
@@ -213,7 +213,7 @@ describe("useProjects pagination", () => {
   it("surfaces a database failure on a later page", async () => {
     let page = 0;
     auth.database = {
-      from: () => {
+      rpc: () => {
         const chain = {
           select: () => chain,
           order: () => chain,

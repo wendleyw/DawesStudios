@@ -18,8 +18,9 @@ test("board views, filters, campaign validation, movement and scoped search", as
   const restoreBoard = await preserveBoardPreference(credentials.agency, fixture.clientId);
   const campaignTitle = `Acceptance campaign ${crypto.randomUUID()}`;
   try {
-    const project = (await agency.from("projects").select("*").eq("id", fixture.projectId).single())
-      .data!;
+    const project = (
+      await agency.rpc("visible_projects").select("*").eq("id", fixture.projectId).single()
+    ).data!;
     await signIn(page, credentials.agency);
     await page.goto(`/clients/${fixture.clientId}/board`);
     await page.getByRole("button", { name: "Canvas view", exact: true }).click();
@@ -198,7 +199,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(page.getByRole("dialog")).toHaveCount(0);
     const saved = (
       await agency
-        .from("projects")
+        .rpc("visible_projects")
         .select("title,start_date,due_date,description")
         .eq("id", fixture.projectId)
         .single()
@@ -222,6 +223,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     expect(
       (await designer.from("projects").select("id").eq("id", fixture.projectId)).data,
     ).toHaveLength(1);
+    await page.getByText("Manage project", { exact: true }).click();
     await page.getByRole("button", { name: /Remove .+ from project/ }).click();
     await page
       .getByRole("dialog")
@@ -316,8 +318,9 @@ test("one click selects and two open the project, on the card and in the calenda
   const fixture = await createProductionFixture(agency);
   const restoreBoard = await preserveBoardPreference(credentials.agency, fixture.clientId);
   try {
-    const project = (await agency.from("projects").select("*").eq("id", fixture.projectId).single())
-      .data!;
+    const project = (
+      await agency.rpc("visible_projects").select("*").eq("id", fixture.projectId).single()
+    ).data!;
     await signIn(page, credentials.agency);
     const board = `/clients/${fixture.clientId}/board`;
     await page.goto(board);

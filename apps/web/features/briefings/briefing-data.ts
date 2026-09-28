@@ -65,9 +65,7 @@ export function useBriefings(clientId: string) {
     enabled: !!session && !!profile,
     queryFn: async () =>
       profile?.role === "designer"
-        ? assertResult(await database.rpc("get_assigned_briefings", { p_client_id: clientId })).map(
-            decodeBriefing,
-          )
+        ? []
         : assertResult(
             await database
               .from("briefings")

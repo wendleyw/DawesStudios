@@ -41,6 +41,9 @@ vi.mock("./project-cover", () => ({
     return <div>Project cover preview</div>;
   },
 }));
+vi.mock("./production-brief", () => ({
+  ProductionBrief: () => <p>Internal content only</p>,
+}));
 vi.mock("./project-briefing", () => ({
   ProjectBriefing: () => <section aria-label="Creative brief">Briefing content</section>,
 }));
@@ -161,6 +164,33 @@ beforeEach(() => {
 });
 
 describe("ProjectDetails designer context", () => {
+  it("returns to overview when the agency switches from production to the client channel", async () => {
+    const client = new QueryClient();
+    const panel = (internal: boolean) => (
+      <QueryClientProvider client={client}>
+        <ProjectDetails
+          project={project}
+          deliverables={deliverables}
+          versions={[]}
+          internal={internal}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(panel(true));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Production" }));
+    expect(screen.getByText("Internal content only")).toBeVisible();
+
+    rerender(panel(false));
+
+    expect(screen.queryByText("Internal content only")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Production" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Project cover preview")).toBeVisible();
+  });
+
   it("opens the brief first and never mounts the cover on either designer tab", async () => {
     state.role = "designer";
     renderDetails();
@@ -168,20 +198,20 @@ describe("ProjectDetails designer context", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("region", { name: "Creative brief" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Production instructions" })).toBeVisible();
     expect(state.cover).not.toHaveBeenCalled();
     await userEvent.setup().click(screen.getByRole("button", { name: "Project info" }));
-    expect(screen.getByText("Service")).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Creative brief" })).toBeNull();
+    expect(screen.queryByText("Service")).toBeNull();
+    expect(screen.getByText("Starts")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Production instructions" })).toBeNull();
     expect(state.cover).not.toHaveBeenCalled();
   });
 
-  it("keeps project information accessible when no brief is linked", () => {
+  it("opens studio instructions even when no client brief is linked", () => {
     state.role = "designer";
     renderDetails([], { briefing_id: null });
-    expect(screen.getByRole("heading", { name: "Project details" })).toBeVisible();
-    expect(screen.getByText("Service")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Briefing" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Briefing" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Production instructions" })).toBeVisible();
     expect(state.cover).not.toHaveBeenCalled();
   });
 

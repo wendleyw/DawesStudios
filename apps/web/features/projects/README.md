@@ -108,7 +108,7 @@ first), `sharedVersions` (the project-level client versions, which have no board
 ## Tools and panels
 
 `project-tool-bar.tsx` is the floating bar (group **Project actions**) centred at the bottom:
-Project details, Comments and Playground. For designers with a linked briefing, the first action is
+Project details, Comments and Playground. For designers, the first action is
 **Briefing**, with a document icon, opening the same details panel. Comments replaces the separate
 Conversation and Feedback buttons. Its **All activity** view contains the channel's project notes
 and version comments; **This round** filters to the internal round, and **This version** to the client
@@ -152,15 +152,41 @@ body/attempt still present in that draft, preserving follow-up text entered whil
 and RLS still govern what the viewer receives. These comments live in this application, not Miro.
 
 Details (`project-details.tsx`) opens on **Overview** for agency and client sessions: notes and
-metadata, a Resources section, cover and version history. Designers with a linked briefing open
-on **Briefing**; **Project info** holds the secondary metadata, resources and round history. Their
-sidebar never mounts the cover, including in Project info. Without a linked briefing, designers
-open project information directly through **Project details**. Agency assignment, credit and Drive actions are grouped under
-**Manage project**. When a briefing exists, **Briefing** opens its saved scope and attachments
-inside the same inspector; **View full briefing** retains the dedicated page. `project-briefing.tsx`
-reuses `useBriefings` (including the designer's assigned-briefing RPC), `useCampaigns`,
-`BriefingSummary` in compact mode and read-only `BriefingAttachments`. It handles loading,
-unavailable data and retry without requesting attachments for an unavailable briefing.
+metadata, a Resources section, cover and version history. The agency's **Client brief** tab and
+the client's **Briefing** tab retain the original request/attachments through `ProjectBriefing`.
+Designers always open **Briefing**, containing only the studio's released production instructions;
+**Project info** holds dates, resources and round history, without the original description,
+service, quantities or cover. No linked client briefing is required for a production brief.
+
+In Working files, agency **Project details → Production → Prepare production brief** opens an
+editor for the selected design board. `production-brief-editor.tsx` edits the internal title,
+service, overview, goals, direction, service answers, deliverable names/formats/dimensions,
+quantities/approaches, HTTPS reference links and internal deadline. **Use client briefing as a
+starting point** copies text and scope into this editor only; it does not release them or copy
+attachments, requester/budget/source metadata. The agency can rewrite or remove the copied scope.
+Reference links can point to the approved resources or working files the designer should use.
+
+**Save draft** persists agency-only content in `production_brief_drafts`. **Send to designer**
+releases a complete snapshot in `production_briefs`, updates the board's internal deadline and
+creates one activity notification for that designer. A later draft leaves the released version
+intact until explicitly sent. Missing releases show a waiting state, never the client request.
+The designer's client **Briefings** route lists released production briefs and links to the exact
+project/board inspector; direct original-briefing URLs are unavailable.
+
+`save_production_brief` checks agency access, board/project locks, expected revision, payload
+limits, deliverable dimensions/quantities and safe reference links. A save-attempt UUID makes
+retries idempotent; changed payloads require a new attempt. Private request records retain each
+saved revision, with no new history editor. Draft reads are agency-only; released reads use the
+same `can_see_board` boundary as the board. Clients and other assigned designers get no rows.
+`production-brief-model.ts` owns the editor schema/copy conversion; reads and writes stay in
+`project-data.ts`. Only a production save invalidates production, project/board and activity reads.
+
+The original briefing, contracted deliverables, project deadline, credit debit, round statuses and
+client version history are unchanged. The designer still sends rounds and the agency still copies
+selected designs into the client board in Miro before sharing. This is internal production control,
+not automatic Miro selection, file copying or a new project-status transition.
+See [production-brief verification](../../../../docs/verification/production-briefs-2026-09-27.md).
+
 Details composes the existing edit, assignment and resource actions. Its project edit
 retains the revision captured when the form opens. The Drive link control and mutation live in
 `project-details-drive-link.tsx`; the credit move and settlement dialogs, including their per-dialog
@@ -232,7 +258,8 @@ controls bar.
 
 `project-data.ts` owns every Supabase read and write for the feature, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires.
-`useProjectDetail` reads the project, its deliverables, its versions on the viewer's channel
+`useProjectDetail` reads the project through `visible_projects`, contracted deliverables for
+agency/client only, and versions on the viewer's channel
 (`design_versions` or `published_versions`, with `publication_reviews` and the channel's Miro links)
 and returns `{ project, deliverables, versions, reviews }`; `toCanvasVersions` maps both tables to
 one `CanvasVersion` shape. `useDesignBoards` reads the boards the viewer may see (RLS limits a
@@ -247,7 +274,7 @@ board dialog. `projectQueryKeys` lists the keys every project write invalidates,
 designer to `internal` and a client to `client` — a missing row resolves to `null` rather than a
 role check here. `setProjectDriveLink(database, { projectId, channel, url })` calls
 `set_project_drive_link(p_project_id, p_channel, p_url)`, agency only; `projects.drive_url` no
-longer exists (dropped in favor of this table), so `useProjectDetail`'s `select("*")` project row,
+longer exists (dropped in favor of this table), so `useProjectDetail`'s authorized project projection,
 `workspace-data.ts`'s `Project` type and `assets/asset-data.ts`'s explicit column list all carry no
 Drive column anymore. A `client`-channel save in `project-details.tsx` also calls
 `assets/asset-data.ts`'s `useInvalidateAssets()` alongside `useInvalidateProject()`: Files

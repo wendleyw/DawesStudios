@@ -12,7 +12,7 @@ projects; moving a card does not change workflow status.
 | Role | Scope | Main entry points |
 | --- | --- | --- |
 | Agency | Studio clients, budgets, assignments, internal review, sharing and delivery | Home, each client's Briefings/Board/Reviews, Team, Credits, project details and Files |
-| Designer | Assigned projects, own design boards, safe briefing/brand direction and internal comments | Home, assigned projects, Working files, Reviews and Files |
+| Designer | Assigned projects, own design boards, studio production instructions/brand direction and internal comments | Home, assigned projects, Working files, Reviews and Files |
 | Client | Own client workspaces, briefing submission, shared versions, client comments and released delivery files | Overview, Briefings, Board, Reviews, Brand Hub/Files and Credits |
 
 Agency uses **Team → Invite someone → Send invitation**; the client's People dialog also has
@@ -33,6 +33,7 @@ item, not an email or a workflow button. Its link opens the screen containing th
 | Quote | Agency: briefing detail → Project budget → **Confirm budget**. | `awaiting_review → budget_confirmed`; no project or debit yet. | Agency action becomes **Start project**. No separate budget-confirmed activity event. Client sees **Scope confirmed** and waits for the studio. |
 | Start project | Agency: choose **Credit month**, then **Accept & create project**. | One atomic, idempotent project creation, deliverable creation and credit debit. Briefing becomes `accepted`; new project starts `planned`. | Eligible client activity **Your project is ready**; agency action **Prepare project**. |
 | Assign and prepare | Agency: project **Project details → Manage project → Assign a designer**; then Working files → **Add a design board** (empty state) or **+** (**Add design board**), and **Add board** in the dialog. | Designer gains project access; board stores its name, Miro link, one designer and optional internal due date. The + registers an existing Miro board/link; it does not create a board in Miro. | Assignment sends designer activity **New project assignment**. Board creation gives its designer action **Submit round**; it has no separate creation activity event. Agency preparation action clears after a board or client publication exists. |
+| Prepare production | Agency: Working files → **Project details → Production → Prepare production brief**. Edit or copy/rewrite the client scope; use **Save draft** or **Send to designer**. | Drafts stay agency-only; sending releases per-board instructions, quantities, references and internal deadline. Client request/credits stay unchanged. No project or round status transition. | Sending creates one designer activity **Production brief updated**. Unsent edits remain private. |
 | Produce and submit | Designer: work in the Miro embed or **Open in Miro**; use **Send to studio**, optionally adding a note and frame link. | Creates numbered board round R1/R2/etc with `submitted` status; project becomes `internal_review` (**Studio review**). | Agency activity **Design ready for studio review** and action **Review round**. Nothing is published to the client. |
 | Studio review | Agency: open the round in Working files. Use internal **Comments → Send message** for direction, or **Share with client** to publish it. | An internal comment is discussion, not a rejection transition. Sharing requires the agency to copy work into the client board in Miro and provide that board/frame link plus a note. | Studio internal comments notify the relevant designer(s); sharing follows the next step. There is currently no explicit return-to-designer action. |
 | Client publication | Agency: **Share with client**, or **Shared with client → New version** (**New client version** in the empty state) to add a client version directly. | Creates V1/V2/etc for the whole project; project becomes `client_review` (**In review**). A linked source round becomes `reviewed` (**Shared**). | Eligible client activity **New designs ready for review** and action **Review version**. |
@@ -58,7 +59,9 @@ a numbered application version is not a frozen snapshot of everything inside tha
 - **Project details** contains Overview/Briefing, timing, files and version history. Agency alone
   sees **Manage project**, assignment/removal, credit adjustments and internal/client Drive links;
   its header **Edit project details** action saves through **Save details**. The designer toolbar
-  opens **Briefing** first when linked, with **Project info** as the other tab; it omits the cover.
+  opens **Briefing** with only released studio instructions, with **Project info** as the other tab;
+  it omits the original request, contracted quantities and cover. Agency can inspect the original
+  **Client brief** separately. Production drafts and releases are scoped to the selected board.
 - **Comments** replaces the older separate conversation/feedback controls. **All activity** and
   **This round** (internal) or **This version** (client) choose context; **Send message** posts,
   **Resolve** and **Reopen** track a comment.

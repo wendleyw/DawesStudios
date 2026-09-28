@@ -1156,3 +1156,134 @@
     padding: 12px;
   }
 }
+
+.production-brief-heading {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.production-brief-heading h3 {
+  margin: 0 0 6px;
+}
+.production-brief-heading p,
+.production-brief-intro,
+.production-brief-fields > p {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.production-brief-heading .button {
+  justify-self: start;
+}
+
+.production-brief-form {
+  display: grid;
+  gap: 20px;
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  min-width: 0;
+}
+.production-brief-form > label,
+.production-brief-fields > label,
+.production-brief-reference > label {
+  display: grid;
+  gap: 8px;
+}
+.production-brief-fields {
+  display: grid;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.production-brief-fields h3,
+.production-brief-fields > p {
+  margin: 0;
+}
+.production-brief-output {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.production-brief-output .deliverable-editor {
+  border: 0;
+  padding: 0;
+}
+.production-brief-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.production-brief-add > label {
+  flex: 1;
+  min-width: 140px;
+}
+.production-brief-reference {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+.production-brief-reference > label {
+  grid-column: 1;
+  min-width: 0;
+}
+.production-brief-reference > button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+.production-brief-discard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.production-brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .production-brief-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .production-brief-actions .primary {
+    grid-column: 1 / -1;
+  }
+}
+.production-brief-list {
+  display: grid;
+  gap: 12px;
+}
+.production-brief-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.production-brief-list-item h2 {
+  font-size: var(--text-base);
+  margin: 0 0 8px;
+}
+.production-brief-list-item p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.production-brief .briefing-summary h2 {
+  font-size: var(--text-lg);
+  line-height: 1.35;
+  margin: 8px 0;
+}

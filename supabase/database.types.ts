@@ -1334,6 +1334,64 @@ export type Database = {
           },
         ]
       }
+      production_brief_drafts: {
+        Row: {
+          board_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          content: Json
+          revision: number
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_brief_drafts_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: true
+            referencedRelation: "design_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_briefs: {
+        Row: {
+          board_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          content: Json
+          revision: number
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_briefs_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: true
+            referencedRelation: "design_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2250,6 +2308,16 @@ export type Database = {
         Args: { p_board_id: string; p_expected_revision?: number; p_item: Json }
         Returns: Json
       }
+      save_production_brief: {
+        Args: {
+          p_board_id: string
+          p_content: Json
+          p_expected_revision: number
+          p_publish: boolean
+          p_request_id: string
+        }
+        Returns: number
+      }
       save_service_preset: {
         Args: {
           p_due_days: number
@@ -2380,6 +2448,32 @@ export type Database = {
           p_timezone: string
         }
         Returns: string
+      }
+      visible_projects: {
+        Args: never
+        Returns: {
+          board_position: Json
+          briefing_id: string | null
+          campaign_id: string | null
+          client_id: string
+          created_at: string
+          credit_month: string | null
+          delivered_at: string | null
+          description: string
+          due_date: string | null
+          id: string
+          service_type: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
     }
     Enums: {

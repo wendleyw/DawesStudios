@@ -28,7 +28,9 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Read another role's Playground | No implicit access | No | No |
 | Create campaign | Scoped | Own client, including briefing | No |
 | Edit campaign planning | Scoped | No implied production authority | No |
-| View briefing list and detail | Scoped | Own client | Safe assigned accepted list/detail; no budget |
+| View original client briefing and attachments | Scoped | Own client | Denied |
+| View released production brief | All boards | Denied | Own currently assigned board only |
+| Edit/save/send production brief | Agency only | Denied | Denied; unsent drafts remain private |
 | Create and save briefing | Scoped | Own authorized draft | No |
 | Edit submitted/accepted briefing | Explicit controlled revision | No direct overwrite | No |
 | Submit briefing | Scoped authorized draft | Own authorized draft | No |
@@ -80,7 +82,25 @@ review/comment history bound to the prior one. Client summaries may show that wo
 before anything is shared, with an explicit **Not shared yet** state; they must not include internal
 round/board content. Miro itself controls the external board's mutable contents.
 
-Designer briefing reads use `get_assigned_briefings`, which omits author, estimate, confirmed credits, and budget note. Raw briefing table access is denied to designers. Designer-visible projections include the project direction, deliverables, deadlines, their assigned design board's rounds, internal agency conversation, and needed brand resources. They exclude client-channel messages, client contact details not required for production, client billing, workspace-wide staff directories, and other designers' unassigned work.
+Designers read only studio-released `production_briefs` for boards they may currently see.
+`production_brief_drafts` are agency-only; clients and other assigned designers receive neither
+private instructions nor drafts. The agency controls all internal content and deliberately sends
+it through `save_production_brief`; copying client text into an editor is not a release.
+The original `briefings`, contracted `deliverables`, attachment metadata and `briefing-files`
+Storage reads are unavailable to designers. The legacy `get_assigned_briefings` RPC returns no
+rows. Direct original-briefing routes show an unavailable state.
+
+Project descriptions may reproduce the client's overview. Direct `projects.description` reads
+are therefore revoked for authenticated callers; narrow project columns remain readable under
+RLS. Project list/detail readers use `visible_projects()`, which enforces current project access
+and returns an empty description to a designer. Agency/client receive their authorized description.
+This also prevents nested or wildcard table reads from bypassing the projection. Shared project
+identity and board dates remain available; the designer inspector shows its production scope.
+Existing signed attachment URLs expire under the Storage limitation documented below.
+
+Designers retain their assigned boards/rounds, internal conversation and needed brand resources.
+They receive no client-channel messages, billing, staff directory or other designers' work.
+
 
 ## Playground and presentation preferences
 

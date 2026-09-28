@@ -149,7 +149,7 @@ export function useProjects(clientId?: string) {
     queryFn: async ({ signal }) => {
       const projects = await fetchAllPages(async (from, to) => {
         const query = database
-          .from("projects")
+          .rpc("visible_projects")
           .select("*")
           .order("created_at", { ascending: false })
           .order("id", { ascending: false });

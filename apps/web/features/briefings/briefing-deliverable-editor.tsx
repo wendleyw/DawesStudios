@@ -19,7 +19,12 @@ export function BriefingDeliverableEditor({
         <span>
           {format?.name ?? item.format} <small>{formatSize(item)}</small>
         </span>
-        <button className="icon-button" aria-label={`Remove ${item.name}`} onClick={onRemove}>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={`Remove ${item.name}`}
+          onClick={onRemove}
+        >
           <X size={16} />
         </button>
       </div>

@@ -3,6 +3,7 @@
 import { ArrowUpRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { ProductionBriefsPage } from "@/features/projects/production-brief";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useClients, useDateFormat } from "@/features/workspace/workspace-data";
 import { personName, requesterLabel } from "@/features/team/client-people";
@@ -19,6 +20,15 @@ import "./briefings.css";
 import { PageStatus } from "@/features/shared/page-status";
 
 export function BriefingsPage({ clientId }: { clientId: string }) {
+  const { profile } = useAuth();
+  return profile?.role === "designer" ? (
+    <ProductionBriefsPage clientId={clientId} />
+  ) : (
+    <ClientBriefingsPage clientId={clientId} />
+  );
+}
+
+function ClientBriefingsPage({ clientId }: { clientId: string }) {
   const { profile } = useAuth();
   const clients = useClients();
   const { formatDate, formatDayTime } = useDateFormat();

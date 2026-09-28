@@ -137,6 +137,9 @@ delete from private.miro_share_requests where project_id in (select id from acce
 delete from public.publication_miro_links where project_id in (select id from acceptance_target);
 delete from public.design_version_miro_links where project_id in (select id from acceptance_target);
 delete from public.design_versions where project_id in (select id from acceptance_target);
+delete from private.production_brief_requests where board_id in (select id from public.design_boards where project_id in (select id from acceptance_target));
+delete from public.production_brief_drafts where board_id in (select id from public.design_boards where project_id in (select id from acceptance_target));
+delete from public.production_briefs where board_id in (select id from public.design_boards where project_id in (select id from acceptance_target));
 delete from public.design_boards where project_id in (select id from acceptance_target);
 delete from public.playground_items where board_id in (select id from public.playground_boards where project_id in (select id from acceptance_target));
 delete from public.playground_boards where project_id in (select id from acceptance_target);

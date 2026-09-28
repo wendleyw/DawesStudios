@@ -8,7 +8,7 @@ import { BriefingSummary } from "@/features/briefings/briefing-summary";
 import { BriefingAttachments } from "@/features/briefings/briefing-attachments";
 import "@/features/briefings/briefings.css";
 
-/** The existing authorized briefing read also limits designers to their assigned projects. */
+/** Client/agency scope only. Designer instructions use ProductionBrief. */
 export function ProjectBriefing({
   clientId,
   briefingId,

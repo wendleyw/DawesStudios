@@ -34,6 +34,9 @@ erDiagram
   Briefing ||--o{ BriefingDeliverable : requests
   Project ||--o{ Deliverable : scopes
   Project ||--o{ Assignment : assigns
+  Project ||--o{ DesignBoard : organizes
+  DesignBoard ||--o| ProductionBriefDraft : prepares
+  DesignBoard ||--o| ProductionBrief : releases
   Project ||--o{ ProductionVersion : contains
   Deliverable ||--o{ ProductionVersion : revises
   ProductionVersion ||--o{ Design : contains
@@ -69,6 +72,9 @@ The diagram omits repeated workspace/client keys and auxiliary file relations fo
 | Quote | Briefing revision, catalog/estimate snapshot, agency-confirmed integer total, adjustment explanation, author/time; accepted quote becomes immutable. |
 | Project | Client/campaign/accepted briefing, title, lifecycle state, dates, public summary, accepted scope/brand/quote snapshots; excludes assignment from client projection. |
 | Assignment | Project, designer identity, assigned/revoked timestamps, agency actor; separate internal relation. |
+| DesignBoard | Project, one designer, internal name, Miro board reference and optional internal deadline; visible only to the agency and that assigned designer. |
+| ProductionBriefDraft | Agency-owned instructions for one design board: title, service, creative direction, deliverables/quantities, references and deadline; saved edits remain private. |
+| ProductionBrief | Explicitly released production instructions for the board's designer; subsequent drafts do not replace the release until sent. Does not change contracted client scope or billing. |
 | Deliverable | Project, source briefing deliverable, format snapshot, custom name, dimensions/size rule, positive quantity, scope and order. |
 | ProductionVersion | Project, deliverable, monotonically ordered revision number within that deliverable, internal notes, creator, change/review state; contains one or more alternative designs. |
 | Design | Version, deliverable, stable ID, optional lineage to prior design, name/order, immutable source/preview file revision; multiple designs per version/deliverable allowed. The revision may be an image or a web-playable video (MP4/WebM); the kind is read from the stored object's extension, not a column, because that extension names the container `apps/media` actually verified rather than what a browser claimed at upload. |

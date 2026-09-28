@@ -33,7 +33,25 @@ passwords are preserved, and token setup is validated before a new account sets 
 
 `clients → campaigns → briefings → projects → deliverables` captures what was ordered, and `projects → design_boards → design_versions` (rounds) captures production. `project_assignments`, `design_boards`, `design_versions`, `internal_comments` and `project_assets` are unreadable to clients. Designers see assigned projects and brand data; they cannot read credit data or client conversations.
 
-Designers cannot select raw briefing rows because those contain budgets and requester IDs. `get_assigned_briefings(p_client_id=null)` returns an allowlisted production brief without financial/author fields, restricted to accepted briefs for assigned projects. Assignment revocation removes project, brief, file and internal-channel access on subsequent authenticated reads; repeating an existing assignment does not notify twice.
+Designers cannot read the original client request, its attachments or contracted deliverables.
+`get_assigned_briefings(p_client_id=null)` is a compatibility endpoint returning no rows.
+`production_brief_drafts` is agency-only; `production_briefs` holds explicitly released content
+and uses the selected design board's visibility boundary. The studio may copy/rewrite the client
+scope in its editor, then deliberately send it. Unsaved or saved draft changes do not replace the
+released instructions. Assignment revocation removes board/production access on subsequent reads.
+
+`save_production_brief(p_board_id,p_content,p_expected_revision,p_publish,p_request_id)` returns
+the new integer revision. It locks the board/project, refuses stale editors and delivered projects,
+validates content, dimensions, quantities and HTTPS references, and stores idempotent private save
+records. Sending updates the internal board deadline and notifies only that board's designer;
+client scope, credits and project/round statuses are untouched. Drafts and releases have no direct
+authenticated writes. The production editor supplies named reference links; original client
+attachments are not automatically copied or granted to the designer.
+
+Authenticated project list/detail reads use `visible_projects()`, which checks current access
+and masks client-derived descriptions for designers. Direct/nested `projects.description` reads
+are revoked; other authorized columns remain selectable. Agency updates still return only `id`.
+The original client request and description remain stored unchanged.
 
 `published_versions` is the separate client projection: a **client version** is project-level and
 numbered per project. Its row, including identity, number and release note, is immutable. Its Miro
@@ -116,6 +134,8 @@ All arguments use the `p_` prefix. Functions return a UUID unless another return
 | `save_briefing_revision` (JSON) | Same arguments as `save_briefing`; atomically returns `{id,updated_at}` for editor saves |
 | `submit_briefing` (void) | `p_briefing_id` |
 | `confirm_briefing_budget` (void) | `p_briefing_id`, `p_credits`, `p_note=''` (required when different from estimate) |
+| `visible_projects` (project rows) | No arguments; authorized project rows, description empty for designers |
+| `save_production_brief` (integer revision) | `p_board_id`, `p_content`, `p_expected_revision`, `p_publish`, `p_request_id`; agency only, per-board instructions |
 | `accept_briefing` | `p_briefing_id`, `p_month=null` (the due-date month, clamped to the writable window, when omitted) |
 | `adjust_credits` | `p_client_id`, `p_amount`, `p_description`, `p_idempotency_key`; applies to the current month |
 | `set_credit_plan` (void) | `p_client_id`, `p_monthly_credits`, `p_starts_on` (the current month or later) |
@@ -170,7 +190,7 @@ Existing draft edits require the revision loaded with the text. A mismatch retur
 
 A `before insert or update` trigger on `public.briefings`, applied at every status so a draft cannot outgrow what a submission could ever reach, caps `requested_deliverables` at 50 entries, `direction` at 65536 bytes, `title` at 200 characters and `overview`/`goals`/`budget_note` at 10,000 characters each, and — under a per-client advisory lock, checked only on insert — refuses a 101st draft for one client with a plain-English message. See `supabase/migrations/202609260003_briefing_limits_and_credit_lock.sql`.
 
-`briefing_attachments` records real files in the private `briefing-files` bucket. Save the draft first, upload to `<briefing-uuid>/<random-uuid>.<extension>`, then call `add_briefing_attachment(p_briefing_id,p_name,p_storage_path,p_mime_type,p_file_size)`. Allowed types are PNG, JPEG, WebP and PDF, up to 50 MiB. A `before insert` trigger, under a per-briefing advisory lock, refuses a 21st attachment for one briefing (same migration). Draft access is required for upload/removal. Submission preserves read access for that client, agency and assigned production team. To remove a draft attachment call `remove_briefing_attachment(p_attachment_id)`, then remove its returned path from Storage. An unregistered file can also be removed while the briefing remains a draft.
+`briefing_attachments` records real files in the private `briefing-files` bucket. Save the draft first, upload to `<briefing-uuid>/<random-uuid>.<extension>`, then call `add_briefing_attachment(p_briefing_id,p_name,p_storage_path,p_mime_type,p_file_size)`. Allowed types are PNG, JPEG, WebP and PDF, up to 50 MiB. A `before insert` trigger, under a per-briefing advisory lock, refuses a 21st attachment for one briefing (same migration). Draft access is required for upload/removal. Submission preserves read access for that client and agency. Designers cannot read original briefing attachments; the studio supplies production references separately. To remove a draft attachment call `remove_briefing_attachment(p_attachment_id)`, then remove its returned path from Storage. An unregistered file can also be removed while the briefing remains a draft.
 
 `credit_requests` lets a client request 25, 50 or 100 credits through `request_credits(p_client_id,p_amount,p_note='')`. This never grants credits or charges a card. Agency users resolve the request through `fulfill_credit_request(p_request_id,p_note='')` or `reject_credit_request(p_request_id,p_note)`. Fulfillment adds an `extra` to the current month and is idempotent, returning the original ledger UUID on retries. Rejected requests cannot be fulfilled.
 

@@ -1,60 +1,68 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; designer context UX integrated**.
+Updated: 2026-09-27 EDT. Owner: **Codex; private production briefs integrated locally**.
 
 ## Objective and accepted decisions
 
 - Improve project UX for agency, client and designer while preparing production workflows.
-- Project pages alone use the compact campaign/title/due-date header for every role (`44dba3b`),
-  title weight700 (`45439d2`). No preview flag or saved layout preference is needed.
-- Desktop client view tools stay on the left rail; only viewport widths up to900px move them below.
-- Miro is the primary creative workspace. No R2 or simultaneous-upload reservation architecture.
-- Resend is selected for production email through Supabase Auth SMTP; no direct SDK.
-- Server/domain/sender credentials unknown. No push, deployment or external email delivery.
+- Project pages alone use the compact campaign/title/due-date header (`44dba3b`), title weight700
+  (`45439d2`). Desktop client tools stay on the left rail; widths up to900px move them below.
+- Miro is the creative workspace. Agency manually copies chosen internal work to the client board.
+- Internal requests may ask for extra concepts/quantities without changing client scope or credits.
+- Designers receive only agency-released production instructions, never the original client request.
 - Preserve live SABRE10clients/68projects/50SABRE and canonical staging10/25.
 - Never migration down/db reset. Unrelated preexisting login.png deletion remains uncommitted.
+- No push, deployment or external email delivery authorized. Target server/domain/sender unknown.
 
-## Latest integrated task: designer context UX
+## Integrated task: private production briefs
 
-- Designer first tool is Briefing when linked; it opens the saved scope directly. Project info
-  contains secondary metadata/resources. Without a brief, Project details remains available.
-- The designer inspector never mounts the project cover. Board-card covers/read permissions
-  unchanged. Agency/client retain their Overview and cover controls.
-- Designer Miro bar: Working files, assigned board name even with one board, Live board/R1/R2.
-- Internal comments use This round; designer audience says You and the studio. Client keeps
-  This version. Named project/round destinations, drafts and existing writes remain intact.
-- Agency icon-only + immediately before designer badge stays grouped8px apart (`506dae7`).
-  Shared with client retains New version. No workflow status, permission or database changes.
-- Current full gate: npm run check passes types/lint/format and129files/1278tests.
-- Focused6files/85tests; Chromium3real roles×4sizes,40geometry checks,19Axe scans,0page errors pass.
-- Designer direct-panel link and submission dialog open/cancel checked. No application writes.
-- [Current report](handoffs/2026-09-27-designer-context-ux.md) and
-  [verification/captures](../verification/designer-context-2026-09-27.md).
-- External Miro requests blocked in isolated checks; actual sign-in/editing not verified.
-- Next concrete UI action: user reviews the designer project page locally.
+- Working files → Project details → Production edits one private brief per selected design board.
+- Editable title/service/direction/goals, deliverables/formats/dimensions/quantities, references and
+  internal deadline. Explicit client-scope copy is available inside the agency editor only.
+- Save draft remains agency-only; Send to designer releases instructions and one activity event.
+- Forward migrations202609280001/002 applied locally. Expected revision is captured on open;
+  database locks/idempotency protect saves. Stale edits keep the user's text and refuse overwrite.
+- Old client briefing/attachment/deliverable reads blocked; visible_projects masks descriptions
+  copied from client scope. Client data, billing, project deadline and workflow statuses unchanged.
+- Existing boards have no auto-release; designers see a waiting state until the agency sends.
+- Gate: types/lint/format and132files/1289tests pass;4DBfiles/197assertions;9HTTP/Auth/Storage tests.
+- Chromium:3workflows pass plus final production retest;5Axe/overflow checks pass at desktop/mobile.
+- Integrity:122FK relationships;live10/68/50;zero production fixture drafts/releases after cleanup.
+- SQL lint has no errors; empty legacy endpoint has unused argument/output warnings.
+- Expanded canonical board-count browser case fails on the demo overlay (8 expected including its
+  fixture); assertion preserved. Full canonical matrix/intake/legacy concurrency not rerun.
+- [Report](handoffs/2026-09-27-production-briefs.md) and
+  [verification/captures](../verification/production-briefs-2026-09-27.md).
+- External Miro requests blocked in isolated browser checks; actual sign-in/editing not verified.
+- Next: user prepares/sends the first production brief locally. Production references are named
+  HTTPS links; this change adds no new binary upload system or automatic Miro copy/publish action.
 
-## Workflow map and outstanding product work
+## Pending workflow decisions from the parallel planning thread
 
-- Funnel docs committed in8402aa9; checkpoint ownership released to this UI task.
-- [Production workflow](../architecture/production-workflow.md) maps current Miro role actions,
-  notification rules and gaps. Its final designer labels match this implementation.
-- [Intake audit](handoffs/2026-09-28-funnel-intake-map.md) and
-  [notification audit](handoffs/2026-09-28-funnel-notifications-map.md) are source/schema evidence.
-- Next workflow fixes: designer revision action vs Home mismatch, missing Miro production-start
-  transition, no briefing decline/cancel. Auth SMTP does not provide workflow email notifications.
-- Agency confirms/accepts budget; client reviews shared versions. No funnel behavior changed here.
+- The planning thread made no implementation/checkpoint edits during this task; Codex owned all
+  shared integration paths. Agree the next owner explicitly before that thread writes them.
+- User accepted: public project starts In progress on acceptance; client must see In progress
+  during Studio review; V1/V2/V3 are iterations of the same work, not extra deliverables/debits.
+- These status/projection changes are **not implemented** by the production-brief feature.
+- Proposed next: agency selects affected boards, writes separate internal revision directions and
+  sends to designer(s); board revision tasks plus public In progress while old review history stays.
+- Board revision tasks/return-to-designer transitions remain future work. Sending a production
+  brief currently changes only the released content, board deadline and designer activity.
+- [Workflow map](../architecture/production-workflow.md), [intake audit](handoffs/2026-09-28-funnel-intake-map.md)
+  and [notification audit](handoffs/2026-09-28-funnel-notifications-map.md) retain existing gaps.
 
-## Prior verified work and evidence
+## Prior integrated UI and evidence
 
-- Project context UX: inline Briefing, named comment destinations, organized side panels,
-  full-width Playground strip and centered copy/paste feedback. Mobile panels cover project chrome.
-- [Context evidence](../verification/project-context-ux-2026-09-27.md): prior129files/1269tests,
-  81CSS checks,3roles×4sizes×3panels,6PNGcopies/30Axe; external Miro paste not verified.
-- [Designer badge](../verification/board-designer-2026-09-27.md): prior129files/1272tests,
-  2Chromium workflows,118FK,live10/68/50. Agency gets authorized display name only.
-- [Plus placement](../verification/board-action-clarity-2026-09-27.md): prior44tests,
-  3responsive dialogs/Axe0. Add design board links an existing Miro board; it does not create one.
-- [Before this task](history/handoff-2026-09-27-before-designer-context.md) retains earlier details.
+- Designer context93e1a15: Briefing first, secondary Project info, no inspector cover;
+  Working files/own board/Live board/R1 labels; This round comments, You and the studio audience.
+  Its original-brief reading is superseded by the production isolation above.
+- [Designer context evidence](../verification/designer-context-2026-09-27.md): prior129files/1278tests,
+  3roles×4sizes,40geometry/19Axe,0page errors. Agency + before designer badge remains506dae7.
+- [Project context evidence](../verification/project-context-ux-2026-09-27.md): inline brief,
+  named comments, organized panels, full-width Playground and centered copy/paste feedback.
+- [Board badge](../verification/board-designer-2026-09-27.md) and
+  [plus/dialog](../verification/board-action-clarity-2026-09-27.md) retain previous evidence.
+- [Prior checkpoint](history/handoff-2026-09-27-before-production-briefs.md) preserves earlier state.
 
 ## Recovery, invitation and deployment continuity
 
@@ -63,15 +71,15 @@ Updated: 2026-09-27 EDT. Owner: **Codex; designer context UX integrated**.
 - Keep ignored backups/orphan archives in supabase/.backups/20260927-recovery-hardening/ and
   successful supabase/.backups/20260927-recovery-verified/. Older fixed clone is untouched.
 - Guarded cleanup removed only11archived fixture orphans; local SABRE checkpoint preserved.
-- Original Gmail invitation remains pending; user still needs password setup. Never consume that
-  invitation in automation. Named test invitations remove only their own captured mail.
+- Original Gmail invitation remains pending; user still needs password setup. Never consume it
+  in automation. Named test invitations remove only their own captured mail.
 - [Callback evidence](../verification/invitation-link-errors-2026-09-27.md) retains Auth investigation.
-- [Email runbook](../operations/email.md) prepares Resend host SMTP; actual delivery is a host gate.
+- Resend is selected through Supabase Auth SMTP; no direct SDK. [Email runbook](../operations/email.md)
+  prepares host SMTP; actual delivery is a host gate. Auth SMTP does not send workflow emails.
 - Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
 - Filesystem staging stopped with data retained:API56110/DB56111/web3113/media56114/mail56115.
   Do not provision/reseed it again.
-- Obtain target server/domain/sender and use [production runbook](../operations/production.md)
-  only when deployment is explicitly requested. Verify Resend delivery with controlled recipients.
+- Use [production runbook](../operations/production.md) only when deployment is requested.
 - Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,
   monitoring alerts, actual Miro sharing and first hosted CI. Local restore is not production proof.
-- Firefox launch/external Miro WebKit limitations remain; complete three-engine coverage not claimed.
+- Firefox/external Miro WebKit limitations remain; complete three-engine coverage not claimed.

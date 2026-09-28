@@ -1,5 +1,7 @@
 "use client";
 
+import { productionBriefSchema, type ProductionBriefContent } from "./production-brief-model";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Database } from "@database";
 import { useAuth } from "@/features/auth/auth-provider";
@@ -167,7 +169,7 @@ export function useProjectDetail(projectId: string, channel: ProjectChannel) {
     queryFn: async () => {
       const clientChannel = channel === "client" || profile?.role === "client";
       const [project, deliverables, versionResult, reviewResult] = await Promise.all([
-        database.from("projects").select("*").eq("id", projectId).single(),
+        database.rpc("visible_projects").select("*").eq("id", projectId).single(),
         database.from("deliverables").select("*").eq("project_id", projectId).order("sort_order"),
         clientChannel
           ? database
@@ -869,4 +871,85 @@ export async function settleProjectCredits(
     );
   }
   return assertResult(result) as ProjectSettlement;
+}
+
+const productionBriefQueryKey = "production-brief";
+
+/** A production release also updates the board deadline and designer activity. */
+export function useInvalidateProductionBrief() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all(
+      [productionBriefQueryKey, "project-detail", "projects", "notifications"].map((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] }),
+      ),
+    );
+}
+
+/** Studio-owned instructions; drafts never enter the designer's query or response. */
+export function useProductionBrief(boardId: string | undefined) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: [productionBriefQueryKey, session?.user.id, boardId, profile?.role],
+    enabled: !!session && !!boardId && profile?.role !== "client",
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const published = assertResult(
+        await database.from("production_briefs").select("*").eq("board_id", boardId!).maybeSingle(),
+      );
+      const draft =
+        profile?.role === "agency"
+          ? assertResult(
+              await database
+                .from("production_brief_drafts")
+                .select("*")
+                .eq("board_id", boardId!)
+                .maybeSingle(),
+            )
+          : null;
+      const decode = (row: TableRow<"production_briefs"> | null) =>
+        row ? { ...row, content: productionBriefSchema.parse(row.content) } : null;
+      return { published: decode(published), draft: decode(draft) };
+    },
+  });
+}
+
+export async function saveProductionBrief(
+  database: SupabaseDatabase,
+  input: {
+    boardId: string;
+    content: ProductionBriefContent;
+    expectedRevision: number;
+    publish: boolean;
+    requestId: string;
+  },
+) {
+  return assertResult(
+    await database.rpc("save_production_brief", {
+      p_board_id: input.boardId,
+      p_content: input.content,
+      p_expected_revision: input.expectedRevision,
+      p_publish: input.publish,
+      p_request_id: input.requestId,
+    }),
+  );
+}
+
+/** Designer index shows released studio briefs, never the client's original requests. */
+export function useProductionBriefs(clientId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: [productionBriefQueryKey, "list", session?.user.id, clientId],
+    enabled: !!session,
+    queryFn: async () =>
+      assertResult(
+        await database
+          .from("production_briefs")
+          .select(
+            "board_id,content,revision,updated_at,design_boards!inner(name,project_id,projects!inner(client_id,title))",
+          )
+          .eq("design_boards.projects.client_id", clientId)
+          .order("updated_at", { ascending: false }),
+      ).map((row) => ({ ...row, content: productionBriefSchema.parse(row.content) })),
+  });
 }
