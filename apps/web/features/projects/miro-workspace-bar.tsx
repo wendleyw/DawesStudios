@@ -142,12 +142,13 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
           )}
           {agency && props.boards.length > 0 && (
             <button
-              className="icon-button"
+              className="button quiet miro-bar-add"
               aria-label="Add design board"
               title="Add design board"
               onClick={props.onAddBoard}
             >
-              <Plus size={16} />
+              <Plus size={14} aria-hidden="true" />
+              Add board
             </button>
           )}
           {props.board && props.rounds.length > 0 && (
@@ -194,12 +195,13 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
           {/* With nothing shared yet, the empty state's own call to action is the one control. */}
           {agency && !props.delivered && (
             <button
-              className="icon-button"
+              className="button quiet miro-bar-add"
               aria-label="New client version"
               title="New client version"
               onClick={props.onAddVersion}
             >
-              <Plus size={16} />
+              <Plus size={14} aria-hidden="true" />
+              New version
             </button>
           )}
           {props.version && (

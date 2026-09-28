@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; board designer emphasis integrated, spacing clarification pending**.
+Updated: 2026-09-27 EDT. Owner: **Codex; board action labels clarified, spacing clarification pending**.
 
 ## Objective and accepted decisions
 
@@ -49,6 +49,10 @@ Updated: 2026-09-27 EDT. Owner: **Codex; board designer emphasis integrated, spa
   the successful `supabase/.backups/20260927-recovery-verified/`. Older fixed clone is untouched.
 
 ## Environment and next concrete work
+
+- Board action follow-up: **Add board** links existing Miro work; **New version** labels sharing.
+  Dialog title/description clarified;73targeted tests,lint/format,3responsive dialogs/Axe0 pass.
+  [Action clarity evidence](../verification/board-action-clarity-2026-09-27.md). No records created.
 
 - Working files now highlights the selected board's designer for the agency, including one board.
   Profile name joins existing RLS; client rows and other designers' boards remain inaccessible.

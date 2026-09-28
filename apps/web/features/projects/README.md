@@ -53,7 +53,7 @@ round's status; in Shared with client a **V1, V2…** toggle and the shown versi
 with nothing shared yet retains Back and More without version controls. The board's own designer gets **Send to studio**
 (`project-action-round.tsx`, `kind: "round"`, an optional note and frame link through the
 idempotent `send_board_round`); the agency gets **Share with client** on a round
-(`project-action-share.tsx`, `kind: "share"`) and, in Shared with client, **+ New client version**.
+(`project-action-share.tsx`, `kind: "share"`) and, in Shared with client, **+ New version** (accessible name **New client version**).
 Delivered projects offer none of these three actions, matching the server's terminal-state checks;
 delivery also dismisses an open round/share dialog. Existing boards, versions and feedback remain
 readable. A round marked **Shared** no longer offers to share it again. Project details resolves
@@ -70,8 +70,10 @@ See the [designer-badge verification](../../../../docs/verification/board-design
 
 Sharing a round and adding a version prefill the client board link from `useLatestSharedMiroLink` (the newest project-level client
 version's link, read for the agency alone, so it works from Working files too); an action opened
-before that read finished reads the link itself and remounts its field when it arrives. The **+**
-icon (**Add design board**) adds another board, and the agency's **More** menu holds **Edit board**
+before that read finished reads the link itself and remounts its field when it arrives. The labeled **+ Add board**
+button (**Add design board** for assistive technology) opens **Add design board** to link an existing
+Miro board and select its designer; it does not create a new board on Miro. The agency's **More**
+menu holds **Edit board**
 (`project-action-board.tsx`, `kind: "board"`: name, Miro link, one assigned designer and an optional
 **Board due date**) and, on a shown client version, **Edit Miro link** (`project-action-miro.tsx`,
 `kind: "miro"`). An empty board or channel shows an inline call to action (**Add a design board** /

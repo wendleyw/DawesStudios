@@ -161,6 +161,12 @@
   padding: 5px 12px;
   font-size: var(--text-xs);
 }
+.miro-bar-add {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
 .project-channel-tabs {
   display: flex;
   align-self: stretch;

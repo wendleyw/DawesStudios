@@ -70,7 +70,7 @@ export function ProjectActionBoard({
   return (
     <ProjectActionShell
       open
-      title={action.board ? "Edit the design board." : "A design board."}
+      title={action.board ? "Edit design board" : "Add design board"}
       closeDisabled={closeDisabled}
       onModalClose={close}
       onSubmit={(event) => {
@@ -89,7 +89,10 @@ export function ProjectActionBoard({
           : undefined)
       }
     >
-      <p>The designer works here; only you and that designer see this board.</p>
+      <p>
+        Link an existing Miro board and choose its designer. Only the studio and that designer see
+        it in this workspace.
+      </p>
       <label>
         Board name
         <input name="name" required maxLength={80} defaultValue={action.board?.name ?? ""} />
@@ -99,6 +102,7 @@ export function ProjectActionBoard({
         <input
           name="miro"
           required
+          placeholder="Paste the Miro board link"
           defaultValue={action.board ? miroBoardUrl(action.board.miro) : ""}
         />
       </label>
