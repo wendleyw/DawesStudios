@@ -353,25 +353,31 @@ export function ProjectWorkspace({
                           ? role === "agency"
                             ? "Work resumes from Edit project details"
                             : "Paused by the studio"
-                          : internal
-                            ? workflowBoard?.activity === "closed"
-                              ? "No further work needed"
-                              : workflowBoard?.currentRequest?.outcome === "open"
-                                ? "Designer working"
-                                : workflowBoard?.currentRequest?.outcome === "submitted"
-                                  ? "Studio review"
-                                  : workflowBoard?.currentRequest?.outcome === "shared"
-                                    ? "Shared with client"
-                                    : "Waiting for production instructions"
-                            : !version
-                              ? role === "client"
-                                ? "The studio is preparing your first version"
-                                : "Nothing shared yet"
-                              : latestPublication?.decision === "changes_requested"
-                                ? "Changes requested"
-                                : latestPublication?.decision === "approved"
-                                  ? "Approved"
-                                  : "Client presentation"}
+                          : project.status === "delivered"
+                            ? "Delivered"
+                            : internal
+                              ? workflowBoard?.activity === "closed"
+                                ? "No further work needed"
+                                : workflowBoard?.currentRequest?.outcome === "open"
+                                  ? "Designer working"
+                                  : workflowBoard?.currentRequest?.outcome === "submitted"
+                                    ? "Studio review"
+                                    : workflowBoard?.currentRequest?.outcome === "shared"
+                                      ? "Shared with client"
+                                      : "Waiting for production instructions"
+                              : !version
+                                ? role === "client"
+                                  ? "The studio is preparing your first version"
+                                  : "Nothing shared yet"
+                                : latestPublication?.decision === "changes_requested"
+                                  ? project.status === "in_progress"
+                                    ? role === "client"
+                                      ? "The studio is working on your changes"
+                                      : "Changes sent to designers"
+                                    : "Changes requested"
+                                  : latestPublication?.decision === "approved"
+                                    ? "Approved"
+                                    : "Client presentation"}
                     </span>
                   </p>
                   {workflow.error && (

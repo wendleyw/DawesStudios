@@ -359,6 +359,31 @@ describe("ProjectWorkspace", () => {
     expect(screen.getByRole("button", { name: "Request changes" })).toBeInTheDocument();
   });
 
+  it.each([
+    ["client", "changes_requested", "in_progress", "The studio is working on your changes"],
+    ["agency", "changes_requested", "in_progress", "Changes sent to designers"],
+    ["client", "changes_requested", "changes_requested", "Changes requested"],
+    ["client", "approved", "delivered", "Delivered"],
+    ["agency", "approved", "delivered", "Delivered"],
+  ] as const)(
+    "tells the %s where a %s version stands once the project is %s",
+    (role, decision, status, text) => {
+      state.role = role;
+      workflowState.publish = false;
+      workflowState.latest = { id: "v1", number: 1, decision, reviewRevision: 1 };
+      const version = { ...round, id: "v1", boardId: null, number: 1, status: decision };
+      renderWorkspace({
+        channel: "client",
+        data: {
+          project: { id: "p", client_id: "c", title: "Campaign", status },
+          versions: [version],
+          deliverables: [],
+        } as unknown as ProjectWorkspaceProps["data"],
+      });
+      expect(screen.getByRole("group", { name: "Workflow actions" })).toHaveTextContent(text);
+    },
+  );
+
   it("prefills the first client version from the latest client link too", async () => {
     renderWorkspace({ channel: "client" });
     await userEvent.setup().click(screen.getByRole("button", { name: "Share with client" }));

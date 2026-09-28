@@ -43,9 +43,12 @@ details); clients and designers see "Paused by the studio".
 | Agency, approved V | Prepare delivery | Opens the project's Files page. |
 | Agency, Files | Delivery file / Complete delivery | Uploads real final bytes, then completes delivery only with the latest V approved and at least one final file. |
 
-There is one contextual action bar, docked in the window's footer under the Miro board, with no duplicate send/share in the Miro header and no
-Mark ready, Ready for client or internal approval step. A disabled/waiting state explains whether
-work awaits the studio, fresh instructions, a resumed project or a reactivated board.
+There is one contextual action bar, centered over the bottom of the Miro board, with no duplicate
+send/share in the Miro header and no Mark ready, Ready for client or internal approval step. A
+disabled/waiting state explains whether work awaits the studio, fresh instructions, a resumed
+project or a reactivated board. Its state never contradicts the project status: once the agency
+sends a client's changes to the designers it reads "The studio is working on your changes" for the
+client and "Changes sent to designers" for the agency, and a delivered project reads "Delivered".
 
 The credit month can be the current month or any of the next 11. Insufficient balance prevents
 acceptance. Budget acceptance belongs to the agency; the client does not receive a billing action.

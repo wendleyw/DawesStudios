@@ -69,3 +69,36 @@ record notes the corrected expectation.
   [Comments open](screenshots/status-2026-09-28/dock-agency-panel-1440.png),
   [client](screenshots/status-2026-09-28/dock-client-1440.png),
   [designer](screenshots/status-2026-09-28/dock-designer-1440.png).
+
+## Second walkthrough (S03) and action map
+
+A fresh project (S03) repeated the flow in the browser for client, agency and both designers.
+Result: 15/16 checkpoints; checkpoint 22 carried the same outdated expectation as S02 (Backlog is
+hidden by the default Active filter), and a separate check in this session confirmed Backlog under
+Filters → Activity for client, agency and designer 1.
+
+| Status before | Who | Button (where) | Status after |
+| --- | --- | --- | --- |
+| — | Client | Send briefing (Briefings) | Briefing Awaiting review |
+| Awaiting review | Agency | Confirm budget (briefing) | Budget confirmed |
+| Budget confirmed | Agency | Accept & create project (briefing) | In progress, 1 credit debit |
+| In progress | Agency | Add design board, then Send to designer (Working files) | In progress · Designer working |
+| Designer working | Designer | Send to studio (own board) | In progress · Studio review (internal) |
+| Studio review | Agency | Review R# → Request changes | Designer working again |
+| Studio review | Agency | Review R# → Share with client | In review, V# created |
+| In review | Client | Approve / Request changes | Approved / Changes requested |
+| Changes requested | Agency | Send to designers (Shared with client) | In progress · designers working |
+| Approved | Agency | Prepare delivery → Complete delivery (Files) | Delivered |
+| Any open status | Agency | Edit project details → Backlog / Active | Paused / resumed, status kept |
+
+Fixed from this run: the action bar contradicted the project status twice. After Send to designers
+it now reads "The studio is working on your changes" (client) or "Changes sent to designers"
+(agency) instead of "Changes requested"; after Complete delivery it reads "Delivered" instead of
+"Approved". Checks: project unit tests 28 files / 247 tests PASS (5 new cases).
+
+The user's short-window screenshot hid the dock behind the macOS Dock; the page itself fits:
+probes at 1024×640, 1180×720, 1435×747, 1435×850, 1728×1000 and 900×1000 measured no page
+overflow, and the board and centered dock stayed inside the window
+([window sizes](screenshots/status-2026-09-28-s03/window-sizes.png),
+[1435×850](screenshots/status-2026-09-28-s03/agency-1435x850.png),
+[client, delivered](screenshots/status-2026-09-28-s03/client-delivered.png)).

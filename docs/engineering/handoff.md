@@ -9,7 +9,7 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - 20 scenarios / 263 UI actions passed via Playwright MCP; [record](../verification/funnel-test-2026-09-28.md).
   Ignored harness `outputs/funnel-harness` (serve with `python3 outputs/funnel-server.py`), report
   `outputs/funnel-report/index.html`. One scenario per MCP call (30-minute idle limit).
-- UI: centered compact dock over a cropped Miro embed (no Miro zoom/scrollbars), Review R#, role-aware Backlog/empty copy, pinned
+- UI: centered dock over cropped Miro (no zoom/scrollbars); bar state matches status (S03 run), Review R#, role-aware Backlog/empty copy, pinned
   dialog actions, scroll-row navigation/tabs, solid client sticky header with scroll-padding,
   overview/briefing/brand/files grid and spacing fixes, canvas fit floor 75%.
 - `npm run check` PASS (1,293 tests). Updated stale e2e assertions (miro-workspace, project-feedback,
