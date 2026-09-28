@@ -4,6 +4,9 @@ import { FileText, ImageIcon } from "lucide-react";
 import {
   Fragment,
   useId,
+  useCallback,
+  useEffect,
+  type ReactNode,
   useRef,
   useState,
   type DragEvent,
@@ -23,6 +26,8 @@ import {
   type Album,
   type AlbumFile,
 } from "./playground-albums";
+
+import { AlbumCopyFeedback, type AlbumCopyStatus } from "./album-copy-feedback";
 
 /** Today's Playground usage: dragging or Enter-adding an album file onto the board. */
 type BoardMode = {
@@ -52,6 +57,7 @@ export type PlaygroundAlbumsPanelProps = {
   /** Albums shown before the Brand Hub albums this panel already builds — the caller's own
    * album, such as `buildPlaygroundAlbum`'s Playground album for the asset strip. */
   extraAlbums?: Album[];
+  actions?: ReactNode;
 } & (BoardMode | ClipboardMode);
 
 export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
@@ -72,14 +78,20 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
   const [copyState, setCopyState] = useState<{
-    fileId: string;
-    state: "copying" | "copied" | "failed";
+    file: AlbumFile;
+    state: AlbumCopyStatus;
   } | null>(null);
-  const [downloadFailed, setDownloadFailed] = useState(false);
-  // Only the latest click's file may ever update `copyState`: an earlier click's copy can still be
-  // in flight (a slow download, a slow clipboard write) when a later click starts a new one, and
-  // its eventual result must never overwrite what the later click already announced.
-  const latestCopyRequest = useRef<string | null>(null);
+  const latestCopyRequest = useRef(0);
+  const dismissCopy = useCallback(() => {
+    latestCopyRequest.current += 1;
+    setCopyState(null);
+  }, []);
+  useEffect(
+    () => () => {
+      latestCopyRequest.current += 1;
+    },
+    [],
+  );
 
   const albums: Album[] = [
     ...extraAlbums,
@@ -91,15 +103,10 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
       ? openAlbum.files.map((file) => ({ ...file, disabledReason: clipboardDisabledReason(file) }))
       : (openAlbum?.files ?? []);
   const firstBrandIndex = albums.findIndex((album) => album.group === "brand");
-  const copiedFile = copyState
-    ? openAlbum?.files.find((file) => file.id === copyState.fileId)
-    : undefined;
-
   function openAlbumChip(id: string) {
     setSelectedIds([]);
     setLastIndex(null);
-    setCopyState(null);
-    setDownloadFailed(false);
+    dismissCopy();
     setOpenId((current) => (current === id ? null : id));
   }
 
@@ -119,23 +126,25 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
 
   async function copy(file: AlbumFile) {
     if (!onCopy) return;
-    latestCopyRequest.current = file.id;
-    setDownloadFailed(false);
-    setCopyState({ fileId: file.id, state: "copying" });
+    const request = ++latestCopyRequest.current;
+    setCopyState({ file, state: "copying" });
     try {
       await onCopy(file);
-      if (latestCopyRequest.current === file.id) setCopyState({ fileId: file.id, state: "copied" });
+      if (latestCopyRequest.current === request) setCopyState({ file, state: "copied" });
     } catch {
-      if (latestCopyRequest.current === file.id) setCopyState({ fileId: file.id, state: "failed" });
+      if (latestCopyRequest.current === request) setCopyState({ file, state: "failed" });
     }
   }
 
   async function download(file: AlbumFile) {
     if (!onDownload) return;
+    const request = ++latestCopyRequest.current;
+    setCopyState({ file, state: "downloading" });
     try {
       await onDownload(file);
+      if (latestCopyRequest.current === request) setCopyState({ file, state: "downloaded" });
     } catch {
-      setDownloadFailed(true);
+      if (latestCopyRequest.current === request) setCopyState({ file, state: "download-failed" });
     }
   }
 
@@ -159,28 +168,36 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
 
   return (
     <div className="playground-albums">
-      <div className="playground-album-chips">
-        {albums.map((album, index) => (
-          // A shorthand `<>` fragment cannot carry the `key` a `.map()` output needs; `Fragment`
-          // is used explicitly here so both the optional divider and the chip share one keyed
-          // wrapper without an extra DOM element.
-          <Fragment key={album.id}>
-            {index > 0 && index === firstBrandIndex && extraAlbums.length > 0 && (
-              <span className="playground-album-divider" aria-hidden="true" />
-            )}
-            <button
-              type="button"
-              aria-pressed={openId === album.id}
-              className={`playground-album-chip${openId === album.id ? " is-open" : ""}`}
-              onClick={() => openAlbumChip(album.id)}
-            >
-              {album.label}
-            </button>
-          </Fragment>
-        ))}
+      <div className="playground-album-heading">
+        <div className="playground-album-chips">
+          {albums.map((album, index) => (
+            // A shorthand `<>` fragment cannot carry the `key` a `.map()` output needs; `Fragment`
+            // is used explicitly here so both the optional divider and the chip share one keyed
+            // wrapper without an extra DOM element.
+            <Fragment key={album.id}>
+              {index > 0 && index === firstBrandIndex && extraAlbums.length > 0 && (
+                <span className="playground-album-divider" aria-hidden="true" />
+              )}
+              <button
+                type="button"
+                aria-pressed={openId === album.id}
+                className={`playground-album-chip${openId === album.id ? " is-open" : ""}`}
+                onClick={() => openAlbumChip(album.id)}
+              >
+                {album.label}
+              </button>
+            </Fragment>
+          ))}
+        </div>
+        {props.actions}
       </div>
       {openAlbum && (
-        <div className="playground-album-row">
+        <div
+          className="playground-album-row"
+          role="region"
+          aria-label={`${openAlbum.label} files`}
+          tabIndex={0}
+        >
           {openFiles.map((file, index) => (
             <AlbumThumbnail
               key={file.id}
@@ -212,25 +229,12 @@ export function PlaygroundAlbumsPanel(props: PlaygroundAlbumsPanelProps) {
         </div>
       )}
       {mode === "clipboard" && copyState && (
-        <p className="playground-album-copy-status" role="status">
-          {copyState.state === "copied" && "Copied — paste in Miro with ⌘V / Ctrl+V"}
-          {copyState.state === "failed" &&
-            (downloadFailed ? (
-              "Couldn't download this file."
-            ) : (
-              <>
-                Couldn&apos;t copy this image.
-                <button
-                  type="button"
-                  className="button quiet"
-                  aria-label={`Download ${copiedFile?.title ?? ""}`}
-                  onClick={() => copiedFile && download(copiedFile)}
-                >
-                  Download
-                </button>
-              </>
-            ))}
-        </p>
+        <AlbumCopyFeedback
+          status={copyState.state}
+          title={copyState.file.title}
+          onDownload={() => void download(copyState.file)}
+          onDismiss={dismissCopy}
+        />
       )}
     </div>
   );

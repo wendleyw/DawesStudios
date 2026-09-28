@@ -13,15 +13,17 @@ export function BriefingSummary({
   draft,
   campaignName,
   showTitle = true,
+  compact = false,
 }: {
   draft: BriefingDraft;
   campaignName?: string;
   showTitle?: boolean;
+  compact?: boolean;
 }) {
   const { formatDate } = useDateFormat();
   const service = services.find((item) => item.id === draft.serviceId);
   return (
-    <div className="briefing-summary">
+    <div className={`briefing-summary${compact ? " is-compact" : ""}`}>
       <section>
         <span className="eyebrow">{campaignName ?? "Campaign not chosen"}</span>
         <h2 className={showTitle ? undefined : "visually-hidden"}>

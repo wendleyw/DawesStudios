@@ -37,6 +37,14 @@ export function PlaygroundAssetStrip({
     <div className="playground-asset-strip dark-surface">
       <PlaygroundAlbumsPanel
         mode="clipboard"
+        actions={
+          <div className="playground-strip-actions">
+            <span>Click an image to copy</span>
+            <button type="button" className="button quiet" onClick={onOpenPlayground}>
+              Open full Playground
+            </button>
+          </div>
+        }
         clientId={clientId}
         extraAlbums={playgroundAlbum ? [playgroundAlbum] : []}
         onCopy={(file) => copyImageToClipboard(() => download(file))}
@@ -46,9 +54,6 @@ export function PlaygroundAssetStrip({
           saveBlob(await download(file), fileNameFor(file.title, path));
         }}
       />
-      <button type="button" className="button quiet" onClick={onOpenPlayground}>
-        Open full Playground
-      </button>
     </div>
   );
 }

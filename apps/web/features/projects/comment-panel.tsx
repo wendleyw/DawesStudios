@@ -37,12 +37,14 @@ export function nextCommentAttempt(
 
 export function CommentPanel({
   projectId,
+  projectTitle,
   channel,
   currentVersion,
   versionLabels,
   onClose,
 }: {
   projectId: string;
+  projectTitle: string;
   channel: ProjectChannel;
   currentVersion?: { id: string; label: string };
   versionLabels: Record<string, string>;
@@ -58,7 +60,7 @@ export function CommentPanel({
     >
       <ProjectPanelHeader
         title="Comments"
-        subtitle={channel === "client" ? "Shared with the studio" : "Studio team only"}
+        subtitle={channel === "client" ? "Client and studio" : "Studio team only"}
         onClose={onClose}
       />
       <div className="comment-controls">
@@ -86,7 +88,7 @@ export function CommentPanel({
         projectId={projectId}
         channel={channel}
         versionId={target?.id}
-        destination={target?.label ?? "Project"}
+        destination={target ? `${projectTitle} [${target.label}]` : projectTitle}
         versionLabels={versionLabels}
         showResolved={showResolved}
       />
@@ -214,7 +216,7 @@ function CommentThread({
             <h3>No comments yet.</h3>
             <p>
               {versionId
-                ? `Start the discussion for ${destination.toLowerCase()}.`
+                ? `Start the discussion for ${destination}.`
                 : "Keep project notes and next steps together."}
             </p>
           </div>

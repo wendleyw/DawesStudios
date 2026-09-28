@@ -299,6 +299,7 @@ export function ProjectWorkspace({
               <CommentPanel
                 key={`${projectId}:${channel}`}
                 projectId={projectId}
+                projectTitle={project.title}
                 channel={channel}
                 currentVersion={
                   commentTarget

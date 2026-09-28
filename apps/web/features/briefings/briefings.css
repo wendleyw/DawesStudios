@@ -862,3 +862,31 @@
     padding: 16px;
   }
 }
+
+/* The project's briefing tab reuses the same accepted scope at inspector density. */
+.briefing-summary.is-compact section {
+  padding-block: 16px;
+}
+.briefing-summary.is-compact section:first-child {
+  padding-top: 0;
+}
+.briefing-summary.is-compact h3 {
+  font-size: var(--text-base);
+  margin-bottom: 12px;
+}
+.briefing-summary.is-compact p,
+.briefing-summary.is-compact .briefing-summary-fields dd {
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+.briefing-summary.is-compact .briefing-summary-fields dt {
+  font-size: var(--text-sm);
+}
+.briefing-summary.is-compact .briefing-deliverable-summary {
+  padding: 10px 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  gap: 5px;
+  font-size: var(--text-sm);
+}

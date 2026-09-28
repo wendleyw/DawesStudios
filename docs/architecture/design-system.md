@@ -206,6 +206,18 @@ the studio and "Former member" to the client; designers see neither.
 
 ## Board canvas and project Miro workspace
 
+Project side panels use a fixed heading and a scrolling body, with the comment composer anchored
+below the history. Under 800 px of work-area width, the panel covers the project chrome, which
+becomes hidden and unfocusable until the panel closes. Details separates **Overview** and
+**Briefing**; secondary agency controls live under **Manage project**. Comment destinations name
+the project and append the selected version or board round in brackets.
+
+The Miro Playground strip puts album selection and its full-screen action on one heading row,
+leaving the entire row below for image references. Successful copying shows a centered nonmodal
+paste instruction for six seconds; it contains no image preview and does not block the board.
+Failure keeps a download action available. See the
+[context UX verification](../verification/project-context-ux-2026-09-27.md).
+
 The client board's Canvas view and Playground use XYFlow/React Flow; the project page has no xyflow canvas of its own — see below. Use a shared canvas frame with a subtle dot-grid background, compact zoom/fit controls, and persisted positions or viewport where appropriate. Pointer and pan behavior must be understandable; mode controls can appear contextually rather than occupying a permanent full-width footer. The canvas is an interactive work surface, not a static screenshot or a decorative background behind a conventional grid.
 
 Every `ReactFlow` instance sets `proOptions={{ hideAttribution: true }}`, so the library's attribution badge does not sit over the bottom-right corner of the work surface. The package is MIT licensed and its licence carries no interface attribution clause, so hiding the badge is permitted; xyflow asks that projects removing it subscribe to React Flow Pro to support the library, which is a request rather than a condition. Restoring the badge means dropping the prop from the board and Playground canvases.

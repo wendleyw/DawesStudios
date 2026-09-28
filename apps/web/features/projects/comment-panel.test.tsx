@@ -55,6 +55,7 @@ function mountPanel(
     <QueryClientProvider client={queryClient}>
       <CommentPanel
         projectId="project"
+        projectTitle="Campus Welcome"
         channel="client"
         currentVersion={version}
         versionLabels={labels}
@@ -88,7 +89,7 @@ describe("unified Comments", () => {
     );
     expect(screen.getByRole("textbox", { name: "Your message" })).toHaveValue("General draft");
     expect(screen.getByText("Posting to", { exact: false })).toHaveTextContent(
-      "Posting to Project",
+      "Posting to Campus Welcome",
     );
   });
 
@@ -121,7 +122,7 @@ describe("unified Comments", () => {
       "true",
     );
     expect(screen.getByText("Posting to", { exact: false })).toHaveTextContent(
-      "Posting to Project",
+      "Posting to Campus Welcome",
     );
     const history = screen.getByRole("region", { name: "Comment history" });
     expect(within(history).getByText("Project")).toBeVisible();
@@ -140,7 +141,7 @@ describe("unified Comments", () => {
     expect(screen.getByRole("textbox", { name: "Your message" })).toHaveValue("");
     expect(screen.queryByText("Project note")).toBeNull();
     expect(screen.getByText("Posting to", { exact: false })).toHaveTextContent(
-      "Posting to Version 1",
+      "Posting to Campus Welcome [Version 1]",
     );
     await user.type(screen.getByRole("textbox", { name: "Your message" }), "Version draft");
     await user.click(screen.getByRole("button", { name: "All activity" }));
@@ -178,7 +179,7 @@ describe("unified Comments", () => {
     );
     expect(screen.getByRole("textbox", { name: "Your message" })).toHaveValue("");
     expect(screen.getByText("Posting to", { exact: false })).toHaveTextContent(
-      "Posting to Version 2",
+      "Posting to Campus Welcome [Version 2]",
     );
     panel.changeVersion({ id: "v1", label: "Version 1" });
     expect(screen.getByRole("textbox", { name: "Your message" })).toHaveValue("V1 draft");

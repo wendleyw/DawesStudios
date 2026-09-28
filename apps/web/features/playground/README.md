@@ -77,15 +77,20 @@ row, without affecting the other files of the same drag. `playground-albums.ts` 
 `playground-albums-panel.tsx` renders it. The panel reads no project data, so no session ever
 requests an `internal-assets` object through it.
 
-`PlaygroundAlbumsPanel`'s props are `{ clientId; extraAlbums? } & (BoardMode | ClipboardMode)`.
+`PlaygroundAlbumsPanel`'s props are `{ clientId; extraAlbums?; actions? } & (BoardMode | ClipboardMode)`.
 Board mode (`mode?: "board"`, the default) is everything above, unchanged. Clipboard mode
 (`mode: "clipboard"`, plus `onCopy`/`onDownload`) renders the same chip row and album but clicking a
 thumbnail calls `onCopy(file)` instead of selecting or dragging it — there is no selection, Shift
 range, Enter-to-add or drag in this mode. Every open album's files are filtered through
 `clipboardDisabledReason` (only images can be copied, overriding any board-only reason), and each
-thumbnail's accessible name becomes **Copy \<title\>** with no `aria-pressed`. A status line below
-the row announces **Copied — paste in Miro with ⌘V / Ctrl+V**, or **Couldn't copy this image.** with
-a **Download \<title\>** fallback button that calls `onDownload(file)`. `extraAlbums` (used by
+thumbnail's accessible name becomes **Copy \<title\>** with no `aria-pressed`.
+A centered, nonmodal message announces **Image copied** and tells the viewer to click inside the
+Miro board and paste with **⌘V / Ctrl+V**. It shows no duplicate image, leaves focus on the source
+thumbnail, allows pointer interaction with the board and dismisses after six seconds or via Close.
+Copy failures keep a **Download image** fallback with an accessible name naming the file; download
+errors remain available for retry. An attempt counter prevents late results, including repeated
+clicks on the same file, from replacing newer feedback or reopening a dismissed message.
+`extraAlbums` (used by
 `PlaygroundAssetStrip` for the viewer's own Playground album) render first, ahead of the Brand Hub
 albums, with the divider drawn before the first Brand Hub album
 whenever at least one extra album is present.
@@ -102,7 +107,11 @@ converts it to PNG and writes it with the Clipboard API inside the same click's 
 Download falls back to `saveBlob` with `fileNameFor`'s stored-extension name; a download that fails
 too announces "Couldn't download this file." in the same polite status region.
 `project-workspace.tsx` mounts this strip above the Miro embed, toggled by the project's own
-Playground icon button.
+Playground icon button. The album chips and **Open full Playground** share a heading row; images
+scroll across the full available width below, without reserving a side column for that button.
+The row is keyboard-focusable and exposes a labeled file region. `album-copy-feedback.tsx` owns
+the centered status message. The full Playground item inspector keeps its heading and Close
+control visible while its fields scroll.
 
 ## Compact header
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlaygroundAlbumsPanel } from "./playground-albums-panel";
 import type { Album, AlbumFile } from "./playground-albums";
@@ -255,7 +255,62 @@ describe("clipboard mode", () => {
     fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
     fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
     expect(onCopy).toHaveBeenCalledWith(expect.objectContaining({ id: "pg-1" }));
-    expect(await screen.findByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+    expect(await screen.findByText("Image copied")).toBeInTheDocument();
+  });
+
+  it("keeps copy feedback separate from thumbnails and preserves keyboard focus", async () => {
+    renderClipboardPanel({});
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    const image = screen.getByRole("button", { name: "Copy Moodboard" });
+    image.focus();
+    fireEvent.click(image);
+    const status = await screen.findByRole("status");
+    expect(await screen.findByText("Image copied")).toBeVisible();
+    expect(status).toHaveTextContent("Click inside the Miro board, then paste");
+    expect(status.querySelector("img")).toBeNull();
+    expect(image).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss copy message" }));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("ignores an older result from repeated clicks on the same image", async () => {
+    let rejectFirst!: (error: Error) => void;
+    const onCopy = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_, reject) => {
+            rejectFirst = reject;
+          }),
+      )
+      .mockResolvedValue(undefined);
+    renderClipboardPanel({ onCopy });
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    await screen.findByText("Image copied");
+    await act(async () => {
+      rejectFirst(new Error("Old request failed"));
+    });
+    expect(screen.getByText("Image copied")).toBeVisible();
+    expect(screen.queryByText("Couldn't copy this image.")).toBeNull();
+  });
+
+  it("does not reopen dismissed feedback when a pending copy completes", async () => {
+    let complete!: () => void;
+    renderClipboardPanel({
+      onCopy: () =>
+        new Promise<void>((resolve) => {
+          complete = resolve;
+        }),
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss copy message" }));
+    await act(async () => {
+      complete();
+    });
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("offers Download when copying fails", async () => {
@@ -322,13 +377,13 @@ describe("clipboard mode", () => {
     fireEvent.click(screen.getByRole("button", { name: /Playground/ }));
     fireEvent.click(screen.getByRole("button", { name: "Copy Moodboard" }));
     fireEvent.click(screen.getByRole("button", { name: "Copy Sketch" }));
-    expect(await screen.findByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+    expect(await screen.findByText("Image copied")).toBeInTheDocument();
     // Moodboard's earlier, slower click now fails; that stale result must not override the
     // status Sketch's later, already-resolved click announced.
     rejectFirst?.(new Error("slow failure"));
     await Promise.resolve();
     await Promise.resolve();
-    expect(screen.getByText("Copied — paste in Miro with ⌘V / Ctrl+V")).toBeInTheDocument();
+    expect(screen.getByText("Image copied")).toBeInTheDocument();
     expect(screen.queryByText("Couldn't copy this image.")).not.toBeInTheDocument();
   });
 

@@ -96,7 +96,9 @@ first), `sharedVersions` (the project-level client versions, which have no board
 Project details, Comments and Playground. Comments replaces the separate Conversation and Feedback
 buttons. Its All activity view contains the channel's project notes and version comments; This
 version filters to the round or client version on screen. The composer explicitly names its
-destination: Project, Round N with the board name, or Version N. Each history entry shows its scope.
+destination: **Posting to <project title>** for project notes, or **Posting to <project title>
+[Version N]** for a client version. Internal rounds retain **[Round N · board name]** so equal round
+numbers on different boards stay distinguishable. Each history entry shows its scope.
 Every tool is a `ProjectToolButton`: a click sends a streak of light once around its SVG outline,
 and an active tool keeps a faint outline with a small comet orbiting it. The effect is decoration in
 `projects.css` and stops under reduced motion; `aria-expanded` still carries the state. The bar
@@ -104,7 +106,10 @@ opens with the studio's animated mark (`shared/brand-mark.tsx`). While a side pa
 re-centres beside it; on work areas narrower than 800 px it hides until the panel closes.
 
 Comments and Details open one floating inspector (`project-panel.tsx`) beside the
-embed, which narrows to leave room for it. `project-page.tsx` owns the open panel
+embed, which narrows to leave room for it. The panel heading and comment composer stay in place;
+only the history or detail body scrolls. Under 800 px of work-area width, the inspector opens over
+the project header to leave enough room for reading and composing. Close/Escape restores the
+original tool. `project-page.tsx` owns the open panel
 (`usePanelFocusReturn`, `use-panel-focus-return.ts`) above its early returns, because the
 `useProjectDetail(projectId, channel)` read goes pending and unmounts the workspace on every channel
 switch. Close/Escape returns focus to the control that opened the panel; `useFocusReturn` also
@@ -129,7 +134,14 @@ body/attempt still present in that draft, preserving follow-up text entered whil
 `CanvasComment.versionId` retains the round/publication scope for labels; channel-specific queries
 and RLS still govern what the viewer receives. These comments live in this application, not Miro.
 
-Details (`project-details.tsx`) composes real edit, assignment and resource actions. Its project edit
+Details (`project-details.tsx`) opens on **Overview**: notes and metadata, a Resources section,
+cover and version history. Agency assignment, credit and Drive actions are grouped under
+**Manage project**. When a briefing exists, **Briefing** opens its saved scope and attachments
+inside the same inspector; **View full briefing** retains the dedicated page. `project-briefing.tsx`
+reuses `useBriefings` (including the designer's assigned-briefing RPC), `useCampaigns`,
+`BriefingSummary` in compact mode and read-only `BriefingAttachments`. It handles loading,
+unavailable data and retry without requesting attachments for an unavailable briefing.
+Details composes the existing edit, assignment and resource actions. Its project edit
 retains the revision captured when the form opens. The Drive link control and mutation live in
 `project-details-drive-link.tsx`; the credit move and settlement dialogs, including their per-dialog
 retry keys and shortfall handling, live in `project-details-credits.tsx`. For the studio and the

@@ -26,6 +26,7 @@ import {
   type TableRow,
   type CanvasVersion,
 } from "./project-data";
+import { ProjectBriefing } from "./project-briefing";
 import { ProjectPanelHeader } from "./project-panel";
 import { ProjectCover } from "./project-cover";
 import { MoveMonthDialog, SettleCreditsDialog, settlementLine } from "./project-details-credits";
@@ -52,6 +53,7 @@ export function ProjectDetails({
   const { formatDate } = useDateFormat();
   const invalidate = useInvalidateProject();
   const invalidateAssets = useInvalidateAssets();
+  const [view, setView] = useState<"overview" | "briefing">("overview");
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
   const [assigning, setAssigning] = useState(false);
@@ -157,9 +159,37 @@ export function ProjectDetails({
           ) : undefined
         }
       />
-      <div className="project-details-content">
-        <ProjectCover projectId={project.id} />
-        <p>{project.description || "No additional project notes yet."}</p>
+      {project.briefing_id && (
+        <div className="project-details-tabs" role="group" aria-label="Project information">
+          <button
+            type="button"
+            aria-pressed={view === "overview"}
+            onClick={() => setView("overview")}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === "briefing"}
+            onClick={() => setView("briefing")}
+          >
+            Briefing
+          </button>
+        </div>
+      )}
+      {view === "briefing" && project.briefing_id && (
+        <div className="project-details-content">
+          <ProjectBriefing clientId={project.client_id} briefingId={project.briefing_id} />
+        </div>
+      )}
+      <div
+        className="project-details-content"
+        hidden={view === "briefing" && !!project.briefing_id}
+      >
+        <div className="project-details-overview">
+          <h3>Project overview</h3>
+          <p>{project.description || "No additional project notes yet."}</p>
+        </div>
         <dl>
           <dt>Service</dt>
           <dd>
@@ -195,102 +225,110 @@ export function ProjectDetails({
             </>
           )}
         </dl>
-        {profile?.role === "agency" && (
-          <div className="assignment-section">
-            <h3>Designer</h3>
-            {assignments.error ? (
-              <p role="alert">Assignments could not be loaded.</p>
-            ) : (
-              <div>
-                {assignments.data?.members
-                  .filter((member) => assignments.data.assigned.includes(member.id))
-                  .map((member) => (
-                    <div className="details-heading" key={member.id}>
-                      <span>{member.display_name}</span>
-                      <button
-                        className="button quiet"
-                        aria-label={`Remove ${member.display_name} from project`}
-                        disabled={revoke.isPending}
-                        onClick={() => {
-                          revoke.reset();
-                          setRevoking({ id: member.id, name: member.display_name });
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
-              </div>
-            )}
-            <button className="button quiet" onClick={() => setAssigning(true)}>
-              Assign a designer
+        <nav className="project-resources" aria-label="Project resources">
+          <h3>Resources</h3>
+          {project.briefing_id && (
+            <button className="button" onClick={() => setView("briefing")}>
+              Read briefing
+              <ArrowUpRight size={14} />
             </button>
-          </div>
-        )}
-        {profile?.role === "agency" && creditState && (canMove || canSettle) && (
-          <div className="assignment-section">
-            <h3>Credits</h3>
-            {canMove && (
-              <button className="button quiet" onClick={() => setCreditDialog("move")}>
-                Move to another month
-              </button>
-            )}
-            {canSettle && (
-              <button className="button quiet" onClick={() => setCreditDialog("settle")}>
-                Settle final credits
-              </button>
-            )}
-          </div>
-        )}
-        {profile?.role === "agency" && driveLinks.isPending && (
-          <p role="status">Loading Drive links…</p>
-        )}
-        {profile?.role === "agency" && driveLinks.error && (
-          <div className="assignment-section">
-            <FormError>Could not load Drive links. Try again.</FormError>
-            <button className="button quiet" onClick={() => void driveLinks.refetch()}>
-              Try again
-            </button>
-          </div>
-        )}
-        {profile?.role === "agency" && !driveLinks.error && driveLinks.data && (
-          <>
-            <DriveLinkControl
-              projectId={project.id}
-              channel="internal"
-              url={driveLinks.data?.internal ?? null}
-              onSaved={() => onDriveLinkSaved("internal")}
-            />
-            <DriveLinkControl
-              projectId={project.id}
-              channel="client"
-              url={driveLinks.data?.client ?? null}
-              onSaved={() => onDriveLinkSaved("client")}
-            />
-          </>
-        )}
-        {project.briefing_id && (
-          <Link
-            className="button"
-            href={`/clients/${project.client_id}/briefings/${project.briefing_id}`}
-          >
-            View briefing
+          )}
+          <Link className="button quiet" href={`/clients/${project.client_id}/brand/overview`}>
+            Brand direction
             <ArrowUpRight size={14} />
           </Link>
+          <Link
+            className="button quiet"
+            href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
+          >
+            Files
+            <ArrowUpRight size={14} />
+          </Link>
+          {profile?.role !== "designer" && (
+            <CopyButton
+              text={shareLink}
+              label="Copy project link"
+              className="button quiet project-copy-link"
+            />
+          )}
+        </nav>
+        <ProjectCover projectId={project.id} />
+        {profile?.role === "agency" && (
+          <details className="project-management">
+            <summary>Manage project</summary>
+            <div className="assignment-section">
+              <h3>Designer</h3>
+              {assignments.error ? (
+                <p role="alert">Assignments could not be loaded.</p>
+              ) : (
+                <div>
+                  {assignments.data?.members
+                    .filter((member) => assignments.data.assigned.includes(member.id))
+                    .map((member) => (
+                      <div className="details-heading" key={member.id}>
+                        <span>{member.display_name}</span>
+                        <button
+                          className="button quiet"
+                          aria-label={`Remove ${member.display_name} from project`}
+                          disabled={revoke.isPending}
+                          onClick={() => {
+                            revoke.reset();
+                            setRevoking({ id: member.id, name: member.display_name });
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  {!assignments.data?.assigned.length && <p>Not assigned yet</p>}
+                </div>
+              )}
+              <button className="button quiet" onClick={() => setAssigning(true)}>
+                Assign a designer
+              </button>
+            </div>
+            {creditState && (canMove || canSettle) && (
+              <div className="assignment-section">
+                <h3>Credits</h3>
+                {canMove && (
+                  <button className="button quiet" onClick={() => setCreditDialog("move")}>
+                    Move to another month
+                  </button>
+                )}
+                {canSettle && (
+                  <button className="button quiet" onClick={() => setCreditDialog("settle")}>
+                    Settle final credits
+                  </button>
+                )}
+              </div>
+            )}
+            {driveLinks.isPending && <p role="status">Loading Drive links…</p>}
+            {driveLinks.error && (
+              <div className="assignment-section">
+                <FormError>Could not load Drive links. Try again.</FormError>
+                <button className="button quiet" onClick={() => void driveLinks.refetch()}>
+                  Try again
+                </button>
+              </div>
+            )}
+            {!driveLinks.error && driveLinks.data && (
+              <>
+                <DriveLinkControl
+                  projectId={project.id}
+                  channel="internal"
+                  url={driveLinks.data?.internal ?? null}
+                  onSaved={() => onDriveLinkSaved("internal")}
+                />
+                <DriveLinkControl
+                  projectId={project.id}
+                  channel="client"
+                  url={driveLinks.data?.client ?? null}
+                  onSaved={() => onDriveLinkSaved("client")}
+                />
+              </>
+            )}
+          </details>
         )}
-        <Link className="button quiet" href={`/clients/${project.client_id}/brand/overview`}>
-          Brand direction
-          <ArrowUpRight size={14} />
-        </Link>
-        <Link
-          className="button quiet"
-          href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
-        >
-          Files
-          <ArrowUpRight size={14} />
-        </Link>
-        {profile?.role !== "designer" && <CopyButton text={shareLink} label="Copy project link" />}
         <details className="project-history">
           <summary>Version history</summary>
           <ol>

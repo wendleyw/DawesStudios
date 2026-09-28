@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no active delegated writers**.
+Updated: 2026-09-27 EDT. Owner: **Codex; project context UX integrated, spacing clarification pending**.
 
 ## Objective and accepted decisions
 
@@ -9,7 +9,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no 
   only viewport width up to 900 px moves them below. Height alone no longer changes orientation.
 - User approved the compact campaign/title/due header for project pages only. `44dba3b` makes it
   the default for all roles; the preview flag and old layout branch are removed.
-- Latest task: user reached sign-in from an invalid Auth invitation link. The screen now explains
+- Prior Auth task: user reached sign-in from an invalid Auth invitation link. The screen now explains
   failed verification; named designer tests remove their captured mail. The user's original Gmail
   invitation remains pending and needs password setup. Never consume its link in automation.
 - Miro is the primary creative workflow; no R2 or simultaneous-upload reservation architecture.
@@ -26,10 +26,7 @@ Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no 
 - UI thread promoted the project header in `44dba3b`;
   [current report](handoffs/2026-09-27-project-header-default.md) owns its visual evidence.
   Follow-up `45439d2` sets title weight to700; its owner verified both fonts/phone and desktop
-  plus81targeted tests. Other uncommitted project CSS belongs to separate work.
-- Preview follow-up: campaign via the existing authorized hook and role-specific due badge;
-  no duplicated project date below. Opened the shared browser at its native size after a fixed
-  test viewport clipped the user's window. Future size matrices run in isolated browsers.
+  plus81targeted tests. The compact header remains limited to project pages.
 - Resend host SMTP fragment and [email runbook](../operations/email.md) prepared. Invitation and
   recovery APIs stay in Supabase Auth; actual delivery is still a target-environment gate.
 - Backup format2 retains owners/ACLs, checks all foreign keys, records image versions and binds
@@ -65,12 +62,21 @@ Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no 
 
 ## Environment and next concrete work
 
+- Project context UX: inline Briefing, named comment destinations, organized side panels,
+  full-width image strip and centered copy/paste feedback. Mobile panels cover project chrome.
+- Current web gate129files/1269tests passes; final81CSS checks pass. Browser3roles×4sizes×3panels,
+  6realPNGcopies/30Axe scans, download fallback and light/dark inspection pass.
+- [Context UX evidence](../verification/project-context-ux-2026-09-27.md) and
+  [handoff](handoffs/2026-09-27-project-context-ux.md). External Miro access/paste not verified.
+- Pending: user sent a tiny spacing crop; asked whether channel/+ or header/bar gap. Await answer.
+  Another thread owns assigned-designer emphasis in miro-workspace-bar.tsx; collect its report.
+
 - Compact Miro review controls now overlap padding and stay centred on phones; next UI action:
   user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;
   [review-control evidence](../verification/compact-miro-review-2026-09-27.md) records scope and captures.
 
 - Sidebar control and optional new-account full name: [prior evidence](../verification/team-invitation-and-sidebar-2026-09-27.md).
-- Current web gate:128files/1262tests, types/lint/format pass. Chromium designer invitation passes
+- Prior invitation gate:128files/1262tests, types/lint/format pass. Chromium designer invitation passes
   invalid link→correct link→password→acceptance→fresh sign-in→reused link; unassigned projects hidden.
   Invalid-link Axe0 and desktop/phone visuals pass. All118FK and live10/68/50 preserved.
 - [Callback evidence](../verification/invitation-link-errors-2026-09-27.md). Actual clicked message
@@ -81,11 +87,6 @@ Updated: 2026-09-27 EDT. Owner: **Codex; invitation callback fix integrated, no 
 - Current toolbar checks: web gate127files/1249tests and Chromium search/filter/focus/Axe across
   five sizes, including1512×696 and1440×600, pass. Desktop captures inspected; live10/68/50 and
   all118FK preserved. [Toolbar evidence](../verification/board-left-toolbar-2026-09-27.md).
-- Prior header-preview UI checks: web gate 127 files / 1,249 tests; six Chromium widths 320–1600 px,
-  campaign/date placement, channel/round actions, More/Escape and Details pass; header Axe0.
-  Native shared tab1512×696: account, project bar and bottom tools entirely visible, no overflow.
-  Final desktop/mobile preview captures inspected. See the linked UI report.
-
 - Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
 - Filesystem staging remains stopped with data/volumes retained. When resumed:
   API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.

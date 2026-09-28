@@ -265,11 +265,19 @@
   width: 300px;
   flex-shrink: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border-left: 1px solid var(--border);
   background: var(--surface);
-  padding: 18px;
+  padding: 0 16px 16px;
 }
 .playground-inspector > header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -379,11 +387,19 @@
 .playground-albums {
   position: relative;
   z-index: 6;
+  min-width: 0;
   border-bottom: 1px solid var(--border);
   padding: 8px 20px;
 }
+.playground-album-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .playground-album-chips {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   overflow-x: auto;
@@ -416,7 +432,10 @@
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-top: 8px;
+  padding: 10px 2px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+  scroll-padding-inline: 2px;
 }
 .playground-album-thumb {
   flex-shrink: 0;
@@ -480,33 +499,95 @@
 .playground-album-thumb-slot:focus-within .playground-album-thumb-reason {
   display: block;
 }
-.playground-album-copy-status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin: 0;
-  padding: 0 16px 8px;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
 /* In Miro mode the strip is the Playground's own surface: the menu colour, with the dark palette. */
 .playground-asset-strip {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
+  flex-shrink: 0;
+  min-width: 0;
   border-bottom: 1px solid var(--border);
   background: var(--menu-surface);
   color: var(--foreground);
 }
 .playground-asset-strip > .playground-albums {
-  flex: 1;
-  min-width: 0;
+  border: 0;
 }
-.playground-asset-strip > .button {
+.playground-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   flex-shrink: 0;
-  margin: 8px 16px 0 0;
+}
+.playground-strip-actions > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.playground-asset-strip .playground-album-thumb:not(.is-disabled) {
+  cursor: copy;
+}
+.playground-copy-feedback {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 32px));
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 18%);
+  text-align: center;
+  pointer-events: none;
+}
+.playground-copy-symbol {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--surface-subtle);
+}
+.playground-copy-feedback strong {
+  font-size: 18px;
+  font-weight: 600;
+}
+.playground-copy-feedback p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.playground-copy-feedback kbd {
+  white-space: nowrap;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+}
+.playground-copy-feedback > .button {
+  margin-top: 16px;
+  pointer-events: auto;
+}
+.playground-copy-feedback > .playground-copy-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  pointer-events: auto;
+}
+@media (max-width: 900px) {
+  .playground-strip-actions > span {
+    display: none;
+  }
 }
 @media (max-width: 700px) {
+  .playground-albums {
+    padding-inline: 12px;
+  }
+  .playground-album-heading {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
   .playground-header {
     padding: 8px 12px;
     gap: 8px;
