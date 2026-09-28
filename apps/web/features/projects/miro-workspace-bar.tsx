@@ -45,6 +45,12 @@ export type MiroWorkspaceBarProps = {
    * work is one click from the version it came from; never on Working files or for designers.
    */
   deliverableHref?: string | null;
+  /**
+   * The studio may share a client version without a designer round (small fixes it makes itself).
+   * The normal path is Approve round → Share with client in Working files, so this sits in the ⋯
+   * menu rather than the action bar.
+   */
+  canShareDirectly?: boolean;
 };
 
 /**
@@ -98,6 +104,17 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               }}
             >
               Edit board
+            </button>
+          )}
+          {agency && props.canShareDirectly && (
+            <button
+              className="button quiet"
+              onClick={() => {
+                close();
+                props.onAddVersion();
+              }}
+            >
+              Share a version directly
             </button>
           )}
           {agency && !internal && props.version && (

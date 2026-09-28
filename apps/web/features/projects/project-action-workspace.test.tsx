@@ -81,6 +81,8 @@ const workflowBoard = {
   capabilities: {
     release: false,
     submit: true,
+    approve: false,
+    share: false,
     requestChanges: false,
     close: false,
     reactivate: false,

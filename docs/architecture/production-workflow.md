@@ -36,15 +36,21 @@ details); clients and designers see "Paused by the studio".
 | Agency, Working files | Send to designer | Opens the production brief editor; explicit send releases private instructions and creates the designer's task. Save draft stays private. |
 | Designer, own Working files | Send to studio | Consumes the current open request once, creates R1/R2, and notifies agency for Studio review. |
 | Agency, submitted board (live view) | Review R1/R2 | Opens the submitted round, where the studio review actions below appear. |
-| Agency, submitted Working files | Request changes | Releases new internal instructions to the selected board; a new designer task replaces the submitted one. |
-| Agency, Working files or Shared with client | Share with client | Opens publication preparation. Confirmation records the client Miro link/note as V1/V2 and notifies eligible clients. |
+| Agency, submitted round | Request changes | Releases new internal instructions to the selected board; a new designer task replaces the submitted one. |
+| Agency, submitted round | Approve round | Records the studio's approval (`approve_board_round`, request outcome `approved`), tells the designer, and asks the studio to share it (**Share with client** action). The public phase is unchanged. |
+| Agency, approved round (round or live view) | Share with client / Share R2 with client | Opens publication preparation. Confirmation records the client Miro link/note as V1/V2 and notifies eligible clients. Request changes stays available. |
 | Client, latest pending V | Request changes / Approve | Required feedback for changes; records one decision and notifies agency. |
-| Agency, client feedback | Send to designers | Chooses continuing boards and explicit closures, reviews the handoff, then commits all decisions atomically. Public phase returns to In progress. |
+| Agency, client feedback, Working files | Send to designer(s) | The board reads "Client requested changes". Chooses continuing boards and explicit closures, reviews the handoff, then commits all decisions atomically. Public phase returns to In progress. In Shared with client the bar only offers **Continue in Working files**. |
+| Agency, ⋯ menu | Share a version directly | For changes the studio makes itself, without a designer round. The database also accepts a still-submitted round cited here, marking it shared. |
 | Agency, approved V | Prepare delivery | Opens the project's Files page. |
 | Agency, Files | Delivery file / Complete delivery | Uploads real final bytes, then completes delivery only with the latest V approved and at least one final file. |
 
 There is one contextual action bar, centered over the bottom of the Miro board, with no duplicate
-send/share in the Miro header and no Mark ready, Ready for client or internal approval step. A
+send/share in the Miro header and no Mark ready or Ready for client. A board reads Waiting for
+production instructions → Designer working → Studio review → Approved by the studio → Waiting for the
+client → Approved by the client / Client requested changes. Shared with client shows status only
+(and Prepare delivery once approved); while a version waits for the client there is no primary
+button. A
 disabled/waiting state explains whether work awaits the studio, fresh instructions, a resumed
 project or a reactivated board. Its state never contradicts the project status: once the agency
 sends a client's changes to the designers it reads "The studio is working on your changes" for the

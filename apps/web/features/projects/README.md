@@ -103,6 +103,15 @@ the state and actions take its first rows, with 44 px touch controls, and the to
 **Request changes** and **Approve** open `project-action-review.tsx` with that decision
 preselected.
 
+The agency's Working files bar follows one order per board (see
+[production-workflow.md](../../../../docs/architecture/production-workflow.md)): **Send to
+designer** → the designer's **Send to studio** → **Review R#** → on the round **Request changes** or
+**Approve round** (`project-action-approve.tsx`, `approve_board_round`) → **Share with client**
+(**Share R# with client** from the live board) → the client's decision. Client feedback shows on the
+board as "Client requested changes" with **Send to designer(s)**; Shared with client then offers
+only **Continue in Working files**, and **Prepare delivery** after approval. A share without a
+designer round is **Share a version directly** in the bar's ⋯ menu (`canShareDirectly`).
+
 `miro-workspace.ts` holds the pure rules: `boardRounds` (a board's rounds with a link, newest
 first), `sharedVersions` (the project-level client versions, which have no board), `pickById`,
 `canReviewShared` and `latestSharedLink`.

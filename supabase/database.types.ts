@@ -2168,6 +2168,15 @@ export type Database = {
         }
         Returns: string
       }
+      approve_board_round: {
+        Args: {
+          p_board_id: string
+          p_expected_board_revision: number
+          p_request_id: string
+          p_round_id: string
+        }
+        Returns: Json
+      }
       assign_designer: {
         Args: { p_designer_id: string; p_project_id: string }
         Returns: undefined

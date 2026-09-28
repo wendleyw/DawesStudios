@@ -14,7 +14,8 @@ const actionLabels: Record<string, string> = {
   start_project: "Start project",
   prepare_project: "Prepare project",
   review_round: "Review round",
-  respond_feedback: "Respond to feedback",
+  share_round: "Share with client",
+  respond_feedback: "Send changes to designers",
   deliver_project: "Deliver project",
   review_credit_request: "Review credit request",
   submit_round: "Submit round",
@@ -40,16 +41,16 @@ export function actionNotificationDestination(item: ActionNotification): string 
         ? `/projects/${project}?channel=internal&board=${board}&panel=details`
         : null;
     case "review_round":
+    case "share_round":
       return project && board
         ? `/projects/${project}?channel=internal&board=${board}&round=${entity}`
         : null;
     case "revise_board":
     case "submit_round":
       return project && board ? `/projects/${project}?channel=internal&board=${board}` : null;
+    // Client feedback goes back to the designers from Working files; its comments stay there too.
     case "respond_feedback":
-      return project
-        ? `/projects/${project}?channel=client&version=${entity}&panel=comments`
-        : null;
+      return project ? `/projects/${project}?channel=internal` : null;
     case "deliver_project":
       return project ? `/clients/${client}/brand/files?project=${project}` : null;
     case "review_version":

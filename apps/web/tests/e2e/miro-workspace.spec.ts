@@ -143,6 +143,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   }
   await studio.setViewportSize({ width: 1600, height: 1000 });
   await capture(studio, "agency-working-files");
+  await studio.getByRole("button", { name: "Approve round 1" }).click();
   await studio.getByRole("button", { name: "Share with client" }).click();
   const shareDialog = studio.getByRole("dialog");
   await shareDialog
@@ -153,7 +154,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await expect(studio.getByRole("dialog")).toHaveCount(0);
   await expect(studio.getByRole("button", { name: "Share with client" })).toHaveCount(0);
   await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
-    "Shared with client",
+    "Waiting for the client",
   );
 
   // The client requests changes, the agency adds V2 directly, the client approves.
@@ -192,15 +193,13 @@ test("agency, designer and client complete Miro review and final-file delivery",
     .getByRole("button", { name: "Shared with client" })
     .click();
   await expect(studio.locator(".miro-bar")).not.toContainText(designerAName);
-  // The agency handles these changes itself once the client's decision reaches its page: the
-  // action bar then shares the next client version.
+  // The agency handles these changes itself once the client's decision reaches its page: a direct
+  // share, without a designer round, lives in the More menu.
   await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
     "Changes requested",
   );
-  await studio
-    .getByRole("group", { name: "Workflow actions" })
-    .getByRole("button", { name: "Share new version" })
-    .click();
+  await studio.locator(".miro-bar").getByRole("button", { name: "More" }).click();
+  await studio.getByRole("button", { name: "Share a version directly" }).click();
   const versionDialog = studio.getByRole("dialog");
   await expect(versionDialog.getByLabel("Client Miro board")).toHaveValue(/uXjVClient1/);
   await versionDialog.getByLabel("Note for the client").fill("Warmer tones applied");

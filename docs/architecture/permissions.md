@@ -53,7 +53,7 @@ Agency administration is an explicit capability for membership, workspace, prese
 | Client-channel project comments | Read/write as Studio | Read/write own client | No |
 | Internal-channel project comments | Read/write | Never | Read/write assigned work |
 | Client approval/change request | Manage workflow; do not impersonate client | Own shared client version only | No |
-| Agency internal approval/change request | Scoped | No | Receive internal result |
+| Agency internal approval (Approve round)/change request | Scoped | No | Receive internal result |
 | Attach and publish delivery files/mark delivered | Agency only | No | Prepare internal files only |
 | Download production files | Scoped | Published/delivered files only | Assigned production files |
 | Canonical Brand Hub read | Scoped | Own client | Brand resources for assigned client |

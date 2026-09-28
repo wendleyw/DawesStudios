@@ -17,7 +17,7 @@ this document preserves the accepted behavior and engineering decisions.
    Internal R1/R2 numbering is independent and belongs to each board.
 4. Every workflow action has an explicit, contextual button using the client's bottom review-bar
    pattern. Opening a form, changing tabs, editing in Miro and saving a draft do not advance state.
-5. Do not add **Mark ready**, **Ready for client**, or an extra internal approval step.
+5. Do not add **Mark ready** or **Ready for client**. *(Amended 2026-09-28 by user decision: the studio now records **Approve round** on a submitted round before **Share with client**, and client feedback is sent back to designers from Working files. See [production-workflow.md](../../architecture/production-workflow.md).)*
 6. Boards have independent instructions, designers and work obligations. One designer's action
    cannot overwrite another board's state or a pending client review.
 7. The agency curates instructions before sending revisions. Designers receive only released

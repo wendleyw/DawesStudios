@@ -1,4 +1,4 @@
-import { shareTestVersion } from "./project-fixture";
+import { releaseTestBrief, shareTestVersion } from "./project-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
@@ -53,6 +53,8 @@ test("action notifications follow designer, studio and client work until complet
         p_designer_id: designerId,
       }),
     );
+    // The studio sends production instructions; only then does the designer have work to submit.
+    await releaseTestBrief(agency, fixture.projectId, board);
     await signIn(designer, credentials.designer);
     await designer.goto("/notifications");
     const designerAction = actions(designer)
@@ -89,6 +91,23 @@ test("action notifications follow designer, studio and client work until complet
       fullPage: true,
     });
     await studioRound.click();
+    await expect(studio.getByRole("button", { name: "Round 1", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // The studio approves the round; the queue then asks it to share the round with the client.
+    await studio.getByRole("button", { name: "Approve round 1", exact: true }).click();
+    await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
+      "Approved by the studio",
+    );
+    await studio.goto("/notifications");
+    // A round's action names the project and its board.
+    const shareAction = actions(studio)
+      .getByRole("link")
+      .filter({ hasText: fixture.name })
+      .filter({ hasText: "Share with client" });
+    await expect(shareAction).toBeVisible();
+    await shareAction.click();
     await expect(studio.getByRole("button", { name: "Round 1", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -160,15 +179,15 @@ test("action notifications follow designer, studio and client work until complet
     await expect(projectAction(client, fixture.name)).toHaveCount(0);
 
     await studio.goto("/notifications");
-    await expect(projectAction(studio, fixture.name)).toContainText("Respond to feedback");
+    // Client feedback opens Working files, where the studio sends it back to the designer.
+    await expect(projectAction(studio, fixture.name)).toContainText("Send changes to designers");
     await projectAction(studio, fixture.name).click();
-    await expect(studio.getByRole("button", { name: "Comments", exact: true })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
     await expect(
-      studio.getByRole("button", { name: "Shared with client", exact: true }),
+      studio.getByRole("button", { name: "Working files", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
+    const feedbackBar = studio.getByRole("group", { name: "Workflow actions" });
+    await expect(feedbackBar).toContainText("Client requested changes");
+    await expect(feedbackBar.getByRole("button", { name: "Send to designer" })).toBeVisible();
     const replacement = value(
       await shareTestVersion(agency, {
         p_project_id: fixture.projectId,

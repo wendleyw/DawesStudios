@@ -39,6 +39,10 @@ export type WorkflowBoard = {
   capabilities: {
     release: boolean;
     submit: boolean;
+    /** A submitted round awaits the studio: Request changes or Approve round. */
+    approve: boolean;
+    /** The studio approved the current round; it can be shared with the client. */
+    share: boolean;
     requestChanges: boolean;
     close: boolean;
     reactivate: boolean;
@@ -103,6 +107,21 @@ export async function sendBoardRoundForRequest(
         p_idempotency_key: input.idempotencyKey,
       } as never,
     ),
+  );
+}
+
+/** The studio's approval of a submitted round, before it is shared with the client. */
+export async function approveBoardRound(
+  database: SupabaseDatabase,
+  input: { boardId: string; roundId: string; boardRevision: number; requestId: string },
+) {
+  return assertResult(
+    await database.rpc("approve_board_round", {
+      p_board_id: input.boardId,
+      p_round_id: input.roundId,
+      p_expected_board_revision: input.boardRevision,
+      p_request_id: input.requestId,
+    }),
   );
 }
 

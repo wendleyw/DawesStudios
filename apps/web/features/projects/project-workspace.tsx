@@ -17,6 +17,7 @@ import { ProjectPanel, type ProjectPanelKind } from "./project-panel";
 import { ProjectToolBar, ProjectToolButton } from "./project-tool-bar";
 import { useFocusReturn, usePanelFocusReturn } from "./use-panel-focus-return";
 import type { useProjectSelection } from "./use-project-selection";
+import { ApproveRoundButton } from "./project-action-approve";
 import { ProjectActionDialog, projectActionKey, type ProjectAction } from "./project-action-dialog";
 import { MiroEmbed } from "./miro-view";
 import { MiroWorkspaceBar } from "./miro-workspace-bar";
@@ -32,6 +33,7 @@ import {
   useProjectDetail,
   useProjectDriveLinks,
   useProjectWorkflow,
+  type CanvasVersion,
   type DesignBoard,
   type ProjectChannel,
 } from "./project-data";
@@ -145,6 +147,44 @@ export function ProjectWorkspace({
       return [item.id, boardName ? `${label} · ${boardName}` : label];
     }),
   );
+  // The studio acts only on an active, undelivered project whose workflow has loaded.
+  const agencyActs =
+    role === "agency" && !paused && project.status !== "delivered" && !!workflow.data;
+  const outcome = workflowBoard?.currentRequest?.outcome;
+  // Client feedback not yet sent back to the designers.
+  const feedbackWaiting = role === "agency" && !!workflow.data?.capabilities.respondFeedback;
+  const activeBoards =
+    workflow.data?.boards.filter((item) => item.activity === "active").length ?? 0;
+  const boardStatus =
+    workflowBoard?.activity === "closed"
+      ? "No further work needed"
+      : feedbackWaiting
+        ? "Client requested changes"
+        : outcome === "open"
+          ? "Designer working"
+          : outcome === "submitted"
+            ? "Studio review"
+            : outcome === "approved"
+              ? "Approved by the studio"
+              : outcome === "shared"
+                ? latestPublication?.decision === "pending"
+                  ? "Waiting for the client"
+                  : latestPublication?.decision === "approved"
+                    ? "Approved by the client"
+                    : "Shared with client"
+                : "Waiting for production instructions";
+  function shareRound(source: CanvasVersion | null) {
+    if (!workflow.data) return;
+    setAction({
+      kind: "share",
+      projectId,
+      round: source,
+      prefill: sharePrefill,
+      workflow: workflow.data,
+      availableRounds,
+      boardNames,
+    });
+  }
   function closePlayground() {
     setPlaygroundOpen(false);
     // The button is disabled until this close commits.
@@ -176,7 +216,7 @@ export function ProjectWorkspace({
       ? { text: "No client version was shared." }
       : role === "agency"
         ? {
-            text: "Nothing shared yet. Prepare a client version from the action bar.",
+            text: "Nothing shared yet. Approve a round in Working files to share it.",
           }
         : { text: "Nothing shared yet. Your studio will share designs here." };
 
@@ -234,31 +274,9 @@ export function ProjectWorkspace({
           onSendRound={() =>
             board && workflowBoard && setAction({ kind: "round", board, workflowBoard })
           }
-          onShareRound={() =>
-            round &&
-            workflow.data &&
-            setAction({
-              kind: "share",
-              projectId,
-              round,
-              prefill: sharePrefill,
-              workflow: workflow.data,
-              availableRounds,
-              boardNames,
-            })
-          }
-          onAddVersion={() =>
-            workflow.data &&
-            setAction({
-              kind: "share",
-              projectId,
-              round: null,
-              prefill: sharePrefill,
-              workflow: workflow.data,
-              availableRounds,
-              boardNames,
-            })
-          }
+          onShareRound={() => round && shareRound(round)}
+          onAddVersion={() => shareRound(null)}
+          canShareDirectly={agencyActs && !!workflow.data?.capabilities.publish}
           onEditLink={() => version && setAction({ kind: "miro", version, channel: "client" })}
           lead={channelLead}
           menu={<ProjectCreditsChip projectId={projectId} viewer={profile} />}
@@ -360,15 +378,7 @@ export function ProjectWorkspace({
                           : project.status === "delivered"
                             ? "Delivered"
                             : internal
-                              ? workflowBoard?.activity === "closed"
-                                ? "No further work needed"
-                                : workflowBoard?.currentRequest?.outcome === "open"
-                                  ? "Designer working"
-                                  : workflowBoard?.currentRequest?.outcome === "submitted"
-                                    ? "Studio review"
-                                    : workflowBoard?.currentRequest?.outcome === "shared"
-                                      ? "Shared with client"
-                                      : "Waiting for production instructions"
+                              ? boardStatus
                               : !version
                                 ? role === "client"
                                   ? "The studio is preparing your first version"
@@ -381,7 +391,9 @@ export function ProjectWorkspace({
                                     : "Changes requested"
                                   : latestPublication?.decision === "approved"
                                     ? "Approved"
-                                    : "Client presentation"}
+                                    : role === "client"
+                                      ? "Ready for your review"
+                                      : "Waiting for the client"}
                     </span>
                   </p>
                   {workflow.error && (
@@ -389,46 +401,28 @@ export function ProjectWorkspace({
                       Try again
                     </button>
                   )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
+                  {agencyActs && internal && !board && (
+                    <button
+                      className="button primary"
+                      onClick={() =>
+                        setAction({ kind: "board", projectId, projectDueDate: project.due_date })
+                      }
+                    >
+                      Add design board
+                    </button>
+                  )}
+                  {agencyActs && internal && board && workflowBoard?.capabilities.reactivate && (
+                    <button
+                      className="button primary"
+                      onClick={() =>
+                        setAction({ kind: "activity", board: workflowBoard, change: "reactivate" })
+                      }
+                    >
+                      Reactivate board
+                    </button>
+                  )}
+                  {agencyActs &&
                     internal &&
-                    role === "agency" &&
-                    !board && (
-                      <button
-                        className="button primary"
-                        onClick={() =>
-                          setAction({ kind: "board", projectId, projectDueDate: project.due_date })
-                        }
-                      >
-                        Add design board
-                      </button>
-                    )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
-                    internal &&
-                    role === "agency" &&
-                    board &&
-                    workflowBoard?.capabilities.reactivate && (
-                      <button
-                        className="button primary"
-                        onClick={() =>
-                          setAction({
-                            kind: "activity",
-                            board: workflowBoard,
-                            change: "reactivate",
-                          })
-                        }
-                      >
-                        Reactivate board
-                      </button>
-                    )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
-                    internal &&
-                    role === "agency" &&
                     board &&
                     workflowBoard?.capabilities.release &&
                     !workflowBoard.currentRequest && (
@@ -441,14 +435,13 @@ export function ProjectWorkspace({
                         Send to designer
                       </button>
                     )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
+                  {agencyActs &&
                     internal &&
-                    role === "agency" &&
                     board &&
                     workflowBoard?.capabilities.close &&
-                    workflowBoard.currentRequest?.outcome !== "submitted" && (
+                    !feedbackWaiting &&
+                    outcome !== "submitted" &&
+                    outcome !== "approved" && (
                       <button
                         className="button"
                         onClick={() =>
@@ -458,6 +451,23 @@ export function ProjectWorkspace({
                         No further work needed
                       </button>
                     )}
+                  {/* The client asked for changes: the studio answers from the boards, where the
+                      designers' work lives, choosing which boards continue. */}
+                  {agencyActs && internal && board && feedbackWaiting && (
+                    <button
+                      className="button primary"
+                      onClick={() =>
+                        setAction({
+                          kind: "handoff",
+                          projectId,
+                          workflow: workflow.data!,
+                          designerNames,
+                        })
+                      }
+                    >
+                      {activeBoards > 1 ? "Send to designers" : "Send to designer"}
+                    </button>
+                  )}
                   {!paused &&
                     project.status !== "delivered" &&
                     workflow.data &&
@@ -473,30 +483,32 @@ export function ProjectWorkspace({
                         Send to studio
                       </button>
                     )}
-                  {/* Studio review acts on the submitted round; from the live board the bar opens it. */}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
+                  {/* The studio reviews the submitted round itself; from the live board the bar
+                      opens it. An approved round can be shared from either view. */}
+                  {agencyActs &&
                     internal &&
-                    role === "agency" &&
                     board &&
                     !currentRound &&
                     submittedRound &&
-                    workflowBoard?.capabilities.requestChanges && (
+                    (workflowBoard?.capabilities.approve || workflowBoard?.capabilities.share) && (
                       <button
                         className="button primary"
-                        onClick={() => setRoundId(submittedRound.id)}
+                        onClick={() =>
+                          workflowBoard.capabilities.share
+                            ? shareRound(submittedRound)
+                            : setRoundId(submittedRound.id)
+                        }
                       >
-                        Review R{submittedRound.number}
+                        {workflowBoard.capabilities.share
+                          ? `Share R${submittedRound.number} with client`
+                          : `Review R${submittedRound.number}`}
                       </button>
                     )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
+                  {agencyActs &&
                     internal &&
-                    role === "agency" &&
                     board &&
                     currentRound &&
+                    round &&
                     workflowBoard?.capabilities.requestChanges && (
                       <>
                         <button
@@ -513,75 +525,28 @@ export function ProjectWorkspace({
                         >
                           Request changes
                         </button>
-                        <button
-                          className="button primary"
-                          onClick={() =>
-                            setAction({
-                              kind: "share",
-                              projectId,
-                              round,
-                              prefill: sharePrefill,
-                              workflow: workflow.data!,
-                              availableRounds,
-                              boardNames,
-                            })
-                          }
-                        >
-                          Share with client
-                        </button>
+                        {workflowBoard.capabilities.approve && (
+                          <ApproveRoundButton
+                            board={workflowBoard}
+                            roundId={round.id}
+                            roundNumber={round.number}
+                          />
+                        )}
+                        {workflowBoard.capabilities.share && (
+                          <button className="button primary" onClick={() => shareRound(round)}>
+                            Share with client
+                          </button>
+                        )}
                       </>
                     )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
+                  {agencyActs && !internal && feedbackWaiting && latestVersion && (
+                    <button className="button primary" onClick={() => onChannel("internal")}>
+                      Continue in Working files
+                    </button>
+                  )}
+                  {agencyActs &&
                     !internal &&
-                    role === "agency" &&
-                    workflow.data.capabilities.respondFeedback &&
-                    latestVersion && (
-                      <button
-                        className="button"
-                        onClick={() =>
-                          setAction({
-                            kind: "handoff",
-                            projectId,
-                            workflow: workflow.data!,
-                            designerNames,
-                          })
-                        }
-                      >
-                        Send to designers
-                      </button>
-                    )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
-                    !internal &&
-                    role === "agency" &&
-                    workflow.data.capabilities.publish && (
-                      <button
-                        // Once a version is approved, delivery is the next step and leads the bar.
-                        className={workflow.data.capabilities.deliver ? "button" : "button primary"}
-                        onClick={() =>
-                          setAction({
-                            kind: "share",
-                            projectId,
-                            round: null,
-                            prefill: sharePrefill,
-                            workflow: workflow.data!,
-                            availableRounds,
-                            boardNames,
-                          })
-                        }
-                      >
-                        {latestPublication ? "Share new version" : "Share with client"}
-                      </button>
-                    )}
-                  {!paused &&
-                    project.status !== "delivered" &&
-                    workflow.data &&
-                    !internal &&
-                    role === "agency" &&
-                    workflow.data.capabilities.deliver &&
+                    workflow.data!.capabilities.deliver &&
                     latestVersion && (
                       <Link
                         className="button primary"

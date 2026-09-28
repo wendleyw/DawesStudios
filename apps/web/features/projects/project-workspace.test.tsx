@@ -52,8 +52,16 @@ const workflowState = vi.hoisted(() => ({
   release: false,
   submit: true,
   requestChanges: true,
+  approve: true,
+  share: false,
   publish: true,
   review: false,
+  respondFeedback: false,
+}));
+vi.mock("./project-action-approve", () => ({
+  ApproveRoundButton: ({ roundNumber }: { roundNumber: number }) => (
+    <button aria-label={`Approve round ${roundNumber}`}>Approve round</button>
+  ),
 }));
 vi.mock("./project-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./project-data")>()),
@@ -85,6 +93,8 @@ vi.mock("./project-data", async (importOriginal) => ({
             release: workflowState.release,
             submit: workflowState.submit,
             requestChanges: workflowState.requestChanges,
+            approve: workflowState.approve,
+            share: workflowState.share,
             close: false,
             reactivate: false,
           },
@@ -94,7 +104,7 @@ vi.mock("./project-data", async (importOriginal) => ({
         publish: workflowState.publish,
         review: workflowState.review,
         deliver: false,
-        respondFeedback: false,
+        respondFeedback: workflowState.respondFeedback,
       },
     },
   }),
@@ -169,8 +179,11 @@ beforeEach(() => {
   workflowState.release = false;
   workflowState.submit = true;
   workflowState.requestChanges = true;
+  workflowState.approve = true;
+  workflowState.share = false;
   workflowState.publish = true;
   workflowState.review = false;
+  workflowState.respondFeedback = false;
   dialog.action = null;
   vi.stubGlobal(
     "ResizeObserver",
@@ -284,6 +297,9 @@ describe("ProjectWorkspace", () => {
   });
 
   it("prefills sharing a round with the latest client link, read from Working files", async () => {
+    workflowState.outcome = "approved";
+    workflowState.approve = false;
+    workflowState.share = true;
     const user = userEvent.setup();
     renderWorkspace({
       boards: [board],
@@ -389,10 +405,107 @@ describe("ProjectWorkspace", () => {
     },
   );
 
-  it("prefills the first client version from the latest client link too", async () => {
+  it("keeps a direct share in the More menu, prefilled from the latest client link", async () => {
+    const user = userEvent.setup();
     renderWorkspace({ channel: "client" });
-    await userEvent.setup().click(screen.getByRole("button", { name: "Share with client" }));
+    expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "More" }));
+    await user.click(screen.getByRole("button", { name: "Share a version directly" }));
     expect(dialog.action).toMatchObject({ kind: "share", round: null, prefill: sharedLink });
+  });
+
+  it("asks the studio to review a submitted round, then to approve it or request changes", async () => {
+    const user = userEvent.setup();
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    const bar = screen.getByRole("group", { name: "Workflow actions" });
+    expect(bar).toHaveTextContent("Studio review");
+    await user.click(within(bar).getByRole("button", { name: "Review R1" }));
+    expect(within(bar).getByRole("button", { name: "Approve round 1" })).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Request changes" })).toBeInTheDocument();
+    expect(within(bar).queryByRole("button", { name: "Share with client" })).toBeNull();
+  });
+
+  it("offers an approved round for sharing from the live board", async () => {
+    workflowState.outcome = "approved";
+    workflowState.approve = false;
+    workflowState.share = true;
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    const bar = screen.getByRole("group", { name: "Workflow actions" });
+    expect(bar).toHaveTextContent("Approved by the studio");
+    await userEvent
+      .setup()
+      .click(within(bar).getByRole("button", { name: "Share R1 with client" }));
+    expect(dialog.action).toMatchObject({ kind: "share", round: { id: "r1" } });
+  });
+
+  it("answers client feedback from Working files, not from the client view", async () => {
+    workflowState.outcome = "shared";
+    workflowState.approve = false;
+    workflowState.requestChanges = false;
+    workflowState.respondFeedback = true;
+    workflowState.latest = {
+      id: "v1",
+      number: 1,
+      decision: "changes_requested",
+      reviewRevision: 1,
+    };
+    const user = userEvent.setup();
+    const onChannel = vi.fn();
+    const version = { ...round, id: "v1", boardId: null, status: "changes_requested" };
+    renderWorkspace({
+      channel: "client",
+      onChannel,
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "changes_requested" },
+        versions: [version],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    const clientBar = screen.getByRole("group", { name: "Workflow actions" });
+    expect(within(clientBar).queryByRole("button", { name: "Send to designers" })).toBeNull();
+    expect(within(clientBar).queryByRole("button", { name: /Share new version/ })).toBeNull();
+    await user.click(within(clientBar).getByRole("button", { name: "Continue in Working files" }));
+    expect(onChannel).toHaveBeenCalledWith("internal");
+  });
+
+  it("sends client feedback back to the designer from the board", async () => {
+    workflowState.outcome = "shared";
+    workflowState.approve = false;
+    workflowState.requestChanges = false;
+    workflowState.respondFeedback = true;
+    workflowState.latest = {
+      id: "v1",
+      number: 1,
+      decision: "changes_requested",
+      reviewRevision: 1,
+    };
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "changes_requested" },
+        versions: [round],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    const bar = screen.getByRole("group", { name: "Workflow actions" });
+    expect(bar).toHaveTextContent("Client requested changes");
+    await userEvent.setup().click(within(bar).getByRole("button", { name: "Send to designer" }));
+    expect(dialog.action).toMatchObject({ kind: "handoff" });
+    expect(dialog.action).not.toHaveProperty("selectedBoardId");
   });
 
   it("closes a pending round dialog when the project becomes delivered", async () => {

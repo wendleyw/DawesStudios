@@ -54,3 +54,22 @@ funnel dataset (web :3003).
 ![Delivered Miro bar](screenshots/page-consistency-2026-09-28/delivered-miro-bar.png)
 ![Home, phone](screenshots/page-consistency-2026-09-28/home-mobile.png)
 ![Deliverables, phone](screenshots/page-consistency-2026-09-28/deliverables-mobile.png)
+
+## Follow-up: workflow order (same day)
+
+User decision: designer → studio → **Approve round** or **Request changes** → share the approved
+round → client decides → client feedback is sent back to designers from Working files.
+
+- Migration `202609280009_studio_round_approval.sql` (applied with `supabase migration up --local`):
+  request outcome `approved`, `approve_board_round`, `approve`/`share` capabilities, the
+  `share_round` action, and sharing accepts approved rounds. `npm run db:types` regenerated.
+- New pgTAP suite `round_approval.test.sql`: 23/23 PASS. `project_workflow` (52),
+  `action_notifications` (56), `workflow_hardening` (29), `production_integrity` (37),
+  `miro_workspace` (35) and `security_definer_coverage` (36) ran without failures.
+- `npm run check`: 135 files / 1,308 tests PASS.
+- Playwright PASS: `action-workflow` (two designers through delivery), `miro-workspace` (2),
+  `action-notifications` (now also releases instructions first and covers the Share with client
+  action and the Working files feedback destination).
+
+![Studio review](screenshots/page-consistency-2026-09-28/studio-review-actions.png)
+![Client feedback in Working files](screenshots/page-consistency-2026-09-28/feedback-actions.png)

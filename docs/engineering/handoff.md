@@ -10,6 +10,9 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
   backup in the delivery dialog; working files retired); Assets takes bulk drops, Edit details after.
 - `npm run check` PASS (1,299 tests); affected Playwright specs PASS except live-data `board-views`
   canvas centering and `action-notifications`. [Record](../verification/page-consistency-2026-09-28.md).
+- Workflow order (same day): **Approve round** between Send to studio and Share with client
+  (migration 009, applied forward); client feedback answered from Working files; direct share in ⋯.
+  pgTAP `round_approval` 23/23; workflow Playwright specs PASS.
 - A stale Turbopack cache served old `globals.css` after a `git stash`; fix: stop the server, delete
   `apps/web/.next/dev`, restart.
 

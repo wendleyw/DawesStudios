@@ -122,10 +122,12 @@ test("two designers complete release, review, feedback handoff, version approval
   await expect(
     studio.locator(".miro-bar").getByRole("button", { name: "Share with client" }),
   ).toHaveCount(0);
-  await studio
-    .getByRole("group", { name: "Workflow actions" })
-    .getByRole("button", { name: "Share with client" })
-    .click();
+  // Studio review: a submitted round is approved before it can be shared.
+  const studioBar = studio.getByRole("group", { name: "Workflow actions" });
+  await expect(studioBar.getByRole("button", { name: "Share with client" })).toHaveCount(0);
+  await studioBar.getByRole("button", { name: "Approve round 1" }).click();
+  await expect(studioBar).toContainText("Approved by the studio");
+  await studioBar.getByRole("button", { name: "Share with client" }).click();
   let dialog = studio.getByRole("dialog");
   await dialog
     .getByLabel("Client Miro board")
@@ -151,7 +153,12 @@ test("two designers complete release, review, feedback handoff, version approval
     .getByRole("group", { name: "Project channel" })
     .getByRole("button", { name: "Shared with client" })
     .click();
-  await expect(studio.getByRole("button", { name: "Send to designers" })).toBeVisible();
+  // Client feedback is answered from Working files, where the designers' boards are.
+  await expect(studio.getByRole("button", { name: "Send to designers" })).toHaveCount(0);
+  await studio.getByRole("button", { name: "Continue in Working files" }).click();
+  await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
+    "Client requested changes",
+  );
   await captureResponsive(studio, "feedback-actions");
   await studio.getByRole("button", { name: "Send to designers" }).focus();
   await studio.keyboard.press("Enter");
@@ -206,6 +213,7 @@ test("two designers complete release, review, feedback handoff, version approval
     .click();
   await selectBoard(studio, "Direction Alpha");
   await studio.getByRole("button", { name: "Round 2" }).click();
+  await studio.getByRole("button", { name: "Approve round 2" }).click();
   await studio.getByRole("button", { name: "Share with client" }).click();
   dialog = studio.getByRole("dialog");
   await expect(dialog.getByLabel("Client Miro board")).toHaveValue(/uXjVWorkflowClient1/);
