@@ -2,7 +2,18 @@
 
 Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Current objective and completed task
+## Latest UI change
+
+- Client Overview now shows the client's logo, the signed-in viewer's greeting and studio-local
+  weekday/date. The old Overview/agency-preview text is removed.
+- The logo appears in either the welcome card or the upper menu. Navigation, history and keyboard
+  activate a460ms move/scale; direct visits and reduced motion use immediate placement.
+- `ClientIdentityProvider` retains only departing geometry; guards handle Strict Mode and cached
+  route effects. Client/designer permissions, figures and the SABRE1/6 dataset are unchanged.
+- [UI verification](../verification/overview-client-identity-2026-09-28.md) records final checks,
+  desktop/mobile captures and animation coverage. No active workers or database migration.
+
+## Current objective and completed workflow task
 
 - Action-driven project workflow is implemented locally; the latest authorized data reduction is
   complete. The local target is now **SABRE only, six projects**, not the previous 10/68 overlay.
@@ -46,7 +57,7 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - Original Gmail invitation remains pending; never consume it in automation. Do not touch older
   restore clone or stopped stagingAPI56110/DB56111/web3113/media56114/mail56115.
 
-## Checks executed in this task
+## Workflow checks (previous task, commit9f2b704)
 
 - Forward migrations003–008 applied with `supabase migration up --local`. No reset/down migration.
 - Final `npm run check`:132files/1293tests, types/lint/format PASS. `npm run build`:PASS.

@@ -11,7 +11,8 @@ import { formatCredits } from "@/features/credits/credit-model";
 import { useReviews } from "@/features/reviews/review-data";
 import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass } from "@/features/shared/status-tone";
-import { WelcomeHeader, welcomeTitle } from "@/features/shared/welcome-header";
+import { welcomeTitle } from "@/features/shared/welcome-header";
+import { ClientIdentity } from "@/features/workspace/client-identity";
 import {
   projectStatusTone,
   projectStatusLabel,
@@ -62,26 +63,32 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
     now,
     formatMonth,
   });
-  const studio = profile?.role === "agency";
   const projectHref = (id: string) => `/projects/${id}?channel=client`;
   return (
     <div className="page-content overview-page">
-      <WelcomeHeader
-        card
-        eyebrow="Overview"
-        title={studio ? `What ${client.name} sees` : welcomeTitle(profile?.display_name)}
-        subtitle={
-          studio ? "This client's overview, as they see it." : formatWeekdayDate(now.toISOString())
-        }
-        actions={
-          <div className="page-actions">
-            <Link className="button primary" href={`/clients/${clientId}/briefings/new`}>
-              <Plus size={16} />
-              New briefing
-            </Link>
+      <header className="page-heading client-page-heading overview-welcome">
+        <div className="overview-welcome-identity">
+          <ClientIdentity
+            client={client}
+            placement="overview"
+            href={`/clients/${clientId}/overview`}
+          />
+          <div>
+            <h1>{welcomeTitle(profile?.display_name)}</h1>
+            <p>
+              <time dateTime={formatDayKey(now.toISOString())}>
+                {formatWeekdayDate(now.toISOString())}
+              </time>
+            </p>
           </div>
-        }
-      />
+        </div>
+        <div className="page-actions">
+          <Link className="button primary" href={`/clients/${clientId}/briefings/new`}>
+            <Plus size={16} />
+            New briefing
+          </Link>
+        </div>
+      </header>
       <div className="overview-stats">
         <div>
           <strong>{overview.credits.remaining}</strong>

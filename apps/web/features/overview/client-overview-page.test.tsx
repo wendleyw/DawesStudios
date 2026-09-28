@@ -31,6 +31,9 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => {
     useDateFormat: () => actual.createDateFormatters("UTC"),
   };
 });
+vi.mock("@/features/brand/brand-data", () => ({
+  useClientLogo: () => ({ data: "/client-logo.png" }),
+}));
 vi.mock("@/features/briefings/briefing-data", () => ({
   useBriefings: () => query([{ status: "awaiting_review" }]),
 }));
@@ -158,10 +161,13 @@ describe("ClientOverviewPage", () => {
     expect(screen.getByText("Delivered work will appear here.")).toBeInTheDocument();
   });
 
-  it("tells the studio whose view it is", () => {
+  it("greets the signed-in studio user beside the client logo and weekday", () => {
     viewer.role = "agency";
     render(<ClientOverviewPage clientId="c1" />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("What SABRE sees");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Beth");
+    expect(screen.getByRole("img", { name: "SABRE" })).toBeInTheDocument();
+    expect(screen.getByText(/Friday/)).toBeInTheDocument();
+    expect(screen.queryByText("This client's overview, as they see it.")).not.toBeInTheDocument();
   });
 
   it("sends a designer to the client's board", () => {

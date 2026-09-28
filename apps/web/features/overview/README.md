@@ -7,8 +7,18 @@ and a designer's `/home` (`designer-overview.tsx`). Both read the same pure mode
 ## Client Overview
 
 Route: `/clients/:clientId/overview` (`app/(workspace)/clients/[clientId]/overview/page.tsx`),
-rendering `ClientOverviewPage`. It uses `WelcomeHeader`/`welcomeTitle` (`features/shared`) for its
-title card and the shared `.overview-stats` tiles for its three numbers.
+rendering `ClientOverviewPage`. Its `overview-welcome` card shows the client's logo,
+`welcomeTitle(profile.display_name)` and the full weekday/date in the configured studio timezone.
+The greeting uses the signed-in viewer for both client and agency roles. It replaces the former
+Overview eyebrow and agency preview description; the shared `.overview-stats` tiles are unchanged.
+
+`ClientIdentity` (`features/workspace`) owns the logo link and its route animation. The upper
+`CanvasHeader` omits its identity on this route, so the main workspace has one logo. Navigating to
+Board/List or another client section moves/scales it into the upper navigation; returning moves it
+back into the welcome card. Keyboard navigation and browser history use the same behavior. Direct
+visits and reduced-motion preferences place the logo without movement. The sidebar workspace
+picker remains a separate client-switching control. On phones the welcome logo, greeting and
+action stack vertically.
 
 **The three tiles** (`clientOverview` in `overview-model.ts`):
 
@@ -30,8 +40,8 @@ title card and the shared `.overview-stats` tiles for its three numbers.
    `<project> · V<N>`, linking to Reviews.
 3. **Recently shipped** — delivered projects, most recently delivered first, linking to the board.
 
-**Studio view**: when `profile.role === "agency"`, the heading reads "What `<client name>` sees"
-and the subtitle explains it is the client's own overview. The studio's own `useReviews` call does
+**Studio view**: the greeting addresses the signed-in studio user while the logo identifies the
+client. The numbers and columns remain the client's own overview. The studio's own `useReviews` call does
 add the submitted-rounds read (`features/reviews/review-data.ts`, since it runs with the `agency`
 role), but `clientOverview`'s waiting-reviews filter drops every internal row
 regardless of viewer (see Isolation below), so what the agency sees here is exactly the client's
@@ -79,8 +89,7 @@ matching the product-wide rule that a designer's view never carries credits.
 
 The page renders only client-visible data. Reviews are filtered through the client's own
 `inReviewTab("waiting", row, "client")` rule (`features/reviews/review-data.ts`), which drops every
-`internal` row for every viewer — including the studio's "What `<client>` sees" rendering of this
-same page. No designer identity, assignment or internal note reaches this page. Designers never see
+`internal` row for every viewer — including the studio's rendering of this same page. No designer identity, assignment or internal note reaches this page. Designers never see
 credits: their queries (`useCreditAccount`/`useCreditLedger`) are disabled for the `designer` role,
 and this page redirects designers away before rendering the tiles regardless.
 

@@ -1,4 +1,34 @@
 /* The welcome dashboards: client Overview and designer /home (features/overview). */
+.overview-welcome {
+  padding: 24px;
+}
+.overview-welcome-identity {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.overview-welcome .board-identity-mark {
+  --client-mark-size: 64px;
+}
+.overview-welcome h1 {
+  margin: 0;
+}
+.overview-welcome time {
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .overview-welcome {
+    padding: 20px;
+  }
+  .overview-welcome-identity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .overview-welcome .board-identity-mark {
+    --client-mark-size: 56px;
+  }
+}
 .overview-page .overview-stats {
   margin-bottom: var(--space-md);
 }

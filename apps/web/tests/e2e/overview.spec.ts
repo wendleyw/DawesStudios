@@ -177,7 +177,7 @@ test("the studio sees a client's Overview as the client does", async ({ page, br
   await signIn(page, credentials.agency);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
   await page.goto(`/clients/${client.id}/overview`);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`What ${client.name} sees`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
   await expect(
     page
       .getByRole("navigation", { name: "Main navigation", exact: true })

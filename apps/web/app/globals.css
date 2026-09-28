@@ -1593,6 +1593,8 @@ img.client-mark {
   margin: 0;
 }
 .board-identity-logo {
+  position: relative;
+  transform-origin: top left;
   display: flex;
   flex-shrink: 0;
   margin: 0;

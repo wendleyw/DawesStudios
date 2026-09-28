@@ -1,9 +1,8 @@
 "use client";
-import Link from "next/link";
 import { AccountMenu } from "./account-menu";
 import { NotificationsPopover } from "./notifications-popover";
 import type { ReactNode } from "react";
-import { ClientMark } from "./client-mark";
+import { ClientIdentity } from "./client-identity";
 import { ClientNavigation } from "./client-navigation";
 import type { Client } from "./workspace-data";
 import type { Profile } from "@/lib/supabase";
@@ -15,31 +14,32 @@ export function CanvasHeader({
   context,
   center,
   heading = false,
+  showIdentity = true,
 }: {
   client: Client;
   viewer: Profile | null;
   context?: ReactNode;
   center?: ReactNode;
   heading?: boolean;
+  showIdentity?: boolean;
 }) {
   const logo = (
-    <Link
-      className="board-identity-logo"
+    <ClientIdentity
+      client={client}
       href={`/clients/${client.id}/${viewer?.role === "designer" ? "board" : "overview"}`}
-      title={client.name}
-    >
-      <ClientMark client={client} className="board-identity-mark" alt={client.name} />
-    </Link>
+    />
   );
   return (
     <header className="board-header">
       <div className="board-identity">
-        <div className="board-client-context">
-          {/* The client's logo stands in for their name and leads to their Overview; designers have
+        {(showIdentity || context) && (
+          <div className="board-client-context">
+            {/* The client's logo stands in for their name and leads to their Overview; designers have
               no client Overview, so theirs leads to the board. The name stays its accessible label. */}
-          {heading ? <h1 className="board-identity-heading">{logo}</h1> : logo}
-          {context}
-        </div>
+            {showIdentity && (heading ? <h1 className="board-identity-heading">{logo}</h1> : logo)}
+            {context}
+          </div>
+        )}
         {viewer && <ClientNavigation client={client} role={viewer.role} />}
       </div>
       {center}

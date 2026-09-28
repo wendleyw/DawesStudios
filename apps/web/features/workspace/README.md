@@ -28,8 +28,8 @@ credits — see [`features/overview/README.md`](../overview/README.md) for its n
 `app-shell.tsx` resolves the active client from `/clients/:id/*` or through `useProjectClient`
 for `/projects/:id`. Client destinations appear once, as visible text links at the top, with an
 underline on the active section. `client-navigation.tsx` owns their shared routing and role rules:
-Overview, Board, Briefings, Reviews, Brand Hub and Credits, with Overview and Credits hidden
-for designers, so a designer's four destinations start on Board. The Board link is named after the
+Board, Briefings, Reviews, Brand Hub and Credits, with Credits hidden for designers. Overview
+lives in the sidebar for clients and the studio; designers have no client Overview destination. The Board link is named after the
 viewer's saved board view (List until one is saved; `boardViewName` in `board/board-views.ts`). Files is a Brand Hub section. Projects keep Board active. No
 client destinations remain in the sidebar on any route. A client signed into exactly one workspace
 lands on its Overview after sign-in (`home-page.tsx`'s single-workspace redirect); the sidebar's own
@@ -55,6 +55,17 @@ inside the main scrolling region. Their white title/action cards and contextual 
 on the plain page background (the dot grid belongs to the canvases), using the full available
 width with 16 px desktop and 12 px mobile gutters.
 Route changes reset this region's scroll position.
+
+On the client's Overview, the logo appears only in the welcome card, alongside the signed-in
+viewer's first name and the studio-local weekday/date. The upper navigation keeps its section
+links but omits the logo. `client-identity.tsx` shares the identity link between that card and
+`CanvasHeader`; a provider inside the persistent shell retains only the departing element's
+geometry. The destination moves/scales from that position with the Web Animations API (460ms),
+then rests in the normal page layout. There is no cloned/floating logo or animation dependency.
+History and keyboard navigation work normally; different clients, direct visits, offscreen origins,
+expired geometry and reduced motion skip the movement. Rendered-frame and consumed-origin guards
+handle Strict Mode and retained route effects without replaying an old transition. The sidebar
+workspace picker remains independent. See the [verification record](../../../../docs/verification/overview-client-identity-2026-09-28.md).
 
 All desktop client routes hide the shell topbar and set `--topbar-height` to zero. On phones the
 64 px shell topbar carries the navigation-drawer button. Client routes show one bell beside the

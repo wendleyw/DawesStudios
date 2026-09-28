@@ -172,15 +172,16 @@ white client header card the client-facing routes use. Callers wrap `actions` in
 container; the component adds none. `welcomeTitle(displayName)` builds the greeting's copy —
 `"Welcome back, <first name>"`, or plain `"Welcome back"` when there is no name.
 
-| Prop       | Type        | Default | Notes                                              |
-| ---------- | ----------- | ------- | -------------------------------------------------- |
-| `eyebrow`  | `string`    | —       | The role name shown above the greeting.            |
-| `title`    | `string`    | —       | Usually `welcomeTitle(displayName)`.               |
-| `subtitle` | `string`    | —       | Optional; omitted when there is nothing to show.   |
-| `actions`  | `ReactNode` | —       | Optional; rendered after the heading text.         |
-| `card`     | `boolean`   | `false` | `true` on client routes for the white header card. |
+| Prop       | Type        | Default | Notes                                            |
+| ---------- | ----------- | ------- | ------------------------------------------------ |
+| `eyebrow`  | `string`    | —       | The role name shown above the greeting.          |
+| `title`    | `string`    | —       | Usually `welcomeTitle(displayName)`.             |
+| `subtitle` | `string`    | —       | Optional; omitted when there is nothing to show. |
+| `actions`  | `ReactNode` | —       | Optional; rendered after the heading text.       |
+| `card`     | `boolean`   | `false` | Optional white header-card variant.              |
 
-Consumers: `workspace/home-page`, `overview` (the welcome dashboards).
+Header consumers: `workspace/home-page`, `overview/designer-overview`. The client Overview uses
+`welcomeTitle` with its own client-logo card and route animation.
 
 ### `StudioManagedNotice` — `studio-managed-notice.tsx`
 

@@ -18,6 +18,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useAuth } from "@/features/auth/auth-provider";
 import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
 import { CanvasHeader } from "./canvas-header";
+import { ClientIdentityProvider } from "./client-identity";
 import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
@@ -397,14 +398,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
             <div className="topbar-actions">{!activeClient && <NotificationsBell />}</div>
           </header>
-          <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
-            {activeClient && !canvasRoute && (
-              <div className="client-page-chrome">
-                <CanvasHeader client={activeClient} viewer={profile} />
-              </div>
-            )}
-            {children}
-          </main>
+          <ClientIdentityProvider>
+            <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
+              {activeClient && !canvasRoute && (
+                <div className="client-page-chrome">
+                  <CanvasHeader
+                    client={activeClient}
+                    viewer={profile}
+                    showIdentity={pathname !== clientOverview}
+                  />
+                </div>
+              )}
+              {children}
+            </main>
+          </ClientIdentityProvider>
         </div>
         <Modal
           open={helpOpen}
