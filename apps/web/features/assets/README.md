@@ -6,6 +6,11 @@ agency's **Delivery file** action sits top right of that card (`shared/header-ac
 search plus, in a campaign, a project `<select>` form one `.hub-toolbar` row below it. Results —
 campaign folders, or a campaign's deliverables in one card per project — follow.
 
+The section is for the studio and the client only. Designers work in Miro: `brand-page.tsx` leaves
+the tab out of their Brand Hub and shows its unavailable page at the address, and Project details
+omits their Deliverables link. (Row-level security still lets an assigned designer read a released
+delivery; the section is hidden, not a new permission.)
+
 Work in progress lives in Miro, so this section lists final delivery files (`delivery_files`) only:
 no working files, no All files/Approved toggle (every deliverable is approved) and no design copies.
 Deliverables at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query)
@@ -112,9 +117,10 @@ against counts read through each role's own session, the Back button and back ar
 links, unknown campaigns, axe, and that a campaign opened from far down the phone folder list starts
 at its title. `tests/e2e/deliverables.spec.ts` adds a deliverable with a Drive backup on a
 disposable approved project, rejects a non-Drive link, downloads the file, reads the saved
-`client` Drive row and checks a designer gets no upload action.
+`client` Drive row and checks a designer has neither the tab nor the page.
 
 Delivery preparation and Complete delivery are unavailable for Backlog projects. The database
 rechecks Active activity, the latest approved client version and real final files under the project
 lock. Prepare delivery in the project action bar navigates to the filtered Deliverables page, and a
-delivered project's Miro bar links there with **Deliverable**.
+delivered project's Miro bar links there with **Deliverable** on the client channel only — the
+client's view and the agency's Shared with client — never on Working files.

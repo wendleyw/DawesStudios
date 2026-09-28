@@ -40,8 +40,9 @@ export type MiroWorkspaceBarProps = {
    */
   driveUrl: string | null;
   /**
-   * Where a delivered project's final files are: its Files view. Shown beside Open in Miro so the
-   * delivered work is one click from the board; left out for designers and undelivered projects.
+   * Where a delivered project's final files are: its Deliverables. Shown beside Open in Miro on the
+   * client channel only (the client, and the agency's Shared with client view), so the delivered
+   * work is one click from the version it came from; never on Working files or for designers.
    */
   deliverableHref?: string | null;
 };
@@ -68,7 +69,7 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
       lead={props.lead}
       link={shown}
       primary={
-        props.delivered && props.deliverableHref ? (
+        props.delivered && !internal && props.deliverableHref ? (
           <Link className="button" href={props.deliverableHref}>
             <PackageCheck size={14} aria-hidden="true" />
             <span className="miro-bar-open-label">Deliverable</span>

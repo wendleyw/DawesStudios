@@ -139,7 +139,7 @@ describe("MiroWorkspaceBar in Working files", () => {
     expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
     expect(screen.getByRole("group", { name: "Client versions" })).toBeInTheDocument();
   });
-  it("links a delivered project to its final files, and nothing before delivery", () => {
+  it("links a delivered project to its final files on the client channel only", () => {
     const href = "/clients/c/brand/files?project=p";
     const { rerender } = render(<MiroWorkspaceBar {...props({ deliverableHref: href })} />);
     expect(screen.queryByRole("link", { name: "Deliverable" })).toBeNull();
@@ -150,6 +150,9 @@ describe("MiroWorkspaceBar in Working files", () => {
     );
     expect(screen.getByRole("link", { name: "Deliverable" })).toHaveAttribute("href", href);
     rerender(<MiroWorkspaceBar {...props({ delivered: true, deliverableHref: null })} />);
+    expect(screen.queryByRole("link", { name: "Deliverable" })).toBeNull();
+    // Working files is the studio's internal view: the deliverable belongs to the client channel.
+    rerender(<MiroWorkspaceBar {...props({ delivered: true, deliverableHref: href })} />);
     expect(screen.queryByRole("link", { name: "Deliverable" })).toBeNull();
   });
   it("shows the agency the board's internal due date on the board's row", () => {

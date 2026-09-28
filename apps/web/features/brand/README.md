@@ -55,7 +55,7 @@ top and the section tabs below. Each section places its actions — **Edit …**
 folder / Add link / Add files**, Deliverables' **Delivery file** — through
 `shared/header-actions.tsx`, so they always sit top right of the card; search and filters form one
 `.hub-toolbar` row under it. The tab that used to read Files is **Deliverables**
-(`features/assets`).
+(`features/assets`); designers do not get it, and its address shows them the unavailable page.
 
 ## Assets and folders
 

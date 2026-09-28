@@ -28,7 +28,16 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   useScrollRow(sectionNav, `${section}:${Boolean(client && sections.data)}`);
   if (clients.isPending || sections.isPending)
     return <PageStatus>Loading the Brand Hub…</PageStatus>;
-  if (!client || sections.error || !isBrandSection(section))
+  // Deliverables are the client's final files; designers work in Miro and never see the section.
+  const navigation = brandNavigation.filter(
+    (item) => item.id !== "files" || profile?.role !== "designer",
+  );
+  if (
+    !client ||
+    sections.error ||
+    !isBrandSection(section) ||
+    !navigation.some((item) => item.id === section)
+  )
     return (
       <div className="page-content">
         <h1>Brand Hub unavailable.</h1>
@@ -60,7 +69,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
             className="brand-section-nav section-tabs card-heading-tools"
             aria-label="Brand sections"
           >
-            {brandNavigation.map((item) => (
+            {navigation.map((item) => (
               <Link
                 key={item.id}
                 href={`/clients/${clientId}/brand/${item.id}`}

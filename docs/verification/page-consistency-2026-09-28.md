@@ -13,8 +13,10 @@ funnel dataset (web :3003).
 2. **Help & support** removed from the sidebar.
 3. **List sort** cycles ascending → descending → default order; Status steps through the statuses
    present and then returns to the default order.
-4. **Delivered projects** show a **Deliverable** link beside Open in Miro (agency and client), opening
-   the project's Deliverables.
+4. **Delivered projects** show a **Deliverable** link beside Open in Miro on the client channel only
+   (the client, and the agency's Shared with client view — not Working files), opening the project's
+   Deliverables. Follow-up the same day: designers no longer see the Deliverables tab, page or
+   Project details link.
 5. **Brand Hub** puts every section's actions in the title card (`shared/header-actions.tsx`) with the
    tabs below, and search/filters in one `.hub-toolbar` row. **Files is now Deliverables**: delivery
    files only (working files and the All/Approved toggle retired), one card per project, and the

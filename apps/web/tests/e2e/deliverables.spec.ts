@@ -7,7 +7,7 @@ import { credentials, localAdmin, localAgency, signIn } from "./test-support";
 const uploadPath = fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url));
 const driveUrl = "https://drive.google.com/drive/folders/acceptance-deliverable-backup";
 
-test("the agency adds a deliverable with its Google Drive backup; only the agency adds one", async ({
+test("the agency adds a deliverable with its Google Drive backup; designers never see the section", async ({
   page,
   browser,
 }) => {
@@ -64,8 +64,16 @@ test("the agency adds a deliverable with its Google Drive backup; only the agenc
 
     const designerPage = await designerContext.newPage();
     await signIn(designerPage, credentials.designer);
+    // Designers work in Miro: no Deliverables tab, and its address shows the unavailable page.
+    await designerPage.goto(`/clients/${fixture.clientId}/brand/overview`);
+    await expect(
+      designerPage.getByRole("navigation", { name: "Brand sections" }).getByRole("link"),
+    ).not.toContainText(["Deliverables"]);
     await designerPage.goto(deliverablesUrl);
-    await expect(designerPage.getByRole("button", { name: "Delivery file" })).toHaveCount(0);
+    await expect(
+      designerPage.getByRole("heading", { name: "Brand Hub unavailable." }),
+    ).toBeVisible();
+    await expect(designerPage.locator(".file-card")).toHaveCount(0);
   } finally {
     await designerContext.close();
     await cleanupTestProject(fixture.projectId);

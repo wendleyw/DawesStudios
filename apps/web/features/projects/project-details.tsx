@@ -300,13 +300,15 @@ export function ProjectDetails({
             Brand direction
             <ArrowUpRight size={14} />
           </Link>
-          <Link
-            className="button quiet"
-            href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
-          >
-            Deliverables
-            <ArrowUpRight size={14} />
-          </Link>
+          {!designer && (
+            <Link
+              className="button quiet"
+              href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
+            >
+              Deliverables
+              <ArrowUpRight size={14} />
+            </Link>
+          )}
           {profile?.role !== "designer" && (
             <CopyButton
               text={shareLink}
