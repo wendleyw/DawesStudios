@@ -126,6 +126,13 @@ html {
   min-height: 100%;
   background: var(--background);
 }
+/* A sideways trackpad swipe that a canvas does not consume (over its floating cards, toolbar or
+   zoom pill) would otherwise reach the browser as Back. Pages with a canvas turn that gesture off;
+   every other page keeps swipe navigation. */
+html:has(.react-flow),
+html:has(.react-flow) body {
+  overscroll-behavior-x: none;
+}
 /*
  * Type pairing tokens. `features/workspace/font.ts` sets `<html data-font>`; the default (no
  * attribute) is the Geist pairing, which looks exactly as before these tokens existed. The font
