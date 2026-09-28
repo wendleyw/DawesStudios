@@ -19,6 +19,7 @@ import {
   useInvalidateProductionBrief,
   type DesignBoard,
   type TableRow,
+  type WorkflowBoard,
 } from "./project-data";
 import {
   copyClientBrief,
@@ -32,11 +33,13 @@ export function ProductionBriefEditor({
   board,
   project,
   saved,
+  workflowBoard,
   onClose,
 }: {
   board: DesignBoard;
   project: TableRow<"projects">;
   saved: ProductionBriefRecord | null;
+  workflowBoard?: WorkflowBoard;
   onClose: () => void;
 }) {
   const { database } = useAuth();
@@ -64,6 +67,7 @@ export function ProductionBriefEditor({
         throw new Error(parsed.error.issues.map((issue) => issue.message).join(" "));
       if (publish && !parsed.data.deliverables.length)
         throw new Error("Add at least one production deliverable before sending.");
+      if (publish && !workflowBoard) throw new Error("Board workflow is still loading. Try again.");
       if (project.due_date && content.dueDate > project.due_date)
         throw new Error("The internal deadline must be on or before the project deadline.");
       const payload = JSON.stringify({ content: parsed.data, publish });
@@ -75,6 +79,8 @@ export function ProductionBriefEditor({
         expectedRevision,
         publish,
         requestId: attempt.current.id,
+        boardRevision: workflowBoard?.workflowRevision,
+        assignmentGeneration: workflowBoard?.assignmentGeneration,
       });
     },
     onSuccess: async () => {

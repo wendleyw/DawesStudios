@@ -124,6 +124,10 @@ export async function cleanupTestProject(projectId: string) {
   const sql = `begin;
 set local session_replication_role=replica;
 create temporary table acceptance_target as select id,client_id,briefing_id from public.projects where id='${projectId}' and title like 'Acceptance %';
+delete from private.workflow_attempts where payload->>'projectId' in (select id::text from acceptance_target) or payload->>'boardId' in (select id::text from public.design_boards where project_id in (select id from acceptance_target));
+delete from private.feedback_handoff_receipts where project_id in (select id from acceptance_target);
+delete from private.publication_round_sources where publication_id in (select id from public.published_versions where project_id in (select id from acceptance_target));
+delete from public.board_work_requests where project_id in (select id from acceptance_target);
 delete from private.client_comment_authors where comment_id in (select id from public.client_comments where project_id in (select id from acceptance_target));
 delete from private.publication_sources where publication_id in (select id from public.published_versions where project_id in (select id from acceptance_target));
 delete from private.sanitized_assets where project_id in (select id from acceptance_target);
@@ -174,4 +178,101 @@ delete from public.credit_plans where client_id='${clientId}';
 commit;`,
     20_000,
   );
+}
+
+/** Publish through the same optimistic-concurrency contract as the confirmation dialog. */
+export async function shareTestVersion(
+  agency: SupabaseClient<Database>,
+  input: {
+    p_project_id: string;
+    p_url: string;
+    p_note?: string;
+    p_source_round?: string;
+    p_request_key?: string;
+  },
+) {
+  const state = value(
+    await agency.rpc("get_project_workflow", { p_project_id: input.p_project_id }),
+  ) as {
+    project: { latestPublication: { id: string; reviewRevision: number } | null };
+  };
+  return agency.rpc("share_workflow_version", {
+    p_project_id: input.p_project_id,
+    p_url: input.p_url,
+    p_note: input.p_note ?? "",
+    p_source_round_ids: input.p_source_round ? [input.p_source_round] : [],
+    p_expected_latest_publication_id: state.project.latestPublication?.id ?? null!,
+    p_expected_review_revision: state.project.latestPublication?.reviewRevision ?? null!,
+    p_confirm_replacement: true,
+    p_request_id: input.p_request_key ?? crypto.randomUUID(),
+  });
+}
+
+/** A test that needs a round must first release real instructions to its assigned designer. */
+export async function releaseTestBrief(
+  agency: SupabaseClient<Database>,
+  projectId: string,
+  boardId: string,
+) {
+  const state = value(await agency.rpc("get_project_workflow", { p_project_id: projectId })) as {
+    boards: {
+      id: string;
+      workflowRevision: number;
+      assignmentGeneration: number;
+      briefRevision: number;
+    }[];
+  };
+  const board = state.boards.find((item) => item.id === boardId);
+  if (!board) throw new Error("Acceptance board was not found.");
+  value(
+    await agency.rpc("save_production_brief", {
+      p_board_id: boardId,
+      p_content: {
+        title: "Acceptance production instructions",
+        serviceId: "static-ad",
+        overview: "Develop a clear visual direction.",
+        goals: "Verify the current work request.",
+        direction: {},
+        deliverables: [
+          {
+            name: "Campaign square",
+            format: "square",
+            quantity: 1,
+            scope: "original",
+            width: 1080,
+            height: 1080,
+          },
+        ],
+        dueDate: "",
+        references: [],
+      },
+      p_expected_revision: board.briefRevision,
+      p_publish: true,
+      p_request_id: crypto.randomUUID(),
+      p_expected_board_revision: board.workflowRevision,
+      p_expected_assignment_generation: board.assignmentGeneration,
+    }),
+  );
+}
+
+export async function sendTestRound(
+  designer: SupabaseClient<Database>,
+  projectId: string,
+  boardId: string,
+  note: string,
+) {
+  const state = value(await designer.rpc("get_project_workflow", { p_project_id: projectId })) as {
+    boards: { id: string; workflowRevision: number; currentRequest: { id: string } | null }[];
+  };
+  const board = state.boards.find((item) => item.id === boardId);
+  if (!board?.currentRequest)
+    throw new Error("Release instructions before submitting an acceptance round.");
+  return designer.rpc("send_board_round_for_request", {
+    p_board_id: boardId,
+    p_request_id: board.currentRequest.id,
+    p_expected_board_revision: board.workflowRevision,
+    p_note: note,
+    p_frame_url: null!,
+    p_idempotency_key: crypto.randomUUID(),
+  });
 }

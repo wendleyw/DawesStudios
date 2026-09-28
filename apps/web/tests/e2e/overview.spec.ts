@@ -43,7 +43,7 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
   const projects = (
     await caller
       .from("projects")
-      .select("id,status,delivered_at,updated_at")
+      .select("id,status,activity,delivered_at,updated_at")
       .eq("client_id", client.id)
   ).data!;
   const account = (
@@ -51,7 +51,10 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
   ).data!;
   await expect
     .poll(() => tile(page, "Active projects"))
-    .toBe(projects.filter((project) => project.status !== "delivered").length);
+    .toBe(
+      projects.filter((project) => project.status !== "delivered" && project.activity !== "backlog")
+        .length,
+    );
   await expect.poll(() => tile(page, "Credits remaining")).toBe(account.balance);
   const waiting = await tile(page, "Needs your review");
 
@@ -59,18 +62,17 @@ test("a client lands on its Overview and sees its own numbers", async ({ page })
   const briefings = (await caller.from("briefings").select("status").eq("client_id", client.id))
     .data!;
   const withStudioStatuses = new Set(["awaiting_review", "budget_confirmed"]);
-  const inProgressStatuses = new Set([
-    "planned",
-    "in_progress",
-    "internal_review",
-    "changes_requested",
-  ]);
+  const inProgressStatuses = new Set(["planned", "in_progress", "changes_requested"]);
   await expect
     .poll(() => flightCount(page, "with the studio"))
     .toBe(briefings.filter((briefing) => withStudioStatuses.has(briefing.status)).length);
   await expect
     .poll(() => flightCount(page, "in progress"))
-    .toBe(projects.filter((project) => inProgressStatuses.has(project.status)).length);
+    .toBe(
+      projects.filter(
+        (project) => inProgressStatuses.has(project.status) && project.activity !== "backlog",
+      ).length,
+    );
   await expect
     .poll(() => flightCount(page, "delivered"))
     .toBe(projects.filter((project) => project.status === "delivered").length);
@@ -143,10 +145,20 @@ test("a designer's home shows only assigned work and no credits", async ({ page 
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Welcome back/);
   const caller = await localCaller(credentials.designer);
-  const allowed = (await caller.from("projects").select("id,status")).data!;
+  const allowed = (await caller.from("projects").select("id,status,activity")).data!;
+  const activeBoards = (
+    await caller.from("design_boards").select("project_id").eq("activity", "active")
+  ).data!;
   await expect
     .poll(() => tile(page, "Active projects"))
-    .toBe(allowed.filter((project) => project.status !== "delivered").length);
+    .toBe(
+      allowed.filter(
+        (project) =>
+          project.status !== "delivered" &&
+          project.activity !== "backlog" &&
+          activeBoards.some((board) => board.project_id === project.id),
+      ).length,
+    );
   const allowedIds = new Set(allowed.map((project) => project.id));
   const hrefs = await page
     .locator(".overview-row")
@@ -184,11 +196,15 @@ test("the studio sees a client's Overview as the client does", async ({ page, br
     await clientContext.close();
   }
 
-  const projects = (await localAdmin.from("projects").select("status").eq("client_id", client.id))
-    .data!;
+  const projects = (
+    await localAdmin.from("projects").select("status,activity").eq("client_id", client.id)
+  ).data!;
   await expect
     .poll(() => tile(page, "Active projects"))
-    .toBe(projects.filter((project) => project.status !== "delivered").length);
+    .toBe(
+      projects.filter((project) => project.status !== "delivered" && project.activity !== "backlog")
+        .length,
+    );
 });
 
 test("the client Overview fits a phone in dark mode", async ({ page }) => {

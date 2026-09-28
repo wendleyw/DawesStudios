@@ -8,8 +8,8 @@ import { ProjectActionDialog, projectActionKey } from "./project-action-dialog";
 const writes = vi.hoisted(() => ({
   createDesignBoard: vi.fn(),
   updateDesignBoard: vi.fn(),
-  sendBoardRound: vi.fn(),
-  shareMiroVersion: vi.fn(),
+  sendBoardRoundForRequest: vi.fn(),
+  shareWorkflowVersion: vi.fn(),
 }));
 const assignments = vi.hoisted(() => ({ error: null as Error | null }));
 const invalidateProject = vi.hoisted(() => vi.fn());
@@ -61,6 +61,42 @@ Object.defineProperties(HTMLDialogElement.prototype, {
 });
 const wrap = (node: ReactNode) =>
   render(<QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>);
+const workflowBoard = {
+  id: "b1",
+  name: "Alpha",
+  activity: "active" as const,
+  designerId: "d1",
+  assignmentGeneration: 1,
+  workflowRevision: 2,
+  briefRevision: 1,
+  briefContent: null,
+  currentRequest: {
+    id: "q1",
+    sequence: 1,
+    kind: "initial",
+    outcome: "open",
+    roundId: null,
+    content: null,
+  },
+  capabilities: {
+    release: false,
+    submit: true,
+    requestChanges: false,
+    close: false,
+    reactivate: false,
+  },
+};
+const workflow = {
+  project: {
+    id: "p",
+    status: "in_progress",
+    activity: "active" as const,
+    workflowRevision: 1,
+    latestPublication: null,
+  },
+  boards: [workflowBoard],
+  capabilities: { publish: true, review: false, deliver: false, respondFeedback: false },
+};
 const board = {
   id: "b1",
   projectId: "p",
@@ -168,22 +204,28 @@ describe("board dialog", () => {
 describe("round dialog", () => {
   it("reuses its idempotency key when a failed send is retried", async () => {
     const user = userEvent.setup();
-    writes.sendBoardRound.mockRejectedValueOnce(new Error("Network down"));
-    wrap(<ProjectActionDialog action={{ kind: "round", board }} onClose={vi.fn()} />);
+    writes.sendBoardRoundForRequest.mockRejectedValueOnce(new Error("Network down"));
+    wrap(
+      <ProjectActionDialog action={{ kind: "round", board, workflowBoard }} onClose={vi.fn()} />,
+    );
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
     expect(await screen.findByText("Network down")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
-    await waitFor(() => expect(writes.sendBoardRound).toHaveBeenCalledTimes(2));
-    const [first, second] = writes.sendBoardRound.mock.calls.map((call) => call[1]);
+    await waitFor(() => expect(writes.sendBoardRoundForRequest).toHaveBeenCalledTimes(2));
+    const [first, second] = writes.sendBoardRoundForRequest.mock.calls.map((call) => call[1]);
     expect(first.idempotencyKey).toBe(second.idempotencyKey);
     expect(first).toMatchObject({ boardId: "b1", note: "Ready", frameUrl: "" });
   });
 
   it("shows a plain message and refreshes the boards once the board is no longer the designer's", async () => {
     const user = userEvent.setup();
-    writes.sendBoardRound.mockRejectedValueOnce(new Error('Board access required (42501): "b1"'));
-    wrap(<ProjectActionDialog action={{ kind: "round", board }} onClose={vi.fn()} />);
+    writes.sendBoardRoundForRequest.mockRejectedValueOnce(
+      new Error('Board access required (42501): "b1"'),
+    );
+    wrap(
+      <ProjectActionDialog action={{ kind: "round", board, workflowBoard }} onClose={vi.fn()} />,
+    );
     await user.type(screen.getByLabelText("Note for the studio"), "Ready");
     await user.click(screen.getByRole("button", { name: "Send to studio" }));
     expect(await screen.findByText("This board is no longer assigned to you.")).toBeInTheDocument();
@@ -201,6 +243,8 @@ describe("share dialog", () => {
         action={{
           kind: "share",
           projectId: "p",
+          workflow,
+          availableRounds: [],
           round,
           prefill: { boardId: "uXjVClient1=", widgetId: "5" },
         }}
@@ -213,13 +257,13 @@ describe("share dialog", () => {
     await user.type(screen.getByLabelText("Note for the client"), "First look");
     await user.click(screen.getByRole("button", { name: "Share with client" }));
     await waitFor(() =>
-      expect(writes.shareMiroVersion).toHaveBeenCalledWith(
+      expect(writes.shareWorkflowVersion).toHaveBeenCalledWith(
         {},
         expect.objectContaining({
           projectId: "p",
           url: "https://miro.com/app/board/uXjVClient1%3D/?moveToWidget=5",
           note: "First look",
-          sourceRoundId: "r1",
+          sourceRoundIds: ["r1"],
         }),
       ),
     );
@@ -233,6 +277,8 @@ describe("share dialog prefill", () => {
         action={{
           kind: "share",
           projectId: "p",
+          workflow,
+          availableRounds: [],
           round: { id: "r1", number: 1 } as never,
           prefill: null,
         }}
@@ -258,7 +304,14 @@ describe("share dialog prefill", () => {
     latestShared.state = { data: null, isPending: false, fetchStatus: "idle" };
     wrap(
       <ProjectActionDialog
-        action={{ kind: "share", projectId: "p", round: null, prefill: null }}
+        action={{
+          kind: "share",
+          projectId: "p",
+          round: null,
+          prefill: null,
+          workflow,
+          availableRounds: [],
+        }}
         onClose={vi.fn()}
       />,
     );
@@ -272,6 +325,8 @@ describe("share dialog prefill", () => {
         action={{
           kind: "share",
           projectId: "p",
+          workflow,
+          availableRounds: [],
           round: null,
           prefill: { boardId: "uXjVClient1=", widgetId: null },
         }}
@@ -286,9 +341,16 @@ describe("projectActionKey", () => {
   it("keys every kind", () => {
     expect(projectActionKey(null)).toBe("closed");
     expect(projectActionKey({ kind: "board", projectId: "p" })).toBe("board:new");
-    expect(projectActionKey({ kind: "round", board })).toBe("round:b1");
-    expect(projectActionKey({ kind: "share", projectId: "p", round: null, prefill: null })).toBe(
-      "share:direct",
-    );
+    expect(projectActionKey({ kind: "round", board, workflowBoard })).toBe("round:b1");
+    expect(
+      projectActionKey({
+        kind: "share",
+        projectId: "p",
+        round: null,
+        prefill: null,
+        workflow,
+        availableRounds: [],
+      }),
+    ).toBe("share:direct");
   });
 });

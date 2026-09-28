@@ -123,3 +123,7 @@ from far down the phone folder list starts at its title.
 designer UI, reloads and downloads identical bytes, verifies project/Approved filters, and checks
 that a client can neither list those records nor download their private Storage objects. It uses
 a disposable acceptance project and guarded cleanup.
+
+Delivery preparation and Complete delivery are unavailable for Backlog projects. The database
+rechecks Active activity, the latest approved client version and real final files under the project
+lock. Prepare delivery in the project action bar navigates to the filtered Files page.

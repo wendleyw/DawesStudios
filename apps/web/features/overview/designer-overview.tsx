@@ -6,8 +6,8 @@ import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass } from "@/features/shared/status-tone";
 import { WelcomeHeader, welcomeTitle } from "@/features/shared/welcome-header";
 import {
-  projectStatusTones,
-  statusLabels,
+  projectStatusTone,
+  projectStatusLabel,
   useClients,
   useDateFormat,
   useProjects,
@@ -25,7 +25,7 @@ export function DesignerOverview() {
   // Nothing on a delivered project still waits on the designer or the studio, so only active
   // projects need their rounds read.
   const activeProjectIds = projects.data
-    ?.filter((project) => project.status !== "delivered")
+    ?.filter((project) => project.status !== "delivered" && project.activity !== "backlog")
     .map((project) => project.id);
   const rounds = useDesignerRounds(activeProjectIds);
   const { formatDate, formatDayKey, formatMonth, formatWeekdayDate } = useDateFormat();
@@ -47,6 +47,7 @@ export function DesignerOverview() {
   const list = projects.data ?? [];
   const overview = designerOverview({
     projects: list,
+    activeBoardProjectIds: rounds.data?.boards.map((board) => board.project_id) ?? [],
     rounds: designerRounds(rounds.data?.rounds ?? [], rounds.data?.boards ?? [], list),
     now,
     formatMonth,
@@ -73,7 +74,7 @@ export function DesignerOverview() {
         <div>
           <strong>{overview.yourTurn}</strong>
           <span>Your turn</span>
-          <small>sent back for changes</small>
+          <small>ready for your work</small>
         </div>
         <div>
           <strong>{overview.inStudioReview}</strong>
@@ -98,20 +99,25 @@ export function DesignerOverview() {
               <span className="overview-row-meta">
                 {clientName(project.client_id)} · Due {formatDate(project.due_date, "not set")}
               </span>
-              <span className={statusToneClass(projectStatusTones[project.status])}>
-                {statusLabels[project.status]}
+              <span className={statusToneClass(projectStatusTone(project))}>
+                {projectStatusLabel(project)}
               </span>
             </Link>
           ))}
         </OverviewPanel>
-        <OverviewPanel eyebrow="Needs you" title="Your turn" empty="Nothing sent back to you.">
+        <OverviewPanel eyebrow="Needs you" title="Your turn" empty="No work waiting on you.">
           {overview.yourTurnRows.map((row) => (
-            <Link key={row.id} className="overview-row" href={`/projects/${row.projectId}`}>
+            <Link
+              key={row.id}
+              className="overview-row"
+              href={`/projects/${row.projectId}?channel=internal&board=${row.boardId}`}
+            >
               <strong>
                 {row.title} · {row.label}
               </strong>
               <span className="overview-row-meta">
-                Changes requested · submitted {relativeAge(row.date, now, formatDayKey)}
+                {row.status === "changes_requested" ? "Changes requested" : "Ready to start"} ·
+                assigned {relativeAge(row.date, now, formatDayKey)}
               </span>
             </Link>
           ))}

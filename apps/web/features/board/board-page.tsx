@@ -186,6 +186,8 @@ function ClientBoard({ clientId }: { clientId: string }) {
             onCampaign={filters.setCampaign}
             status={filters.status}
             onStatus={filters.setStatus}
+            activity={filters.activity}
+            onActivity={filters.setActivity}
             campaigns={campaigns.data ?? []}
             resultCount={filters.filteredProjects.length}
             onClear={filters.clearFilters}

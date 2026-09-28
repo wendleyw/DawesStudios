@@ -1,3 +1,4 @@
+import { shareTestVersion } from "./project-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
@@ -169,7 +170,7 @@ test("action notifications follow designer, studio and client work until complet
       studio.getByRole("button", { name: "Shared with client", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     const replacement = value(
-      await agency.rpc("share_miro_version", {
+      await shareTestVersion(agency, {
         p_project_id: fixture.projectId,
         p_url: "https://miro.com/app/board/uXjVActionsClient=/",
         p_note: "Warmer tones applied.",

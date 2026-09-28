@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { sendBoardRound, type DesignBoard } from "./project-data";
+import { sendBoardRoundForRequest, type DesignBoard, type WorkflowBoard } from "./project-data";
 import { miroUrlHint, parseMiroBoardUrl } from "./miro-links";
 import {
   ProjectActionShell,
@@ -11,7 +11,7 @@ import {
   useProjectActionClose,
 } from "./project-action-shell";
 
-export type RoundAction = { kind: "round"; board: DesignBoard };
+export type RoundAction = { kind: "round"; board: DesignBoard; workflowBoard: WorkflowBoard };
 
 /**
  * The message shown in place of the raw `send_board_round` error once the agency has reassigned
@@ -31,19 +31,27 @@ export function ProjectActionRound({
 }) {
   const { database } = useAuth();
   // One key per open dialog: a retry after a failure replays the same send.
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const attempt = useRef<{ payload: string; id: string } | null>(null);
   const { invalidate, closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       const value = (name: string) => String(form.get(name) ?? "").trim();
       const frameUrl = value("frame");
       if (frameUrl && !parseMiroBoardUrl(frameUrl)) throw new Error(miroUrlHint);
+      const note = value("note");
+      const payload = JSON.stringify({ note, frameUrl });
+      if (attempt.current?.payload !== payload)
+        attempt.current = { payload, id: crypto.randomUUID() };
       try {
-        await sendBoardRound(database, {
+        if (!action.workflowBoard.currentRequest || !action.workflowBoard.capabilities.submit)
+          throw new Error("The current board request is unavailable. Refresh the project.");
+        await sendBoardRoundForRequest(database, {
           boardId: action.board.id,
-          note: value("note"),
+          requestId: action.workflowBoard.currentRequest.id,
+          boardRevision: action.workflowBoard.workflowRevision,
+          note,
           frameUrl,
-          idempotencyKey: idempotencyKey.current,
+          idempotencyKey: attempt.current.id,
         });
       } catch (error) {
         if (error instanceof Error && error.message.includes("Board access required")) {

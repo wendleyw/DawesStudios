@@ -63,6 +63,12 @@ describe("ActionNotifications", () => {
       "/projects/project-1?channel=internal&board=board-1&round=entity-1",
       "Review round",
     ],
+    [
+      "prepare_board",
+      "/projects/project-1?channel=internal&board=board-1&panel=details",
+      "Prepare production brief",
+    ],
+    ["revise_board", "/projects/project-1?channel=internal&board=board-1", "Make changes"],
     ["submit_round", "/projects/project-1?channel=internal&board=board-1", "Submit round"],
     [
       "respond_feedback",

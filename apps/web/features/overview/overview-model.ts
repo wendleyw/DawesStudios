@@ -1,11 +1,10 @@
 import type { CreditEntry } from "@/features/credits/credit-model";
+import { inReviewTab, type ReviewRow } from "@/features/reviews/review-data";
 import {
-  inReviewTab,
-  latestBy,
-  publishedVersionStatus,
-  roundLabel,
-  type ReviewRow,
-} from "@/features/reviews/review-data";
+  workRequestStatus,
+  workRequestLabel,
+  type CurrentBoardWork,
+} from "@/features/reviews/work-request";
 import type { Project } from "@/features/workspace/workspace-data";
 
 /** Rows per dashboard column; "See all" leads to the full list. */
@@ -81,7 +80,9 @@ export function clientOverview(input: {
   now: Date;
   formatMonth: MonthFormatter;
 }): ClientOverview {
-  const active = input.projects.filter((project) => project.status !== "delivered");
+  const active = input.projects.filter(
+    (project) => project.status !== "delivered" && project.activity !== "backlog",
+  );
   const delivered = input.projects.filter((project) => project.status === "delivered");
   const month = input.formatMonth(input.now.toISOString());
   const creditsByProject = new Map<string, number>();
@@ -115,19 +116,12 @@ export function clientOverview(input: {
   };
 }
 
-export type RawDesignerRound = {
-  id: string;
-  project_id: string;
-  /** The design board the round belongs to; the read only returns rows that have one. */
-  board_id: string | null;
-  version_number: number;
-  status: string;
-  created_at: string;
-};
+export type RawDesignerRound = CurrentBoardWork;
 
 export type DesignerRound = {
   id: string;
   projectId: string;
+  boardId: string;
   title: string;
   /** "Board name · Round N". */
   label: string;
@@ -135,31 +129,34 @@ export type DesignerRound = {
   date: string;
 };
 
-/**
- * Each design board's latest round on the designer's projects. A round shared with the client
- * takes the client's decision from its project (`publishedVersionStatus`), so a share the client
- * sent back reads as changes requested. A row without a board is not a round and is skipped.
- */
+/** Current board work only; a client's decision does not create a designer task. */
 export function designerRounds(
-  rounds: RawDesignerRound[],
+  requests: RawDesignerRound[],
   boards: { id: string; name: string }[],
   projects: Project[],
 ): DesignerRound[] {
-  const onBoards = rounds.filter((round) => round.board_id);
-  return latestBy(onBoards, (round) => round.board_id!).flatMap((round) => {
-    const project = projects.find((item) => item.id === round.project_id);
-    if (!project) return [];
+  return requests.flatMap((request) => {
+    const project = projects.find((item) => item.id === request.project_id);
+    if (
+      !project ||
+      project.activity === "backlog" ||
+      project.status === "delivered" ||
+      !request.current ||
+      request.outcome === "closed"
+    )
+      return [];
     return [
       {
-        id: round.id,
+        id: request.id,
         projectId: project.id,
+        boardId: request.board_id,
         title: project.title,
-        label: roundLabel(
-          boards.find((board) => board.id === round.board_id)?.name,
-          round.version_number,
+        label: workRequestLabel(
+          request,
+          boards.find((board) => board.id === request.board_id)?.name,
         ),
-        status: publishedVersionStatus(round.status, project.status),
-        date: round.created_at,
+        status: workRequestStatus(request),
+        date: request.created_at,
       },
     ];
   });
@@ -179,13 +176,21 @@ export type DesignerOverview = {
 export function designerOverview(input: {
   projects: Project[];
   rounds: DesignerRound[];
+  activeBoardProjectIds?: string[];
   now: Date;
   formatMonth: MonthFormatter;
 }): DesignerOverview {
-  const active = input.projects.filter((project) => project.status !== "delivered");
+  const active = input.projects.filter(
+    (project) =>
+      project.status !== "delivered" &&
+      project.activity !== "backlog" &&
+      (!input.activeBoardProjectIds || input.activeBoardProjectIds.includes(project.id)),
+  );
   const delivered = input.projects.filter((project) => project.status === "delivered");
   const month = input.formatMonth(input.now.toISOString());
-  const sentBack = input.rounds.filter((round) => round.status === "changes_requested");
+  const sentBack = input.rounds.filter(
+    (round) => round.status === "changes_requested" || round.status === "draft",
+  );
   return {
     active: active.length,
     yourTurn: sentBack.length,

@@ -1,3 +1,4 @@
+import { shareTestVersion } from "./project-fixture";
 import { expect, test } from "@playwright/test";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
@@ -26,7 +27,7 @@ test.beforeAll(async () => {
     p_designer_id: fixture.designerId,
   });
   if (board.error) throw new Error(board.error.message);
-  const shared = await agency.rpc("share_miro_version", {
+  const shared = await shareTestVersion(agency, {
     p_project_id: projectId,
     p_url: clientBoard,
     p_note: "A first look in Miro.",

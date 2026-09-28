@@ -112,10 +112,14 @@ describe("invalidation authority", () => {
     const keys = /for \(const key of \[([^\]]*)\]\)/.exec(source);
     expect(keys?.[1].match(/"[^"]+"/g)).toEqual([
       '"project-detail"',
+      '"project-workflow"',
+      '"production-brief"',
       '"projects"',
       '"comments"',
       '"reviews"',
       '"assets"',
+      '"action-notifications"',
+      '"overview-designer-rounds"',
     ]);
   });
 });

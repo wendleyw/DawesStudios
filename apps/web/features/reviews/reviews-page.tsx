@@ -65,7 +65,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
             ...(profile?.role === "client"
               ? [{ id: "with-studio", label: "With the studio" }]
               : []),
-            { id: "approved", label: "Approved" },
+            ...(profile?.role !== "designer" ? [{ id: "approved", label: "Approved" }] : []),
           ].map((item) => (
             <button
               key={item.id}
@@ -93,7 +93,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
             return (
               <Link
                 key={row.id}
-                href={`/projects/${row.projectId}?channel=${row.internal ? "internal" : "client"}`}
+                href={`/projects/${row.projectId}?channel=${row.internal ? "internal" : "client"}${row.boardId ? `&board=${row.boardId}` : `&version=${row.id}`}`}
                 className="review-card"
               >
                 <h2>{row.title}</h2>

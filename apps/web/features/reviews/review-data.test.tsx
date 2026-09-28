@@ -22,7 +22,7 @@ function stubDatabase(rowsFor: (table: string, calls: Call[]) => unknown[]) {
   const from = (table: string) => {
     const own: Call[] = [];
     const builder: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "in", "is", "not", "order"])
+    for (const method of ["select", "eq", "neq", "in", "is", "not", "order"])
       builder[method] = (...args: unknown[]) => {
         const call = { table, method, args };
         own.push(call);
@@ -37,25 +37,19 @@ function stubDatabase(rowsFor: (table: string, calls: Call[]) => unknown[]) {
   return calls;
 }
 
-const projects = [{ id: "p1", title: "Launch", status: "internal_review" }];
+const projects = [{ id: "p1", title: "Launch", status: "in_progress", activity: "active" }];
 const rounds = [
   {
-    id: "r1",
+    id: "request2",
     project_id: "p1",
     board_id: "b1",
-    version_number: 1,
-    status: "reviewed",
-    created_at: "2026-09-20T00:00:00Z",
-    notes: "First",
-  },
-  {
-    id: "r2",
-    project_id: "p1",
-    board_id: "b1",
-    version_number: 2,
-    status: "submitted",
+    sequence: 2,
+    kind: "initial",
+    outcome: "submitted",
+    current: true,
+    round_id: "r2",
+    round: { version_number: 2, notes: "Second" },
     created_at: "2026-09-22T00:00:00Z",
-    notes: "Second",
   },
 ];
 const clientVersions = [
@@ -77,12 +71,12 @@ const clientVersions = [
   },
 ];
 
-function rowsFor(table: string, calls: Call[]) {
+function rowsFor(table: string) {
   if (table === "projects") return projects;
   if (table === "design_boards") return [{ id: "b1", name: "Hero banner" }];
   if (table === "published_versions") return clientVersions;
-  const submittedOnly = calls.some((call) => call.method === "eq" && call.args[0] === "status");
-  return submittedOnly ? rounds.filter((round) => round.status === "submitted") : rounds;
+  if (table === "board_work_requests") return rounds;
+  return [];
 }
 
 function renderReviews() {
@@ -106,7 +100,7 @@ beforeEach(() => {
 });
 
 describe("useReviews", () => {
-  it("gives the agency the latest client version and every submitted round", async () => {
+  it("gives the agency the latest client version and each current submitted request", async () => {
     const calls = stubDatabase(rowsFor);
     const { result } = renderReviews();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -115,7 +109,7 @@ describe("useReviews", () => {
       expect.objectContaining({ id: "r2", label: "Hero banner · Round 2", internal: true }),
       expect.objectContaining({ id: "v2", label: "V2", status: "pending", internal: false }),
     ]);
-    expect(has(calls, "design_versions", "not", "board_id", "is", null)).toBe(true);
+    expect(has(calls, "board_work_requests", "eq", "current", true)).toBe(true);
     expect(
       calls.some((call) => call.method === "select" && String(call.args[0]).includes("*")),
     ).toBe(false);

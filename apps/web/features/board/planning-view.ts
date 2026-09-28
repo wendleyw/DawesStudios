@@ -4,21 +4,13 @@
  * Kept free of React and xyflow so the board's selection and sizing rules can be unit tested
  * without rendering a canvas.
  */
-import type { ProjectStatus } from "@/features/workspace/workspace-data";
+import { publicProjectStatuses } from "@/features/workspace/workspace-data";
 
 /**
  * The stages the Kanban lays out, in the order work moves through them. It lives here rather than
  * with the component because the board's geometry is sized from how many there are.
  */
-export const boardStatuses: ProjectStatus[] = [
-  "planned",
-  "in_progress",
-  "internal_review",
-  "client_review",
-  "changes_requested",
-  "approved",
-  "delivered",
-];
+export const boardStatuses = publicProjectStatuses;
 
 /** The part of an xyflow node change this board reads. */
 export type BoardNodeChange = { type: string; id?: string; selected?: boolean };

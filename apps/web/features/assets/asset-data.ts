@@ -90,6 +90,7 @@ export type AssetProject = {
   id: string;
   title: string;
   status: string;
+  activity?: string;
   campaignId: string | null;
   campaignTitle: string | null;
   /**
@@ -112,7 +113,7 @@ export function useProjectAssets(clientId: string) {
           assertResult(
             await database
               .from("projects")
-              .select("id,title,status,campaign_id,campaigns(id,title)")
+              .select("id,title,status,activity,campaign_id,campaigns(id,title)")
               .eq("client_id", clientId)
               .order("id")
               .range(from, to)
@@ -124,6 +125,7 @@ export function useProjectAssets(clientId: string) {
         id: row.id,
         title: row.title,
         status: row.status,
+        activity: row.activity,
         campaignId: row.campaign_id,
         campaignTitle: row.campaigns?.title ?? null,
         driveUrl: null,

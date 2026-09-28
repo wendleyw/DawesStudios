@@ -7,8 +7,9 @@ import { ArrowRight, ArrowUpRight, FolderKanban, Plus } from "lucide-react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { DesignerOverview } from "@/features/overview/designer-overview";
 import {
-  projectStatusTones,
+  projectStatusTone,
   statusLabels,
+  projectStatusLabel,
   useClients,
   useDateFormat,
   useProjects,
@@ -30,8 +31,11 @@ export function HomePage() {
   const projects = useProjects();
   const campaigns = useWorkspaceCampaigns();
   if (profile?.role === "designer") return <DesignerOverview />;
-  const activeProjects = projects.data?.filter((project) => project.status !== "delivered") ?? [];
-  const needsAttentionStatuses = ["internal_review", "client_review", "changes_requested"] as const;
+  const activeProjects =
+    projects.data?.filter(
+      (project) => project.status !== "delivered" && project.activity !== "backlog",
+    ) ?? [];
+  const needsAttentionStatuses = ["client_review", "changes_requested"] as const;
   const reviewProjects = activeProjects.filter((project) =>
     (needsAttentionStatuses as readonly string[]).includes(project.status),
   );
@@ -135,8 +139,8 @@ export function HomePage() {
                   )}
                 </span>
                 <span>
-                  <span className={statusToneClass(projectStatusTones[project.status])}>
-                    {statusLabels[project.status]}
+                  <span className={statusToneClass(projectStatusTone(project))}>
+                    {projectStatusLabel(project)}
                   </span>
                 </span>
                 <span>{formatDate(project.due_date, "No due date")}</span>

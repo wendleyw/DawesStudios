@@ -1,5 +1,6 @@
 import {
   statusLabels,
+  publicProjectStatuses,
   type Project,
   type ProjectStatus,
 } from "@/features/workspace/workspace-data";
@@ -18,7 +19,7 @@ export type SortDirection = "asc" | "desc";
 export type ActiveListSort = { key: ListSortKey; direction: SortDirection; lead?: ProjectStatus };
 export type ListSort = ActiveListSort | null;
 
-const STATUSES = Object.keys(statusLabels) as ProjectStatus[];
+const STATUSES = publicProjectStatuses;
 
 /** Column order and the label both the header buttons and the phone select derive their text from. */
 export const LIST_SORT_COLUMNS: readonly { key: ListSortKey; label: string }[] = [
@@ -34,7 +35,7 @@ const COLUMN_LABELS: Record<ListSortKey, string> = Object.fromEntries(
 
 /** Workflow order for the Status column: the same key order as `statusLabels`, i.e. the Kanban columns. */
 const STATUS_RANK: Record<ProjectStatus, number> = Object.fromEntries(
-  Object.keys(statusLabels).map((status, index) => [status, index]),
+  STATUSES.map((status, index) => [status, index]),
 ) as Record<ProjectStatus, number>;
 
 /** The word(s) a header button's accessible name adds once its column is the active sort. */

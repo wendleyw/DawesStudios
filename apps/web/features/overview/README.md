@@ -14,15 +14,14 @@ title card and the shared `.overview-stats` tiles for its three numbers.
 
 - **Credits remaining** — the account's current `balance`, with `used`/`total` from the ledger's
   `project_debit` entries (`used` is their sum, `total` is `balance + used`).
-- **Active projects** — projects whose status is not `delivered`, with how many of the client's
+- **Active projects** — Active projects whose status is not `delivered`, with how many of the client's
   delivered projects shipped in the current calendar month (`useDateFormat().formatMonth`, studio
   time zone) as the supporting note.
 - **Needs your review** — client versions in the client's own **Waiting for you** tab (`inReviewTab`,
   see Isolation below).
 
 **In flight** is a strip below the tiles with three counts: briefings **with the studio**
-(`awaiting_review`/`budget_confirmed`), active projects **in progress** (`planned`, `in_progress`,
-`internal_review`, `changes_requested`), and projects **delivered** overall.
+(`awaiting_review`/`budget_confirmed`), active projects **in progress** (`planned`, `in_progress`, `changes_requested`), and projects **delivered** overall.
 
 **Three columns**, left to right, each up to `ROW_LIMIT` (5) rows and a "See all" link:
 
@@ -52,11 +51,10 @@ for its plain (non-card) heading, eyebrow "My work".
 
 **The four tiles** (`designerOverview` in `overview-model.ts`):
 
-- **Active projects** — the designer's own projects whose status is not `delivered`.
-- **Your turn** — the latest rounds of their own design boards sent back for changes (`status === "changes_requested"`,
-  after `publishedVersionStatus` folds in the client's decision — see below).
-- **In studio review** — their own latest rounds awaiting the studio's internal review
-  (`status === "submitted"`).
+- **Active projects** — the designer's own Active projects whose status is not `delivered`.
+- **Your turn** — current open production requests (initial work, revisions and reactivation),
+  from each authorized board independently.
+- **In studio review** — current submitted requests waiting on agency.
 - **Delivered this month** — their own projects delivered in the current calendar month
   (`useDateFormat().formatMonth`, studio time zone).
 
@@ -64,22 +62,15 @@ for its plain (non-card) heading, eyebrow "My work".
 designer's `/home` has no board-wide list route to point one at):
 
 1. **What's moving** — active projects soonest-due first (`bySoonestDue`), linking to the project.
-2. **Your turn** — sent-back rounds, oldest first, each labelled
-   `<project> · <board name> · Round <N>`, linking to the project.
+2. **Your turn** — open requests, oldest first, labelled by project, board and work, linking to that board.
 3. **Recently delivered** — delivered projects, most recently delivered first, linking to the
    project.
 
-**`useDesignerRounds`** (`overview-data.ts`) is this feature's one Supabase read: the rounds
-(`design_versions` rows with a `board_id`, named columns only) and the `design_boards` names for
-the designer's own project ids, row-level security already scoping both to their own boards.
-Filtering on `board_id` also leaves out the legacy per-deliverable versions still stored until
-they are deleted. `designerRounds` (`overview-model.ts`) reduces that pair to each board's latest
-round (`latestBy`), labels it with `roundLabel` ("Board name · Round N"; no deliverable label), and
-applies `publishedVersionStatus` — all three from `features/reviews/review-data.ts`, which lists
-Reviews' rows by the same rules — a round shared with the client
-(`status: "reviewed"`) takes its outcome from the project's own status, so a share the client sent
-back reads as `changes_requested` even though the designer cannot read the client's review row
-directly.
+**`useDesignerRounds`** (`overview-data.ts`) reads current `board_work_requests` with optional
+embedded round metadata and authorized board names. Closed/superseded requests, Backlog and delivered
+projects are excluded. `designerRounds` uses the same request labels/statuses as Reviews; the public
+project status never creates a designer task. Initial production work appears before a first round.
+Your turn links select the exact internal board. Reads page in batches of 500.
 
 **No credits**: `DesignerOverview` imports no credit hook and renders no credits figure or word,
 matching the product-wide rule that a designer's view never carries credits.
@@ -98,9 +89,9 @@ and this page redirects designers away before rendering the tiles regardless.
 - `overview-model.ts` — pure functions and types (`clientOverview`, `deliveredOn`, `relativeAge`,
   `bySoonestDue`, `ROW_LIMIT`, plus the designer-only `designerOverview`/`designerRounds` used by
   `/home`). No Supabase import; every input is a plain value the page already has.
-- `overview-data.ts` — `useDesignerRounds`, the one Supabase read this feature owns (rounds and
-  design board names for a designer's own **active** (non-delivered) projects — nothing on a
-  delivered project still waits on the designer or the studio, so its rounds are never requested). Both reads page past PostgREST's row cap (`supabase/config.toml` `max_rows`) in blocks
+- `overview-data.ts` — `useDesignerRounds`, the Supabase reads this feature owns (current work requests,
+  embedded round metadata and board names for the designer's own active boards on Active,
+  non-delivered projects). Reads page past PostgREST's row cap (`supabase/config.toml` `max_rows`) in blocks
   of 500, the way `features/credits/credit-data.ts`'s `useCreditLedger` does. The client Overview
   page reads entirely through hooks other features already own (`useClients`, `useProjects`,
   `useBriefings`, `useCreditAccount`, `useCreditLedger`, `useReviews`); only the designer's `/home`

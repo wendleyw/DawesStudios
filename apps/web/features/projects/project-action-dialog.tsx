@@ -6,8 +6,19 @@ import { ProjectActionReview, type ReviewAction } from "./project-action-review"
 import { ProjectActionBoard, type BoardAction } from "./project-action-board";
 import { ProjectActionRound, type RoundAction } from "./project-action-round";
 import { ProjectActionShare, type ShareAction } from "./project-action-share";
+import { ProjectActionProduction, type ProductionAction } from "./project-action-production";
+import { ProjectActionHandoff, type HandoffAction } from "./project-action-handoff";
+import { ProjectActionActivity, type BoardActivityAction } from "./project-action-activity";
 
-export type ProjectAction = ReviewAction | MiroAction | BoardAction | RoundAction | ShareAction;
+export type ProjectAction =
+  | ReviewAction
+  | MiroAction
+  | BoardAction
+  | RoundAction
+  | ShareAction
+  | ProductionAction
+  | HandoffAction
+  | BoardActivityAction;
 
 /**
  * A thin dispatcher: it renders exactly one component per action kind (each in its own file
@@ -43,6 +54,12 @@ export function ProjectActionDialog({
       return <ProjectActionRound action={action} onClose={onClose} />;
     case "share":
       return <ProjectActionShare action={action} onClose={onClose} />;
+    case "production":
+      return <ProjectActionProduction action={action} onClose={onClose} />;
+    case "handoff":
+      return <ProjectActionHandoff action={action} onClose={onClose} />;
+    case "activity":
+      return <ProjectActionActivity action={action} onClose={onClose} />;
   }
 }
 
@@ -56,6 +73,12 @@ export function projectActionKey(action: ProjectAction | null): string {
       return `round:${action.board.id}`;
     case "share":
       return `share:${action.round?.id ?? "direct"}`;
+    case "production":
+      return `production:${action.board.id}:${action.workflowBoard.workflowRevision}`;
+    case "handoff":
+      return `handoff:${action.projectId}:${action.selectedBoardId ?? "feedback"}`;
+    case "activity":
+      return `activity:${action.board.id}:${action.change}`;
     default:
       return `${action.kind}:${action.version.id}`;
   }

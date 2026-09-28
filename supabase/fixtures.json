@@ -149,7 +149,8 @@
       "deliverable_id": "e800677d-438e-88f9-dda8-e68de9e29034",
       "service_type": "ai",
       "title": "Acme / AI-Enhanced Add-On",
-      "status": "planned",
+      "status": "in_progress",
+      "production_stage": "planned",
       "credits": 1,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -169,6 +170,7 @@
       "service_type": "blog",
       "title": "Acme / Blog Design / Infographic",
       "status": "in_progress",
+      "production_stage": "in_progress",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -187,7 +189,8 @@
       "deliverable_id": "758dd9ba-ca4b-17be-5c2a-35eb5cf41fbb",
       "service_type": "guidelines",
       "title": "Harbor & Pine / Brand Guidelines",
-      "status": "internal_review",
+      "status": "in_progress",
+      "production_stage": "internal_review",
       "credits": 10,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39",
@@ -208,6 +211,7 @@
       "service_type": "specialty",
       "title": "Harbor & Pine / Branded Specialty Design",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 7,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -227,6 +231,7 @@
       "service_type": "production",
       "title": "Kestrel Outdoor / Content Production",
       "status": "changes_requested",
+      "production_stage": "changes_requested",
       "credits": 3,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -246,6 +251,7 @@
       "service_type": "direction",
       "title": "Kestrel Outdoor / Creative Direction / Operations",
       "status": "approved",
+      "production_stage": "approved",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -265,6 +271,7 @@
       "service_type": "deck",
       "title": "Northfield Bank / Deck / Presentation Design",
       "status": "approved",
+      "production_stage": "approved",
       "credits": 5,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -284,6 +291,7 @@
       "service_type": "animated-ad",
       "title": "Northfield Bank / Digital Ad (Animated)",
       "status": "in_progress",
+      "production_stage": "in_progress",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
@@ -304,6 +312,7 @@
       "service_type": "static-ad",
       "title": "Otto & Sons / Digital Ad (Static)",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 2,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -322,7 +331,8 @@
       "deliverable_id": "59a369c4-0759-0cee-b257-9cdd11f7f008",
       "service_type": "email-hero",
       "title": "Otto & Sons / Email Hero",
-      "status": "planned",
+      "status": "in_progress",
+      "production_stage": "planned",
       "credits": 2,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
@@ -343,6 +353,7 @@
       "service_type": "email",
       "title": "Pelagic / Full Email Design",
       "status": "in_progress",
+      "production_stage": "in_progress",
       "credits": 4,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -362,6 +373,7 @@
       "service_type": "gif",
       "title": "Pelagic / GIF Animation",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -381,6 +393,7 @@
       "service_type": "print",
       "title": "Rune Fitness / Printed Marketing Materials",
       "status": "changes_requested",
+      "production_stage": "changes_requested",
       "credits": 6,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -400,6 +413,7 @@
       "service_type": "reel",
       "title": "Rune Fitness / Short Video / Reel",
       "status": "approved",
+      "production_stage": "approved",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -419,6 +433,7 @@
       "service_type": "static-ad",
       "title": "Instagram Ads",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 2,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -438,6 +453,7 @@
       "service_type": "web",
       "title": "Campaign Landing Page",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 10,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -457,6 +473,7 @@
       "service_type": "email-hero",
       "title": "Email Banner",
       "status": "approved",
+      "production_stage": "approved",
       "credits": 1,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -476,6 +493,7 @@
       "service_type": "social",
       "title": "Social Launch",
       "status": "in_progress",
+      "production_stage": "in_progress",
       "credits": 1,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -494,7 +512,8 @@
       "deliverable_id": "9dacebea-35be-0e52-64aa-c99f92a7d441",
       "service_type": "social",
       "title": "Product Story",
-      "status": "internal_review",
+      "status": "in_progress",
+      "production_stage": "internal_review",
       "credits": 1,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -513,7 +532,8 @@
       "deliverable_id": "4f33de30-24a3-4070-f5db-7539004a7c8b",
       "service_type": "branding",
       "title": "Brand Guidelines",
-      "status": "internal_review",
+      "status": "in_progress",
+      "production_stage": "internal_review",
       "credits": 12,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9",
@@ -534,6 +554,7 @@
       "service_type": "print",
       "title": "Stationery",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 6,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -553,6 +574,7 @@
       "service_type": "web",
       "title": "Sablefish Provisions / UI Web Layout",
       "status": "in_progress",
+      "production_stage": "in_progress",
       "credits": 10,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -572,6 +594,7 @@
       "service_type": "whitepaper",
       "title": "Sablefish Provisions / Whitepaper",
       "status": "approved",
+      "production_stage": "approved",
       "credits": 6,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"
@@ -590,7 +613,8 @@
       "deliverable_id": "8c97ac68-9520-0b3e-ded2-fcb3ac76250f",
       "service_type": "youtube",
       "title": "Vela Skincare / YouTube Video",
-      "status": "planned",
+      "status": "in_progress",
+      "production_stage": "planned",
       "credits": 5,
       "designers": [
         "52711616-ca15-f1b7-957f-52b6415dce39"
@@ -610,6 +634,7 @@
       "service_type": "other",
       "title": "Vela Skincare / Other",
       "status": "client_review",
+      "production_stage": "client_review",
       "credits": 4,
       "designers": [
         "10300a94-2ce5-c5de-d94c-38ebdb270fa9"

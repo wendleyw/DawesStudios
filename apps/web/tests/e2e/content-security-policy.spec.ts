@@ -1,3 +1,4 @@
+import { shareTestVersion } from "./project-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
@@ -66,7 +67,7 @@ test("primary surfaces load without Content-Security-Policy violations for every
   if (!shared?.length) {
     const agency = await localAgency();
     fixtureProject = (await createProductionFixture(agency)).projectId;
-    const version = await agency.rpc("share_miro_version", {
+    const version = await shareTestVersion(agency, {
       p_project_id: fixtureProject,
       p_url: "https://miro.com/app/board/uXjVCspE2E=/",
       p_note: "Content-Security-Policy check.",

@@ -21,18 +21,7 @@ async function readAllRows<T>(
   }
 }
 
-/**
- * The only Supabase access this feature owns: the rounds and design board names of a designer's
- * active (non-delivered) projects — nothing on a delivered project still waits on the designer or
- * the studio, so its rounds are never requested. A round is a `design_versions` row with a
- * `board_id`; the one-parent check keeps every such row free of a deliverable, so filtering on
- * `board_id` also leaves out the legacy per-deliverable versions still stored until they are
- * deleted. Row-level security already limits both reads to the designer's own boards; the client
- * Overview reuses the workspace, briefing, credit and review hooks instead. Both reads page past
- * PostgREST's row cap (`readAllRows` above) and name their columns: the API grants no role
- * `design_versions.created_by`, so a `select("*")` there is refused (`design_boards` is read as
- * `id,name`, all it needs).
- */
+/** Read current board requests, including the initial work before any round exists. */
 export function useDesignerRounds(projectIds: string[] | undefined) {
   const { database, profile, session } = useAuth();
   return useQuery({
@@ -43,19 +32,23 @@ export function useDesignerRounds(projectIds: string[] | undefined) {
       const [rounds, boards] = await Promise.all([
         readAllRows<RawDesignerRound>((offset) =>
           database
-            .from("design_versions")
-            .select("id,project_id,board_id,version_number,status,created_at")
+            .from("board_work_requests")
+            .select(
+              "id,project_id,board_id,sequence,kind,outcome,current,round_id,created_at,round:design_versions!board_work_requests_round_id_fkey(version_number,notes)",
+            )
             .in("project_id", projectIds)
-            .not("board_id", "is", null)
+            .eq("current", true)
+            .neq("outcome", "closed")
             .order("created_at")
             .order("id")
             .range(offset, offset + 499)
             .abortSignal(signal),
         ),
-        readAllRows<{ id: string; name: string }>((offset) =>
+        readAllRows<{ id: string; name: string; project_id: string }>((offset) =>
           database
             .from("design_boards")
-            .select("id,name")
+            .select("id,name,project_id")
+            .eq("activity", "active")
             .in("project_id", projectIds)
             .order("id")
             .range(offset, offset + 499)

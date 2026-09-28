@@ -249,3 +249,16 @@ removal for `/api/clients/{clientId}/members/{profileId}/remove`'s **Finish remo
 then blocks sign-in and sets `removal_completed_at`. Project notifications reach the project's
 requester, people who chose all activity and, for a studio reply, the people who wrote in that
 conversation; the actor and removed people never receive them.
+
+## Action-driven board work
+
+`board_work_requests` is read-only to authenticated callers: agency sees internal history; a designer
+sees only own boards/current assignment generation; clients see no rows. Current instructions are
+released explicitly, and private drafts/client briefs remain inaccessible to designers. Revocation,
+reassignment and team removal invalidate outgoing tasks; restoring assignment requires fresh release.
+`get_project_workflow` returns role-scoped capabilities without exposing source-publication mapping.
+
+Workflow commands lock projects before board state, validate expected revisions and replay identities,
+and enforce Active/Backlog independently of public phase. Legacy unguarded round/share RPC execution
+is revoked. Project metadata uses the atomic guarded details command; only board_position retains its
+separate direct agency update permission. Notifications target current authorized recipients.

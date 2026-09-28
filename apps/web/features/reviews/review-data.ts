@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { workRequestLabel, workRequestStatus, type CurrentBoardWork } from "./work-request";
 import { assertResult } from "@/lib/supabase";
 
 export type ReviewRow = {
   id: string;
   projectId: string;
+  boardId?: string;
   title: string;
   /** "Board name · Round N" for a round, "V N" for a client version. */
   label: string;
@@ -17,17 +19,6 @@ export type ReviewRow = {
   /** Who made the client's decision and when; null until decided, and on reviews decided before reviewers were recorded. */
   reviewedBy: string | null;
   reviewedAt: string | null;
-};
-
-/** A round: a `design_versions` row on a design board. */
-type RoundRow = {
-  id: string;
-  project_id: string;
-  board_id: string | null;
-  version_number: number;
-  status: string;
-  created_at: string;
-  notes: string;
 };
 
 /** A client version: a project-level `published_versions` row with the client's decision. */
@@ -44,8 +35,8 @@ type ClientVersionRow = {
   } | null;
 };
 
-/** Named columns: the API grants no role `design_versions.created_by`, so `select("*")` is refused. */
-const ROUND_COLUMNS = "id,project_id,board_id,version_number,status,created_at,notes";
+const REQUEST_COLUMNS =
+  "id,project_id,board_id,sequence,kind,outcome,current,round_id,created_at,round:design_versions!board_work_requests_round_id_fkey(version_number,notes)";
 const CLIENT_VERSION_COLUMNS =
   "id,project_id,version_number,published_at,release_note,publication_reviews!publication_reviews_publication_id_fkey(status,reviewed_by,reviewed_at)";
 
@@ -60,30 +51,6 @@ export function latestBy<T extends { version_number: number }>(
     if (!current || current.version_number < row.version_number) latest.set(key(row), row);
   }
   return [...latest.values()];
-}
-
-/** The label a round is listed under: its design board's name and its number on that board. */
-export function roundLabel(boardName: string | undefined, roundNumber: number): string {
-  return `${boardName ?? "Design board"} · Round ${roundNumber}`;
-}
-
-/**
- * What a version already shared with the client means, now that the client has had its turn.
- *
- * `design_versions.status` stops at `reviewed` — "Shared" — and never records the
- * decision that followed, which lives in `publication_reviews`. A designer cannot read that table
- * (`reviews_read` admits the agency and the client alone) and cannot reach it from an internal
- * version either, because the record joining the two is `private.publication_sources` in the
- * unexposed `private` schema. The one projection of the client's decision a designer *can* read is
- * the project's own status, which `review_publication` writes in the same transaction as the
- * review. A published version therefore takes its outcome from the project it belongs to, and stays
- * "Shared" while the client is still deciding.
- */
-export function publishedVersionStatus(versionStatus: string, projectStatus: string): string {
-  if (versionStatus !== "reviewed") return versionStatus;
-  if (projectStatus === "changes_requested") return "changes_requested";
-  if (projectStatus === "approved" || projectStatus === "delivered") return "approved";
-  return "reviewed";
 }
 
 /**
@@ -116,14 +83,7 @@ export function inReviewTab(
   return !isFinished(row.status) && (role === "designer" || !row.internal);
 }
 
-/**
- * All Supabase access for the reviews list, on the Miro workspace model:
- * - a designer sees the latest round of each of their design boards (`design_versions` with a
- *   `board_id`; row-level security admits only their own boards);
- * - the agency and the client see the latest client version of each project (`published_versions`,
- *   always project-level), with the client's decision from `publication_reviews`;
- * - the agency also sees every round a designer has submitted for studio review.
- */
+/** Current board requests for internal work and the latest immutable client publication. */
 export function useReviews(clientId: string) {
   const { database, profile, session } = useAuth();
   return useQuery({
@@ -131,51 +91,50 @@ export function useReviews(clientId: string) {
     enabled: !!session && !!profile,
     queryFn: async (): Promise<ReviewRow[]> => {
       const projects = assertResult(
-        await database.from("projects").select("id,title,status").eq("client_id", clientId),
+        await database
+          .from("projects")
+          .select("id,title,status,activity")
+          .eq("client_id", clientId)
+          .eq("activity", "active"),
       );
       if (!projects.length) return [];
       const ids = projects.map((project) => project.id);
       const role = profile?.role;
       const projectFor = (id: string) => projects.find((project) => project.id === id)!;
-      const readRounds = async (submittedOnly: boolean) => {
+      const readWork = async (submittedOnly: boolean): Promise<ReviewRow[]> => {
         let query = database
-          .from("design_versions")
-          .select(ROUND_COLUMNS)
+          .from("board_work_requests")
+          .select(REQUEST_COLUMNS)
           .in("project_id", ids)
-          .not("board_id", "is", null);
-        if (submittedOnly) query = query.eq("status", "submitted");
-        const rounds = assertResult(await query) as RoundRow[];
-        const boardIds = [...new Set(rounds.map((round) => round.board_id!))];
+          .eq("current", true)
+          .neq("outcome", "closed");
+        if (submittedOnly) query = query.eq("outcome", "submitted");
+        const requests = assertResult(await query) as CurrentBoardWork[];
+        const boardIds = [...new Set(requests.map((request) => request.board_id))];
         const boards = boardIds.length
-          ? (assertResult(
-              await database.from("design_boards").select("id,name").in("id", boardIds),
-            ) as { id: string; name: string }[])
+          ? assertResult(await database.from("design_boards").select("id,name").in("id", boardIds))
           : [];
-        return { rounds, boards };
+        return requests
+          .filter((request) => projectFor(request.project_id).status !== "delivered")
+          .map((request) => ({
+            id: request.round_id ?? request.id,
+            projectId: request.project_id,
+            boardId: request.board_id,
+            title: projectFor(request.project_id).title,
+            label: workRequestLabel(
+              request,
+              boards.find((board) => board.id === request.board_id)?.name,
+            ),
+            status: workRequestStatus(request),
+            date: request.created_at,
+            note: request.round?.notes ?? null,
+            internal: true,
+            reviewedBy: null,
+            reviewedAt: null,
+          }));
       };
-      const toRoundRow = (round: RoundRow, boards: { id: string; name: string }[]): ReviewRow => {
-        const project = projectFor(round.project_id);
-        const board = boards.find((item) => item.id === round.board_id);
-        return {
-          id: round.id,
-          projectId: round.project_id,
-          title: project.title,
-          label: roundLabel(board?.name, round.version_number),
-          status: publishedVersionStatus(round.status, project.status),
-          date: round.created_at,
-          note: round.notes,
-          internal: true,
-          reviewedBy: null,
-          reviewedAt: null,
-        };
-      };
-
-      if (role === "designer") {
-        const { rounds, boards } = await readRounds(false);
-        return latestBy(rounds, (round) => round.board_id!)
-          .map((round) => toRoundRow(round, boards))
-          .toSorted((a, b) => b.date.localeCompare(a.date));
-      }
+      if (role === "designer")
+        return (await readWork(false)).toSorted((a, b) => b.date.localeCompare(a.date));
 
       const versions = assertResult(
         await database
@@ -198,8 +157,7 @@ export function useReviews(clientId: string) {
         }),
       );
       if (role === "agency") {
-        const { rounds, boards } = await readRounds(true);
-        rows.push(...rounds.map((round) => toRoundRow(round, boards)));
+        rows.push(...(await readWork(true)));
       }
       return rows.toSorted((a, b) => b.date.localeCompare(a.date));
     },

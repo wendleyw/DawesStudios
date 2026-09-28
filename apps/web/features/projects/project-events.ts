@@ -11,7 +11,17 @@ export function useProjectEvents(projectId: string) {
     if (!session || !profile) return;
     const channel = database.channel(`project:${session.user.id}:${projectId}`);
     const refresh = () => {
-      for (const key of ["project-detail", "projects", "comments", "reviews", "assets"])
+      for (const key of [
+        "project-detail",
+        "project-workflow",
+        "production-brief",
+        "projects",
+        "comments",
+        "reviews",
+        "assets",
+        "action-notifications",
+        "overview-designer-rounds",
+      ])
         void queryClient.invalidateQueries({ queryKey: [key] });
     };
     channel.on(

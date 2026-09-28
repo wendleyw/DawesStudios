@@ -1,3 +1,4 @@
+import { shareTestVersion } from "./project-fixture";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test as base, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -85,7 +86,7 @@ test("two people at one client act separately, and the product attributes and no
     // A client version on the Miro model: the agency shares a client board link directly.
     const publish = async (note: string) =>
       value(
-        await agency.rpc("share_miro_version", {
+        await shareTestVersion(agency, {
           p_project_id: fixture.projectId,
           p_url: "https://miro.com/app/board/uXjVClientTeam=/",
           p_note: note,

@@ -15,6 +15,7 @@ export function useBoardFilters(projects: Project[]) {
   const [search, setSearch] = useState("");
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState("");
+  const [activity, setActivity] = useState("active");
   const [quarter, setQuarter] = useState("");
   // Each planning view keeps its period while the viewer switches views.
   const [month, setMonth] = useState(() => monthStart(new Date().toISOString().slice(0, 10)));
@@ -47,7 +48,7 @@ export function useBoardFilters(projects: Project[]) {
     }
   }
 
-  const filtered = Boolean(search || campaign || status || quarter);
+  const filtered = Boolean(search || campaign || status || quarter || activity !== "active");
   const filteredProjects = useMemo(
     () =>
       projects.filter(
@@ -58,14 +59,16 @@ export function useBoardFilters(projects: Project[]) {
               .includes(search.toLowerCase())) &&
           (!campaign || project.campaign_id === campaign) &&
           (!status || project.status === status) &&
+          (!activity || (project.activity ?? "active") === activity) &&
           projectInPeriod(project, quarter),
       ),
-    [projects, search, campaign, status, quarter],
+    [projects, search, campaign, status, quarter, activity],
   );
 
   const clearFilters = useCallback(() => {
     setCampaign("");
     setStatus("");
+    setActivity("active");
     setSearch("");
     setQuarter("");
   }, []);
@@ -77,6 +80,8 @@ export function useBoardFilters(projects: Project[]) {
     setCampaign,
     status,
     setStatus,
+    activity,
+    setActivity,
     quarter,
     periodYears,
     choosePeriod,

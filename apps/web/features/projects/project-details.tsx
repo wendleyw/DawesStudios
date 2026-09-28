@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowUpRight, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useInvalidateAssets } from "@/features/assets/asset-data";
 import { useAuth } from "@/features/auth/auth-provider";
 import { useBriefingRequester } from "@/features/briefings/briefing-data";
@@ -17,11 +17,12 @@ import { useDateFormat, versionStatusLabel } from "@/features/workspace/workspac
 import {
   assignDesigner,
   revokeDesignAssignment,
-  updateProjectDetails,
+  saveProjectDetailsWithActivity,
   useInvalidateProject,
   useProjectAssignments,
   useProjectCredits,
   useProjectDriveLinks,
+  useProjectWorkflow,
   type ProjectChannel,
   type TableRow,
   type CanvasVersion,
@@ -68,6 +69,10 @@ export function ProjectDetails({
   const view = selectedView === "production" && !production ? "overview" : selectedView;
   const [editing, setEditing] = useState(false);
   const [editRevision, setEditRevision] = useState(project.updated_at);
+  const [editWorkflowRevision, setEditWorkflowRevision] = useState(0);
+  const [editActivity, setEditActivity] = useState<"active" | "backlog">("active");
+  const editAttempt = useRef<{ payload: string; id: string } | null>(null);
+  const workflow = useProjectWorkflow(project.id);
   const [assigning, setAssigning] = useState(false);
   const [revoking, setRevoking] = useState<{ id: string; name: string } | null>(null);
   const [creditDialog, setCreditDialog] = useState<"move" | "settle" | null>(null);
@@ -103,11 +108,18 @@ export function ProjectDetails({
         throw new Error("The due date must be on or after the start date.");
       const title = String(form.get("title")).trim();
       if (!title) throw new Error("Add a project title.");
-      await updateProjectDetails(database, {
+      const description = String(form.get("description")).trim();
+      const payload = JSON.stringify({ title, description, start, due, activity: editActivity });
+      if (editAttempt.current?.payload !== payload)
+        editAttempt.current = { payload, id: crypto.randomUUID() };
+      await saveProjectDetailsWithActivity(database, {
         id: project.id,
         revision: editRevision,
+        workflowRevision: editWorkflowRevision,
+        activity: editActivity,
+        requestId: editAttempt.current.id,
         title,
-        description: String(form.get("description")).trim(),
+        description,
         startDate: start,
         dueDate: due,
       });
@@ -163,7 +175,11 @@ export function ProjectDetails({
               className="icon-button"
               aria-label="Edit project details"
               onClick={() => {
+                if (!workflow.data) return;
                 setEditRevision(project.updated_at);
+                setEditWorkflowRevision(workflow.data.project.workflowRevision);
+                setEditActivity(workflow.data.project.activity);
+                editAttempt.current = null;
                 save.reset();
                 setEditing(true);
               }}
@@ -433,6 +449,17 @@ export function ProjectDetails({
               <input type="date" name="due" defaultValue={project.due_date ?? ""} />
             </label>
           </div>
+          <label>
+            Project activity
+            <select
+              name="activity"
+              value={editActivity}
+              onChange={(event) => setEditActivity(event.target.value as "active" | "backlog")}
+            >
+              <option value="active">Active</option>
+              {project.status !== "delivered" && <option value="backlog">Backlog</option>}
+            </select>
+          </label>
           {/*
             The compare-and-set conflict reads as a sentence because `updateProjectDetails` turns
             the PGRST116 result into one before it returns; there is no second copy of that message

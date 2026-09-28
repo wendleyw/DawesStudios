@@ -525,3 +525,11 @@ The shared zoom pill (zoom out, live zoom level, zoom in, fit) animates over 200
 board keeps its custom readable fit; Playground retains its own zoom range and
 selection behavior. No CSS transition is applied to the viewport transform,
 avoiding drag lag.
+
+## Project workflow controls
+
+Miro workspaces use one contextual bottom action bar for agency, designer and client advances.
+The existing utility toolbar remains above it; send/share is not duplicated in the Miro header.
+The bar names the current board/version and uses the client review buttons' visual treatment.
+Dialogs retain drafts on failure, validate before send and review handoff recipients/closures.
+Backlog is a neutral project badge and a separate activity filter, never another workflow column.

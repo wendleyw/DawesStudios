@@ -44,11 +44,59 @@ vi.mock("./project-action-dialog", () => ({
   projectActionKey: () => "closed",
 }));
 const sharedLink = vi.hoisted(() => ({ boardId: "uXjVClient1=", widgetId: "5" }));
+const workflowState = vi.hoisted(() => ({
+  versions: [] as unknown[],
+  activity: "active" as "active" | "backlog",
+  outcome: "submitted",
+  latest: null as null | { id: string; number: number; decision: string; reviewRevision: number },
+  release: false,
+  submit: true,
+  requestChanges: true,
+  publish: true,
+  review: false,
+}));
 vi.mock("./project-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./project-data")>()),
   useProjectDriveLinks: () => ({ data: { internal: null, client: null } }),
   useLatestSharedMiroLink: (_projectId: string, enabled: boolean) => ({
     data: enabled ? sharedLink : undefined,
+  }),
+  useProjectDetail: () => ({ data: { versions: workflowState.versions } }),
+  useProjectWorkflow: () => ({
+    data: {
+      project: {
+        id: "p",
+        activity: workflowState.activity,
+        workflowRevision: 1,
+        latestPublication: workflowState.latest,
+      },
+      boards: [
+        {
+          id: "b1",
+          name: "Alpha",
+          activity: "active",
+          designerId: "d1",
+          assignmentGeneration: 1,
+          workflowRevision: 1,
+          briefRevision: 1,
+          briefContent: null,
+          currentRequest: { id: "q1", outcome: workflowState.outcome, roundId: "r1" },
+          capabilities: {
+            release: workflowState.release,
+            submit: workflowState.submit,
+            requestChanges: workflowState.requestChanges,
+            close: false,
+            reactivate: false,
+          },
+        },
+      ],
+      capabilities: {
+        publish: workflowState.publish,
+        review: workflowState.review,
+        deliver: false,
+        respondFeedback: false,
+      },
+    },
   }),
 }));
 
@@ -85,6 +133,7 @@ function Harness(props: Omit<ProjectWorkspaceProps, "panels">) {
 }
 
 function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
+  workflowState.versions = overrides.channel === "client" ? [] : (overrides.data?.versions ?? []);
   const props: Omit<ProjectWorkspaceProps, "panels"> = {
     projectId: "p",
     channel: "internal",
@@ -109,6 +158,14 @@ function renderWorkspace(overrides: Partial<ProjectWorkspaceProps> = {}) {
 beforeEach(() => {
   state.role = "agency";
   state.clientAvailable = true;
+  workflowState.activity = "active";
+  workflowState.outcome = "submitted";
+  workflowState.latest = null;
+  workflowState.release = false;
+  workflowState.submit = true;
+  workflowState.requestChanges = true;
+  workflowState.publish = true;
+  workflowState.review = false;
   dialog.action = null;
   vi.stubGlobal(
     "ResizeObserver",
@@ -184,7 +241,7 @@ describe("ProjectWorkspace", () => {
   it("labels a designer's view Working files without offering a channel switch", () => {
     state.role = "designer";
     renderWorkspace();
-    expect(screen.getByText("Working files")).toBeInTheDocument();
+    expect(screen.getAllByText("Working files").length).toBeGreaterThan(0);
     expect(screen.queryByRole("group", { name: "Project channel" })).toBeNull();
   });
 
@@ -245,9 +302,66 @@ describe("ProjectWorkspace", () => {
     });
   });
 
+  it("keeps advances on the current submitted round and hides them on older board history", async () => {
+    const user = userEvent.setup();
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round, { ...round, id: "old", number: 0 }],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    await user.click(
+      within(screen.getByRole("group", { name: "Rounds" })).getByRole("button", {
+        name: "Round 1",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Request changes" })).toBeInTheDocument();
+    await user.click(
+      within(screen.getByRole("group", { name: "Rounds" })).getByRole("button", {
+        name: "Round 0",
+      }),
+    );
+    expect(screen.queryByRole("button", { name: "Request changes" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+  });
+
+  it("suspends every advance control while the project is in Backlog", () => {
+    workflowState.activity = "backlog";
+    renderWorkspace({
+      boards: [board],
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_progress" },
+        versions: [round],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    expect(screen.getByText("Project in backlog")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send to designer" })).toBeNull();
+  });
+
+  it("offers only the latest pending version to the client for review", () => {
+    state.role = "client";
+    workflowState.review = true;
+    workflowState.latest = { id: "v2", number: 2, decision: "pending", reviewRevision: 0 };
+    const version = { ...round, id: "v2", boardId: null, number: 2, status: "pending" };
+    renderWorkspace({
+      channel: "client",
+      data: {
+        project: { id: "p", client_id: "c", title: "Campaign", status: "in_review" },
+        versions: [version],
+        deliverables: [],
+      } as unknown as ProjectWorkspaceProps["data"],
+    });
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Request changes" })).toBeInTheDocument();
+  });
+
   it("prefills the first client version from the latest client link too", async () => {
     renderWorkspace({ channel: "client" });
-    await userEvent.setup().click(screen.getByRole("button", { name: "New client version" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Share with client" }));
     expect(dialog.action).toMatchObject({ kind: "share", round: null, prefill: sharedLink });
   });
 

@@ -1,3 +1,4 @@
+import { shareTestVersion, releaseTestBrief, sendTestRound } from "./project-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createPlaygroundFixture } from "./playground-fixture";
@@ -66,21 +67,19 @@ test("one Comments panel keeps project, round, and client-version messages and d
         p_designer_id: designerAccount.data.user.id,
       }),
     );
+    await releaseTestBrief(agency, fixture.projectId, board);
     const round = value(
-      await designerCaller.rpc("send_board_round", {
-        p_board_id: board,
-        p_note: "Ready for comments.",
-      }),
+      await sendTestRound(designerCaller, fixture.projectId, board, "Ready for comments."),
     );
     const version1 = value(
-      await agency.rpc("share_miro_version", {
+      await shareTestVersion(agency, {
         p_project_id: fixture.projectId,
         p_url: clientBoard,
         p_note: "First look at the campaign.",
       }),
     );
     const version2 = value(
-      await agency.rpc("share_miro_version", {
+      await shareTestVersion(agency, {
         p_project_id: fixture.projectId,
         p_url: "https://miro.com/app/board/uXjVFeedback2=/",
         p_note: "Second look at the campaign.",

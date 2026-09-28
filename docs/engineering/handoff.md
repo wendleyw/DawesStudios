@@ -1,100 +1,75 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex workflow planning; ownership received after cb9f767**.
+Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Latest integrated task: action-driven workflow plan
+## Current objective and completed task
 
-- [Design](../superpowers/specs/2026-09-27-action-driven-workflow-design.md) and
-  [implementation plan](../superpowers/plans/2026-09-27-action-driven-workflow.md) define the next work.
-- Planning/docs only; no runtime code, migrations, database rows or application UI changed.
-- Dependency order: persistence/permissions, atomic commands, action bars, queues/views, acceptance.
-- Current gate: npm run check passes types/lint/format and132files/1289tests. No DB/browser rerun.
-- Documentation links/root instruction synchronization pass;19acceptance scenarios planned.
-- [Independent review](handoffs/2026-09-27-workflow-plan-review.md):4findings addressed; no remaining
-  concrete inconsistency in reviewed scope. Runtime behavior still needs implementation/evidence.
-- Next implementation slice: inventory legacy states and protect public phases (W01/W03/W11),
-  then request/handoff semantics before enabling revision/closure buttons. No deployment authorized.
+- Action-driven project workflow is implemented locally; the latest authorized data reduction is
+  complete. The local target is now **SABRE only, six projects**, not the previous 10/68 overlay.
+- [Verification record](../verification/action-driven-workflow-2026-09-28.md) contains commands,
+  results, screenshots and remaining release evidence. [Workflow guide](../architecture/production-workflow.md)
+  describes current buttons and notification recipients.
+- Root instructions remain synchronized. Preserve the unrelated preexisting `D login.png`.
+- No push/deployment requested. No database reset or migration down is allowed.
 
-## Objective and accepted decisions
+## Implemented behavior
 
-- Improve project UX for agency, client and designer while preparing production workflows.
-- Project pages alone use the compact campaign/title/due-date header (`44dba3b`), title weight700
-  (`45439d2`). Desktop client tools stay on the left rail; widths up to900px move them below.
-- Miro is the creative workspace. Agency manually copies chosen internal work to the client board.
-- Internal requests may ask for extra concepts/quantities without changing client scope or credits.
-- Designers receive only agency-released production instructions, never the original client request.
-- Preserve live SABRE10clients/68projects/50SABRE and canonical staging10/25.
-- Never migration down/db reset. Unrelated preexisting login.png deletion remains uncommitted.
-- No push, deployment or external email delivery authorized. Target server/domain/sender unknown.
+- Acceptance creates In progress and one debit; internal submissions never replace the public
+  review/approval. R numbers are per board; V1/V2/V3 are client iterations, not deliverables/debits.
+- Private per-board production release creates assignment-scoped work. One contextual bottom bar
+  per role/view; no Mark ready, Ready for client or internal Approve. Header duplicates removed.
+- Feedback handoff explicitly continues selected boards and may close others. Omitted boards stay
+  unchanged. Empty/close-only handoffs fail. Agency may handle changes and publish directly.
+- Reassignment/revocation ends old work and advances generation; fresh instructions are required.
+  Closed boards retain authorized history; reactivation requires a new release.
+- Active/Backlog in Edit project preserves phase/history/credits and suppresses actions. Server
+  guards block advances while paused; Delivered cannot enter Backlog. Board filters expose both.
+- Publication captures latest V and review revision; stale forms conflict. Delivery requires latest
+  approval and a real file, stamps delivered_at once, and permits safe retry.
+- Current requests drive Home/Reviews/action notifications. Clients never receive internal boards,
+  identities, briefs, receipts or Studio review. Miro composition remains manual; links stay editable.
+- Workflow email is not implemented; events are in-app. Resend is the selected Auth SMTP provider.
 
-## Integrated task: private production briefs
+## Local runtime and data
 
-- Working files → Project details → Production edits one private brief per selected design board.
-- Editable title/service/direction/goals, deliverables/formats/dimensions/quantities, references and
-  internal deadline. Explicit client-scope copy is available inside the agency editor only.
-- Save draft remains agency-only; Send to designer releases instructions and one activity event.
-- Forward migrations202609280001/002 applied locally. Expected revision is captured on open;
-  database locks/idempotency protect saves. Stale edits keep the user's text and refuse overwrite.
-- Old client briefing/attachment/deliverable reads blocked; visible_projects masks descriptions
-  copied from client scope. Client data, billing, project deadline and workflow statuses unchanged.
-- Existing boards have no auto-release; designers see a waiting state until the agency sends.
-- Prior feature gate:132files/1289tests;4DBfiles/197assertions;9HTTP/Auth/Storage tests.
-- Chromium:3workflows pass plus final production retest;5Axe/overflow checks pass at desktop/mobile.
-- Integrity:122FK relationships;live10/68/50;zero production fixture drafts/releases after cleanup.
-- SQL lint has no errors; empty legacy endpoint has unused argument/output warnings.
-- Expanded canonical board-count browser case fails on the demo overlay (8 expected including its
-  fixture); assertion preserved. Full canonical matrix/intake/legacy concurrency not rerun.
-- [Report](handoffs/2026-09-27-production-briefs.md) and
-  [verification/captures](../verification/production-briefs-2026-09-27.md).
-- External Miro requests blocked in isolated browser checks; actual sign-in/editing not verified.
-- Available: agency prepares/sends production briefs locally. Production references are named
-  HTTPS links; this change adds no new binary upload system or automatic Miro copy/publish action.
+- Web http://localhost:3003; API55421/DB55422/media55430; Next dev and media remain running.
+- Retained: Brand Guidelines (In progress, two designers); Social Launch (Backlog); Campaign Landing
+  Page (In review); Trail Weekend Social Series (Changes requested); Email Banner (Approved);
+  Everyday Essentials Launch (Delivered). Board defaults to Active; All projects shows all six.
+- Cleanup removed nine other workspaces, 62 projects and 203 scoped Storage objects. All Auth
+  accounts remain; former clients have no memberships. SABRE account and ledger both equal648.
+- Complete ignored backup: `supabase/.backups/20260928-before-sabre-only/` (DB +237 Storage files,
+  taken after007/before008); operation state: `supabase/.local/sabre-development/plan.json` complete.
+  [Dataset guide](../operations/sabre-development.md) documents guards/recovery. Do not run the old
+  SABRE overlay removal against this new state. Preserve its checkpoint as historical evidence.
+- Canonical seed/assertions remain exactly10clients/25projects. Seed was regenerated, not applied.
+- Original Gmail invitation remains pending; never consume it in automation. Do not touch older
+  restore clone or stopped stagingAPI56110/DB56111/web3113/media56114/mail56115.
 
-## Accepted workflow target; implementation pending
+## Checks executed in this task
 
-- Accept creates In progress; client never receives Studio review; V1/V2/V3 are iterations of the
-  same work with no automatic extra deliverables/debits. Internal rounds remain per board.
-- One contextual bottom action bar per role/view; no Mark ready, Ready for client or extra approval.
-- Agency curates revision instructions and chooses affected boards; no raw client feedback to designers.
-- Continue working vs No further work needed is explicit per board; omitted boards stay unchanged.
-  Closing ends that board's tasks, preserves authorized history and allows fresh reactivation.
-- Agency Edit project gets Active/Backlog independently of phase; pause suspends advances/tasks,
-  preserves history/credits/dates, and resumes current obligations. Delivered cannot enter Backlog.
-- These transitions/activity controls are not implemented. Current production sends change only
-  released content, internal deadline and one designer activity event.
-- [Current workflow map](../architecture/production-workflow.md) remains a current-code description.
-- The previous owner's [checkpoint](history/handoff-2026-09-27-before-action-workflow-plan.md)
-  retains earlier intake/notification audit links and evidence.
+- Forward migrations003–008 applied with `supabase migration up --local`. No reset/down migration.
+- Final `npm run check`:132files/1293tests, types/lint/format PASS. `npm run build`:PASS.
+- Nine named SQL suites:385assertions PASS after cleanup; production_integrity now owns rollback
+  fixtures instead of depending on deleted projects. Full canonical SQL suite was not run on1/6.
+- Seven Chromium/API checks PASS: two-designer workflow through actual file delivery, duplicate
+  send/share and review/publication race, SABRE six-state check and four role overview checks.
+- Foreign-key audit:133relationships PASS. Backup hashes, rollback rehearsal, Storage cleanup,
+  retained file download, former-client access denial and credit reconciliation PASS.
+- Real HTTP tests exposed PostgREST infinite retries for custom40001; migration006 usesPT409.
+- Independent review's five findings fixed by008: delivered_at, revocation generation, notification
+  recipients, direct metadata grants and old-round comment recipients. Regression SQL passed.
+- Historical within this task: broad HTTP9PASS before data reduction on10/68. Not repeated on1/6.
+- Reviewed desktop1600/mobile390 captures; committed final images are linked in verification record.
 
-## Prior integrated UI and evidence
+## Next concrete work and release boundaries
 
-- Designer context93e1a15: Briefing first, secondary Project info, no inspector cover;
-  Working files/own board/Live board/R1 labels; This round comments, You and the studio audience.
-  Its original-brief reading is superseded by the production isolation above.
-- [Designer context evidence](../verification/designer-context-2026-09-27.md): prior129files/1278tests,
-  3roles×4sizes,40geometry/19Axe,0page errors. Agency + before designer badge remains506dae7.
-- [Project context evidence](../verification/project-context-ux-2026-09-27.md): inline brief,
-  named comments, organized panels, full-width Playground and centered copy/paste feedback.
-- [Board badge](../verification/board-designer-2026-09-27.md) and
-  [plus/dialog](../verification/board-action-clarity-2026-09-27.md) retain previous evidence.
-- [Prior checkpoint](history/handoff-2026-09-27-before-production-briefs.md) preserves earlier state.
-
-## Recovery, invitation and deployment continuity
-
-- a7b35e5 verified isolated restore:10clients/68projects/72boards,237Storageobjects,118FK,
-  four role logins and authenticated delivery hashes. [Evidence](../verification/recovery-and-email-2026-09-27.md).
-- Keep ignored backups/orphan archives in supabase/.backups/20260927-recovery-hardening/ and
-  successful supabase/.backups/20260927-recovery-verified/. Older fixed clone is untouched.
-- Guarded cleanup removed only11archived fixture orphans; local SABRE checkpoint preserved.
-- Original Gmail invitation remains pending; user still needs password setup. Never consume it
-  in automation. Named test invitations remove only their own captured mail.
-- [Callback evidence](../verification/invitation-link-errors-2026-09-27.md) retains Auth investigation.
-- Resend is selected through Supabase Auth SMTP; no direct SDK. [Email runbook](../operations/email.md)
-  prepares host SMTP; actual delivery is a host gate. Auth SMTP does not send workflow emails.
-- Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
-- Filesystem staging stopped with data retained:API56110/DB56111/web3113/media56114/mail56115.
-  Do not provision/reseed it again.
-- Use [production runbook](../operations/production.md) only when deployment is requested.
-- Remaining release gates: real DNS/TLS issuance/renewal, external SMTP, off-host recovery,
-  monitoring alerts, actual Miro sharing and first hosted CI. Local restore is not production proof.
-- Firefox/external Miro WebKit limitations remain; complete three-engine coverage not claimed.
+- Continue remaining acceptance evidence on a separately controlled canonical10/25 environment;
+  do not reset/reseed this local SABRE dataset. See verification record for unexercised race and
+  Realtime permutations, fresh canonical provisioning and external Miro/Resend requirements.
+- SMTP/DNS/TLS, off-host recovery and hosted CI remain release gates. Local checks do not establish
+  production readiness; push/deployment need a user request.
+- Worker reports in `handoffs/2026-09-27-workflow-*.md` and `2026-09-28-workflow-*.md` preserve
+  bounded evidence; their earlier pending checks are superseded by the integrated record above.
+- [Previous checkpoint](history/handoff-2026-09-27-before-workflow-implementation.md) preserves
+  pre-workflow history. Read archived material only when needed.

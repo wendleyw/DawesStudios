@@ -31,9 +31,10 @@ card moves below navigation; the title and date wrap within the card as needed.
 `miro-view.tsx`) is one full-width wrapping controls bar below the title. It contains Back
 (`ProjectBackLink`), the channel (`ProjectChannelLead`: agency **Working files / Shared with
 client**, designer **Working files** without a switch, no channel label for clients), board/round/version controls,
-the agency's board due date, the primary action, **Open in Miro** for the shown link (`miroBoardUrl`,
+the agency's board due date, **Open in Miro** for the shown link (`miroBoardUrl`,
 `target="_blank"`; the embed can fail to sign in behind third-party-cookie restrictions), and
-**More**. The project due date appears only in the title card.
+**More**. Workflow advances appear in the single contextual bar at the bottom of the workspace.
+The project due date appears only in the title card.
 
 More holds the project's credits (`credits/project-credits-chip.tsx`; designers never see it)
 and, once set by the agency, the Drive link of the channel on screen: **Open internal Drive folder**
@@ -51,14 +52,12 @@ In Working files the bar shows a compact board picker (only with more than one b
 chosen name up to 200 px), a **Board / R1 / R2…** round toggle once the board has rounds, and the
 round's status. Designers also see the board name when only one is assigned, and their base toggle
 reads **Live board** to distinguish it from submitted rounds. In Shared with client a **V1, V2…**
-toggle shows the client versions and the selected version's status. A client
-with nothing shared yet retains Back and More without version controls. The board's own designer gets **Send to studio**
-(`project-action-round.tsx`, `kind: "round"`, an optional note and frame link through the
-idempotent `send_board_round`); the agency gets **Share with client** on a round
-(`project-action-share.tsx`, `kind: "share"`) and, in Shared with client, **+ New version** (accessible name **New client version**).
-Delivered projects offer none of these three actions, matching the server's terminal-state checks;
-delivery also dismisses an open round/share dialog. Existing boards, versions and feedback remain
-readable. A round marked **Shared** no longer offers to share it again. Project details resolves
+toggle shows the client versions and the selected version's status. A client with nothing shared
+yet retains Back and More without version controls. The bottom bar shows the selected context and
+actions allowed by `get_project_workflow`: agency production release, internal change request or
+publication; the current designer's submission; agency feedback handoff, new publication or delivery
+preparation; and the latest client's review. Backlog and closed boards show a waiting state. Older
+rounds and versions remain readable without acquiring current actions. Project details resolves
 service names from the briefing catalog instead of showing codes.
 
 The agency's Working files bar identifies the selected board's **Designer** in a compact badge,
@@ -73,14 +72,14 @@ See the [designer-badge verification](../../../../docs/verification/board-design
 
 Sharing a round and adding a version prefill the client board link from `useLatestSharedMiroLink` (the newest project-level client
 version's link, read for the agency alone, so it works from Working files too); an action opened
-before that read finished reads the link itself and remounts its field when it arrives. The **+** icon
+before that read finished reads the link itself and fills an untouched field when it arrives. The **+** icon
 immediately before the designer badge (**Add design board** in its tooltip and accessible name) opens **Add design board** to link an existing
 Miro board and select its designer; it does not create a new board on Miro. The agency's **More**
 menu holds **Edit board**
 (`project-action-board.tsx`, `kind: "board"`: name, Miro link, one assigned designer and an optional
 **Board due date**) and, on a shown client version, **Edit Miro link** (`project-action-miro.tsx`,
 `kind: "miro"`). An empty board or channel shows an inline call to action (**Add a design board** /
-**New client version**) to the agency and a plain waiting message to everyone else.
+the bottom action bar to the agency and a plain waiting message to everyone else.
 
 The agency may edit a client version's link after sharing, approval or delivery. Its version
 identity, number, note and review/comment history remain intact; changing the link does not create
@@ -95,7 +94,7 @@ layout; re-check it if Miro changes its bar). The sidebar folds while a link is 
 (`useFoldSidebarWhile`). `frame-src https://miro.com` is the one Content-Security-Policy exception
 this feature requires (`apps/web/next.config.ts`). A client whose shown client version awaits their
 decision (`canReviewShared`: the latest shared version, pending, project not delivered) gets
-`MiroReviewBar` at the bottom, with the tool bar tucked behind its top edge as one compact,
+review actions in the same contextual bottom bar used by every role. It sits with the tool bar as one compact,
 centred stack. The 6 px overlap covers padding only, preserving complete buttons and keyboard
 focus rings. On phones both bars remain centred, with 44 px touch controls and less reserved
 space below the embed. **Request changes** and **Approve** open `project-action-review.tsx`
@@ -291,8 +290,10 @@ writes either table, through `set_publication_miro_link` / `set_version_miro_lin
 RPCs parse and validate the URL, and `miro-links.ts`'s `parseMiroBoardUrl` only lets a dialog refuse
 an obviously bad link first. A shared client version is nothing but its link, so its field is
 required and clearing it is refused by the dialog and the database. The workspace writes are
-`createDesignBoard`, `updateDesignBoard`, `sendBoardRound`, `shareMiroVersion` and
-`reviewPublication`; comments go through `postComment` / `resolveComment`. Credits are read by
+`createDesignBoard`, `updateDesignBoard`, `saveProductionBrief`, `sendBoardRoundForRequest`,
+`handoffBoardWork`, `shareWorkflowVersion`, `changeBoardActivity` and `reviewPublication`.
+Project metadata and Active/Backlog save together through `saveProjectDetailsWithActivity`.
+Comments go through `postComment` / `resolveComment`. Credits are read by
 `useProjectCredits` (the ledger rows and the settlement, whose granted columns it names:
 `settled_by` and the idempotency key are not selectable) and written by `moveProjectMonth` and
 `settleProjectCredits`.
@@ -306,7 +307,8 @@ RLS, described in [the backend contract](../../../../docs/architecture/backend.m
 reviews and design boards) and polls while the socket is down.
 
 `ProjectActionDialog` (`project-action-dialog.tsx`) is a dispatcher with one component per
-`ProjectAction` kind (`board`, `round`, `share`, `miro`, `review`); `project-action-shell.tsx` holds
+`ProjectAction` kind (`board`, `production`, `round`, `handoff`, `activity`, `share`, `miro`,
+`review`); `project-action-shell.tsx` holds
 the shared `Modal` shell, error paragraph and Cancel/submit footer, and the `useProjectActionClose`
 (closing is refused while a save is pending) and `useCloseOnSuccess` hooks.
 
@@ -323,6 +325,14 @@ channel lead, comment draft and attempt, data-access argument shapes, Miro rules
 `useProjectCover`). They use stubbed Supabase clients and prove argument shape, not authorization.
 Role isolation and end-to-end flows are proved by the orchestrator's database and browser suites in
 [the acceptance matrix](../../../../docs/architecture/acceptance-matrix.md).
+
+`npx playwright test tests/e2e/action-workflow.spec.ts --project=chromium` creates a disposable
+accepted project with two assigned designers. It exercises release, pause/resume, both submissions,
+V1 publication, client changes, a handoff that continues one direction and closes the other, V2,
+client approval, and final delivery through Files. The test uses the signed-in role pages and
+cleans up its project afterward; it does not require a particular count of existing demo projects.
+It captures the action bar, handoff form, and Backlog edit form at 1600 px and 390 px in ignored
+`outputs/`, checks horizontal overflow, and opens the handoff by keyboard.
 
 `npx playwright test tests/e2e/miro-workspace.spec.ts` verifies the workspace round trip on a
 disposable SABRE acceptance project: the agency adds a design board for designer A beside designer
@@ -347,3 +357,7 @@ The page resets its local selection when the URL changes, including another noti
 same project. It resolves identifiers only against authorized query results; a client remains on
 the client channel and a designer on Working files regardless of URL hints. `panel` accepts only
 `details` or `comments`. An unavailable target falls back to the current authorized workspace.
+
+Workflow success and project realtime refresh also invalidate action notifications, Designer Home,
+Reviews and Files, so closing a board or pausing/resuming a project immediately updates their cached
+current-work projections. Their periodic polling remains the disconnected-session fallback.

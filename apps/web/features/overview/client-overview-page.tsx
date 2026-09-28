@@ -13,8 +13,8 @@ import { PageStatus } from "@/features/shared/page-status";
 import { statusToneClass } from "@/features/shared/status-tone";
 import { WelcomeHeader, welcomeTitle } from "@/features/shared/welcome-header";
 import {
-  projectStatusTones,
-  statusLabels,
+  projectStatusTone,
+  projectStatusLabel,
   useClients,
   useDateFormat,
   useProjects,
@@ -130,8 +130,8 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
                   {creditsLabel ? `${creditsLabel.amount} ${creditsLabel.word} · ` : ""}Due{" "}
                   {formatDate(project.due_date, "not set")}
                 </span>
-                <span className={statusToneClass(projectStatusTones[project.status])}>
-                  {statusLabels[project.status]}
+                <span className={statusToneClass(projectStatusTone(project))}>
+                  {projectStatusLabel(project)}
                 </span>
               </Link>
             );

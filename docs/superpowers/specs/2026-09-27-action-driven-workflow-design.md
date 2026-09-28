@@ -1,10 +1,11 @@
 # Action-driven project workflow
 
-Status: implementation design, not implemented. Baseline: `cb9f767` (private production briefs).
+Status: implemented locally on 2026-09-28. Baseline: `cb9f767` (private production briefs).
+[Verification and remaining release evidence](../../verification/action-driven-workflow-2026-09-28.md).
 The user requested this plan after reviewing the button flow, independent designer directions and
 Backlog. [Implementation plan](../plans/2026-09-27-action-driven-workflow.md).
 The [production workflow map](../../architecture/production-workflow.md) describes current code;
-this document describes the agreed target and the engineering choices needed to implement it.
+this document preserves the accepted behavior and engineering decisions.
 
 ## Accepted product decisions
 
@@ -204,6 +205,13 @@ Existing explicit agency billing adjustments remain separate from workflow advan
   PostgREST nested reads and Realtime payloads are part of the security tests.
 
 ## Migration and existing data
+
+User priority update, 2026-09-27: existing clients are disposable test data and will be deleted and
+rebuilt later. Prioritize fresh, complete functional journeys. Limit legacy reconciliation to what
+the forward schema requires; do not build compatibility layers or reconstruct ambiguous historical
+requests solely to preserve demo states. No client deletion or database reset is authorized now.
+The historical-inventory guidance below is secondary to this update; role isolation, billing
+invariants, non-destructive migration and self-contained acceptance tests remain required.
 
 Use forward migrations after the currently applied `202609280002`, applied with
 `supabase migration up --local`. Do not edit applied migrations,

@@ -164,7 +164,7 @@ describe("clientOverview", () => {
 describe("designerRounds and designerOverview", () => {
   const projects = [
     project({ id: "p1", title: "Launch", status: "changes_requested", due_date: "2026-10-02" }),
-    project({ id: "p2", title: "Guide", status: "internal_review" }),
+    project({ id: "p2", title: "Guide", status: "in_progress" }),
     project({
       id: "p3",
       title: "Poster",
@@ -177,35 +177,37 @@ describe("designerRounds and designerOverview", () => {
       id: "r1",
       project_id: "p1",
       board_id: "b1",
-      version_number: 1,
-      status: "approved",
+      sequence: 1,
+      kind: "initial",
+      outcome: "closed",
+      current: false,
+      round_id: null,
+      round: null,
       created_at: "2026-09-01T00:00:00Z",
     },
-    // The client sent the project back after this round was shared.
     {
       id: "r2",
       project_id: "p1",
       board_id: "b1",
-      version_number: 2,
-      status: "reviewed",
+      sequence: 2,
+      kind: "revision",
+      outcome: "open",
+      current: true,
+      round_id: null,
+      round: null,
       created_at: "2026-09-20T00:00:00Z",
     },
     {
       id: "r3",
       project_id: "p2",
       board_id: "b2",
-      version_number: 1,
-      status: "submitted",
+      sequence: 1,
+      kind: "initial",
+      outcome: "submitted",
+      current: true,
+      round_id: "round3",
+      round: { version_number: 1, notes: "Review" },
       created_at: "2026-09-22T00:00:00Z",
-    },
-    // Not a round: a row without a board is skipped.
-    {
-      id: "legacy",
-      project_id: "p2",
-      board_id: null,
-      version_number: 4,
-      status: "submitted",
-      created_at: "2026-09-23T00:00:00Z",
     },
   ];
   const boards = [
@@ -213,25 +215,69 @@ describe("designerRounds and designerOverview", () => {
     { id: "b2", name: "Guide pages" },
   ];
 
-  it("keeps each board's latest round, labelled by board and round, and reads a sent-back share as changes requested", () => {
+  it("uses current board requests without inferring tasks from client decisions", () => {
     expect(designerRounds(raw, boards, projects)).toEqual([
       {
         id: "r2",
         projectId: "p1",
+        boardId: "b1",
         title: "Launch",
-        label: "Hero banner · Round 2",
+        label: "Hero banner · Changes requested",
         status: "changes_requested",
         date: "2026-09-20T00:00:00Z",
       },
       {
         id: "r3",
         projectId: "p2",
+        boardId: "b2",
         title: "Guide",
         label: "Guide pages · Round 1",
         status: "submitted",
         date: "2026-09-22T00:00:00Z",
       },
     ]);
+  });
+
+  it("does not turn client feedback into a task for an unselected designer", () => {
+    const shared = [
+      {
+        ...raw[1],
+        kind: "initial",
+        outcome: "shared",
+        round_id: "round2",
+        round: { version_number: 1, notes: "Shared" },
+      },
+    ];
+    const overview = designerOverview({
+      projects,
+      rounds: designerRounds(shared, boards, projects),
+      now,
+      formatMonth,
+    });
+    expect(overview.yourTurn).toBe(0);
+  });
+
+  it("excludes paused and closed work, and includes initial work before R1", () => {
+    const initial = [{ ...raw[1], kind: "initial", outcome: "open", round: null }];
+    const open = designerOverview({
+      projects,
+      rounds: designerRounds(initial, boards, projects),
+      activeBoardProjectIds: ["p1"],
+      now,
+      formatMonth,
+    });
+    expect(open.yourTurn).toBe(1);
+    expect(open.moving.map((item) => item.id)).toEqual(["p1"]);
+    expect(
+      designerRounds(
+        initial,
+        boards,
+        projects.map((item) => ({ ...item, activity: "backlog" as const })),
+      ),
+    ).toEqual([]);
+    expect(
+      designerRounds([{ ...initial[0], current: false, outcome: "closed" }], boards, projects),
+    ).toEqual([]);
   });
 
   it("counts the designer's work", () => {

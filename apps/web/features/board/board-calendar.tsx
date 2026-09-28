@@ -4,8 +4,8 @@ import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useMemo, type CSSProperties } from "react";
 import {
-  projectStatusTones,
-  statusLabels,
+  projectStatusTone,
+  projectStatusLabel,
   useDateFormat,
   type Project,
 } from "@/features/workspace/workspace-data";
@@ -52,7 +52,7 @@ export function BoardCalendar({
         key={project.id}
         className={`board-calendar-project ${project.id === selectedId ? "selected" : ""}`}
         aria-current={project.id === selectedId ? "true" : undefined}
-        title={`${project.title} — ${statusLabels[project.status]} — ${campaignName(project.campaign_id)}`}
+        title={`${project.title} — ${projectStatusLabel(project)} — ${campaignName(project.campaign_id)}`}
         {...selectOrOpen({
           onSelect: () => onSelect(project.id),
           onOpen: () => onOpen(project.id),
@@ -60,13 +60,13 @@ export function BoardCalendar({
       >
         <strong title={project.title}>{distinctTitle(project.title, prefix)}</strong>
         <span className="board-calendar-campaign">{campaignName(project.campaign_id)}</span>
-        <span className={statusToneClass(projectStatusTones[project.status])}>
-          {statusLabels[project.status]}
+        <span className={statusToneClass(projectStatusTone(project))}>
+          {projectStatusLabel(project)}
         </span>
         <Link
           className="board-calendar-open"
           href={projectHref(project.id)}
-          aria-label={`${openLabel(project.title)}, ${statusLabels[project.status]}, ${formatDate(project.due_date, "No due date")}`}
+          aria-label={`${openLabel(project.title)}, ${projectStatusLabel(project)}, ${formatDate(project.due_date, "No due date")}`}
         >
           <ArrowUpRight size={15} aria-hidden="true" />
         </Link>

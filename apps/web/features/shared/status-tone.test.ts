@@ -75,7 +75,8 @@ describe("status tones", () => {
     // A briefing waiting on the studio and a project sent back for changes are both waiting on a
     // person.
     expect(briefingStatusTones.awaiting_review).toBe(projectStatusTones.changes_requested);
-    expect(creditRequestStatusTones.pending).toBe(projectStatusTones.internal_review);
+    expect(creditRequestStatusTones.pending).toBe(projectStatusTones.client_review);
+    expect(projectStatusTones.internal_review).toBe(projectStatusTones.in_progress);
   });
 });
 

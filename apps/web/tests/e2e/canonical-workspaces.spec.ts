@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { test, expect } from "@playwright/test";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { credentials, evidenceDirectory, localAgency, localCaller, signIn } from "./test-support";
 import { versionGroupKey } from "@/features/projects/version-row";
 
@@ -182,6 +182,10 @@ async function readMiroModel(agency: Awaited<ReturnType<typeof localAgency>>): P
  * version sent back, and each version shared from one round. Returns each project's latest client
  * version number.
  */
+const canonical = JSON.parse(
+  readFileSync(new URL("../../../../supabase/fixtures.json", import.meta.url), "utf8"),
+) as { projects: { id: string; production_stage: string; rounds_per_board: number }[] };
+
 function assertMiroModel(
   projects: { id: string; title: string; status: string }[],
   model: MiroModel,
@@ -213,9 +217,15 @@ function assertMiroModel(
     const decisions = versions.map(
       (version) => model.reviews.find((review) => review.publication_id === version.id)?.status,
     );
-    if (project.status === "planned" || project.status === "in_progress") {
+    const expected = canonical.projects.find((item) => item.id === project.id)!;
+    expect(
+      perBoard.every((count) => count === expected.rounds_per_board),
+      project.title,
+    ).toBe(true);
+    if (expected.rounds_per_board === 0) {
       expect([rounds.length, versions.length], project.title).toEqual([0, 0]);
-    } else if (project.status === "internal_review") {
+    } else if (expected.production_stage === "internal_review") {
+      expect(project.status).toBe("in_progress");
       expect([1, 2], project.title).toContain(perBoard[0]);
       expect(new Set(rounds.map((round) => round.status)), project.title).toEqual(
         new Set(["submitted"]),

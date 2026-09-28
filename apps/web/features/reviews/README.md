@@ -9,29 +9,16 @@ tooltip), a status badge and the date. The status column has a fixed width so co
 statuses map onto the shared badge tones in `reviews-page.tsx`. The same layout adapts to desktop and mobile without duplicating client
 navigation in the sidebar.
 
-`reviews-page.tsx` lists work on the Miro workspace model: a designer sees the latest round of each
-of their own design boards; the agency and the client see the latest client version of each
-project (awaiting or decided by the client); the agency also sees every round a designer has
-submitted for studio review (**Studio review**). No row carries a deliverable label.
-`inReviewTab` decides which tab shows a row. A client's **Waiting for you** holds only versions
-still waiting on their decision; a version they sent back is waiting on the studio and appears under
-**With the studio**, and an approved one under **Approved**.
+`review-data.ts` owns the Supabase reads. Designer rows come from current `board_work_requests`,
+with an optional embedded round and the authorized board name; initial tasks exist before R1.
+Agency Studio review includes only current submitted requests. Closed/superseded work and Backlog
+projects are excluded. Client/agency publication rows use the latest project V and its own review.
+A client never queries internal requests/boards/rounds. Row links select the exact board or V.
 
-`review-data.ts` owns the feature's Supabase access, as
-[the data-access contract](../../../../docs/architecture/data-access.md) requires. `useReviews` is
-the page's single read hook. Rounds are `design_versions` rows with a `board_id` (named columns:
-the API grants no role `design_versions.created_by`), labelled with `roundLabel` through a
-`design_boards` read of `id,name`; client
-versions are `published_versions` rows, always project-level, embedding their
-`publication_reviews` decision (`status,reviewed_by,reviewed_at`). A client session never reads
-`design_versions` or `design_boards`. `review-data.test.tsx` covers the three roles' reads.
-
-`isFinished` and `inReviewTab` also live in `review-data.ts`, beside `publishedVersionStatus`,
-`roundLabel` and `latestBy` (which the Overview's designer rounds also use),
-rather than in `reviews-page.tsx`, so another feature can read the tab rule without importing the
-page component. `reviews-page.tsx` imports `inReviewTab` from there to filter its rows; the page
-still declares its own `versionStatusTones`, which is presentation (a `StatusTone` per status for
-the badge), not the tab rule.
+`work-request.ts` provides the request status/label mapping shared with Designer Home. Neither
+surface infers a designer task from project status or raw client feedback. `inReviewTab` owns tab
+filtering; only clients/agency have an Approved tab. Private history stays accessible in the project.
+`review-data.test.tsx` covers the three role-specific reads.
 
 A decided version names who decided. The row's note column reads "Approved by <name> · <date>" or
 "Changes requested by <name> · <date>" (the release note moves to its tooltip), from

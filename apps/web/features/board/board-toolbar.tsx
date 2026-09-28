@@ -24,6 +24,8 @@ export function BoardToolbar({
   onCampaign,
   status,
   onStatus,
+  activity = "active",
+  onActivity,
   campaigns,
   resultCount,
   onClear,
@@ -40,6 +42,8 @@ export function BoardToolbar({
   onCampaign: (id: string) => void;
   status: string;
   onStatus: (status: string) => void;
+  activity?: string;
+  onActivity?: (activity: string) => void;
   campaigns: BoardCampaign[];
   resultCount: number;
   onClear: () => void;
@@ -117,7 +121,9 @@ export function BoardToolbar({
           onClick={() => setPanel(panel === "filters" ? null : "filters")}
         >
           <SlidersHorizontal size={18} aria-hidden="true" />
-          {(campaign || status) && <span className="board-tool-indicator" aria-hidden="true" />}
+          {(campaign || status || activity !== "active") && (
+            <span className="board-tool-indicator" aria-hidden="true" />
+          )}
         </button>
       </div>
       <span className="board-tool-divider" aria-hidden="true" />
@@ -231,6 +237,16 @@ export function BoardToolbar({
                   ))}
                 </select>
               </label>
+              {onActivity && (
+                <label>
+                  Activity
+                  <select value={activity} onChange={(event) => onActivity(event.target.value)}>
+                    <option value="active">Active</option>
+                    <option value="backlog">Backlog</option>
+                    <option value="">All projects</option>
+                  </select>
+                </label>
+              )}
               <label>
                 Status
                 <select value={status} onChange={(event) => onStatus(event.target.value)}>
@@ -249,7 +265,7 @@ export function BoardToolbar({
               <span className="board-result-count" role="status">
                 {resultCount} project{resultCount === 1 ? "" : "s"}
               </span>
-              {(search || campaign || status) && (
+              {(search || campaign || status || activity !== "active") && (
                 <button type="button" className="button quiet" onClick={onClear}>
                   Clear filters
                 </button>

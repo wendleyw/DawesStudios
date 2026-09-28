@@ -39,8 +39,9 @@ function ProjectPageContent({ projectId }: { projectId: string }) {
         ? "internal"
         : agencyChannel;
   const data = useProjectDetail(projectId, channel);
-  // RLS limits a designer to their own boards; the client channel never reads boards at all.
-  const boards = useDesignBoards(projectId, profile?.role !== "client" && channel === "internal");
+  // Agency handoffs in Shared with client need the authorized board names and responsible designers.
+  // Client sessions never read boards; RLS still limits designers to their own boards.
+  const boards = useDesignBoards(projectId, profile?.role !== "client");
   // A file dropped anywhere on the page must never make the browser open it and leave the
   // workspace: nothing on the page accepts a dropped file.
   useEffect(() => {

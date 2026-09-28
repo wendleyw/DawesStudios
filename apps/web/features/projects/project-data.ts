@@ -19,6 +19,174 @@ import type { MiroLink } from "./miro-links";
 export type TableRow<Name extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][Name]["Row"];
 export type ProjectChannel = "internal" | "client";
+export type WorkflowBoard = {
+  id: string;
+  name: string;
+  activity: "active" | "closed";
+  designerId: string | null;
+  assignmentGeneration: number;
+  workflowRevision: number;
+  briefRevision: number;
+  briefContent: ProductionBriefContent | null;
+  currentRequest: {
+    id: string;
+    sequence: number;
+    kind: string;
+    outcome: string;
+    roundId: string | null;
+    content: ProductionBriefContent | null;
+  } | null;
+  capabilities: {
+    release: boolean;
+    submit: boolean;
+    requestChanges: boolean;
+    close: boolean;
+    reactivate: boolean;
+  };
+};
+export type ProjectWorkflow = {
+  project: {
+    id: string;
+    status: string;
+    activity: "active" | "backlog";
+    workflowRevision: number;
+    latestPublication: {
+      id: string;
+      number: number;
+      decision: string;
+      reviewRevision: number;
+    } | null;
+  };
+  boards: WorkflowBoard[];
+  capabilities: { publish: boolean; review: boolean; deliver: boolean; respondFeedback: boolean };
+};
+
+export function useProjectWorkflow(projectId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["project-workflow", session?.user.id, projectId],
+    enabled: !!session,
+    refetchInterval: 30_000,
+    queryFn: async () =>
+      assertResult(
+        await database.rpc(
+          "get_project_workflow" as never,
+          {
+            p_project_id: projectId,
+          } as never,
+        ),
+      ) as ProjectWorkflow,
+  });
+}
+
+/** Workflow commands take revisions captured when the form opened. Callers keep their inputs on conflict. */
+export async function sendBoardRoundForRequest(
+  database: SupabaseDatabase,
+  input: {
+    boardId: string;
+    requestId: string;
+    boardRevision: number;
+    note: string;
+    frameUrl: string;
+    idempotencyKey: string;
+  },
+) {
+  return assertResult(
+    await database.rpc(
+      "send_board_round_for_request" as never,
+      {
+        p_board_id: input.boardId,
+        p_request_id: input.requestId,
+        p_expected_board_revision: input.boardRevision,
+        p_note: input.note,
+        p_frame_url: input.frameUrl,
+        p_idempotency_key: input.idempotencyKey,
+      } as never,
+    ),
+  );
+}
+
+export async function handoffBoardWork(
+  database: SupabaseDatabase,
+  input: {
+    projectId: string;
+    latestPublicationId: string | null;
+    reviewRevision: number | null;
+    decisions: Array<{
+      boardId: string;
+      action: "continue" | "close";
+      content?: ProductionBriefContent;
+      expectedBoardRevision: number;
+      expectedAssignmentGeneration: number;
+      expectedBriefRevision: number;
+    }>;
+    requestId: string;
+  },
+) {
+  return assertResult(
+    await database.rpc(
+      "handoff_board_work" as never,
+      {
+        p_project_id: input.projectId,
+        p_latest_publication_id: input.latestPublicationId,
+        p_expected_review_revision: input.reviewRevision,
+        p_board_decisions: input.decisions,
+        p_request_id: input.requestId,
+      } as never,
+    ),
+  );
+}
+
+export async function shareWorkflowVersion(
+  database: SupabaseDatabase,
+  input: {
+    projectId: string;
+    url: string;
+    note: string;
+    sourceRoundIds: string[];
+    latestPublicationId: string | null;
+    reviewRevision: number | null;
+    confirmReplacement: boolean;
+    requestId: string;
+  },
+) {
+  return assertResult(
+    await database.rpc(
+      "share_workflow_version" as never,
+      {
+        p_project_id: input.projectId,
+        p_url: input.url,
+        p_note: input.note,
+        p_source_round_ids: input.sourceRoundIds,
+        p_expected_latest_publication_id: input.latestPublicationId,
+        p_expected_review_revision: input.reviewRevision,
+        p_confirm_replacement: input.confirmReplacement,
+        p_request_id: input.requestId,
+      } as never,
+    ),
+  );
+}
+
+export async function changeBoardActivity(
+  database: SupabaseDatabase,
+  input: {
+    boardId: string;
+    revision: number;
+    action: "close" | "reactivate";
+    requestId: string;
+  },
+) {
+  return assertResult(
+    await database.rpc(
+      (input.action === "close" ? "close_board_work" : "reactivate_board_work") as never,
+      {
+        p_board_id: input.boardId,
+        p_expected_revision: input.revision,
+        p_request_id: input.requestId,
+      } as never,
+    ),
+  );
+}
 export type CanvasVersion = {
   id: string;
   projectId: string;
@@ -54,7 +222,8 @@ const internalVersionColumns =
 
 /** A canvas version row, from whichever of the two channel tables the canvas was read from. */
 type CanvasVersionRow =
-  Omit<TableRow<"design_versions">, "created_by"> | TableRow<"published_versions">;
+  | Omit<TableRow<"design_versions">, "created_by" | "work_request_id" | "assignment_generation">
+  | TableRow<"published_versions">;
 /** The columns of a publication review the canvas reads. */
 type CanvasReviewRow = Pick<
   TableRow<"publication_reviews">,
@@ -161,11 +330,11 @@ async function readMiroLinks(
   }));
 }
 
-export function useProjectDetail(projectId: string, channel: ProjectChannel) {
+export function useProjectDetail(projectId: string, channel: ProjectChannel, enabled = true) {
   const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["project-detail", session?.user.id, projectId, channel],
-    enabled: !!session,
+    enabled: !!session && enabled,
     queryFn: async () => {
       const clientChannel = channel === "client" || profile?.role === "client";
       const [project, deliverables, versionResult, reviewResult] = await Promise.all([
@@ -478,10 +647,17 @@ export async function setProjectDriveLink(
  */
 export const projectQueryKeys = [
   "project-detail",
+  "project-workflow",
+  "production-brief",
   "projects",
   "comments",
   "notifications",
   "project-drive-links",
+  // Workflow commands also change these current-work projections.
+  "action-notifications",
+  "overview-designer-rounds",
+  "reviews",
+  "assets",
 ] as const;
 
 export function useInvalidateProject() {
@@ -544,6 +720,38 @@ export async function updateProjectDetails(
       "This project changed while you were editing. Close and reopen the details to try again.",
     );
   assertResult(result);
+}
+
+export async function saveProjectDetailsWithActivity(
+  database: SupabaseDatabase,
+  input: {
+    id: string;
+    revision: string;
+    workflowRevision: number;
+    title: string;
+    description: string;
+    startDate: string | null;
+    dueDate: string | null;
+    activity: "active" | "backlog";
+    requestId: string;
+  },
+) {
+  return assertResult(
+    await database.rpc(
+      "save_project_details_with_activity" as never,
+      {
+        p_project_id: input.id,
+        p_title: input.title,
+        p_description: input.description,
+        p_start_date: input.startDate,
+        p_due_date: input.dueDate,
+        p_activity: input.activity,
+        p_expected_updated_at: input.revision,
+        p_expected_workflow_revision: input.workflowRevision,
+        p_request_id: input.requestId,
+      } as never,
+    ),
+  );
 }
 
 export async function assignDesigner(
@@ -922,6 +1130,8 @@ export async function saveProductionBrief(
     expectedRevision: number;
     publish: boolean;
     requestId: string;
+    boardRevision?: number;
+    assignmentGeneration?: number;
   },
 ) {
   return assertResult(
@@ -931,6 +1141,12 @@ export async function saveProductionBrief(
       p_expected_revision: input.expectedRevision,
       p_publish: input.publish,
       p_request_id: input.requestId,
+      ...(input.publish
+        ? {
+            p_expected_board_revision: input.boardRevision,
+            p_expected_assignment_generation: input.assignmentGeneration,
+          }
+        : {}),
     }),
   );
 }

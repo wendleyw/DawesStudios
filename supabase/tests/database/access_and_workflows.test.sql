@@ -2,6 +2,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select plan(55);
+create temporary table aw_latest as
+ select v.id as latest_id,r.review_revision from public.published_versions v
+ left join public.publication_reviews r on r.publication_id=v.id
+ where v.project_id=md5('dawes:project-sabre-campaign-landing-page')::uuid
+ order by v.version_number desc limit 1;
+grant select on aw_latest to authenticated;
 
 select is((select count(*)::int from public.clients),10,'Fixture contains exactly 10 clients');
 select is((select count(*)::int from public.projects),25,'Fixture contains exactly 25 projects');
@@ -31,7 +37,10 @@ select throws_ok($$update public.profiles set role='agency' where id=auth.uid()$
 select throws_ok($$select public.adjust_credits(md5('dawes:client-org-8')::uuid,100,'Unauthorized','attack')$$,'42501','Agency access required','Client cannot grant credits');
 select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Client cannot post internally');
 select throws_ok($$select public.post_comment(md5('dawes:project-4')::uuid,'client','Attack')$$,'42501','Client channel access required','Client cannot post across tenants');
-select throws_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAttack1=/')$$,'42501','Agency access required','Client cannot share a client version');
+select throws_ok($$select public.share_workflow_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,
+ 'https://miro.com/app/board/uXjVAttack1=/','', '{}'::uuid[],
+ (select latest_id from aw_latest),(select review_revision from aw_latest),true,
+ md5('aw:unauthorized-share')::uuid)$$,'42501','Agency access required','Client cannot share a client version');
 select throws_ok($$update public.credit_accounts set balance=9999$$,'42501',null,'Balances cannot be updated directly');
 select hasnt_table('public','published_designs','Uploaded client snapshots are retired');
 select ok(not exists(select 1 from public.client_comments where author_kind='studio' and author_label<>'Studio'),'Agency messages use Studio identity');
@@ -50,7 +59,10 @@ select is((select count(*)::int from public.credit_ledger),0,'Designer cannot re
 select is((select count(*)::int from public.client_comments),0,'Designer cannot read client conversations');
 select is((select count(*)::int from public.published_versions),0,'Designer cannot enumerate client publication records');
 select throws_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'client','Attack')$$,'42501','Client channel access required','Designer cannot post in client channel');
-select throws_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAttack1=/')$$,'42501','Agency access required','Designer cannot share a client version');
+select throws_ok($$select public.share_workflow_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,
+ 'https://miro.com/app/board/uXjVAttack1=/','', '{}'::uuid[],
+ (select latest_id from aw_latest),(select review_revision from aw_latest),true,
+ md5('aw:unauthorized-share')::uuid)$$,'42501','Agency access required','Designer cannot share a client version');
 select throws_ok($$select public.post_comment(md5('dawes:project-1')::uuid,'internal','Attack')$$,'42501','Internal channel access required','Designer cannot comment on another assignment');
 select lives_ok($$select public.post_comment(md5('dawes:project-sabre-campaign-landing-page')::uuid,'internal','Ready for studio review.')$$,'Assigned designer can comment internally');
 
@@ -66,8 +78,12 @@ select is(public.accept_briefing(md5('dawes:pending-2')::uuid),(select id from p
 select is((select count(*)::int from public.credit_ledger where project_id=(select id from public.projects where briefing_id=md5('dawes:pending-2')::uuid)),1,'Repeated acceptance creates exactly one debit');
 select throws_ok($$select public.accept_briefing(md5('dawes:pending-3')::uuid)$$,'P0001','Insufficient credit balance','Insufficient balance rejects acceptance');
 select is((select count(*)::int from public.projects where briefing_id=md5('dawes:pending-3')::uuid),0,'Failed acceptance creates no project');
-select lives_ok($$select public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction',null,md5('aw:share-1')::uuid)$$,'Agency shares a client version');
-select is(public.share_miro_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction',null,md5('aw:share-1')::uuid),(select publication_id from public.publication_miro_links where board_id='uXjVAccept1='),'Share retries return the existing client version');
+select lives_ok($$select public.share_workflow_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,
+ 'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction','{}'::uuid[],
+ (select latest_id from aw_latest),(select review_revision from aw_latest),true,md5('aw:share-1')::uuid)$$,'Agency shares a client version');
+select is(public.share_workflow_version(md5('dawes:project-sabre-campaign-landing-page')::uuid,
+ 'https://miro.com/app/board/uXjVAccept1=/?moveToWidget=7','Second direction','{}'::uuid[],
+ (select latest_id from aw_latest),(select review_revision from aw_latest),true,md5('aw:share-1')::uuid),(select publication_id from public.publication_miro_links where board_id='uXjVAccept1='),'Share retries return the existing client version');
 select throws_ok($$update public.published_versions set release_note='Changed'$$,'42501',null,'Client versions cannot be updated directly');
 select is((select status::text from public.projects where id=md5('dawes:project-sabre-campaign-landing-page')::uuid),'client_review','Sharing puts the project in client review');
 select is((select status from public.publication_reviews r join public.publication_miro_links l on l.publication_id=r.publication_id where l.board_id='uXjVAccept1='),'pending','A shared version opens a pending client review');

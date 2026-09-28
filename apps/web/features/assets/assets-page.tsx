@@ -123,10 +123,13 @@ export function AssetsPage({ clientId }: { clientId: string }) {
 
   const selectedProject = projects.find((item) => item.id === project);
   // A delivery belongs to an approved project, and the dialog opens on the one being looked at.
-  const deliverable = projects.filter((item) => item.status === "approved");
+  const deliverable = projects.filter(
+    (item) => item.status === "approved" && item.activity !== "backlog",
+  );
   const canDeliver =
     profile?.role === "agency" &&
     selectedProject?.status === "approved" &&
+    selectedProject.activity !== "backlog" &&
     assets.some((file) => file.projectId === selectedProject.id && file.category === "Delivery");
 
   const clearFilters = () => {

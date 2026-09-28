@@ -39,7 +39,8 @@ describe("versionStatusLabels", () => {
   it("speaks the same vocabulary as the project status a version moves", () => {
     // A version submitted to the studio and a project in studio review are one moment in the
     // workflow; the canvas showed the bare token `submitted` beside the badge `Studio review`.
-    expect(versionStatusLabels.submitted).toBe(statusLabels.internal_review);
+    expect(versionStatusLabels.submitted).toBe("Studio review");
+    expect(statusLabels.internal_review).toBe("In progress");
     expect(versionStatusLabels.pending).toBe(statusLabels.client_review);
     expect(versionStatusLabels.approved).toBe(statusLabels.approved);
     expect(versionStatusLabels.changes_requested).toBe(statusLabels.changes_requested);

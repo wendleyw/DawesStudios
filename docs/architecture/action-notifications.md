@@ -1,8 +1,6 @@
 # Action notifications
 
-This page describes the current predicates. The [action-driven workflow plan](../superpowers/plans/2026-09-27-action-driven-workflow.md)
-will replace round/global-status inference with board work requests, recorded agency handoffs,
-and Backlog/closed-board suppression. Those changes are planned, not current behavior.
+Current predicates follow the [action-driven workflow](production-workflow.md).
 
 `public.action_notifications` is an authenticated, read-only view of work that can be acted on
 now. It has no table, scheduler, acknowledgement flag, or retry state. `public.notifications`
@@ -24,11 +22,17 @@ agency and authorized designer receive those labels.
 | `start_project` | Agency | Budget confirmed, with no project | Briefing |
 | `review_credit_request` | Agency | Pending credit request | Credit request |
 | `prepare_project` | Agency | Project not delivered, with no design board or client publication | Project |
-| `review_round` | Agency | Latest round on a board is submitted; project not delivered | Round |
-| `respond_feedback` | Agency | Latest client publication has changes requested; project not delivered | Publication |
+| `prepare_board` | Agency | Active board has no current request and has an active assigned designer | Board |
+| `review_round` | Agency | Active board has a current submitted request | Round |
+| `respond_feedback` | Agency | Latest client publication has changes requested and no recorded agency handoff | Publication |
 | `deliver_project` | Agency | Latest client publication is approved and project status is approved | Publication |
-| `submit_round` | Assigned designer | Own board on a project not delivered; no round or the latest round is a draft | Board |
+| `submit_round` | Assigned designer | Own active board has an open initial request in the current assignment generation | Board |
+| `revise_board` | Assigned designer | Own active board has an open revision/reactivation request in the current assignment generation | Board |
 | `review_version` | Client | Latest client publication awaits review; project not delivered; recipient rule below | Publication |
+
+All project actions require Active activity and a non-delivered project. Closed directions and
+requests from earlier assignment generations are excluded. Backlog/resume does not create new
+historical events. A client decision alone creates no designer task.
 
 `private.can_receive_project_action(project_id)` applies the same recipient rule as
 `private.notify_client` for client project notifications. The active briefing requester receives

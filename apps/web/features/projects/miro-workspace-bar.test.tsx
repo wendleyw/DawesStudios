@@ -91,7 +91,7 @@ describe("MiroWorkspaceBar in Working files", () => {
     expect(screen.getByTitle("Designer: Name unavailable")).toBeVisible();
     expect(screen.queryByText("d1")).toBeNull();
   });
-  it("lets the agency pick boards and rounds, add and edit boards, and share a round", async () => {
+  it("lets the agency pick boards and rounds while advances stay in the action bar", async () => {
     const user = userEvent.setup();
     const onRound = vi.fn();
     const onShareRound = vi.fn();
@@ -100,12 +100,12 @@ describe("MiroWorkspaceBar in Working files", () => {
     const rounds = screen.getByRole("group", { name: "Rounds" });
     await user.click(within(rounds).getByRole("button", { name: "Board" }));
     expect(onRound).toHaveBeenCalledWith(null);
-    await user.click(screen.getByRole("button", { name: "Share with client" }));
-    expect(onShareRound).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
+    expect(onShareRound).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Add design board" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
   });
-  it("gives the board's designer Send to studio and nothing of the agency's", () => {
+  it("shows the designer's board navigation without an advance control", () => {
     render(<MiroWorkspaceBar {...props({ role: "designer", viewerId: "d1", boards: [boardA] })} />);
     // One board needs no picker.
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
@@ -114,7 +114,7 @@ describe("MiroWorkspaceBar in Working files", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Send to studio" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
   });
@@ -152,11 +152,11 @@ describe("MiroWorkspaceBar in Working files", () => {
 });
 
 describe("MiroWorkspaceBar in Shared with client", () => {
-  it("shows the versions, status and the agency's add button", () => {
+  it("shows the versions and status without a second publication control", () => {
     render(<MiroWorkspaceBar {...props({ channel: "client" })} />);
     expect(screen.getByRole("group", { name: "Client versions" })).toHaveTextContent("V1");
     expect(screen.getByText("In review")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "New client version" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
   });
   it("leaves the first client version to the empty state", () => {

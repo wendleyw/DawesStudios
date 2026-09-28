@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Send, Share2, UserRound } from "lucide-react";
+import { Plus, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { DriveIcon } from "@/features/shared/drive-icon";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
@@ -51,32 +51,14 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
   const agency = props.role === "agency";
   const internal = props.channel === "internal";
   const shown = internal ? (props.round?.miro ?? props.board?.miro) : props.version?.miro;
-  const ownBoard = props.board?.designerId === props.viewerId;
   const designerName = props.board?.designerName?.trim() || "Name unavailable";
-  // One action at most: the board's designer sends a round, the agency shares the round on screen.
-  const primary =
-    !props.delivered && internal && props.board && props.role === "designer" && ownBoard ? (
-      <button className="button primary" onClick={props.onSendRound}>
-        <Send size={13} aria-hidden="true" />
-        Send to studio
-      </button>
-    ) : !props.delivered &&
-      internal &&
-      agency &&
-      props.round &&
-      props.round.status !== "reviewed" ? (
-      <button className="button primary" onClick={props.onShareRound}>
-        <Share2 size={13} aria-hidden="true" />
-        Share with client
-      </button>
-    ) : null;
+  // Workflow advances live in the single contextual bar below the canvas.
   return (
     <MiroBarShell
       back={props.back}
       tone={miroBarTone(props.role, props.channel)}
       lead={props.lead}
       link={shown}
-      primary={primary}
       menu={(close) => (
         <>
           {agency && internal && props.board && (
@@ -200,18 +182,6 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               </button>
             ))}
           </div>
-          {/* With nothing shared yet, the empty state's own call to action is the one control. */}
-          {agency && !props.delivered && (
-            <button
-              className="button quiet miro-bar-add"
-              aria-label="New client version"
-              title="New client version"
-              onClick={props.onAddVersion}
-            >
-              <Plus size={14} aria-hidden="true" />
-              New version
-            </button>
-          )}
           {props.version && (
             <span className="miro-bar-status">{versionStatusLabel(props.version.status)}</span>
           )}

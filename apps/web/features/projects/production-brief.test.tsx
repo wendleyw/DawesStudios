@@ -18,6 +18,7 @@ vi.mock("@/features/workspace/workspace-data", () => ({
   useDateFormat: () => ({ formatDate: (value: string) => value }),
 }));
 vi.mock("./project-data", () => ({
+  useProjectWorkflow: () => ({ data: { project: { activity: "active" }, boards: [] } }),
   useProductionBrief: () => ({
     data: state.data,
     isPending: state.pending,

@@ -158,7 +158,7 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
     project=uid(f'project-{key}'); briefing=uid(f'briefing-{key}'); deliverable=uid(f'deliverable-{key}')
     assert len(designers)==1 or status in TWO_DESIGNER_STATUSES, key
     insert('public.briefings',id=briefing,client_id=client,campaign_id=campaign,title=title,service_type=service['id'],status='accepted',overview=f'Create a focused {service["name"].lower()} for {campaign_label}.',goals='Build awareness and give our audience one clear next step.',direction={'source':'brand_hub','tone':'Clear, confident and human','questions':answers(service)},requested_deliverables=specs,due_date=due_date,estimated_credits=credits,confirmed_credits=credits,budget_note='Scope confirmed.',created_by=customer,requested_by=customer)
-    insert('public.projects',id=project,client_id=client,campaign_id=campaign,briefing_id=briefing,title=title,description=description,service_type=service['id'],status=status if status=='in_progress' else 'planned',due_date=due_date,start_date=start_date,board_position={'x':0,'y':0})
+    insert('public.projects',id=project,client_id=client,campaign_id=campaign,briefing_id=briefing,title=title,description=description,service_type=service['id'],status='in_progress',due_date=due_date,start_date=start_date,board_position={'x':0,'y':0})
     for designer in designers: insert('public.project_assignments',project_id=project,designer_id=designer)
     insert('public.deliverables',id=deliverable,project_id=project,**specs[0])
     for si,spec in enumerate(specs[1:],start=1):
@@ -191,22 +191,42 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
         return f"(select id from public.design_versions where board_id={board_ref(boards[bi][2])} and version_number={number})"
     def version_ref(number):
         return f"(select id from public.published_versions where project_id={project_sql} and version_number={number})"
+    def board_field(board_name, field):
+        return f"(select {field} from public.design_boards where id={board_ref(board_name)})"
+    def release(bi, designer, board_name, number):
+        as_user(uid('agency'))
+        content={'title':f'{title} — {board_name}', 'serviceId':service['id'],
+                 'overview':'Create the next considered direction on the assigned Miro board.',
+                 'goals':'Keep the hierarchy clear and aligned with the brand.',
+                 'direction':{'notes':'Develop this direction independently for studio review.'},
+                 'deliverables':specs,'dueDate':board_due,'references':[]}
+        call('save_production_brief',board_ref(board_name),sql(content),
+             f"coalesce((select revision from public.production_brief_drafts where board_id={board_ref(board_name)}),0)",
+             'true',sql(uid(f'release-{key}-{bi}-{number}')),board_field(board_name,'workflow_revision'),board_field(board_name,'assignment_generation'))
     def send_round(bi,designer,board_name,board,number):
+        release(bi,designer,board_name,number)
         as_user(designer)
         note='First direction on the board, ready for studio review.' if number==1 else 'Refined round with tighter spacing, ready for studio review.'
-        call('send_board_round',board_ref(board_name),sql(note),sql(miro_url(board,miro_widget(f'{key}-{bi}-{number}'))),sql(round_key(bi,number)))
+        call('send_board_round_for_request',board_ref(board_name),
+             f"(select id from public.board_work_requests where board_id={board_ref(board_name)} and current)",
+             board_field(board_name,'workflow_revision'),sql(note),
+             sql(miro_url(board,miro_widget(f'{key}-{bi}-{number}'))),sql(round_key(bi,number)))
     def share(number):
-        # The client version shows the lead board's frame for that round; only the agency shares.
-        _,_,_,board=boards[0]
         as_user(uid('agency'))
         note=f'A considered direction for {campaign_label}.' if number==1 else 'The refined direction, with your feedback applied.'
-        call('share_miro_version',project_sql,sql(miro_url(board,miro_widget(f'{key}-0-{number}'))),sql(note),round_ref(0,number),sql(uid(f'share-{key}-{number}')))
+        latest=f"(select id from public.published_versions where project_id={project_sql} order by version_number desc limit 1)"
+        call('share_workflow_version',project_sql,sql(miro_url(miro_board(f'{key}-client'),miro_widget(f'{key}-client-{number}'))),sql(note),
+             f"array[{round_ref(0,number)}]",latest,
+             f"(select review_revision from public.publication_reviews where publication_id={latest})",
+             'true',sql(uid(f'share-{key}-{number}')))
     def review(number,decision):
         as_user(customer)
         feedback='This feels right. Approved.' if decision=='approved' else 'Please give the headline a little more space.'
         call('review_publication',version_ref(number),sql(decision),sql(feedback))
     history=miro_history(status,second_round)
     versions=0
+    if not history and status=='in_progress':
+        for bi,designer,board_name,_ in boards: release(bi,designer,board_name,1)
     for cycle,decision in enumerate(history,start=1):
         for bi,designer,board_name,board in boards: send_round(bi,designer,board_name,board,cycle)
         if decision is None: continue
@@ -231,7 +251,7 @@ def emit_project(*, key, name, client, customer, campaign, service, specs, title
     format_spec=next(f for f in CATALOG['formats'] if f['id']==specs[0]['format'])
     width,height=format_pixel_size(format_spec)
     manifest['covers'].append({'project_id':project,'index':len(manifest['covers'])+1,'width':width,'height':height,'client_visible':versions>0})
-    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':status,'credits':credits,'designers':designers,'rounds_per_board':len(history),'client_versions':versions,'drive_links':{'client':drive,'internal':drive_internal}})
+    manifest['projects'].append({'id':project,'client_id':client,'briefing_id':briefing,'deliverable_id':deliverable,'service_type':service['id'],'title':title,'status':'in_progress' if status in ('planned','internal_review') else status,'production_stage':status,'credits':credits,'designers':designers,'rounds_per_board':len(history),'client_versions':versions,'drive_links':{'client':drive,'internal':drive_internal}})
 
 manifest={'users':[{'id':uid(k),'email':e,'name':n,'role':r} for k,e,n,r in accounts],'clients':[],'projects':[],'delivery_project_id':uid('project-7'),'brand_assets':[],'covers':[]}
 for index,(name,slug,industry) in enumerate(CLIENTS):

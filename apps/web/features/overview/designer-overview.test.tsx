@@ -33,12 +33,16 @@ const defaultRounds = {
       id: "r1",
       project_id: "p1",
       board_id: "b1",
-      version_number: 2,
-      status: "reviewed",
+      sequence: 2,
+      kind: "revision",
+      outcome: "open",
+      current: true,
+      round_id: null,
+      round: null,
       created_at: "2026-09-23T00:00:00Z",
     },
   ],
-  boards: [{ id: "b1", name: "Hero banner" }],
+  boards: [{ id: "b1", name: "Hero banner", project_id: "p1" }],
 };
 const data = vi.hoisted(() => ({
   projects: [] as Project[],
@@ -82,8 +86,8 @@ describe("DesignerOverview", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Welcome back, Alex");
     expect(screen.getByText("My work")).toHaveClass("eyebrow");
     expect(tiles().getByText("Your turn").closest("div")).toHaveTextContent("1");
-    expect(screen.getByText("Changes requested · submitted 2 days ago")).toBeInTheDocument();
-    expect(screen.getByText("Launch · Hero banner · Round 2")).toBeInTheDocument();
+    expect(screen.getByText("Changes requested · assigned 2 days ago")).toBeInTheDocument();
+    expect(screen.getByText("Launch · Hero banner · Changes requested")).toBeInTheDocument();
     expect(screen.queryByText(/credit/i)).not.toBeInTheDocument();
   });
 
@@ -101,7 +105,7 @@ describe("DesignerOverview", () => {
     mocks.useDesignerRounds.mockReturnValue(query({ rounds: [], boards: [] }));
     render(<DesignerOverview />);
     expect(screen.getByText("No active assignments.")).toBeInTheDocument();
-    expect(screen.getByText("Nothing sent back to you.")).toBeInTheDocument();
+    expect(screen.getByText("No work waiting on you.")).toBeInTheDocument();
     expect(screen.getByText("Delivered work will appear here.")).toBeInTheDocument();
   });
 

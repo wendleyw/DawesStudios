@@ -45,6 +45,89 @@ export type Database = {
           },
         ]
       }
+      board_work_requests: {
+        Row: {
+          assignment_generation: number
+          board_id: string
+          brief_revision: number | null
+          closed_reason: string | null
+          content: Json | null
+          created_at: string
+          current: boolean
+          id: string
+          kind: string
+          outcome: string
+          project_id: string
+          recipient_id: string
+          round_id: string | null
+          sequence: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_generation: number
+          board_id: string
+          brief_revision?: number | null
+          closed_reason?: string | null
+          content?: Json | null
+          created_at?: string
+          current?: boolean
+          id?: string
+          kind: string
+          outcome: string
+          project_id: string
+          recipient_id: string
+          round_id?: string | null
+          sequence: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_generation?: number
+          board_id?: string
+          brief_revision?: number | null
+          closed_reason?: string | null
+          content?: Json | null
+          created_at?: string
+          current?: boolean
+          id?: string
+          kind?: string
+          outcome?: string
+          project_id?: string
+          recipient_id?: string
+          round_id?: string | null
+          sequence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_work_requests_board_id_project_id_fkey"
+            columns: ["board_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "design_boards"
+            referencedColumns: ["id", "project_id"]
+          },
+          {
+            foreignKeyName: "board_work_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_work_requests_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_work_requests_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: true
+            referencedRelation: "design_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_asset_folders: {
         Row: {
           client_id: string
@@ -908,6 +991,8 @@ export type Database = {
       }
       design_boards: {
         Row: {
+          activity: string
+          assignment_generation: number
           board_id: string
           created_at: string
           created_by: string
@@ -918,8 +1003,11 @@ export type Database = {
           project_id: string
           updated_at: string
           widget_id: string | null
+          workflow_revision: number
         }
         Insert: {
+          activity?: string
+          assignment_generation?: number
           board_id: string
           created_at?: string
           created_by: string
@@ -930,8 +1018,11 @@ export type Database = {
           project_id: string
           updated_at?: string
           widget_id?: string | null
+          workflow_revision?: number
         }
         Update: {
+          activity?: string
+          assignment_generation?: number
           board_id?: string
           created_at?: string
           created_by?: string
@@ -942,6 +1033,7 @@ export type Database = {
           project_id?: string
           updated_at?: string
           widget_id?: string | null
+          workflow_revision?: number
         }
         Relationships: [
           {
@@ -1011,6 +1103,7 @@ export type Database = {
       }
       design_versions: {
         Row: {
+          assignment_generation: number
           board_id: string
           created_at: string
           created_by: string
@@ -1020,8 +1113,10 @@ export type Database = {
           request_key: string | null
           status: string
           version_number: number
+          work_request_id: string | null
         }
         Insert: {
+          assignment_generation?: number
           board_id: string
           created_at?: string
           created_by: string
@@ -1031,8 +1126,10 @@ export type Database = {
           request_key?: string | null
           status?: string
           version_number: number
+          work_request_id?: string | null
         }
         Update: {
+          assignment_generation?: number
           board_id?: string
           created_at?: string
           created_by?: string
@@ -1042,6 +1139,7 @@ export type Database = {
           request_key?: string | null
           status?: string
           version_number?: number
+          work_request_id?: string | null
         }
         Relationships: [
           {
@@ -1063,6 +1161,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_versions_work_request_id_fkey"
+            columns: ["work_request_id"]
+            isOneToOne: false
+            referencedRelation: "board_work_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1621,6 +1726,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          activity: string
           board_position: Json
           briefing_id: string | null
           campaign_id: string | null
@@ -1636,8 +1742,10 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at: string
+          workflow_revision: number
         }
         Insert: {
+          activity?: string
           board_position?: Json
           briefing_id?: string | null
           campaign_id?: string | null
@@ -1653,8 +1761,10 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at?: string
+          workflow_revision?: number
         }
         Update: {
+          activity?: string
           board_position?: Json
           briefing_id?: string | null
           campaign_id?: string | null
@@ -1670,6 +1780,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
           updated_at?: string
+          workflow_revision?: number
         }
         Relationships: [
           {
@@ -1750,6 +1861,7 @@ export type Database = {
           id: string
           project_id: string
           publication_id: string
+          review_revision: number
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -1759,6 +1871,7 @@ export type Database = {
           id?: string
           project_id: string
           publication_id: string
+          review_revision?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -1768,6 +1881,7 @@ export type Database = {
           id?: string
           project_id?: string
           publication_id?: string
+          review_revision?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -2075,6 +2189,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      close_board_work: {
+        Args: {
+          p_board_id: string
+          p_expected_revision: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
       confirm_briefing_budget: {
         Args: { p_briefing_id: string; p_credits: number; p_note?: string }
         Returns: undefined
@@ -2170,6 +2292,17 @@ export type Database = {
           path: string
         }[]
       }
+      get_project_workflow: { Args: { p_project_id: string }; Returns: Json }
+      handoff_board_work: {
+        Args: {
+          p_board_decisions: Json
+          p_expected_review_revision: number
+          p_latest_publication_id: string
+          p_project_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       invitation_requires_password: {
         Args: { p_token: string }
         Returns: boolean
@@ -2203,6 +2336,14 @@ export type Database = {
           p_version_id?: string
         }
         Returns: string
+      }
+      reactivate_board_work: {
+        Args: {
+          p_board_id: string
+          p_expected_revision: number
+          p_request_id: string
+        }
+        Returns: Json
       }
       register_sanitized_asset: {
         Args: {
@@ -2312,11 +2453,37 @@ export type Database = {
         Args: {
           p_board_id: string
           p_content: Json
+          p_expected_assignment_generation?: number
+          p_expected_board_revision?: number
           p_expected_revision: number
           p_publish: boolean
           p_request_id: string
         }
         Returns: number
+      }
+      save_production_brief_legacy: {
+        Args: {
+          p_board_id: string
+          p_content: Json
+          p_expected_revision: number
+          p_publish: boolean
+          p_request_id: string
+        }
+        Returns: number
+      }
+      save_project_details_with_activity: {
+        Args: {
+          p_activity: string
+          p_description: string
+          p_due_date: string
+          p_expected_updated_at: string
+          p_expected_workflow_revision: number
+          p_project_id: string
+          p_request_id: string
+          p_start_date: string
+          p_title: string
+        }
+        Returns: Json
       }
       save_service_preset: {
         Args: {
@@ -2334,6 +2501,17 @@ export type Database = {
           p_frame_url?: string
           p_idempotency_key?: string
           p_note?: string
+        }
+        Returns: string
+      }
+      send_board_round_for_request: {
+        Args: {
+          p_board_id: string
+          p_expected_board_revision: number
+          p_frame_url: string
+          p_idempotency_key: string
+          p_note: string
+          p_request_id: string
         }
         Returns: string
       }
@@ -2419,6 +2597,19 @@ export type Database = {
         }
         Returns: string
       }
+      share_workflow_version: {
+        Args: {
+          p_confirm_replacement: boolean
+          p_expected_latest_publication_id: string
+          p_expected_review_revision: number
+          p_note: string
+          p_project_id: string
+          p_request_id: string
+          p_source_round_ids: string[]
+          p_url: string
+        }
+        Returns: string
+      }
       submit_briefing: { Args: { p_briefing_id: string }; Returns: undefined }
       transfer_month_credits: {
         Args: {
@@ -2452,6 +2643,7 @@ export type Database = {
       visible_projects: {
         Args: never
         Returns: {
+          activity: string
           board_position: Json
           briefing_id: string | null
           campaign_id: string | null
@@ -2467,6 +2659,7 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status"]
           title: string
           updated_at: string
+          workflow_revision: number
         }[]
         SetofOptions: {
           from: "*"

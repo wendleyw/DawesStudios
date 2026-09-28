@@ -10,6 +10,8 @@ const internalVersion: Row<"design_versions"> = {
   project_id: "project-1",
   board_id: "board-1",
   request_key: null,
+  work_request_id: null,
+  assignment_generation: 1,
   version_number: 1,
   notes: "V1 explores two square directions.",
   status: "reviewed",
@@ -36,6 +38,7 @@ const review = (
   feedback: "Please give the headline more breathing room.",
   reviewed_at: "2026-09-21T12:00:00.000Z",
   reviewed_by: reviewedBy,
+  review_revision: 1,
 });
 
 describe("canvas versions and their client review", () => {

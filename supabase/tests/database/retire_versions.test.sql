@@ -5,8 +5,8 @@ select no_plan();
 
 -- Retire Versions, Phase 2 (202609270007_retire_versions_schema.sql): the legacy per-deliverable
 -- Versions schema is gone, and every function the Miro workspace still relies on compiles and
--- behaves (post_comment, resolve_comment, review_publication, share_miro_version,
--- send_board_round, set_version_miro_link, accept_briefing). Every fixture is created here and
+-- behaves (post_comment, resolve_comment, review_publication, share_workflow_version,
+-- send_board_round_for_request, set_version_miro_link, accept_briefing). Every fixture is created here and
 -- rolled back, so nothing depends on the seed or the SABRE demonstration overlay.
 
 -- 1. The dropped schema.
@@ -68,6 +68,13 @@ create function pg_temp.act_as(p text) returns text language sql as $$
   select set_config('request.jwt.claim.sub',pg_temp.k(p)::text,true) $$;
 create function pg_temp.remember(p text, v uuid) returns uuid language sql as $$
   insert into rv values(p,v) on conflict(key) do update set value=excluded.value returning value $$;
+create function pg_temp.brief() returns jsonb language sql as $$
+ select jsonb_build_object('title','Internal work','serviceId','social','overview','Prepare a direction',
+ 'goals','Explore','direction',jsonb_build_object('notes','Private instructions'),
+ 'deliverables',jsonb_build_array(jsonb_build_object('name','Concept','format','feed',
+ 'quantity',1,'scope','original','width',1080,'height',1350)),
+ 'dueDate','2026-10-01','references',jsonb_build_array())
+$$;
 
 insert into auth.users(id,email,raw_user_meta_data) values
   (pg_temp.k('agency'),'rv-agency@fixture.local','{"display_name":"RV Agency"}'),
@@ -103,12 +110,19 @@ select pg_temp.act_as('agency');
 set local role authenticated;
 select pg_temp.remember('board-a',public.create_design_board(pg_temp.k('project'),'Alpha','https://miro.com/app/board/uXjVRvAlpha=/',pg_temp.k('designer-a')));
 select pg_temp.remember('board-b',public.create_design_board(pg_temp.k('project'),'Beta','https://miro.com/app/board/uXjVRvBeta0=/',pg_temp.k('designer-b')));
+select is(save_production_brief(pg_temp.k('board-a'),pg_temp.brief(),0,true,
+ md5('rv:release-a')::uuid,1,1),1,'Agency releases the first request');
 reset role;
 select pg_temp.act_as('designer-a');
 set local role authenticated;
-select lives_ok($$select pg_temp.remember('round-a',public.send_board_round(pg_temp.k('board-a'),'First pass',null,md5('rv:round-a')::uuid))$$,'A designer sends a round on their board');
-select is(public.send_board_round(pg_temp.k('board-a'),'First pass',null,md5('rv:round-a')::uuid),pg_temp.k('round-a'),'A round retry returns the same round');
-select throws_ok($$select public.send_board_round(pg_temp.k('board-b'),'Not mine')$$,'42501',null,'A designer cannot send a round on another designer''s board');
+select lives_ok($$select pg_temp.remember('round-a',public.send_board_round_for_request(pg_temp.k('board-a'),
+ (select id from board_work_requests where board_id=pg_temp.k('board-a') and current),2,
+ 'First pass',null,md5('rv:round-a')::uuid))$$,'A designer sends a round on their board');
+select is(public.send_board_round_for_request(pg_temp.k('board-a'),
+ (select id from board_work_requests where board_id=pg_temp.k('board-a') and current),2,
+ 'First pass',null,md5('rv:round-a')::uuid),pg_temp.k('round-a'),'A round retry returns the same round');
+select throws_ok($$select public.send_board_round_for_request(pg_temp.k('board-b'),gen_random_uuid(),1,'Not mine',null,
+ md5('rv:wrong-board')::uuid)$$,'42501',null,'A designer cannot send a round on another designer''s board');
 select lives_ok($$select public.set_version_miro_link(pg_temp.k('round-a'),'https://miro.com/app/board/uXjVRvAlpha=/?moveToWidget=42')$$,'The board''s designer relinks its round');
 reset role;
 select is((select widget_id from public.design_version_miro_links where version_id=pg_temp.k('round-a')),'42','The round link is stored');
@@ -149,16 +163,18 @@ select is((select author_label from public.client_comments where id=pg_temp.k('c
 -- 6. share_miro_version and review_publication.
 select pg_temp.act_as('agency');
 set local role authenticated;
-select lives_ok($$select pg_temp.remember('v1',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVRvClient=/','First',pg_temp.k('round-a'),md5('rv:share-1')::uuid))$$,'The agency shares a round');
-select lives_ok($$select pg_temp.remember('v2',public.share_miro_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVRvClient=/?moveToWidget=2','Second'))$$,'The agency shares a second version');
+select lives_ok($$select pg_temp.remember('v1',public.share_workflow_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVRvClient=/','First',
+ array[pg_temp.k('round-a')],null,null,false,md5('rv:share-1')::uuid))$$,'The agency shares a round');
+select lives_ok($$select pg_temp.remember('v2',public.share_workflow_version(pg_temp.k('project'),'https://miro.com/app/board/uXjVRvClient=/?moveToWidget=2','Second',
+ '{}'::uuid[],pg_temp.k('v1'),1,true,md5('rv:share-2')::uuid))$$,'The agency shares a second version');
 reset role;
 select is((select array_agg(version_number order by version_number) from public.published_versions where project_id=pg_temp.k('project')),array[1,2],'Client versions are numbered per project');
 select throws_ok($$insert into public.published_versions(project_id,version_number) values(pg_temp.k('project'),2)$$,'23505',null,'A client version number is unique per project');
 select pg_temp.act_as('client');
 set local role authenticated;
 select lives_ok($$select public.post_comment(pg_temp.k('project'),'client','On V1',pg_temp.k('v1'))$$,'The client comments on a client version');
-select throws_ok($$select public.review_publication(pg_temp.k('v1'),'approved','')$$,'P0001','Review the latest published version','An older client version cannot be reviewed');
-select throws_ok($$select public.review_publication(pg_temp.k('v2'),'changes_requested','')$$,'P0001','Describe the requested changes','Requested changes need a description');
+select throws_ok($$select public.review_publication(pg_temp.k('v1'),'approved','')$$,'PT409','Review the latest published version','An older client version cannot be reviewed');
+select throws_ok($$select public.review_publication(pg_temp.k('v2'),'changes_requested','')$$,'22023','Choose a decision and describe requested changes','Requested changes need a description');
 select lives_ok($$select public.review_publication(pg_temp.k('v2'),'changes_requested','Brighter')$$,'The client requests changes on the latest version');
 select lives_ok($$select public.review_publication(pg_temp.k('v2'),'changes_requested','Brighter')$$,'The same decision retried is accepted');
 reset role;

@@ -1,9 +1,14 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
-import { shareMiroVersion, useLatestSharedMiroLink, type CanvasVersion } from "./project-data";
+import {
+  shareWorkflowVersion,
+  useLatestSharedMiroLink,
+  type CanvasVersion,
+  type ProjectWorkflow,
+} from "./project-data";
 import { miroBoardUrl, miroUrlHint, parseMiroBoardUrl, type MiroLink } from "./miro-links";
 import {
   ProjectActionShell,
@@ -18,6 +23,9 @@ export type ShareAction = {
   round: CanvasVersion | null;
   /** The client board to start from; null lets the dialog read the latest shared link itself. */
   prefill: MiroLink | null;
+  workflow: ProjectWorkflow;
+  availableRounds: CanvasVersion[];
+  boardNames?: Record<string, string>;
 };
 
 /**
@@ -37,19 +45,34 @@ export function ProjectActionShare({
   const loading = action.prefill === null && latest.isPending && latest.fetchStatus !== "idle";
   const prefill = action.prefill ?? latest.data ?? null;
   const prefillUrl = prefill ? miroBoardUrl(prefill) : "";
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const [url, setUrl] = useState(prefillUrl);
+  const urlTouched = useRef(false);
+  useEffect(() => {
+    if (!urlTouched.current && prefillUrl) setUrl(prefillUrl);
+  }, [prefillUrl]);
+  const [selected, setSelected] = useState<string[]>(action.round ? [action.round.id] : []);
+  const attempt = useRef<{ payload: string; id: string } | null>(null);
   const { closeOnSuccess } = useCloseOnSuccess(onClose);
   const mutation = useMutation({
     mutationFn: async (form: FormData) => {
       const value = (name: string) => String(form.get(name) ?? "").trim();
       const url = value("miro");
       if (!parseMiroBoardUrl(url)) throw new Error(miroUrlHint);
-      await shareMiroVersion(database, {
+      const note = value("note");
+      const confirmReplacement = form.get("confirmReplacement") === "on";
+      const payload = JSON.stringify({ url, note, selected, confirmReplacement });
+      if (attempt.current?.payload !== payload)
+        attempt.current = { payload, id: crypto.randomUUID() };
+      const latestPublication = action.workflow.project.latestPublication;
+      await shareWorkflowVersion(database, {
         projectId: action.projectId,
         url,
-        note: value("note"),
-        sourceRoundId: action.round?.id ?? null,
-        idempotencyKey: idempotencyKey.current,
+        note,
+        sourceRoundIds: selected,
+        latestPublicationId: latestPublication?.id ?? null,
+        reviewRevision: latestPublication?.reviewRevision ?? null,
+        confirmReplacement,
+        requestId: attempt.current.id,
       });
     },
     onSuccess: closeOnSuccess,
@@ -83,12 +106,14 @@ export function ProjectActionShare({
       </p>
       <label>
         Client Miro board
-        {/* Remounted once a late prefill arrives, so `defaultValue` takes it. */}
         <input
-          key={loading ? "loading" : prefillUrl}
           name="miro"
           required
-          defaultValue={prefillUrl}
+          value={url}
+          onChange={(event) => {
+            urlTouched.current = true;
+            setUrl(event.target.value);
+          }}
           disabled={loading}
         />
       </label>
@@ -96,6 +121,35 @@ export function ProjectActionShare({
         Note for the client
         <textarea name="note" rows={3} placeholder="What should the client look at?" />
       </label>
+      {action.availableRounds.length > 0 && (
+        <fieldset>
+          <legend>Included working rounds</legend>
+          {action.availableRounds.map((round) => (
+            <label key={round.id}>
+              <input
+                type="checkbox"
+                checked={selected.includes(round.id)}
+                onChange={(event) =>
+                  setSelected((current) =>
+                    event.target.checked
+                      ? [...current, round.id]
+                      : current.filter((id) => id !== round.id),
+                  )
+                }
+              />
+              {round.boardId ? `${action.boardNames?.[round.boardId] ?? "Design board"} · ` : ""}R
+              {round.number}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {action.workflow.project.latestPublication &&
+        action.workflow.project.latestPublication.decision !== "changes_requested" && (
+          <label>
+            <input type="checkbox" name="confirmReplacement" required />
+            Replace the current V{action.workflow.project.latestPublication.number} review
+          </label>
+        )}
     </ProjectActionShell>
   );
 }

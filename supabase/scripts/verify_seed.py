@@ -88,7 +88,7 @@ def main():
     assert len(drive_client) >= 3, 'A few projects need a Drive backup link'
     assert len(drive_internal) >= 2, 'A couple of projects need an internal Drive link'
     assert all(re.fullmatch(r'https://drive\.google\.com/\S*', url) for url in list(drive_client.values()) + list(drive_internal.values())), 'A Drive link is not a drive.google.com URL'
-    assert {row['status'] for row in projects} == {'planned', 'in_progress', 'internal_review', 'client_review', 'changes_requested', 'approved', 'delivered'}
+    assert {row['status'] for row in projects} == {'in_progress', 'client_review', 'changes_requested', 'approved', 'delivered'}
     deliverables = rows('deliverables')
     multi = [project for project, count in Counter(row['project_id'] for row in deliverables).items() if count >= 2]
     assert len(multi) >= 4, 'At least four projects need multiple deliverables'
@@ -137,10 +137,10 @@ def main():
             board = next(b for b in project_boards if b['id'] == row['board_id'])
             assert row['created_by'] == board['designer_id'], "A round is on its own designer's board"
             assert miro_id.match(round_links[row['id']]['board_id']) and round_links[row['id']]['widget_id'], 'Round without a Miro frame'
-        # Sending a round moves a project to internal review, so earlier statuses hold boards only.
+        # Internal rounds are independent of the public project phase.
         per_board = Counter(row['board_id'] for row in project_rounds)
         assert all(per_board[board['id']] == expected_row['rounds_per_board'] for board in project_boards), 'Round count moved: ' + project['title']
-        if status in ('planned', 'in_progress'):
+        if expected_row['rounds_per_board'] == 0:
             assert not project_rounds and not project_versions, 'A project before internal review has no round'
         else:
             assert 1 <= expected_row['rounds_per_board'] <= 2, 'Each board holds one or two rounds'
@@ -150,7 +150,7 @@ def main():
         decisions = [reviews[row['id']]['status'] for row in project_versions]
         # Every version before the latest was sent back, so the client only ever decides the newest.
         assert all(decision == 'changes_requested' for decision in decisions[:-1])
-        if status == 'internal_review':
+        if expected_row.get('production_stage') == 'internal_review':
             assert {row['status'] for row in project_rounds} == {'submitted'} and not decisions, 'Internal review keeps every round with the studio'
         elif status == 'client_review':
             assert decisions and decisions[-1] == 'pending'

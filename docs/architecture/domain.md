@@ -117,23 +117,28 @@ Audience/style/resources are initialized from the selected client's Brand Hub. A
 
 ## Project, review, and publication workflow
 
-| Current state | Command / actor | Next state and invariant |
-|---|---|---|
-| Brief | Start production / agency or assigned designer | Designing; accepted scope exists. |
-| Designing or Revision | Submit version / assigned designer or agency | Agency review; exact internal version submitted. |
-| Agency review | Request internal changes / agency | Revision; internal feedback recorded. |
-| Agency review | Publish for review / agency | Client review; immutable publication and pending client review created together. |
-| Client review | Request changes / authorized client | Revision; feedback attached to reviewed publication and client channel. |
-| Client review | Approve / authorized client | Approved; approval identifies exact publication. |
-| Approved | Deliver / agency | Delivered; authorized real files and delivery manifest exist. |
+Acceptance starts **In progress**. Public phases are In progress, In review, Changes requested,
+Approved and Delivered; Planned remains a legacy/manual value. Internal Studio review is a board
+request outcome, never a public project phase. Changing a board layout/card position does not move
+workflow state. [Production workflow](production-workflow.md) is the authoritative button map.
 
-The backend status identifiers map to the reference labels as follows: `planned` = Brief, `in_progress` = Designing, `internal_review` = Agency review, `client_review` = Client review, `changes_requested` = Revision, `approved` = Approved, and `delivered` = Delivered. The final interface may use clearer equivalent English labels consistently across all views. Kanban and project status controls invoke these transitions; they cannot bypass publication, review, or delivery requirements. If agency workflow permits publishing its own prepared design, it still performs the internal readiness validation before publication. Additional reopen/cancel/archive operations require an explicit documented transition rather than silently introducing arbitrary state changes.
+Production uses named, designer-owned Miro boards. Agency releases private instructions to create
+one current assignment-scoped request; submission creates R1/R2 without changing the public phase.
+Internal Request changes creates new work. The agency alone publishes V1/V2/V3 for the entire project,
+with private source-round provenance and a client Miro link/note. Versions are review iterations of
+the same project, not extra deliverables/charges. Clients receive no internal board/author metadata.
 
-New version can initialize from the preceding version of the same deliverable, preserving names/order and immutable file references while assigning new version/design identities. Later content replacement creates a new immutable file revision. Prior comments remain attached to their original design/version or publication. The canvas is a projection of this model: deliverable format columns, ordered versions, then ordered designs. Version numbers are local to a deliverable, not a single project-wide counter. xyflow node positions are not the project hierarchy or authorization source.
+A client decides the latest pending V. Requested changes wait on the agency, which either handles
+them itself or atomically relays curated instructions to selected boards, explicitly closing unwanted
+directions and leaving omitted boards alone. A handoff needs at least one continuing board. Closure
+keeps history; reactivation/reassignment requires a fresh release. Assignment generations protect old
+rounds and instructions from a new assignee. Only the agency retains historical cross-generation access.
 
-Publication never exposes private source authorship. The publication transaction validates design selection, copies approved public metadata, references immutable client-authorized content, and records a client-safe event. Later internal design changes, names, files, comments, or assignments do not mutate a published snapshot. Later publication receives a new ID; old review history remains readable within scope.
-
-Client approval and agency internal approval are distinct events. A client's request for changes returns to the agency; the agency communicates the appropriate direction to the designer in the internal channel. There is no direct client-designer thread. Designer notification text must not quote the client's private channel.
+Project Active/Backlog is independent of phase. Backlog preserves work and billing while suppressing
+action queues and blocking advancement in backend commands. Publication compares both the expected
+latest V and review revision; stale confirmations cannot replace an intervening client decision.
+Delivery requires the latest approved V and persisted final files. Agency can correct the external
+Miro link without creating another V or changing the recorded decision; external Miro content is live.
 
 ## Credits and reporting
 

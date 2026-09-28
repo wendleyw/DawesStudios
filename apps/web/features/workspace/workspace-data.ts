@@ -95,6 +95,8 @@ export type Project = {
   title: string;
   description: string;
   status: ProjectStatus;
+  activity?: "active" | "backlog";
+  workflow_revision?: number;
   service_type: string;
   due_date: string | null;
   /** When the studio marked the project delivered; null until then. */
@@ -343,10 +345,28 @@ export function useWorkspaceCampaigns() {
 // words on two screens, and every date is formatted by the same set of functions.
 // ---------------------------------------------------------------------------------------------
 
+/** Public phases; internal reviews belong to board work requests. */
+export const publicProjectStatuses: ProjectStatus[] = [
+  "planned",
+  "in_progress",
+  "client_review",
+  "changes_requested",
+  "approved",
+  "delivered",
+];
+
+export function projectStatusLabel(project: Pick<Project, "status" | "activity">): string {
+  return project.activity === "backlog" ? "Backlog" : statusLabels[project.status];
+}
+
+export function projectStatusTone(project: Pick<Project, "status" | "activity">): StatusTone {
+  return project.activity === "backlog" ? "neutral" : projectStatusTones[project.status];
+}
+
 export const statusLabels: Record<ProjectStatus, string> = {
   planned: "Planned",
   in_progress: "In progress",
-  internal_review: "Studio review",
+  internal_review: "In progress",
   client_review: "In review",
   changes_requested: "Changes requested",
   approved: "Approved",
@@ -361,7 +381,7 @@ export const statusLabels: Record<ProjectStatus, string> = {
 export const projectStatusTones: Record<ProjectStatus, StatusTone> = {
   planned: "neutral",
   in_progress: "active",
-  internal_review: "attention",
+  internal_review: "active",
   client_review: "attention",
   changes_requested: "attention",
   approved: "complete",

@@ -493,3 +493,30 @@ describe("BoardPage list sort", () => {
     expect(select).toHaveValue("project-desc");
   });
 });
+
+describe("project activity filters", () => {
+  it("keeps paused projects out of Active and makes them reachable in Backlog", async () => {
+    const user = userEvent.setup();
+    fixture.view = "list";
+    fixture.projects = [
+      project({ id: "active", title: "Active campaign", status: "in_progress" }),
+      project({
+        id: "paused",
+        title: "Paused campaign",
+        status: "client_review",
+        activity: "backlog",
+      }),
+    ];
+    mountBoard();
+    expect(await screen.findByText("Active campaign")).toBeInTheDocument();
+    expect(screen.queryByText("Paused campaign")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Activity" }), "backlog");
+    expect(screen.getByText("Paused campaign")).toBeInTheDocument();
+    expect(screen.queryByText("Active campaign")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Status" })).not.toHaveTextContent("Studio review");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Activity" }), "");
+    expect(screen.getByText("Active campaign")).toBeInTheDocument();
+    expect(screen.getByText("Paused campaign")).toBeInTheDocument();
+  });
+});

@@ -98,6 +98,15 @@ insert into public.design_boards(id, project_id, name, designer_id, board_id, cr
   (pg_temp.k('board-b'), pg_temp.k('project-work'), 'Board B', pg_temp.k('designer-b'), 'uXjVActionB1=', pg_temp.k('agency'));
 insert into public.design_versions(id, project_id, board_id, version_number, status, created_by) values
   (pg_temp.k('round-a1'), pg_temp.k('project-work'), pg_temp.k('board-a'), 1, 'submitted', pg_temp.k('designer-a'));
+insert into public.board_work_requests(id,project_id,board_id,recipient_id,
+ assignment_generation,sequence,kind,outcome,round_id,content,brief_revision)
+values
+ (md5('an:request-a1')::uuid,pg_temp.k('project-work'),pg_temp.k('board-a'),
+ pg_temp.k('designer-a'),1,1,'legacy_round','submitted',pg_temp.k('round-a1'),null,null),
+ (md5('an:request-b1')::uuid,pg_temp.k('project-work'),pg_temp.k('board-b'),
+ pg_temp.k('designer-b'),1,1,'initial','open',null,'{}'::jsonb,1);
+update public.design_versions set work_request_id=md5('an:request-a1')::uuid
+ where id=pg_temp.k('round-a1');
 insert into public.published_versions(id, project_id, version_number) values
   (pg_temp.k('version-1'), pg_temp.k('project-work'), 1),
   (pg_temp.k('version-other'), pg_temp.k('project-other'), 1);
@@ -156,9 +165,15 @@ select ok(pg_temp.has_action('review_round', pg_temp.k('round-a1')),
   'Reading a historical event does not resolve a pending action');
 reset role;
 
--- Latest-round behavior: a newer draft replaces a submitted review and reopens designer submit.
+-- A newly released request supersedes the submitted request; draft rows alone are historical.
 insert into public.design_versions(id, project_id, board_id, version_number, status, created_by) values
   (pg_temp.k('round-a2'), pg_temp.k('project-work'), pg_temp.k('board-a'), 2, 'draft', pg_temp.k('designer-a'));
+update public.board_work_requests set current=false,outcome='closed',closed_reason='superseded'
+ where id=md5('an:request-a1')::uuid;
+insert into public.board_work_requests(id,project_id,board_id,recipient_id,
+ assignment_generation,sequence,kind,outcome,content,brief_revision)
+values(md5('an:request-a2')::uuid,pg_temp.k('project-work'),pg_temp.k('board-a'),
+ pg_temp.k('designer-a'),1,2,'revision','open','{}'::jsonb,2);
 select pg_temp.act_as('agency');
 set local role authenticated;
 select ok(not pg_temp.has_action('review_round', pg_temp.k('round-a1')),
@@ -166,7 +181,7 @@ select ok(not pg_temp.has_action('review_round', pg_temp.k('round-a1')),
 reset role;
 select pg_temp.act_as('designer-a');
 set local role authenticated;
-select ok(pg_temp.has_action('submit_round', pg_temp.k('board-a')),
+select ok(pg_temp.has_action('revise_board', pg_temp.k('board-a')),
   'The board owner can submit a newer draft');
 select ok(not pg_temp.has_action('submit_round', pg_temp.k('board-b')),
   'A designer cannot see another designer board action');
@@ -175,6 +190,10 @@ select ok(not pg_temp.has_action('review_round', pg_temp.k('round-a1')),
 reset role;
 insert into public.design_versions(id, project_id, board_id, version_number, status, created_by) values
   (pg_temp.k('round-a3'), pg_temp.k('project-work'), pg_temp.k('board-a'), 3, 'submitted', pg_temp.k('designer-a'));
+update public.board_work_requests set outcome='submitted',round_id=pg_temp.k('round-a3')
+ where id=md5('an:request-a2')::uuid;
+update public.design_versions set work_request_id=md5('an:request-a2')::uuid
+ where id=pg_temp.k('round-a3');
 select pg_temp.act_as('agency');
 set local role authenticated;
 select ok(pg_temp.has_action('review_round', pg_temp.k('round-a3')),
@@ -185,17 +204,21 @@ select is((select count(*)::int from public.action_notifications
 reset role;
 select pg_temp.act_as('designer-a');
 set local role authenticated;
-select ok(not pg_temp.has_action('submit_round', pg_temp.k('board-a')),
+select ok(not pg_temp.has_action('revise_board', pg_temp.k('board-a')),
   'A submitted latest round closes designer submit');
 reset role;
 update public.design_versions set status = 'reviewed' where id = pg_temp.k('round-a3');
 select pg_temp.act_as('designer-a');
 set local role authenticated;
-select ok(not pg_temp.has_action('submit_round', pg_temp.k('board-a')),
+select ok(not pg_temp.has_action('revise_board', pg_temp.k('board-a')),
   'A reviewed latest round also closes designer submit');
 reset role;
 update public.design_versions set status = 'submitted' where id = pg_temp.k('round-a3');
 update public.profiles set removed_at = now() where id = pg_temp.k('designer-a');
+update public.board_work_requests set outcome='submitted',round_id=pg_temp.k('round-a3')
+ where id=md5('an:request-a2')::uuid;
+update public.design_versions set work_request_id=md5('an:request-a2')::uuid
+ where id=pg_temp.k('round-a3');
 select pg_temp.act_as('agency');
 set local role authenticated;
 select ok(pg_temp.has_action('review_round', pg_temp.k('round-a3')),
@@ -334,11 +357,11 @@ reset role;
 insert into public.design_versions(id, project_id, board_id, version_number, status, created_by) values
   (md5('an:round-a4')::uuid, pg_temp.k('project-work'), pg_temp.k('board-a'), 4,
    'submitted', pg_temp.k('designer-a'));
-update public.projects set status = 'internal_review' where id = pg_temp.k('project-work');
+-- Internal rounds leave the approved public phase unchanged.
 select pg_temp.act_as('agency');
 set local role authenticated;
-select ok(not pg_temp.has_action('deliver_project', pg_temp.k('version-2')),
-  'A newer internal round makes the old approval stale for delivery');
+select ok(pg_temp.has_action('deliver_project', pg_temp.k('version-2')),
+  'An internal round does not revoke the latest client approval');
 reset role;
 update public.projects set status = 'approved' where id = pg_temp.k('project-work');
 update public.projects set status = 'delivered' where id = pg_temp.k('project-work');

@@ -1,5 +1,10 @@
 # SABRE demonstration workspace
 
+> The 50-project overlay below is historical. On 2026-09-28 the user authorized a local development
+> reduction to SABRE only with six representative projects. Do not run this overlay's removal
+> checkpoint against that reduced dataset. See [SABRE development](../../../docs/operations/sabre-development.md).
+
+
 The user authorized a temporary, fully populated SABRE workspace on September 23, 2026 and
 confirmed that all current clients/data are test fixtures. This overlay leaves **50 SABRE
 projects, 10 clients and 68 total projects** in the local application. It enriches the original

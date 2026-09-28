@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "
 import Link from "next/link";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
 import { useMemo, type CSSProperties } from "react";
-import { statusLabels, type Project } from "@/features/workspace/workspace-data";
+import { projectStatusLabel, type Project } from "@/features/workspace/workspace-data";
 import {
   timelineColumns,
   timelineScaleSpan,
@@ -153,7 +153,7 @@ export function ProjectTimeline({
                   <Link
                     className="timeline-open"
                     href={projectHref(project.id)}
-                    aria-label={`${openLabel(project.title)}, ${statusLabels[project.status]}, ${scheduleLabel(project.start_date, project.due_date)}`}
+                    aria-label={`${openLabel(project.title)}, ${projectStatusLabel(project)}, ${scheduleLabel(project.start_date, project.due_date)}`}
                   >
                     <ArrowUpRight size={13} aria-hidden="true" />
                   </Link>
@@ -170,13 +170,13 @@ export function ProjectTimeline({
                   <span
                     className={`timeline-project-bar ${project.status} ${interval.clippedStart ? "clipped-start" : ""} ${interval.clippedEnd ? "clipped-end" : ""}`}
                     style={{ gridColumn: `${interval.left + 2} / span ${interval.width}` }}
-                    title={`${project.title} — ${statusLabels[project.status]} — ${scheduleLabel(project.start_date, project.due_date)}`}
+                    title={`${project.title} — ${projectStatusLabel(project)} — ${scheduleLabel(project.start_date, project.due_date)}`}
                   >
                     <span className="timeline-status-dot" aria-hidden="true" />
                     {/* The lane already carries the title, so the bar spends its width on the one
                         thing the grid cannot show: where the work has got to. */}
                     {interval.width >= LABELLED_BAR_COLUMNS && (
-                      <span className="timeline-bar-status">{statusLabels[project.status]}</span>
+                      <span className="timeline-bar-status">{projectStatusLabel(project)}</span>
                     )}
                   </span>
                 ) : pointer ? (

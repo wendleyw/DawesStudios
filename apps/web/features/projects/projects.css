@@ -1024,6 +1024,29 @@
 .miro-review-bar > .button {
   flex-shrink: 0;
 }
+.project-workflow-bar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.project-workflow-bar > p {
+  margin-right: auto;
+}
+.workflow-handoff-boards {
+  display: grid;
+  gap: 16px;
+  max-height: min(55vh, 560px);
+  overflow-y: auto;
+}
+.workflow-handoff-boards fieldset,
+.workflow-handoff-content {
+  display: grid;
+  gap: 12px;
+}
+.workflow-handoff-deliverable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px auto;
+  gap: 8px;
+}
 .project-canvas:has(> .miro-review-bar) > .project-tool-bar {
   bottom: calc(16px + var(--control-height) + 18px - 6px);
   padding-bottom: 12px;

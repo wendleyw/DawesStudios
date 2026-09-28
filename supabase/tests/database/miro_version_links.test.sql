@@ -27,14 +27,35 @@ $$;
 create function pg_temp.act_as(p_key text) returns text language sql as $$
   select set_config('request.jwt.claim.sub',pg_temp.context(p_key)::text,true)
 $$;
+create function pg_temp.brief() returns jsonb language sql as $$
+ select jsonb_build_object('title','Link test instructions','serviceId','social',
+ 'overview','Prepare link round','goals','Test Miro links',
+ 'direction',jsonb_build_object('notes','Private instructions'),
+ 'deliverables',jsonb_build_array(jsonb_build_object('name','Concept','format','feed',
+ 'quantity',1,'scope','original','width',1080,'height',1350)),
+ 'dueDate','','references',jsonb_build_array())
+$$;
 
 select set_config('request.jwt.claim.sub',pg_temp.context('agency')::text,true);
 set local role authenticated;
 insert into miro_context values('board',public.create_design_board(pg_temp.context('project'),'Links board',
   'https://miro.com/app/board/uXjVBoard01=/',pg_temp.context('assigned')));
-insert into miro_context values('version',public.send_board_round(pg_temp.context('board'),'Links round'));
-insert into miro_context values('publication',public.share_miro_version(pg_temp.context('project'),
-  'https://miro.com/app/board/uXjVClient00=/','Links version'));
+select save_production_brief(pg_temp.context('board'),pg_temp.brief(),0,true,
+ md5('miro-links:release')::uuid,1,1);
+reset role;
+select pg_temp.act_as('assigned'); set local role authenticated;
+insert into miro_context values('version',send_board_round_for_request(pg_temp.context('board'),
+ (select id from board_work_requests where board_id=pg_temp.context('board') and current),
+ 2,'Links round',null,md5('miro-links:round')::uuid));
+reset role;
+select pg_temp.act_as('agency'); set local role authenticated;
+insert into miro_context values('publication',share_workflow_version(pg_temp.context('project'),
+ 'https://miro.com/app/board/uXjVClient00=/','Links version',array[pg_temp.context('version')],
+ (select id from published_versions where project_id=pg_temp.context('project')
+  order by version_number desc limit 1),
+ (select r.review_revision from published_versions v join publication_reviews r on r.publication_id=v.id
+  where v.project_id=pg_temp.context('project') order by v.version_number desc limit 1),
+ true,md5('miro-links:share')::uuid));
 reset role;
 
 select has_table('public','publication_miro_links','Client-board links have their own table');

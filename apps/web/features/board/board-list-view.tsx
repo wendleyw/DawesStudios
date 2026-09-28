@@ -4,8 +4,9 @@ import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useId } from "react";
 import {
-  projectStatusTones,
+  projectStatusTone,
   statusLabels,
+  projectStatusLabel,
   useDateFormat,
   type Project,
 } from "@/features/workspace/workspace-data";
@@ -117,8 +118,8 @@ export function BoardListView({
           <strong title={project.title}>{project.title}</strong>
           <span>{campaignName(project.campaign_id)}</span>
           <span>
-            <span className={statusToneClass(projectStatusTones[project.status])}>
-              {statusLabels[project.status]}
+            <span className={statusToneClass(projectStatusTone(project))}>
+              {projectStatusLabel(project)}
             </span>
           </span>
           <span>{formatDate(project.due_date, "No due date")}</span>

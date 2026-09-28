@@ -10,6 +10,7 @@ import { PageStatus } from "@/features/shared/page-status";
 import {
   useProductionBrief,
   useProductionBriefs,
+  useProjectWorkflow,
   type DesignBoard,
   type TableRow,
 } from "./project-data";
@@ -28,6 +29,7 @@ export function ProductionBrief({
   const { profile } = useAuth();
   const agency = profile?.role === "agency";
   const query = useProductionBrief(board?.id);
+  const workflow = useProjectWorkflow(project.id);
   const { formatDate } = useDateFormat();
   const [editing, setEditing] = useState(false);
   if (!board)
@@ -64,12 +66,14 @@ export function ProductionBrief({
                 : "No production brief sent yet."}
           </p>
         </div>
-        {agency && project.status !== "delivered" && (
-          <button className="button quiet" onClick={() => setEditing(true)}>
-            <Pencil size={14} />
-            {saved ? "Edit production brief" : "Prepare production brief"}
-          </button>
-        )}
+        {agency &&
+          project.status !== "delivered" &&
+          workflow.data?.project.activity !== "backlog" && (
+            <button className="button quiet" onClick={() => setEditing(true)}>
+              <Pencil size={14} />
+              {saved ? "Edit production brief" : "Prepare production brief"}
+            </button>
+          )}
       </div>
       {saved ? (
         <>
@@ -112,6 +116,7 @@ export function ProductionBrief({
           board={board}
           project={project}
           saved={saved}
+          workflowBoard={workflow.data?.boards.find((item) => item.id === board.id)}
           onClose={() => setEditing(false)}
         />
       )}

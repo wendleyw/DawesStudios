@@ -18,6 +18,8 @@ const actionLabels: Record<string, string> = {
   deliver_project: "Deliver project",
   review_credit_request: "Review credit request",
   submit_round: "Submit round",
+  prepare_board: "Prepare production brief",
+  revise_board: "Make changes",
   review_version: "Review version",
 };
 
@@ -33,10 +35,15 @@ export function actionNotificationDestination(item: ActionNotification): string 
       return `/clients/${client}/briefings/${entity}`;
     case "prepare_project":
       return project ? `/projects/${project}?channel=internal&panel=details` : null;
+    case "prepare_board":
+      return project && board
+        ? `/projects/${project}?channel=internal&board=${board}&panel=details`
+        : null;
     case "review_round":
       return project && board
         ? `/projects/${project}?channel=internal&board=${board}&round=${entity}`
         : null;
+    case "revise_board":
     case "submit_round":
       return project && board ? `/projects/${project}?channel=internal&board=${board}` : null;
     case "respond_feedback":
