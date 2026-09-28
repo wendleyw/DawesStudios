@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; board action labels clarified, spacing clarification pending**.
+Updated: 2026-09-27 EDT. Owner: **Codex; add-board icon placed before the designer**.
 
 ## Objective and accepted decisions
 
@@ -50,8 +50,8 @@ Updated: 2026-09-27 EDT. Owner: **Codex; board action labels clarified, spacing 
 
 ## Environment and next concrete work
 
-- Board action follow-up: **Add board** links existing Miro work; **New version** labels sharing.
-  Dialog title/description clarified;73targeted tests,lint/format,3responsive dialogs/Axe0 pass.
+- Latest user direction: icon-only **+** immediately before the designer badge, grouped8px apart.
+  Add design board tooltip/dialog retained;44tests,lint/format,3responsive dialogs/Axe0 pass.
   [Action clarity evidence](../verification/board-action-clarity-2026-09-27.md). No records created.
 
 - Working files now highlights the selected board's designer for the agency, including one board.
@@ -65,8 +65,8 @@ Updated: 2026-09-27 EDT. Owner: **Codex; board action labels clarified, spacing 
   6realPNGcopies/30Axe scans, download fallback and light/dark inspection pass.
 - [Context UX evidence](../verification/project-context-ux-2026-09-27.md) and
   [handoff](handoffs/2026-09-27-project-context-ux.md). External Miro access/paste not verified.
-- Pending: user sent a tiny spacing crop; asked whether channel/+ or header/bar gap. Await answer.
-  Board designer emphasis is integrated; existing spacing selectors are unchanged.
+- The latest explicit placement supersedes the earlier ambiguous crop: **+** precedes designer.
+  Shared with client retains **New version**; no project content or Miro board was created.
 
 - Compact Miro review controls now overlap padding and stay centred on phones; next UI action:
   user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;

@@ -247,6 +247,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.miro-bar-board-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.miro-bar-board-owner > .icon-button {
+  flex-shrink: 0;
+}
 .miro-bar-designer {
   display: inline-flex;
   align-items: center;

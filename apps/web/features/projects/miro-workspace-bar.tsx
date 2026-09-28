@@ -133,23 +133,26 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               ))}
             </select>
           )}
-          {agency && props.board && (
-            <span className="miro-bar-designer" title={`Designer: ${designerName}`}>
-              <UserRound size={14} aria-hidden="true" />
-              <span>Designer</span>
-              <strong>{designerName}</strong>
-            </span>
-          )}
-          {agency && props.boards.length > 0 && (
-            <button
-              className="button quiet miro-bar-add"
-              aria-label="Add design board"
-              title="Add design board"
-              onClick={props.onAddBoard}
-            >
-              <Plus size={14} aria-hidden="true" />
-              Add board
-            </button>
+          {agency && (props.board || props.boards.length > 0) && (
+            <div className="miro-bar-board-owner">
+              {props.boards.length > 0 && (
+                <button
+                  className="icon-button"
+                  aria-label="Add design board"
+                  title="Add design board"
+                  onClick={props.onAddBoard}
+                >
+                  <Plus size={16} aria-hidden="true" />
+                </button>
+              )}
+              {props.board && (
+                <span className="miro-bar-designer" title={`Designer: ${designerName}`}>
+                  <UserRound size={14} aria-hidden="true" />
+                  <span>Designer</span>
+                  <strong>{designerName}</strong>
+                </span>
+              )}
+            </div>
           )}
           {props.board && props.rounds.length > 0 && (
             <div className="segmented-control" role="group" aria-label="Rounds">

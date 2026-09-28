@@ -15,6 +15,6 @@
 - Evidence: `docs/verification/project-context-ux-2026-09-27.md`.
 - Limit: isolated checks blocked external Miro; no claim of access or actual Miro paste.
 - Preserved: original Gmail invitation, local demonstration, role grants and unrelated login.png deletion.
-- Pending: user sent a small spacing crop; clarification requested (channel/+ versus header/bar).
+- Follow-up: user chose icon-only **+** before the designer; see board-action-clarity verification.
 - Concurrent task: assigned designer in Working Files belongs to other thread; exclude its files.
-- Next: resolve spacing clarification and user visual review. No push/deployment authorized.
+- Next: user visual review. No push/deployment authorized.

@@ -60,7 +60,8 @@ readable. A round marked **Shared** no longer offers to share it again. Project 
 service names from the briefing catalog instead of showing codes.
 
 The agency's Working files bar identifies the selected board's **Designer** in a compact badge,
-with the name in bold, including when only one board exists. Switching boards updates that name;
+with the name in bold, including when only one board exists. The **+** and badge stay together
+when the bar wraps. Switching boards updates that name;
 rounds retain their board's owner. `useDesignBoards` joins only `display_name` through the board's
 designer foreign key under the existing board/profile RLS. Clients receive no board rows and
 designers still receive only their own. The badge is absent from Shared with client and designer
@@ -70,8 +71,8 @@ See the [designer-badge verification](../../../../docs/verification/board-design
 
 Sharing a round and adding a version prefill the client board link from `useLatestSharedMiroLink` (the newest project-level client
 version's link, read for the agency alone, so it works from Working files too); an action opened
-before that read finished reads the link itself and remounts its field when it arrives. The labeled **+ Add board**
-button (**Add design board** for assistive technology) opens **Add design board** to link an existing
+before that read finished reads the link itself and remounts its field when it arrives. The **+** icon
+immediately before the designer badge (**Add design board** in its tooltip and accessible name) opens **Add design board** to link an existing
 Miro board and select its designer; it does not create a new board on Miro. The agency's **More**
 menu holds **Edit board**
 (`project-action-board.tsx`, `kind: "board"`: name, Miro link, one assigned designer and an optional

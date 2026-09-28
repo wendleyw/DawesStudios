@@ -16,5 +16,16 @@ an external Miro board. The function and authorization remain unchanged.
 - Final screenshots inspected: [desktop action](screenshots/board-action-clarity-2026-09-27-desktop.png)
   and [mobile dialog](screenshots/board-action-clarity-2026-09-27-mobile.png).
 
-The earlier cropped spacing request still does not identify which two elements the user meant;
-no guessed global gap change is included. No push or deployment.
+## Final placement requested by the user
+
+The user subsequently chose the icon-only **+**, immediately left of the designer name. The icon
+and designer badge now share a wrapping group with an 8 px gap, preserving their alignment on
+phones. The tooltip/accessibility name and clarified dialog remain **Add design board**.
+Shared with client retains **New version**.
+
+- Current targeted gate: **44 tests** pass; ESLint, Prettier and whitespace checks pass.
+- Chromium1512×696,1024×768,390×844: icon left of designer,8px gap, vertical alignment,
+  no document overflow, correct dialog,Cancel/focus return and3dialogAxe scans pass.
+- Final captures inspected: [desktop](screenshots/board-add-placement-2026-09-27-desktop.png)
+  and [mobile](screenshots/board-add-placement-2026-09-27-mobile.png).
+- No records created; external Miro requests blocked in isolated checks. No push or deployment.
