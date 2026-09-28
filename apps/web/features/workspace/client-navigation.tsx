@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { usePathname } from "next/navigation";
 import type { Profile } from "@/lib/supabase";
+import { useScrollRow } from "@/features/shared/use-scroll-row";
 import { useBoardPreferences } from "@/features/board/board-data";
 import { boardViewName, defaultBoardView } from "@/features/board/board-views";
 import type { Client } from "./workspace-data";
@@ -14,6 +16,9 @@ import type { Client } from "./workspace-data";
  */
 export function ClientNavigation({ client, role }: { client: Client; role: Profile["role"] }) {
   const pathname = usePathname();
+  const navigation = useRef<HTMLElement>(null);
+  // On a phone the links scroll sideways in one row with the current section kept in view.
+  useScrollRow(navigation, pathname);
   const boardView = useBoardPreferences(client.id).data ?? defaultBoardView;
   const destinations = [
     { path: "board", label: boardViewName(boardView) },
@@ -23,7 +28,7 @@ export function ClientNavigation({ client, role }: { client: Client; role: Profi
     ...(role !== "designer" ? [{ path: "credits", label: "Credits" }] : []),
   ];
   return (
-    <nav className="client-navigation" aria-label={`${client.name} navigation`}>
+    <nav ref={navigation} className="client-navigation" aria-label={`${client.name} navigation`}>
       {destinations.map(({ path, label }) => {
         const active =
           pathname.includes(`/clients/${client.id}/${path.split("/")[0]}`) ||

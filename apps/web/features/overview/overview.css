@@ -29,15 +29,29 @@
     --client-mark-size: 56px;
   }
 }
+/* The number tiles, the In flight strip and the three lists share one column grid and one 16px
+   rhythm, so every edge lines up down the page. */
 .overview-page .overview-stats {
   margin-bottom: var(--space-md);
+}
+@media (min-width: 1001px) {
+  .overview-page .overview-stats:has(> :nth-child(3):last-child) {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Four tiles (the designer's /home): the first list spans two tiles, the others one each. */
+  .overview-page:has(.overview-stats > :nth-child(4):last-child) .overview-columns {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .overview-page:has(.overview-stats > :nth-child(4):last-child) .overview-columns > :first-child {
+    grid-column: span 2;
+  }
 }
 .overview-flight {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-sm) var(--space-lg);
-  margin-bottom: var(--space-section);
+  margin-bottom: var(--space-md);
   padding: var(--space-md) var(--space-lg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -57,7 +71,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-md);
-  align-items: start;
+  align-items: stretch;
 }
 .overview-panel {
   overflow: hidden;
@@ -109,13 +123,15 @@
 .overview-row:focus-visible {
   outline-offset: -3px;
 }
+/* A long title wraps to a second line beside its status rather than losing its end. */
 .overview-row > strong {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--ink);
   font-size: var(--text-lg);
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .overview-row-meta {
   grid-column: 1;
@@ -137,5 +153,20 @@
 @media (max-width: 1000px) {
   .overview-columns {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* On a phone In flight reads as a label over three equal counts instead of a ragged wrap. */
+@media (max-width: 640px) {
+  .overview-flight {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs) var(--space-md);
+  }
+  .overview-flight > .eyebrow {
+    grid-column: 1 / -1;
+  }
+  .overview-flight > span:not(.eyebrow) {
+    display: flex;
+    flex-direction: column;
   }
 }

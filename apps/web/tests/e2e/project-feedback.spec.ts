@@ -27,7 +27,7 @@ async function send(panel: Locator, body: string) {
   await expect(panel.getByRole("textbox", { name: "Your message", exact: true })).toHaveValue("");
 }
 
-async function selectScope(panel: Locator, scope: "All activity" | "This version") {
+async function selectScope(panel: Locator, scope: "All activity" | "This version" | "This round") {
   await panel.getByRole("button", { name: scope, exact: true }).click();
   await expect(panel.getByRole("button", { name: scope, exact: true })).toHaveAttribute(
     "aria-pressed",
@@ -101,7 +101,7 @@ test("one Comments panel keeps project, round, and client-version messages and d
       "aria-pressed",
       "true",
     );
-    await expect(clientPanel).toContainText("Posting to Project");
+    await expect(clientPanel).toContainText(/Posting to Acceptance Playground [0-9a-f-]{36}/);
     await send(clientPanel, "General client note.");
     await expect(
       clientPanel
@@ -118,7 +118,9 @@ test("one Comments panel keeps project, round, and client-version messages and d
       .getByRole("button", { name: "V1" })
       .click();
     await selectScope(clientPanel, "This version");
-    await expect(clientPanel).toContainText("Posting to Version 1");
+    await expect(clientPanel).toContainText(
+      /Posting to Acceptance Playground [0-9a-f-]{36} \[Version 1\]/,
+    );
     await expect(clientPanel).not.toContainText("General client note.");
     await expect(clientMessage).toHaveValue("");
     await send(clientPanel, "Client note for first version.");
@@ -127,7 +129,9 @@ test("one Comments panel keeps project, round, and client-version messages and d
       .getByRole("group", { name: "Client versions" })
       .getByRole("button", { name: "V2" })
       .click();
-    await expect(clientPanel).toContainText("Posting to Version 2");
+    await expect(clientPanel).toContainText(
+      /Posting to Acceptance Playground [0-9a-f-]{36} \[Version 2\]/,
+    );
     await expect(clientMessage).toHaveValue("");
     await send(clientPanel, "Client note for second version.");
     await client
@@ -157,13 +161,15 @@ test("one Comments panel keeps project, round, and client-version messages and d
       .click();
     await openPanel(studio, "Comments");
     const studioPanel = studio.locator(".comment-panel");
-    await expect(studioPanel).toContainText("Posting to Project");
+    await expect(studioPanel).toContainText(/Posting to Acceptance Playground [0-9a-f-]{36}/);
     await expect(studioPanel).not.toContainText("General client note.");
     await send(studioPanel, "General studio note.");
     const studioMessage = studioPanel.getByRole("textbox", { name: "Your message" });
     await studioMessage.fill("Studio project draft");
-    await selectScope(studioPanel, "This version");
-    await expect(studioPanel).toContainText("Posting to Round 1");
+    await selectScope(studioPanel, "This round");
+    await expect(studioPanel).toContainText(
+      /Posting to Acceptance Playground [0-9a-f-]{36} \[Round 1 · Comments direction\]/,
+    );
     await expect(studioMessage).toHaveValue("");
     await send(studioPanel, "Studio note for first round.");
     await studioMessage.fill("Studio round draft");
@@ -186,7 +192,7 @@ test("one Comments panel keeps project, round, and client-version messages and d
       .getByRole("group", { name: "Rounds" })
       .getByRole("button", { name: "Round 1" })
       .click();
-    await selectScope(studioPanel, "This version");
+    await selectScope(studioPanel, "This round");
     await expect(studioMessage).toHaveValue("Studio round draft");
     await selectScope(studioPanel, "All activity");
     await expect(studioMessage).toHaveValue("Studio project draft");
@@ -303,7 +309,7 @@ test("floating project chrome and panels fit desktop and mobile", async ({ page 
             "true",
           );
           await expect(panel.getByRole("button", { name: "This version" })).toHaveCount(0);
-          await expect(panel).toContainText("Posting to Project");
+          await expect(panel).toContainText(/Posting to Acceptance Playground [0-9a-f-]{36}/);
         }
         // The bar never sits under the open panel: it re-centres beside it, or steps aside.
         const bar = await page.evaluate(() => {

@@ -22,6 +22,8 @@ the private source association is never returned to a client or designer.
 phase, dates, credit charge and all versions, suppresses pending actions, and blocks advancement
 in the backend. Resume restores eligible work without repeating activity notifications. Delivered
 projects cannot enter Backlog. Board views default to Active and offer Backlog and All projects.
+The action bar reads "Project in backlog": the agency sees where work resumes (Edit project
+details); clients and designers see "Paused by the studio".
 
 ## Actions from briefing to delivery
 
@@ -33,6 +35,7 @@ projects cannot enter Backlog. Board views default to Active and offer Backlog a
 | Agency, project details | Assign a designer / Add board | Registers the internal Miro link and board owner; does not release instructions. |
 | Agency, Working files | Send to designer | Opens the production brief editor; explicit send releases private instructions and creates the designer's task. Save draft stays private. |
 | Designer, own Working files | Send to studio | Consumes the current open request once, creates R1/R2, and notifies agency for Studio review. |
+| Agency, submitted board (live view) | Review R1/R2 | Opens the submitted round, where the studio review actions below appear. |
 | Agency, submitted Working files | Request changes | Releases new internal instructions to the selected board; a new designer task replaces the submitted one. |
 | Agency, Working files or Shared with client | Share with client | Opens publication preparation. Confirmation records the client Miro link/note as V1/V2 and notifies eligible clients. |
 | Client, latest pending V | Request changes / Approve | Required feedback for changes; records one decision and notifies agency. |
@@ -40,7 +43,7 @@ projects cannot enter Backlog. Board views default to Active and offer Backlog a
 | Agency, approved V | Prepare delivery | Opens the project's Files page. |
 | Agency, Files | Delivery file / Complete delivery | Uploads real final bytes, then completes delivery only with the latest V approved and at least one final file. |
 
-There is one contextual bottom action bar, with no duplicate send/share in the Miro header and no
+There is one contextual action bar, docked in the window's footer under the Miro board, with no duplicate send/share in the Miro header and no
 Mark ready, Ready for client or internal approval step. A disabled/waiting state explains whether
 work awaits the studio, fresh instructions, a resumed project or a reactivated board.
 

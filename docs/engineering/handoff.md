@@ -2,6 +2,20 @@
 
 Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
+## Latest task (Claude, 2026-09-28) — SABRE funnel test + layout fixes
+
+- Local data: SABRE only, 20 funnel projects F01–F20 (two designers, public Miro test boards),
+  402 credits; backups `supabase/.backups/20260928-before-funnel-reset` and `...-before-sabre-only`.
+- 20 scenarios / 263 UI actions passed via Playwright MCP; [record](../verification/funnel-test-2026-09-28.md).
+  Ignored harness `outputs/funnel-harness` (serve with `python3 outputs/funnel-server.py`), report
+  `outputs/funnel-report/index.html`. One scenario per MCP call (30-minute idle limit).
+- UI: docked project footer + framed Miro embed, Review R#, role-aware Backlog/empty copy, pinned
+  dialog actions, scroll-row navigation/tabs, solid client sticky header with scroll-padding,
+  overview/briefing/brand/files grid and spacing fixes, canvas fit floor 75%.
+- `npm run check` PASS (1,293 tests). Updated stale e2e assertions (miro-workspace, project-feedback,
+  client-navigation). Client-switcher, overview-notes and sabre-development specs need other data.
+- The dev server does not hot-reload `globals.css`: restart with `outputs/funnel-harness/restart-web.sh`.
+
 ## Latest UI change
 
 - Client Overview now shows the client's logo, the signed-in viewer's greeting and studio-local
@@ -44,11 +58,9 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 ## Local runtime and data
 
 - Web http://localhost:3003; API55421/DB55422/media55430; Next dev and media remain running.
-- Retained: Brand Guidelines (In progress, two designers); Social Launch (Backlog); Campaign Landing
-  Page (In review); Trail Weekend Social Series (Changes requested); Email Banner (Approved);
-  Everyday Essentials Launch (Delivered). Board defaults to Active; All projects shows all six.
-- Cleanup removed nine other workspaces, 62 projects and 203 scoped Storage objects. All Auth
-  accounts remain; former clients have no memberships. SABRE account and ledger both equal648.
+- Live data is the 20-project funnel set (see the latest task above); the earlier six retained
+  projects were removed with authorization after a backup. Earlier cleanup (nine workspaces, 62
+  projects) stands; all Auth accounts remain and former clients have no memberships.
 - Complete ignored backup: `supabase/.backups/20260928-before-sabre-only/` (DB +237 Storage files,
   taken after007/before008); operation state: `supabase/.local/sabre-development/plan.json` complete.
   [Dataset guide](../operations/sabre-development.md) documents guards/recovery. Do not run the old

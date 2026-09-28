@@ -135,7 +135,7 @@ export function ProjectActionHandoff({
       error={error || mutation.error?.message}
     >
       {confirm ? (
-        <div>
+        <div className="workflow-handoff-confirm">
           <p>Confirm these board decisions. Boards not listed stay unchanged.</p>
           <ul>
             {boards

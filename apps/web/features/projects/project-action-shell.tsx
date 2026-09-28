@@ -77,7 +77,7 @@ export function ProjectActionShell({
 }) {
   return (
     <Modal open={open} onClose={onModalClose} title={title} closeDisabled={closeDisabled}>
-      <form className="stack-form" onSubmit={onSubmit}>
+      <form className="stack-form project-action-form" onSubmit={onSubmit}>
         {children}
         {error && <FormError>{error}</FormError>}
         <div className="form-actions">

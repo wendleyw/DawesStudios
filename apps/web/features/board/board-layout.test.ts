@@ -401,24 +401,25 @@ describe("campaign widths", () => {
 describe("fitting the view to the board", () => {
   const view = { width: 1400, height: 900 };
 
-  it("shows the whole board when it is larger than the view", () => {
-    const content = { width: 2800, height: 1200 };
+  it("shows the whole board when it is larger than the view but fits at a legible zoom", () => {
+    const content = { width: 1600, height: 1100 };
     const fit = boardFit(content, view);
     expect(content.width * fit.zoom).toBeLessThanOrEqual(view.width - FIT_PAD * 2 + 1);
     expect(content.height * fit.zoom).toBeLessThanOrEqual(view.height - FIT_PAD * 2 + 1);
+    expect(fit.zoom).toBeGreaterThanOrEqual(MIN_FIT_ZOOM);
   });
 
   it("constrains on whichever axis overflows first", () => {
     // Tall and narrow: height decides, and the extra width is spent on centring.
-    const fit = boardFit({ width: 600, height: 2000 }, view);
-    expect(fit.zoom).toBeCloseTo((view.height - FIT_PAD * 2) / 2000, 5);
+    const fit = boardFit({ width: 600, height: 1000 }, view);
+    expect(fit.zoom).toBeCloseTo((view.height - FIT_PAD * 2) / 1000, 5);
     expect(fit.x).toBeGreaterThan(FIT_PAD);
   });
 
   it("keeps a full board legible instead of shrinking it to fit the height", () => {
     // Ten campaigns stacked beside the calendar are far taller than any laptop viewport. Fitting
     // that height literally would render a 280px card at ~90px, so the fit stops at the legible
-    // floor, shows both columns across, and leaves the rest to vertical panning.
+    // floor (a 210px card), shows both columns across, and leaves the rest to vertical panning.
     const tall = { width: 1520, height: 2900 };
     const fit = boardFit(tall, view);
     expect(fit.zoom).toBe(MIN_FIT_ZOOM);

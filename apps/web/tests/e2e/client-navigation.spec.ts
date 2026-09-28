@@ -134,16 +134,24 @@ test("client links stay visible at the top across pages without duplicating side
     );
     await expect(menu.getByRole("link")).toHaveCount(5);
     await expect(menu.getByRole("link", { name: "Studio settings", exact: true })).toHaveCount(0);
+    // The row stays on one line: wide screens show every link, and a phone scrolls the row
+    // sideways with the current link fully in view and a faded edge where more links wait.
     await expect
       .poll(() =>
         menu.evaluate((element) => {
           const rect = element.getBoundingClientRect();
+          const current = element.querySelector('[aria-current="page"]')!.getBoundingClientRect();
+          const scrolls = element.scrollWidth > element.clientWidth;
           return (
             rect.left >= 0 &&
             rect.right <= innerWidth &&
             rect.bottom <= innerHeight &&
             element.scrollHeight <= element.clientHeight &&
-            element.scrollWidth <= element.clientWidth
+            current.left >= rect.left - 1 &&
+            current.right <= rect.right + 1 &&
+            (!scrolls ||
+              element.hasAttribute("data-more-start") ||
+              element.hasAttribute("data-more-end"))
           );
         }),
       )

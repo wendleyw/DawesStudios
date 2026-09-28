@@ -70,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLDivElement>(null);
   const mainContent = useRef<HTMLElement>(null);
+  const clientChrome = useRef<HTMLDivElement>(null);
   const focusHandled = useRef(false);
 
   useEffect(() => {
@@ -179,6 +180,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [session, loading, router, pathname]);
   const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
   const activeClient = clients.data?.find((client) => client.id === activeClientId);
+  const chromeShown = Boolean(activeClient && !canvasRoute);
+  // The client header is sticky over the page; its measured height becomes the scroller's
+  // scroll-padding, so anything scrolled into view (a validation summary, a step) lands below it.
+  useEffect(() => {
+    const chrome = clientChrome.current;
+    const scroller = chrome?.parentElement;
+    if (!chrome || !scroller || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(() =>
+      scroller.style.setProperty("--client-chrome-height", `${chrome.offsetHeight}px`),
+    );
+    observer.observe(chrome);
+    return () => observer.disconnect();
+  }, [chromeShown]);
   const studioName = settings.data?.studio_name || "Brianna Dawes Studios";
   // The tab names the client first inside a client workspace, then the studio: "Client | Studio".
   const tabTitle = activeClient ? `${activeClient.name} | ${studioName}` : studioName;
@@ -401,7 +415,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ClientIdentityProvider>
             <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
               {activeClient && !canvasRoute && (
-                <div className="client-page-chrome">
+                <div className="client-page-chrome" ref={clientChrome}>
                   <CanvasHeader
                     client={activeClient}
                     viewer={profile}

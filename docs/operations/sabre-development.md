@@ -1,5 +1,12 @@
 # Local SABRE development dataset
 
+> **Current state (2026-09-28, later the same day):** with the user's authorization the six
+> projects below were replaced by the 20-project funnel test (F01–F20, two designers, public Miro
+> test boards), after a full backup at `supabase/.backups/20260928-before-funnel-reset`. SABRE
+> credits were reset to 500 before the run. See the
+> [funnel test record](../verification/funnel-test-2026-09-28.md). The pruning procedure below is
+> kept as history and recovery reference; its six-project guard no longer matches the live data.
+
 This one-time operation reduces the **existing local** demonstration from 10 clients and 68
 projects to SABRE and six representative projects. It does not change the canonical seed, its
 10-client/25-project assertions, the SABRE population recipe, or production data. The previous

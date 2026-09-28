@@ -294,9 +294,11 @@
   white-space: nowrap;
 }
 .miro-workspace-empty {
-  position: absolute;
-  inset: var(--project-chrome-height) 0 0;
   display: grid;
+  flex: 1;
+  min-height: 0;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
   place-content: center;
   gap: 12px;
   padding: 24px;
@@ -347,10 +349,54 @@
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
 }
+/* Below 1000px "Open in Miro" becomes its icon and the designer chip shows only the name, so the bar
+   keeps one row on a tablet; both labels stay for assistive technology. */
+@container board (max-width: 1000px) {
+  .miro-bar-actions > a.button {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .miro-bar-open-label,
+  .miro-bar-designer > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* On a phone the agency's bar keeps two rows: back, channel tabs and the bar's actions first, then
+   the board, rounds or versions. */
 @media (max-width: 639px) {
+  .miro-bar-context {
+    column-gap: 8px;
+  }
+  /* Only the agency's channel tabs need their own row; other roles' controls flow onto one. */
+  .miro-bar-context:has(> .project-channel-tabs)::after {
+    content: "";
+    order: 1;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .miro-bar-context:has(> .project-channel-tabs)
+    > :not(
+      .icon-button:first-child,
+      .project-channel-tabs,
+      .project-channel-label,
+      .miro-bar-actions
+    ) {
+    order: 2;
+  }
   .miro-bar-actions {
-    width: 100%;
-    justify-content: flex-end;
+    margin-left: auto;
+  }
+  .project-channel-tabs {
+    gap: 14px;
+  }
+  .project-channel-tabs svg {
+    display: none;
   }
 }
 .project-workspace {
@@ -376,29 +422,58 @@
 }
 .project-canvas {
   position: relative;
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 12px;
   min-width: 0;
   min-height: 0;
+  padding: calc(var(--project-chrome-height) + 12px) 16px 16px;
   background: var(--canvas-background);
 }
+/* An open side panel takes the right edge; the board and the dock stop beside it. */
+.project-workspace:has(> .project-inspector) .project-canvas {
+  padding-right: calc(min(380px, 100% - 32px) + 32px);
+}
+/* Below 800px an open panel covers the whole work area, as it hides the header; the dock hides with
+   it so keyboard focus never reaches controls beneath the panel. */
+@container board (max-width: 799px) {
+  .project-workspace:has(> .project-inspector) .project-canvas {
+    padding-right: 16px;
+  }
+  .project-workspace:has(> .project-inspector) .project-dock {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .project-canvas {
+    padding: calc(var(--project-chrome-height) + 8px) 12px 12px;
+    gap: 8px;
+  }
+}
 /*
- * Project tools float at the bottom of the canvas, centred in whatever width the side panel leaves.
- * Icons normalise to 20 px so the page's own actions match the bar's buttons.
+ * The docked footer: project tools on the left, then the board or version, its state and the
+ * workflow actions. It stays in the window's footer for every role and view.
  */
-.project-tool-bar {
-  position: absolute;
-  z-index: 6;
-  bottom: 16px;
-  left: 50%;
+.project-dock {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
-  transform: translateX(-50%);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 8%);
+}
+/* Project tools open the dock. Icons normalise to 20 px so the page's own actions match the bar's
+   buttons. */
+.project-tool-bar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
 }
 .project-tool-bar .icon-button {
   width: var(--control-height);
@@ -547,33 +622,14 @@
   margin-inline: 4px;
   background: var(--border);
 }
-/*
- * An open side panel floats over the canvas's right edge. The bar then centres in the space between
- * the zoom pill (bottom left, about 185 px with its inset) and the panel; on a canvas too narrow for
- * that, it hides until the panel closes.
- */
-.project-workspace:has(> .project-inspector) .project-tool-bar {
-  left: calc(200px + (100% - 200px - min(380px, 100% - 32px) - 32px) / 2);
-}
-@container board (max-width: 799px) {
-  .project-workspace:has(> .project-inspector) .project-tool-bar {
-    display: none;
-  }
-}
-/* On phones the bar keeps touch-sized buttons and moves right, clear of the zoom pill. */
+/* On phones the tools keep touch-sized buttons. */
 @media (max-width: 640px) {
-  .project-tool-bar {
-    right: 12px;
-    bottom: 12px;
-    left: auto;
-    transform: none;
-  }
   .project-tool-bar .icon-button {
     width: var(--control-height-touch);
     height: var(--control-height-touch);
     flex-basis: var(--control-height-touch);
   }
-  /* The mark would push the bar over the zoom pill; the sidebar drawer still carries it. */
+  /* The sidebar drawer carries the mark on a phone; the dock keeps its row for actions. */
   .project-tool-bar-brand {
     display: none;
   }
@@ -956,20 +1012,15 @@
   }
 }
 .miro-view {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
+  position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  padding-top: var(--project-chrome-height);
-  background: var(--canvas-background);
-}
-/* Details/Conversation narrow the Miro view exactly as they narrow the canvas: the embed's right
-   edge stops where the inspector's own footprint (its 16px right inset plus its width) begins,
-   instead of the panel merely floating over hidden board content. Same panel-width term as the
-   tool bar's own footprint math above. */
-.project-workspace:has(> .project-inspector) .miro-view {
-  right: calc(min(380px, calc(100% - 32px)) + 32px);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
 }
 @container board (max-width: 799px) {
   .project-page:has(.project-inspector) > .project-chrome {
@@ -979,29 +1030,17 @@
     top: 12px;
     z-index: 25;
   }
-  .project-workspace:has(> .project-inspector) .miro-view {
-    right: 0;
-  }
 }
-/*
- * The review bar overlaps the tool bar's lower padding to form one compact stack. Both follow
- * the same centring, including beside an open side panel; controls and focus rings stay clear.
- */
+/* The workflow bar fills the dock after the tools: the board or version and its state on the left,
+   its actions on the right. */
 .miro-review-bar {
-  position: absolute;
-  z-index: 7;
-  bottom: 16px;
-  left: 50%;
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
-  max-width: calc(100% - 32px);
-  padding: 8px 8px 8px 18px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
-  transform: translateX(-50%);
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
 }
 .miro-review-bar > p {
   display: flex;
@@ -1018,8 +1057,10 @@
   text-overflow: ellipsis;
 }
 .miro-review-bar > p > span {
+  overflow: hidden;
   color: var(--muted);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
 }
 .miro-review-bar > .button {
   flex-shrink: 0;
@@ -1027,68 +1068,97 @@
 .project-workflow-bar {
   flex-wrap: wrap;
   justify-content: flex-end;
+  row-gap: 8px;
 }
 .project-workflow-bar > p {
   margin-right: auto;
 }
+/* A project action's buttons stay pinned to the dialog's lower edge while a long form scrolls
+   beneath them, so Cancel and the action are always in reach. */
+.project-action-form > .form-actions {
+  position: sticky;
+  z-index: 1;
+  bottom: calc(-1 * var(--space-lg));
+  margin: 0 calc(-1 * var(--space-lg)) calc(-1 * var(--space-lg));
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+/* The dialog body already scrolls; a second scroller here clipped focus rings and hid fields. */
 .workflow-handoff-boards {
   display: grid;
   gap: 16px;
-  max-height: min(55vh, 560px);
-  overflow-y: auto;
+}
+/* The confirmation reads as text: its Edit decisions action sits on the same left edge. */
+.workflow-handoff-confirm {
+  display: grid;
+  gap: 12px;
+}
+.workflow-handoff-confirm > ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+.workflow-handoff-confirm > .button {
+  justify-self: start;
+  padding-inline: 0;
 }
 .workflow-handoff-boards fieldset,
 .workflow-handoff-content {
   display: grid;
   gap: 12px;
 }
+/* Each board is its own group: the board and its designer head it, a rule separates the next. */
+.workflow-handoff-boards fieldset + fieldset {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.workflow-handoff-boards legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
 .workflow-handoff-deliverable {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px auto;
   gap: 8px;
 }
-.project-canvas:has(> .miro-review-bar) > .project-tool-bar {
-  bottom: calc(16px + var(--control-height) + 18px - 6px);
-  padding-bottom: 12px;
-}
-.project-workspace:has(> .project-inspector) .miro-review-bar {
-  left: calc(200px + (100% - 200px - min(380px, 100% - 32px) - 32px) / 2);
-}
-@container board (max-width: 799px) {
-  .project-workspace:has(> .project-inspector) .miro-review-bar {
-    display: none;
-  }
-}
+/* On a phone the state and actions take the dock's first row(s) and the tools sit below them. The
+   board/version name and its state stay readable on their own line; the actions share the next. */
 @media (max-width: 640px) {
-  .miro-review-bar {
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    max-width: none;
-    transform: none;
+  .project-dock {
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .miro-review-bar > p {
-    flex: 1;
-    margin-right: 4px;
+  .project-dock > .miro-review-bar {
+    order: -1;
+    flex-basis: 100%;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--border);
+    border-left: 0;
   }
-  .miro-review-bar > p > span {
-    display: none;
+  .project-dock > .project-tool-bar {
+    margin-inline: auto;
   }
-  .project-canvas:has(> .miro-review-bar) > .project-tool-bar {
-    bottom: calc(12px + var(--control-height-touch) + 18px - 6px);
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
+  .project-workflow-bar > p {
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 0 4px;
   }
-  .project-canvas:has(> .miro-review-bar) .miro-view {
-    padding-bottom: calc(2 * var(--control-height-touch) + 44px);
+  .project-workflow-bar > p > strong {
+    flex-shrink: 0;
+    max-width: 60%;
   }
-}
-/* On phones the tool bar moves to the right edge, over Miro's own zoom controls; the embed stops
-   above it instead. */
-@media (max-width: 640px) {
-  .miro-view {
-    padding-bottom: calc(var(--control-height) + 36px);
+  .project-workflow-bar > .button {
+    flex: 1 1 0;
+    min-width: max-content;
   }
 }
 /* Miro's embed has no option to hide only its top bar (board name, menu, collaborators) while

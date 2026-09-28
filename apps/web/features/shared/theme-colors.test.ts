@@ -86,9 +86,11 @@ function violations(path: string) {
   return declarations(read(path)).flatMap(({ selector, property, value }) => {
     if (themeIndependent[selector]) return [];
     const literals = withoutLightDark(value).match(colourLiteral) ?? [];
-    const offending = property.endsWith("shadow")
-      ? literals.filter((literal) => !blackShadow.test(literal))
-      : literals;
+    // A shadow's or mask's black is only an opacity ramp, so it reads the same on either theme.
+    const offending =
+      property.endsWith("shadow") || property.startsWith("mask")
+        ? literals.filter((literal) => !blackShadow.test(literal))
+        : literals;
     return offending.map((literal) => `${path} ${selector} { ${property}: ${literal} }`);
   });
 }

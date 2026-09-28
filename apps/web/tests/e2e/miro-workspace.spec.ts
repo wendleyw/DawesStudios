@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { cleanupTestProject, createProductionFixture } from "./project-fixture";
+import { cleanupTestProject, createProductionFixture, releaseTestBrief } from "./project-fixture";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 
 // One acceptance project in SABRE with no versions, so both channels open on the Miro workspace.
@@ -89,6 +89,15 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await boardDialog.getByRole("button", { name: "Add board" }).click();
   await expect(studio.getByRole("dialog")).toHaveCount(0);
   await expect(studio.getByRole("combobox", { name: "Design board" })).toHaveValue(/.+/);
+  // A designer works only on released instructions (the action-driven workflow).
+  const boardA = await localAdmin
+    .from("design_boards")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("name", "Direction A")
+    .single();
+  expect(boardA.error).toBeNull();
+  await releaseTestBrief(await localAgency(), projectId, boardA.data!.id);
 
   // The designer sends a round of their board.
   const designer = await (await browser.newContext()).newPage();
@@ -177,7 +186,15 @@ test("agency, designer and client complete Miro review and final-file delivery",
     .getByRole("button", { name: "Shared with client" })
     .click();
   await expect(studio.locator(".miro-bar-designer")).toHaveCount(0);
-  await studio.getByRole("button", { name: "New client version" }).click();
+  // The agency handles these changes itself once the client's decision reaches its page: the
+  // action bar then shares the next client version.
+  await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
+    "Changes requested",
+  );
+  await studio
+    .getByRole("group", { name: "Workflow actions" })
+    .getByRole("button", { name: "Share new version" })
+    .click();
   const versionDialog = studio.getByRole("dialog");
   await expect(versionDialog.getByLabel("Client Miro board")).toHaveValue(/uXjVClient1/);
   await versionDialog.getByLabel("Note for the client").fill("Warmer tones applied");

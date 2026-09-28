@@ -1028,11 +1028,6 @@
     }
   }
 }
-@container board (max-width: 480px) {
-  .board-work-area {
-    --board-header-space: 164px;
-  }
-}
 .board-widgets-tool {
   display: contents;
 }

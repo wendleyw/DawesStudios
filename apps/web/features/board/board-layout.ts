@@ -353,8 +353,11 @@ export function buildStack(input: StackInput): StackFrame[] {
 
 /** Breathing room kept around the board when the view is fitted to it. */
 export { FIT_PAD } from "@/features/board/canvas-fit";
-/** Automatic framing keeps cards readable; manual zoom can go further, down to 10%. */
-export const MIN_FIT_ZOOM = 0.4;
+/**
+ * Automatic framing keeps card text readable (a 280px card shows at 210px); a board taller or wider
+ * than that pans instead of shrinking further. Manual zoom can still go down to 10%.
+ */
+export const MIN_FIT_ZOOM = 0.75;
 
 /**
  * The viewport that shows the whole board at once. Computed from the frames rather than measured

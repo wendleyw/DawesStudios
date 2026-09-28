@@ -37,12 +37,51 @@
   color: var(--muted);
   text-decoration: none;
 }
+/* Above the 1000px breakpoint every row shares the list's columns through subgrid: the metadata
+   columns take the width their longest entry needs, so short values are never cut while space is
+   free, and the title takes the rest. Designers never see who asked for a briefing (they never
+   receive requested_by), so their list drops that column instead of leaving it empty. */
 @media (min-width: 1001px) {
-  /* Designers never see who asked for a briefing (they never receive requested_by); drop the
-     column instead of leaving it empty. Scoped above the 1000px breakpoint below, which already
-     hides and re-templates this row for every viewer. */
-  .briefing-list.no-requester .briefing-list-row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 136px 176px 88px 16px;
+  .briefing-list {
+    --briefing-meta: minmax(0, max-content);
+    display: grid;
+    grid-template-columns:
+      minmax(20ch, 1fr) var(--briefing-meta) var(--briefing-meta) var(--briefing-meta)
+      max-content max-content max-content 16px;
+    column-gap: 20px;
+    padding-inline: var(--space-lg);
+  }
+  .briefing-list.no-requester {
+    grid-template-columns:
+      minmax(20ch, 1fr) var(--briefing-meta) var(--briefing-meta)
+      max-content max-content max-content 16px;
+  }
+  /* The row still spans the card for its hover and divider; its tracks are the list's, inside the
+     list's padding. */
+  .briefing-list-row {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    margin-inline: calc(-1 * var(--space-lg));
+  }
+  /* When space runs short a value wraps to a second line rather than losing its end. */
+  .briefing-list .briefing-list-row > :is(h2, span:not(.status-badge)) {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+/* Below 1500px seven columns leave the title too little room; the requester and due date step
+   aside first. */
+@media (min-width: 1001px) and (max-width: 1500px) {
+  .briefing-list,
+  .briefing-list.no-requester {
+    grid-template-columns:
+      minmax(20ch, 1fr) var(--briefing-meta) var(--briefing-meta)
+      max-content max-content 16px;
+  }
+  .briefing-list .briefing-list-row > :is(span.briefing-list-requester, span.briefing-list-date) {
+    display: none;
   }
 }
 .briefing-list-row h2 {
@@ -384,19 +423,21 @@
   font-size: var(--text-base);
   color: light-dark(#52604a, #a9b99e);
 }
+/* The briefing and its side panel are two cards on the page's 16px rhythm, top edges aligned under
+   the title card. */
 .briefing-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
-  gap: 60px;
-  margin-top: 38px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
 }
 .briefing-review-aside {
   align-self: start;
   position: sticky;
-  top: 30px;
-  padding: 26px;
-  background: var(--background);
-  border-radius: 10px;
+  top: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -465,7 +506,6 @@
   }
   .briefing-detail-layout {
     grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 28px;
   }
   /* The opened date stays: it is the list's order. */
   .briefing-list-row {
@@ -497,8 +537,10 @@
   .briefing-detail-layout {
     grid-template-columns: 1fr;
   }
+  /* In one column the status and its action (Confirm budget, Open project) lead the page. */
   .briefing-review-aside {
     position: static;
+    order: -1;
   }
   .deliverable-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));

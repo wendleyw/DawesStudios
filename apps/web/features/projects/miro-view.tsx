@@ -85,7 +85,7 @@ export function MiroBarShell({
     <div className="miro-bar-actions">
       {link && (
         <a className="button" href={miroBoardUrl(link)} target="_blank" rel="noopener noreferrer">
-          Open in Miro
+          <span className="miro-bar-open-label">Open in Miro</span>
           <ArrowUpRight size={13} aria-hidden="true" />
         </a>
       )}

@@ -17,8 +17,13 @@
  * across a desktop; below that the row keeps its order and moves under the finger instead of
  * reflowing into a block that pushes the section itself off the screen.
  */
+/* The faded edge (useScrollRow) shows the row scrolls; a scrollbar under the tabs would repeat it. */
 .brand-section-nav {
   margin-bottom: var(--space-lg);
+  scrollbar-width: none;
+}
+.brand-section-nav::-webkit-scrollbar {
+  display: none;
 }
 .brand-section-heading {
   display: flex;
@@ -42,8 +47,8 @@
   padding: 0;
 }
 /*
- * One scale for every Brand Hub section: 14px gaps, 20px panel padding, 15px panel titles and
- * 14px body text, so no section reads larger than its neighbours.
+ * One scale for every Brand Hub section: 14px gaps, the shared 24px panel padding (so the hero and
+ * the panels share one text edge), 15px panel titles and 14px body text.
  */
 .brand-content-stack {
   display: flex;
@@ -54,7 +59,7 @@
   align-self: flex-start;
 }
 .brand-panel {
-  padding: 20px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -129,6 +134,8 @@
   gap: 6px;
   margin: 0;
   padding-left: 16px;
+  /* The reset drops list markers; the indent is for these bullets. */
+  list-style: disc;
   color: var(--muted);
   font-size: var(--text-base);
   line-height: 1.5;

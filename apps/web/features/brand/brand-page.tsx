@@ -2,9 +2,10 @@
 
 import { Pencil } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { AssetsPage } from "@/features/assets/assets-page";
+import { useScrollRow } from "@/features/shared/use-scroll-row";
 import { useClients } from "@/features/workspace/workspace-data";
 import { useBrandSections } from "./brand-data";
 import { brandNavigation, isBrandSection, type EditableSectionId } from "./brand-model";
@@ -20,6 +21,9 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const sections = useBrandSections(clientId);
   const [editing, setEditing] = useState<EditableSectionId | null>(null);
   const client = clients.data?.find((item) => item.id === clientId);
+  const sectionNav = useRef<HTMLElement>(null);
+  // The section row scrolls sideways below desktop; it mounts once the Hub has loaded.
+  useScrollRow(sectionNav, `${section}:${Boolean(client && sections.data)}`);
   if (clients.isPending || sections.isPending)
     return <PageStatus>Loading the Brand Hub…</PageStatus>;
   if (!client || sections.error || !isBrandSection(section))
@@ -49,6 +53,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
         sideways instead of wrapping, so the order stays the order of the groups.
       */}
         <nav
+          ref={sectionNav}
           className="brand-section-nav section-tabs client-page-tools"
           aria-label="Brand sections"
         >

@@ -408,7 +408,7 @@ function BudgetReview({
             budget_confirmed with no unsaved edits, at which point Accept & create project takes over
             below. Editing any field flips `unconfirmedEdit` back to true and brings this back. */}
         {!(briefing.status === "budget_confirmed" && !unconfirmedEdit) && (
-          <button className="button" disabled={confirm.isPending || accept.isPending}>
+          <button className="button primary" disabled={confirm.isPending || accept.isPending}>
             {confirm.isPending ? "Saving…" : "Confirm budget"}
           </button>
         )}

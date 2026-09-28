@@ -125,7 +125,7 @@ export function ProjectActionShare({
         <fieldset>
           <legend>Included working rounds</legend>
           {action.availableRounds.map((round) => (
-            <label key={round.id}>
+            <label key={round.id} className="checkbox-label">
               <input
                 type="checkbox"
                 checked={selected.includes(round.id)}
@@ -145,7 +145,7 @@ export function ProjectActionShare({
       )}
       {action.workflow.project.latestPublication &&
         action.workflow.project.latestPublication.decision !== "changes_requested" && (
-          <label>
+          <label className="checkbox-label">
             <input type="checkbox" name="confirmReplacement" required />
             Replace the current V{action.workflow.project.latestPublication.number} review
           </label>

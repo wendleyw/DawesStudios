@@ -22,6 +22,14 @@ The CSS-only `.section-tabs` primitive is consumed by `brand/brand-page`, `brief
 
 ## Components
 
+### Scroll row
+
+`useScrollRow` (`use-scroll-row.ts`) keeps a sideways-scrolling row of links usable on narrow
+screens: the current link (`aria-current="page"`) stays in view and the edges that hide more links
+get `data-more-start` / `data-more-end`, which `globals.css` fades. Consumers:
+`workspace/client-navigation` (the client links in the floating header) and `brand/brand-page`
+(the Brand Hub section tabs).
+
 ### Folder tile
 
 `FolderTile` (`folder-tile.tsx`) is one folder in a directory view: an icon, the folder's name and

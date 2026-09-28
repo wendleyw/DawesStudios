@@ -244,13 +244,18 @@
   position: relative;
   height: calc(100dvh - var(--topbar-height));
   overflow-y: auto;
+  /* Set from the sticky client header's height (app-shell.tsx). */
+  scroll-padding-top: var(--client-chrome-height, 0px);
   container: board / inline-size;
 }
+/* The sticky header is a solid band in the page colour, so content scrolling beneath it never shows
+   between its cards. */
 .client-page-chrome {
   position: sticky;
   z-index: 21;
   top: 0;
-  padding: 16px 16px 0;
+  padding: 16px 16px 12px;
+  background: var(--background);
   pointer-events: none;
 }
 .client-page-chrome > .board-header {
@@ -258,7 +263,7 @@
 }
 @media (max-width: 720px) {
   .client-page-chrome {
-    padding: 12px 12px 0;
+    padding: 12px 12px 8px;
   }
 }
 

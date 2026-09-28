@@ -758,7 +758,7 @@ img.client-mark {
 .table-head,
 .project-row {
   display: grid;
-  grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(112px, 0.9fr) 68px 18px;
+  grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(112px, 0.9fr) 104px 18px;
   align-items: center;
   gap: 20px;
   padding: 0 20px;
@@ -792,6 +792,11 @@ img.client-mark {
 }
 .project-row > span {
   min-width: 0;
+}
+/* The due date ("No due date", "Sep 28, 2026") always reads on one line. */
+.table-head > :nth-child(4),
+.project-row > :nth-child(4) {
+  white-space: nowrap;
 }
 .project-title {
   display: flex;
@@ -1275,6 +1280,8 @@ img.client-mark {
   font-size: 20px;
 
   letter-spacing: -0.025em;
+  /* A title that wraps beside the close button splits into even lines, not a stranded word. */
+  text-wrap: balance;
 }
 .modal-header p {
   margin-top: 8px;
@@ -1317,7 +1324,7 @@ img.client-mark {
   }
   .table-head,
   .project-row {
-    grid-template-columns: minmax(130px, 1.8fr) minmax(90px, 1.1fr) minmax(100px, 0.9fr) 55px 16px;
+    grid-template-columns: minmax(130px, 1.8fr) minmax(90px, 1.1fr) minmax(100px, 0.9fr) 96px 16px;
     gap: 14px;
     padding-inline: 16px;
   }
@@ -1553,7 +1560,8 @@ img.client-mark {
   inset: 16px 16px auto;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  /* The header's cards share one height, whichever holds more. */
+  align-items: stretch;
   gap: 16px;
   pointer-events: none;
 }
@@ -1729,14 +1737,35 @@ img.board-identity-mark {
     }
   }
 }
-/* On a phone the links wrap at their own widths, so a long one such as Brand Hub never runs into
-   its neighbour. */
+/* On a phone the links stay on one row and scroll sideways, so the sticky header never grows a third
+   row over the page; the current section is scrolled into view (client-navigation.tsx). */
 @container board (max-width: 480px) {
   .board-identity .client-navigation {
-    flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 0 16px;
+    gap: 16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
   }
+  .board-identity .client-navigation::-webkit-scrollbar {
+    display: none;
+  }
+}
+/* A sideways-scrolling row (`useScrollRow`) fades the edge that hides more links. A mask uses only
+   opacity, so its colour is theme-neutral. */
+[data-more-end] {
+  mask-image: linear-gradient(to right, rgb(0 0 0 / 100%) calc(100% - 32px), transparent);
+}
+[data-more-start] {
+  mask-image: linear-gradient(to left, rgb(0 0 0 / 100%) calc(100% - 32px), transparent);
+}
+[data-more-start][data-more-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 100%) 32px calc(100% - 32px),
+    transparent
+  );
 }
 
 /* Notification feed shared by the workspace page and project inspector. */
@@ -1789,7 +1818,8 @@ img.board-identity-mark {
 /* Shared client title cards and responsive action groups. */
 .client-page-workspace > .main-content > .page-content {
   max-width: none;
-  padding: 12px 16px 32px;
+  /* With the sticky header's own 12px bottom band, the page starts 16px below its cards. */
+  padding: 4px 16px 32px;
 }
 .client-page-heading {
   display: grid;
