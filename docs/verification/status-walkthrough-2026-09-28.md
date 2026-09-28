@@ -107,7 +107,7 @@ overflow, and the board and centered dock stayed inside the window
 
 A narrated, single-window run in the visible Playwright browser: every step showed a caption (who,
 what, what happens next), highlighted the button before clicking and paused on the result; the
-role changed by signing out and in. Nine chapters, 37 actions and 11 database checks, all PASS.
+role changed by signing out and in. Nine chapters: 21 workflow actions, 9 narrated views and 10 database checks, all PASS.
 Final state of "D01 Spring Launch Campaign": Delivered, Direction A shared twice (R1→V1, R2→V2),
 Direction B closed after one round, latest decision approved, 1 final file, exactly 1 credit debit.
 A hidden dry run (X01, now also on the SABRE board) found one display defect, fixed before the
