@@ -166,12 +166,13 @@ more than one board); a designer sees only their board's name and no rounds, bec
 is their work and sent rounds are the agency's review history. The state is not repeated here: it
 lives once in the docked action bar. Add design board, Edit board, Edit Miro link and Drive sit in
 the ⋯ menu. Below 1000 px "Open in Miro" becomes its icon (its name stays for assistive
-technology); on phones the agency's bar keeps two rows. The embedded Miro board sits in its own framed area between the header and a docked
-footer, 12 px from each, so nothing of ours floats over Miro's canvas or its own controls. The
-footer (`.project-dock`) spans the work area 16 px from the window's bottom edge: Details, Comments
-and Playground first, then the board or version, its state and the workflow actions. An open side
-panel narrows the board and the dock beside it; on phones the state and actions take the dock's
-first rows and the tools sit below. A channel with nothing shared yet shows a text prompt and, for
+technology); on phones the agency's bar keeps two rows. The embedded Miro board fills the framed
+area below the header, and its iframe is cropped so Miro's own top bar, zoom control and
+scrollbars stay hidden (Open in Miro keeps the full editor). On desktop and tablet the dock
+(`.project-dock`) is a compact pill centered over the board, 12 px above its bottom edge: Details,
+Comments and Playground first, then the board or version, its state and the workflow actions. An
+open side panel narrows the board and the dock recenters on it; on phones the dock sits below the
+board, the state and actions take its first rows and the tools sit below. A channel with nothing shared yet shows a text prompt and, for
 the agency, its creation action in place of the embed.
 
 Comments and details share a floating inspector with close/Escape and focus return.
@@ -543,7 +544,7 @@ avoiding drag lag.
 
 ## Project workflow controls
 
-Miro workspaces use one contextual action bar, docked in the window's footer with the utility
+Miro workspaces use one contextual action bar, centered over the embedded board with the utility
 tools, for agency, designer and client advances; send/share is not duplicated in the Miro header.
 The bar names the current board/version and uses the client review buttons' visual treatment.
 Dialogs retain drafts on failure, validate before send and review handoff recipients/closures.

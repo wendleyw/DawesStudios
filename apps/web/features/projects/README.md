@@ -95,10 +95,11 @@ layout; re-check it if Miro changes its bar). The sidebar folds while a link is 
 (`useFoldSidebarWhile`). `frame-src https://miro.com` is the one Content-Security-Policy exception
 this feature requires (`apps/web/next.config.ts`). A client whose shown client version awaits their
 decision (`canReviewShared`: the latest shared version, pending, project not delivered) gets
-review actions in the same contextual action bar used by every role. The embed sits in its own
-framed area; the tools and the action bar share one docked footer (`.project-dock`) under it, so
-nothing floats over Miro's canvas or controls. An open side panel narrows both; on phones the
-state and actions take the dock's first rows, with 44 px touch controls, and the tools sit below.
+review actions in the same contextual action bar used by every role. The embed fills its own
+framed area, cropped so Miro's top bar, zoom control and scrollbars stay hidden; the tools and
+the action bar share one compact dock (`.project-dock`) centered over the board's bottom edge. An
+open side panel narrows the board and recenters the dock; on phones the dock sits below the board,
+the state and actions take its first rows, with 44 px touch controls, and the tools sit below.
 **Request changes** and **Approve** open `project-action-review.tsx` with that decision
 preselected.
 

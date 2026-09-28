@@ -53,3 +53,19 @@ record notes the corrected expectation.
 - [Agency, Shared with client](screenshots/status-2026-09-28/bar-agency-shared-desktop.png)
 - [Designer](screenshots/status-2026-09-28/bar-designer-desktop.png)
 - [Client](screenshots/status-2026-09-28/bar-client-desktop.png)
+
+## Centered dock over a cropped Miro embed
+
+- The embed's iframe is cropped (64 px top, 64 px bottom, 16 px right) so Miro's top bar, zoom
+  control and scrollbars stay hidden; Open in Miro keeps the full editor.
+- On desktop and tablet the dock is a compact 48 px pill centered over the board, 12 px above its
+  bottom edge, and recenters beside an open side panel; on phones it sits below the board.
+- Checks: project unit tests 28 files / 242 tests PASS; `project-feedback` and `miro-workspace`
+  specs 5/5 PASS; `npm run check` 1,293 tests PASS. Measured at 1440 px: board 92–1424, dock
+  562–954 (centered for agency, client and designer).
+- Captures: [agency](screenshots/status-2026-09-28/dock-agency-1440.png),
+  [tablet](screenshots/status-2026-09-28/dock-agency-834.png),
+  [phone](screenshots/status-2026-09-28/dock-agency-390.png),
+  [Comments open](screenshots/status-2026-09-28/dock-agency-panel-1440.png),
+  [client](screenshots/status-2026-09-28/dock-client-1440.png),
+  [designer](screenshots/status-2026-09-28/dock-designer-1440.png).

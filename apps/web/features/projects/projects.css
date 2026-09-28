@@ -383,6 +383,8 @@
   min-height: 0;
 }
 .project-canvas {
+  --canvas-inset: 16px;
+  --canvas-inset-right: var(--canvas-inset);
   position: relative;
   display: flex;
   flex: 1;
@@ -390,18 +392,19 @@
   gap: 12px;
   min-width: 0;
   min-height: 0;
-  padding: calc(var(--project-chrome-height) + 12px) 16px 16px;
+  padding: calc(var(--project-chrome-height) + 12px) var(--canvas-inset-right) var(--canvas-inset)
+    var(--canvas-inset);
   background: var(--canvas-background);
 }
 /* An open side panel takes the right edge; the board and the dock stop beside it. */
 .project-workspace:has(> .project-inspector) .project-canvas {
-  padding-right: calc(min(380px, 100% - 32px) + 32px);
+  --canvas-inset-right: calc(min(380px, 100% - 32px) + 32px);
 }
 /* Below 800px an open panel covers the whole work area, as it hides the header; the dock hides with
    it so keyboard focus never reaches controls beneath the panel. */
 @container board (max-width: 799px) {
   .project-workspace:has(> .project-inspector) .project-canvas {
-    padding-right: 16px;
+    --canvas-inset-right: var(--canvas-inset);
   }
   .project-workspace:has(> .project-inspector) .project-dock {
     display: none;
@@ -409,13 +412,16 @@
 }
 @media (max-width: 720px) {
   .project-canvas {
-    padding: calc(var(--project-chrome-height) + 8px) 12px 12px;
+    --canvas-inset: 12px;
+    padding-top: calc(var(--project-chrome-height) + 8px);
     gap: 8px;
   }
 }
 /*
- * The docked footer: project tools on the left, then the board or version, its state and the
- * workflow actions. It stays in the window's footer for every role and view.
+ * The action bar: project tools on the left, then the board or version, its state and the workflow
+ * actions. Above a phone it floats as one compact pill centred over the foot of the Miro board, so
+ * the board keeps the full height (Miro's own zoom control is cropped away). On a phone it sits
+ * below the board instead.
  */
 .project-dock {
   display: flex;
@@ -428,6 +434,31 @@
   border-radius: 16px;
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 8%);
+}
+@media (min-width: 641px) {
+  .project-dock {
+    position: absolute;
+    z-index: 6;
+    bottom: calc(var(--canvas-inset) + 12px);
+    /* Centred on the board, beside an open side panel too. */
+    left: calc((100% + var(--canvas-inset) - var(--canvas-inset-right)) / 2);
+    width: max-content;
+    max-width: calc(100% - var(--canvas-inset) - var(--canvas-inset-right) - 24px);
+    min-height: 48px;
+    padding: 4px;
+    border-radius: 14px;
+    transform: translateX(-50%);
+  }
+  .project-dock .project-tool-bar .icon-button,
+  .project-dock .project-tool-bar-brand {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+  .project-dock .button {
+    min-height: 38px;
+    padding-block: 0;
+  }
 }
 /* Project tools open the dock. Icons normalise to 20 px so the page's own actions match the bar's
    buttons. */
@@ -1123,12 +1154,15 @@
     min-width: max-content;
   }
 }
-/* Miro's embed has no option to hide only its top bar (board name, menu, collaborators) while
-   keeping editing, so the frame is shifted up by the bar's height and the crop hides it. The value
-   follows Miro's current layout: re-check it if a strip of the bar reappears or the board's top is
-   cut short. */
+/* Miro's embed has no option to hide only its chrome (top bar, zoom control, scrollbars) while
+   keeping editing, so the frame is larger than the view and the crop hides them: the top bar above,
+   the zoom control and horizontal scrollbar below (8px inset + 48px control + 8px), the vertical
+   scrollbar on the right. Zoom stays available with the trackpad or wheel. The values follow Miro's
+   current layout: re-check them if a strip of its chrome reappears or the board is cut short. */
 .miro-view-crop {
   --miro-top-bar: 64px;
+  --miro-bottom-controls: 64px;
+  --miro-scrollbar: 16px;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -1138,8 +1172,8 @@
   position: absolute;
   top: calc(-1 * var(--miro-top-bar));
   left: 0;
-  width: 100%;
-  height: calc(100% + var(--miro-top-bar));
+  width: calc(100% + var(--miro-scrollbar));
+  height: calc(100% + var(--miro-top-bar) + var(--miro-bottom-controls));
   border: 0;
   background: var(--surface);
 }
