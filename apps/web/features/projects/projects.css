@@ -155,6 +155,10 @@
 .miro-bar-primary {
   display: flex;
   gap: 8px;
+  margin-left: auto;
+}
+.miro-bar-primary + .miro-bar-actions {
+  margin-left: 0;
 }
 .miro-bar-primary > .button {
   min-height: 34px;
@@ -312,9 +316,10 @@
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
 }
-/* Below 1000px "Open in Miro" becomes its icon so the bar keeps one row on a tablet; its name stays
+/* Below 1000px "Open in Miro" and "Deliverable" become their icons so the bar keeps one row on a tablet; its name stays
    for assistive technology. */
 @container board (max-width: 1000px) {
+  .miro-bar-primary > a.button,
   .miro-bar-actions > a.button {
     width: 34px;
     padding: 0;

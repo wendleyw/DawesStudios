@@ -74,7 +74,7 @@ export function BriefingDetail({ clientId, briefingId }: { clientId: string; bri
     requesterLabel(requester) ?? (canChangeRequester ? "No requester yet" : null);
   return (
     <div className="page-content briefing-detail">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <div className="page-title-row">
             <Link

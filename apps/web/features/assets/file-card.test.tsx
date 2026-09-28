@@ -18,7 +18,6 @@ const base: ProjectAsset = {
   size: 955392,
   date: "2026-09-23T12:00:00Z",
   category: "Delivery",
-  approved: true,
 };
 
 function renderCard(props: Partial<Parameters<typeof FileCard>[0]> = {}) {

@@ -6,7 +6,7 @@
   margin-top: 0;
 }
 .settings-content {
-  padding-top: var(--space-section);
+  padding-top: 0;
 }
 .settings-section {
   display: grid;

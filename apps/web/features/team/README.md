@@ -7,6 +7,9 @@ Studio/Presets/Clients beyond once sharing a tab bar. Agency-only: every other r
 its own non-account tabs, not the roster — `team-page.tsx` renders that refusal itself now that the
 route no longer goes through `settings-page.tsx`.
 
+- The page uses the shared title card with **Invite someone** top right, then one card per group:
+  **Agency** first, then **Designers**, then **Invitations** — so the studio's own people never sit
+  between designers.
 - `team-page.tsx` exports `TeamPage` (the page itself) and `InvitePerson` (the invite dialog, reused
   by `features/settings/client-settings.tsx` for client-scoped invitations). Each member row except
   the signed-in caller's own gets a role select (`Agency`/`Designer`) and a `Remove` button; removal

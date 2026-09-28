@@ -129,7 +129,7 @@ export function ProductionBriefsPage({ clientId }: { clientId: string }) {
   if (query.isPending) return <PageStatus>Loading production briefs…</PageStatus>;
   return (
     <div className="page-content">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Production briefs</h1>
           <p>Instructions from the studio for your assigned boards.</p>

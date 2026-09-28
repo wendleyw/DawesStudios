@@ -232,15 +232,15 @@
 }
 @media (min-width: 901px) {
   .board-workspace .workspace,
-  .client-page-workspace {
+  .card-workspace {
     --topbar-height: 0px;
   }
   .board-workspace .workspace > .topbar,
-  .client-page-workspace > .topbar {
+  .card-workspace > .topbar {
     display: none;
   }
 }
-.client-page-workspace > .main-content {
+.card-workspace > .main-content {
   position: relative;
   height: calc(100dvh - var(--topbar-height));
   overflow-y: auto;
@@ -250,7 +250,7 @@
 }
 /* The sticky header is a solid band in the page colour, so content scrolling beneath it never shows
    between its cards. */
-.client-page-chrome {
+.page-chrome {
   position: sticky;
   z-index: 21;
   top: 0;
@@ -258,41 +258,33 @@
   background: var(--background);
   pointer-events: none;
 }
-.client-page-chrome > .board-header {
+.page-chrome > .board-header {
   position: static;
 }
 @media (max-width: 720px) {
-  .client-page-chrome {
+  .page-chrome {
     padding: 12px 12px 8px;
   }
 }
 
-.topbar-identity {
-  display: flex;
-  min-width: 0;
-  margin-right: auto;
+/* The studio pages' identity card: the studio name where a client page shows the client's logo.
+   It holds no navigation, so it stays one row where a client card stacks its links. */
+.board-header .board-identity.studio-identity {
+  /* A client card's height (its 48px logo plus padding), so titles start at the same line. */
+  min-height: 70px;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
   color: var(--muted);
-  font-size: var(--text-base);
-  white-space: nowrap;
 }
-.topbar-identity > svg {
-  color: var(--muted);
-}
-.topbar-identity strong {
+.studio-identity strong {
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
   font-size: var(--text-lg);
   font-weight: 500;
   text-overflow: ellipsis;
-}
-.topbar-actions {
-  display: flex;
-  margin-left: auto;
-  align-items: center;
-  gap: 4px;
+  white-space: nowrap;
 }
 .mobile-menu,
 .sidebar-backdrop,
@@ -639,16 +631,6 @@ img.client-switcher-mark {
   }
 }
 @media (max-width: 640px) {
-  .topbar-actions {
-    gap: 0;
-  }
-  .topbar-identity {
-    gap: 8px;
-    font-size: var(--text-sm);
-  }
-  .topbar-identity > svg {
-    display: none;
-  }
   .attention-section {
     margin-bottom: 32px;
   }

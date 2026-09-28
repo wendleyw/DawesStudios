@@ -8,9 +8,11 @@ its own search field. `client-mark.tsx` renders a client's mark — the logo the
 Settings > Clients (`clients.logo_path`), else the first Brand Hub Logo image, else initials — and
 is used by this feature's shell, `features/board` and `features/settings`.
 
-The shared Help & support dialog explains Comments, its All activity / This version scopes,
-the explicit posting destination, and opening the Miro board. It does not refer to the retired
-in-app design viewer or pins.
+Every non-canvas page shares the floating header cards: client pages show the client's
+`CanvasHeader`; studio pages (Overview, Team, Settings, Notifications) show `StudioHeader` — the
+studio name on the left, notifications and the account menu (without a client's Credits block) on
+the right — and put their title in the same white title card. The sidebar no longer has a Help &
+support item (removed at the user's request on 2026-09-28).
 
 ## `/home`
 

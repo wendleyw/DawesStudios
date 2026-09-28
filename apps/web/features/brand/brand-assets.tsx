@@ -12,18 +12,21 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { Modal } from "@/features/shared/modal";
 import { BrandFolderDialog } from "./brand-folder-dialog";
 import { BrandAssetFolderPicker } from "./brand-asset-folder-picker";
-import { AssetUpload } from "./brand-asset-upload";
+import { BrandAssetDetails } from "./brand-asset-details";
+import { useBrandBatchUpload } from "./brand-batch-upload";
 import { BrandProducts } from "./brand-products";
 import { AssetPreview } from "./brand-asset-preview";
 import { BrandLinkDialog } from "./brand-link-dialog";
 import { FolderTile } from "@/features/shared/folder-tile";
+import { HeaderActions } from "@/features/shared/header-actions";
 import {
   downloadBrandAssetFile,
   useBrandAssets,
@@ -44,13 +47,22 @@ import {
 import type { Json } from "@database";
 import { CopyButton } from "@/features/shared/copy-button";
 import { FormError } from "@/features/shared/form-error";
+import {
+  brandUploadMimes,
+  clientBrandUploadMimes,
+  uploadExtensionMap,
+  uploadLimitMb,
+  uploadTypesLabel,
+} from "@/features/shared/upload-rules";
 import { SearchField } from "@/features/shared/search-field";
 
 /**
  * Brand Hub Assets as a directory: folders nest inside folders, a path leads back up, and each level
  * lists its folders before its files and links. Products is a fixed entry at the top level. A
  * search looks through every folder at once. The agency manages everything; a client may also
- * create folders and add images and links; designers browse.
+ * create folders and add images and links; designers browse. Files are added in bulk — dropped on
+ * the directory or picked several at a time — straight into the open folder; the agency then adds
+ * details to any one of them from its dialog.
  */
 export function BrandAssets({
   clientId,
@@ -69,7 +81,10 @@ export function BrandAssets({
   const folders = useBrandAssetFolders(clientId);
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
   const [folderAction, setFolderAction] = useState<"new" | "rename" | "delete" | null>(null);
-  const [adding, setAdding] = useState<"file" | "link" | null>(null);
+  const [adding, setAdding] = useState<"link" | null>(null);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const filePicker = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(params.get("asset"));
@@ -85,6 +100,8 @@ export function BrandAssets({
   const parent = path.at(-2) ?? null;
   const canManage = profile?.role === "agency";
   const canContribute = canManage || profile?.role === "client";
+  const allowed = canManage ? brandUploadMimes : clientBrandUploadMimes;
+  const batch = useBrandBatchUpload(clientId, allowed);
   const searching = !!search.trim() || !!category;
   const selected = allAssets.find((asset) => asset.id === selectedId);
   const categories = Array.from(
@@ -111,6 +128,13 @@ export function BrandAssets({
       });
     },
   });
+  const canDrop = canContribute && !inProducts;
+  const dropTarget = current?.name ?? "Assets";
+  const uploading = batch.items.filter(
+    (item) => item.status === "queued" || item.status === "uploading",
+  ).length;
+  const failed = batch.items.filter((item) => item.status === "failed");
+  const done = batch.items.filter((item) => item.status === "done").length;
   const open = (id: string | null) => {
     setOpenFolderId(id);
     setFolderAction(null);
@@ -134,7 +158,7 @@ export function BrandAssets({
   const selectedLink = selected ? safeHttpsUrl(selected.link_url ?? "") : null;
   return (
     <>
-      <div className="brand-resource-toolbar">
+      <div className="hub-toolbar">
         <SearchField
           label="Search brand assets"
           value={search}
@@ -152,7 +176,7 @@ export function BrandAssets({
           </select>
         </label>
         {canContribute && !inProducts && (
-          <div className="brand-resource-actions">
+          <HeaderActions>
             <button className="button" onClick={() => setFolderAction("new")}>
               <FolderPlus size={15} />
               New folder
@@ -161,155 +185,238 @@ export function BrandAssets({
               <Link2 size={15} />
               Add link
             </button>
-            <button className="button primary" onClick={() => setAdding("file")}>
+            <button className="button primary" onClick={() => filePicker.current?.click()}>
               <Plus size={15} />
-              {canManage ? "Add asset" : "Add image"}
+              {canManage ? "Add files" : "Add images"}
             </button>
-          </div>
+          </HeaderActions>
         )}
       </div>
-      {/* The section title already says Assets, so the path only appears once there is a way up. */}
-      {(searching || current || inProducts) && (
-        <div className="brand-directory-heading">
-          {searching ? (
-            <p className="brand-directory-path">
-              <span aria-current="page">Search results</span>
-              <small>
-                {items.length} asset{items.length === 1 ? "" : "s"}
-              </small>
-            </p>
-          ) : (
-            <nav className="brand-directory-path" aria-label="Folder path">
-              {current || inProducts ? (
-                <button type="button" onClick={() => open(null)}>
-                  Assets
+      {canDrop && (
+        <input
+          ref={filePicker}
+          type="file"
+          multiple
+          hidden
+          aria-label={canManage ? "Add files" : "Add images"}
+          accept={Object.keys(uploadExtensionMap(allowed)).join(",")}
+          onChange={(event) => {
+            if (event.target.files?.length)
+              batch.add(Array.from(event.target.files), current?.id ?? null);
+            event.target.value = "";
+          }}
+        />
+      )}
+      {batch.items.length > 0 && (
+        <div className="brand-upload-queue" role="status">
+          <div>
+            <strong>
+              {uploading
+                ? `Uploading ${done + failed.length + 1} of ${batch.items.length}…`
+                : failed.length
+                  ? `${done} of ${batch.items.length} added. ${failed.length} could not be added.`
+                  : `${done} file${done === 1 ? "" : "s"} added.`}
+            </strong>
+            {failed.length > 0 && (
+              <ul>
+                {failed.map((item) => (
+                  <li key={item.key}>
+                    {item.fileName}: {item.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {!uploading && (
+            <div className="brand-upload-queue-actions">
+              {failed.length > 0 && (
+                <button className="button" onClick={batch.retry}>
+                  Try again
                 </button>
-              ) : (
-                <span aria-current="page">Assets</span>
               )}
-              {inProducts && (
-                <>
-                  <ChevronRight size={14} aria-hidden="true" />
-                  <span aria-current="page">Products</span>
-                </>
-              )}
-              {path.map((folder, index) => (
-                <span key={folder.id} className="brand-directory-step">
-                  <ChevronRight size={14} aria-hidden="true" />
-                  {index === path.length - 1 ? (
-                    <span aria-current="page">{folder.name}</span>
-                  ) : (
-                    <button type="button" onClick={() => open(folder.id)}>
-                      {folder.name}
-                    </button>
-                  )}
-                </span>
-              ))}
-            </nav>
-          )}
-          {canManage && current && !searching && (
-            <div>
-              <button
-                className="icon-button"
-                aria-label="Rename folder"
-                title="Rename folder"
-                onClick={() => setFolderAction("rename")}
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Delete folder"
-                title="Delete folder"
-                onClick={() => setFolderAction("delete")}
-              >
-                <Trash2 size={15} />
+              <button className="button quiet" onClick={batch.dismiss}>
+                Dismiss
               </button>
             </div>
           )}
         </div>
       )}
-      {inProducts && !searching ? (
-        <BrandProducts clientId={clientId} content={products} onEdit={onEditProducts} />
-      ) : (
-        <>
-          {(subfolders.length > 0 || (showProducts && !current && !searching)) && (
-            <div className="folder-tiles brand-folder-tiles" aria-label="Folders" role="list">
-              {showProducts && !current && !searching && (
-                <div role="listitem">
-                  <FolderTile
-                    name="Products"
-                    meta={`${productCount} product${productCount === 1 ? "" : "s"}`}
-                    icon={<Package size={20} aria-hidden="true" />}
-                    onOpen={() => open("products")}
-                  />
-                </div>
-              )}
-              {subfolders.map((folder) => {
-                const count = folderAssetCount(allFolders, allAssets, folder.id);
-                return (
-                  <div role="listitem" key={folder.id}>
+      <div
+        className="brand-drop-zone"
+        data-dragging={dragging || undefined}
+        onDragEnter={(event) => {
+          if (!canDrop || !event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragOver={(event) => {
+          if (!canDrop || !event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (!canDrop) return;
+          event.preventDefault();
+          setDragging(false);
+          if (event.dataTransfer.files.length)
+            batch.add(Array.from(event.dataTransfer.files), current?.id ?? null);
+        }}
+      >
+        {dragging && (
+          <div className="brand-drop-overlay" aria-hidden="true">
+            <Upload size={22} />
+            <strong>Drop to add to {dropTarget}</strong>
+            <span>
+              {uploadTypesLabel(allowed)}. Up to {uploadLimitMb()} MB each.
+            </span>
+          </div>
+        )}
+        {/* The section title already says Assets, so the path only appears once there is a way up. */}
+        {(searching || current || inProducts) && (
+          <div className="brand-directory-heading">
+            {searching ? (
+              <p className="brand-directory-path">
+                <span aria-current="page">Search results</span>
+                <small>
+                  {items.length} asset{items.length === 1 ? "" : "s"}
+                </small>
+              </p>
+            ) : (
+              <nav className="brand-directory-path" aria-label="Folder path">
+                {current || inProducts ? (
+                  <button type="button" onClick={() => open(null)}>
+                    Assets
+                  </button>
+                ) : (
+                  <span aria-current="page">Assets</span>
+                )}
+                {inProducts && (
+                  <>
+                    <ChevronRight size={14} aria-hidden="true" />
+                    <span aria-current="page">Products</span>
+                  </>
+                )}
+                {path.map((folder, index) => (
+                  <span key={folder.id} className="brand-directory-step">
+                    <ChevronRight size={14} aria-hidden="true" />
+                    {index === path.length - 1 ? (
+                      <span aria-current="page">{folder.name}</span>
+                    ) : (
+                      <button type="button" onClick={() => open(folder.id)}>
+                        {folder.name}
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            )}
+            {canManage && current && !searching && (
+              <div>
+                <button
+                  className="icon-button"
+                  aria-label="Rename folder"
+                  title="Rename folder"
+                  onClick={() => setFolderAction("rename")}
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Delete folder"
+                  title="Delete folder"
+                  onClick={() => setFolderAction("delete")}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {inProducts && !searching ? (
+          <BrandProducts clientId={clientId} content={products} onEdit={onEditProducts} />
+        ) : (
+          <>
+            {(subfolders.length > 0 || (showProducts && !current && !searching)) && (
+              <div className="folder-tiles brand-folder-tiles" aria-label="Folders" role="list">
+                {showProducts && !current && !searching && (
+                  <div role="listitem">
                     <FolderTile
-                      name={folder.name}
-                      meta={`${count} asset${count === 1 ? "" : "s"}`}
-                      onOpen={() => open(folder.id)}
+                      name="Products"
+                      meta={`${productCount} product${productCount === 1 ? "" : "s"}`}
+                      icon={<Package size={20} aria-hidden="true" />}
+                      onOpen={() => open("products")}
                     />
                   </div>
-                );
-              })}
-            </div>
-          )}
-          {items.length ? (
-            <div className="brand-assets-grid">
-              {items.map((asset) => (
-                <button
-                  className="brand-asset-card"
-                  key={asset.id}
-                  onClick={() => setSelectedId(asset.id)}
-                >
-                  <AssetPreview asset={asset} />
-                  <div>
-                    <span className="eyebrow">{asset.category}</span>
-                    <h3>{asset.name}</h3>
-                    {asset.description && <p>{asset.description}</p>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            !subfolders.length && (
-              <div className="empty-state">
-                <ImageIcon size={26} />
-                <h3>
-                  {searching
-                    ? "No matching assets."
-                    : current
-                      ? "This folder is empty."
-                      : "A place for the essentials."}
-                </h3>
-                <p>
-                  {searching
-                    ? "Try another search or clear the filters."
-                    : canContribute
-                      ? "Add images, links or folders to organize them."
-                      : "Approved brand files will appear here."}
-                </p>
-                {searching && (
-                  <button
-                    className="button"
-                    onClick={() => {
-                      setSearch("");
-                      setCategory("");
-                    }}
-                  >
-                    Clear filters
-                  </button>
                 )}
+                {subfolders.map((folder) => {
+                  const count = folderAssetCount(allFolders, allAssets, folder.id);
+                  return (
+                    <div role="listitem" key={folder.id}>
+                      <FolderTile
+                        name={folder.name}
+                        meta={`${count} asset${count === 1 ? "" : "s"}`}
+                        onOpen={() => open(folder.id)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            )
-          )}
-        </>
-      )}
+            )}
+            {items.length ? (
+              <div className="brand-assets-grid">
+                {items.map((asset) => (
+                  <button
+                    className="brand-asset-card"
+                    key={asset.id}
+                    onClick={() => setSelectedId(asset.id)}
+                  >
+                    <AssetPreview asset={asset} />
+                    <div>
+                      <span className="eyebrow">{asset.category}</span>
+                      <h3>{asset.name}</h3>
+                      {asset.description && <p>{asset.description}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              !subfolders.length && (
+                <div className="empty-state">
+                  <ImageIcon size={26} />
+                  <h3>
+                    {searching
+                      ? "No matching assets."
+                      : current
+                        ? "This folder is empty."
+                        : "A place for the essentials."}
+                  </h3>
+                  <p>
+                    {searching
+                      ? "Try another search or clear the filters."
+                      : canContribute
+                        ? "Add images, links or folders to organize them."
+                        : "Approved brand files will appear here."}
+                  </p>
+                  {searching && (
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setSearch("");
+                        setCategory("");
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+          </>
+        )}
+      </div>
       {folderAction && (folderAction === "new" || current) && (
         <BrandFolderDialog
           clientId={clientId}
@@ -321,15 +428,6 @@ export function BrandAssets({
           deleting={folderAction === "delete"}
           onClose={() => setFolderAction(null)}
           onSaved={(id) => open(folderAction === "delete" ? (parent?.id ?? null) : id)}
-        />
-      )}
-      {adding === "file" && (
-        <AssetUpload
-          clientId={clientId}
-          folders={allFolders}
-          folderId={current?.id ?? null}
-          imagesOnly={!canManage}
-          onClose={() => setAdding(null)}
         />
       )}
       {adding === "link" && (
@@ -347,6 +445,7 @@ export function BrandAssets({
           description={selected.description || undefined}
           onClose={() => {
             setSelectedId(null);
+            setEditingDetails(false);
             download.reset();
           }}
           footer={
@@ -383,6 +482,23 @@ export function BrandAssets({
           }
         >
           <AssetPreview asset={selected} />
+          {editingDetails && canManage ? (
+            <BrandAssetDetails
+              key={selected.id}
+              asset={selected}
+              onDone={() => setEditingDetails(false)}
+            />
+          ) : (
+            canManage && (
+              <button
+                className="button quiet brand-asset-edit"
+                onClick={() => setEditingDetails(true)}
+              >
+                <Pencil size={14} />
+                Edit details
+              </button>
+            )
+          )}
           <div className="brand-tags">
             <span>{selected.category}</span>
             {selected.tags.map((tag, i) => (

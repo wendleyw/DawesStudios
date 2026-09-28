@@ -21,12 +21,13 @@ const HOVER_CLOSE_DELAY = 220;
  * settings and sign out. Designers get the same menu without the ring or the Credits block. It is a
  * native nonmodal popover, like the notifications feed, so it stays above the canvas.
  */
-export function AccountMenu({ clientId, viewer }: { clientId: string; viewer: Profile | null }) {
+export function AccountMenu({ clientId, viewer }: { clientId?: string; viewer: Profile | null }) {
   const id = useId();
   const pathname = usePathname();
   const router = useRouter();
   const { database } = useAuth();
-  const meter = useCreditMeter(clientId, viewer);
+  // Studio-level pages have no client, so their menu carries no Credits block.
+  const meter = useCreditMeter(clientId ?? "", viewer);
   const trigger = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
   const hoverTimer = useRef<number | undefined>(undefined);
@@ -153,7 +154,7 @@ export function AccountMenu({ clientId, viewer }: { clientId: string; viewer: Pr
             <span>{roleLabel}</span>
           </div>
         </div>
-        {meter && viewer && (
+        {meter && viewer && clientId && (
           <CreditMeterPanel
             clientId={clientId}
             role={viewer.role}
@@ -183,7 +184,7 @@ export function AccountMenu({ clientId, viewer }: { clientId: string; viewer: Pr
           </button>
         </div>
       </div>
-      {creditAction && (
+      {creditAction && clientId && (
         <CreditActionDialog
           clientId={clientId}
           mode={creditAction}

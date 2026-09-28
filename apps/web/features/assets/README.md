@@ -1,34 +1,40 @@
-# Assets
+# Assets (Brand Hub → Deliverables)
 
-The Files page uses the shared floating client navigation/profile and white title/action card
-on the plain page background. Search and the All files/Approved control always sit inside that
-card; the campaign view adds a project `<select>` scoped to that campaign's own projects, which the
-folder view omits since a folder spans every project in its campaign. Actual file results — campaign
-folders, or a campaign's files grouped by project — remain below. The content uses the full
-available width with the same desktop/mobile gutters as other client sections.
+The Brand Hub's **Deliverables** section (route id `files`, so every existing
+`/brand/files?project=` link and notification keeps working) shares the Brand Hub title card: the
+agency's **Delivery file** action sits top right of that card (`shared/header-actions.tsx`), and
+search plus, in a campaign, a project `<select>` form one `.hub-toolbar` row below it. Results —
+campaign folders, or a campaign's deliverables in one card per project — follow.
 
-The Brand Hub's Files section at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query) lists working files (`project_assets`) and delivery
-files (`delivery_files`) across a client's projects, grouped into campaign folders rather than one flat grid (a client
+Work in progress lives in Miro, so this section lists final delivery files (`delivery_files`) only:
+no working files, no All files/Approved toggle (every deliverable is approved) and no design copies.
+Deliverables at `/clients/:clientId/brand/files` (the old `/clients/:clientId/assets` redirects there, keeping its query)
+are grouped into campaign folders rather than one flat grid (a client
 the size of SABRE's demo overlay runs to 167 files across 50 projects in 11 campaigns). The default
 view (no `campaign` param) shows one folder card per campaign with at least one matching file,
 newest file first; projects with no readable campaign share a "No campaign" folder that always
 sorts last, at `?campaign=none`. Opening a folder (`?campaign=<id>`), or a project's own Files link
 (`?project=<id>`, which opens that project's campaign with the project filter preset), shows that
 campaign's files grouped by project, newest file first within each group; an unknown `campaign`
-falls back to the folder view. The agency can upload a working file or a delivery file and mark an
-approved project as delivered from either view, exactly as before this split.
+falls back to the folder view. The agency adds a delivery file to an approved, Active project and
+marks it delivered from either view.
+
+`delivery-file-dialog.tsx` is the one upload dialog. Beside the file it holds the project's
+**Google Drive backup**: the project's `client`-channel Drive folder (`project_drive_links`), shown
+prefilled and saved through `setProjectDriveLink` before the file is sent, since saving the link
+again is harmless while the file is sent once. `parseDriveUrl` refuses anything but
+`https://drive.google.com/…` before any request. Each project group then shows a labelled **Google
+Drive backup** link.
 
 `asset-data.ts` owns every Supabase read and write for the feature, as
 [the data-access contract](../../../../docs/architecture/data-access.md) requires. `useProjectAssets`
 is the page's single read hook; its `projects` read also carries each project's `campaign_id` and
 campaign title via a `campaigns(id,title)` embed — the FK from `projects` to `campaigns` is
 unambiguous, and every role may read campaigns (`campaigns_read` on `private.can_access_client`), so
-this needs no second query or role branch. `findAssetByStoragePath`, `removeUnusedUpload`,
-`uploadInternalAsset`, `recordProjectAsset` and `markProjectDelivered` were relocated from
-`upload-file-dialog.tsx` and `assets-page.tsx` during the small-features migration (task 15).
+this needs no second query or role branch. `markProjectDelivered` is the feature's one write.
 The hook pages projects and each file/link table in 500-row requests, then reads related rows in
-100-project ID groups. Project IDs and file creation time have stable ordering across pages; the
-client role still skips working-file reads, and only client-channel Drive links are requested.
+100-project ID groups. Project IDs and file creation time have stable ordering across pages, and
+only client-channel Drive links are requested.
 
 Each file is a `FileCard` (`file-card.tsx`). A raster image (PNG, JPEG, WebP, GIF) shows its own
 preview: `useAssetPreviews` signs every image in the list, in at most 100 paths per `createSignedUrls` request,
@@ -39,10 +45,10 @@ icon and its real type from `fileTypeLabel` ("PDF", "MP4", "Word", or "File"). D
 Miro, so the list has no design copies: the former shared-designs source (`published_designs`) is
 no longer read. Cards in a row share a height and their footers line up.
 `FileCard` does not render its own project link — the campaign view's project group heading, which
-every `.file-grid` of cards sits under, carries that link instead, plus an **Open client Drive
-folder** icon link (`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener
-noreferrer"`) once the agency has set the project's `client`-channel Drive link in its own Details.
-Files is the client-facing delivery surface, so this is always the client link, never the internal
+every `.file-grid` of cards sits under, carries that link instead, plus a **Google Drive backup**
+link (`shared/drive-icon.tsx`'s `DriveIcon`, `target="_blank" rel="noopener noreferrer"`) once the
+agency has set the project's `client`-channel Drive link, in the delivery dialog or its Details.
+Deliverables is the client-facing delivery surface, so this is always the client link, never the internal
 one: a designer's own read of `project_drive_links` only ever returns
 their `internal` row, so this icon does not appear for them regardless.
 
@@ -84,46 +90,31 @@ project }` pair simply stops matching the newly resolved campaign on the next re
 
 `asset-data.ts` exports `assetQueryKeys` (`["assets"]`) and `useInvalidateAssets()`. Unlike `brand`
 and `briefings`, this feature does get an aggregate helper, and the reason is the condition
-[rule 5 of the contract](../../../../docs/architecture/data-access.md) sets for one: both of the
-feature's write call sites — `assets-page.tsx`'s deliver mutation and `upload-file-dialog.tsx`'s
-upload mutation — already invalidated the whole set, because the whole set is a single key. Routing
-them through the helper is therefore exactly non-widening.
+[rule 5 of the contract](../../../../docs/architecture/data-access.md) sets for one:
+`assets-page.tsx`'s deliver mutation already invalidated the whole set, because the whole set is a
+single key. The delivery dialog writes a project's Drive link too, so it refreshes through
+`projects/project-data.ts`'s `useInvalidateProject()`, whose set includes `assets` and
+`project-drive-links`, like every other project write.
 
 `assets-page.tsx` also invalidates `projects`, which `workspace/workspace-data.ts` owns; it reaches
 that key through that feature's `useInvalidateWorkspace()`, whose set (`["projects"]`) is likewise
 exactly what the call site invalidated inline. Neither key is duplicated here.
 
-## Deviation from the data-access contract: a read that is not a hook
-
-`findAssetByStoragePath` is exported as a plain `async (database, input)` function instead of a
-`use<Thing>()` hook.
-
-It is called from two places in `upload-file-dialog.tsx`: from the dialog's `close()` (deciding
-whether an unfinished upload's file can be safely removed from storage before the dialog closes)
-and from the upload mutation's `mutationFn` (deciding whether a retried submit already recorded this
-upload's row). Both call sites branch on the result before performing a write; neither renders it.
-This is exactly the shape [rule 2 of the contract](../../../../docs/architecture/data-access.md)
-names — the same `select` a hook would use on render is a plain function when a mutation (or a
-handler that guards a close) branches on it instead — so no restructuring turns it into a hook. The
-reason is also recorded above the function in `asset-data.ts`.
-
 ## Test files
 
-`asset-data.test.tsx` holds the regression tests for `initialUploadProject`, the working-file and
-delivery read (`useProjectAssets`) and the preview signing; `file-card.test.tsx` covers the card. The five functions relocated in this migration are tested in
-`asset-data-writes.test.ts` instead, kept separate so the existing file's diff stays empty.
-`file-groups.test.ts` covers campaign grouping and ordering, "No campaign" always sorting last,
-counts and cover choice under a filter, project grouping, and resolving the view from `campaign`/
-`project` params, including unknown ids. In the browser, `tests/e2e/files-campaigns.spec.ts` checks
-both views for the studio and a client against counts read through each role's own session, the
-Back button and back arrow, `?project=` links, unknown campaigns, axe, and that a campaign opened
-from far down the phone folder list starts at its title.
-
-`tests/e2e/files-actions.spec.ts` additionally uploads working files through the agency and assigned
-designer UI, reloads and downloads identical bytes, verifies project/Approved filters, and checks
-that a client can neither list those records nor download their private Storage objects. It uses
-a disposable acceptance project and guarded cleanup.
+`asset-data.test.tsx` holds the regression tests for `initialUploadProject`, the delivery read
+(`useProjectAssets`) and the preview signing; `file-card.test.tsx` covers the card and
+`asset-data-writes.test.ts` covers `markProjectDelivered`. `file-groups.test.ts` covers campaign
+grouping and ordering, "No campaign" always sorting last, counts and cover choice under a filter,
+project grouping, and resolving the view from `campaign`/`project` params, including unknown ids. In
+the browser, `tests/e2e/files-campaigns.spec.ts` checks both views for the studio and a client
+against counts read through each role's own session, the Back button and back arrow, `?project=`
+links, unknown campaigns, axe, and that a campaign opened from far down the phone folder list starts
+at its title. `tests/e2e/deliverables.spec.ts` adds a deliverable with a Drive backup on a
+disposable approved project, rejects a non-Drive link, downloads the file, reads the saved
+`client` Drive row and checks a designer gets no upload action.
 
 Delivery preparation and Complete delivery are unavailable for Backlog projects. The database
 rechecks Active activity, the latest approved client version and real final files under the project
-lock. Prepare delivery in the project action bar navigates to the filtered Files page.
+lock. Prepare delivery in the project action bar navigates to the filtered Deliverables page, and a
+delivered project's Miro bar links there with **Deliverable**.

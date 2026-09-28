@@ -7,8 +7,8 @@ import {
 
 /**
  * The List view starts in `filteredProjects` order (`null`, "today's order"). Clicking a header
- * button replaces that with an explicit key and direction; there is no click path back to `null` —
- * only switching clients (which remounts the board) restores it.
+ * button replaces that with an explicit key and direction; clicking past the column's last state
+ * returns to `null`, so every sort can be switched off again.
  */
 export type ListSortKey = "project" | "campaign" | "status" | "due";
 export type SortDirection = "asc" | "desc";
@@ -47,23 +47,23 @@ const HEADER_STATE_LABELS: Record<ListSortKey, Record<SortDirection, string>> = 
 };
 
 /**
- * First click on a column sorts it ascending; a second click on the active column reverses it.
- * Status instead steps its lead through the statuses the list holds (`present`, any order), back
- * to the first after the last, so no click leaves the list looking unchanged.
+ * First click on a column sorts it ascending, a second reverses it and a third returns to the
+ * default order. Status instead steps its lead through the statuses the list holds (`present`, any
+ * order) and returns to the default order after the last one.
  */
 export function nextListSort(
   current: ListSort,
   key: ListSortKey,
   present: readonly ProjectStatus[] = STATUSES,
-): ActiveListSort {
+): ListSort {
   if (key === "status") {
     const cycle = STATUSES.filter((status) => present.includes(status));
     const order = cycle.length ? cycle : STATUSES;
     const index = current?.key === "status" && current.lead ? order.indexOf(current.lead) : -1;
-    return { key, direction: "asc", lead: order[(index + 1) % order.length] };
+    return index === order.length - 1 ? null : { key, direction: "asc", lead: order[index + 1] };
   }
   if (current && current.key === key)
-    return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+    return current.direction === "asc" ? { key, direction: "desc" } : null;
   return { key, direction: "asc" };
 }
 
@@ -73,7 +73,8 @@ export function listSortAccessibleName(key: ListSortKey, active: ListSort): stri
   if (!active || active.key !== key) return label;
   if (key === "status" && active.lead)
     return `${label}, ${statusLabels[active.lead]} first. Click for the next status`;
-  return `${label}, ${HEADER_STATE_LABELS[key][active.direction]}`;
+  const next = active.direction === "asc" ? "Click to reverse" : "Click for the default order";
+  return `${label}, ${HEADER_STATE_LABELS[key][active.direction]}. ${next}`;
 }
 
 export type ListSortOption = { value: string; label: string; sort: ListSort };

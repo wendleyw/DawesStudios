@@ -34,7 +34,7 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
     profile.role === "agency" ? ["workspace", "clients", "presets", "account"] : ["account"];
   return (
     <div className="page-content settings-page">
-      <header className="page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>{tab === "account" ? "Your account" : "Settings"}</h1>
           <p>
@@ -43,21 +43,24 @@ export function SettingsPage({ tab = "workspace" }: { tab?: SettingsTab }) {
               : "Keep the studio organized and ready for what is next."}
           </p>
         </div>
+        {tabs.length > 1 && (
+          <nav
+            className="settings-tabs section-tabs card-heading-tools"
+            aria-label="Settings sections"
+          >
+            {tabs.map((item) => (
+              <Link
+                key={item}
+                href={`/settings/${item}`}
+                className={tab === item ? "active" : ""}
+                aria-current={tab === item ? "page" : undefined}
+              >
+                {labels[item]}
+              </Link>
+            ))}
+          </nav>
+        )}
       </header>
-      {tabs.length > 1 && (
-        <nav className="settings-tabs section-tabs" aria-label="Settings sections">
-          {tabs.map((item) => (
-            <Link
-              key={item}
-              href={`/settings/${item}`}
-              className={tab === item ? "active" : ""}
-              aria-current={tab === item ? "page" : undefined}
-            >
-              {labels[item]}
-            </Link>
-          ))}
-        </nav>
-      )}
       <div className="settings-content">
         {tab === "account" ? (
           <AccountSettings key={profile.id} />

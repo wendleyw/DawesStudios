@@ -1,31 +1,19 @@
 "use client";
 
-import {
-  CircleHelp,
-  Home,
-  Layers3,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  Settings2,
-  Users,
-  X,
-} from "lucide-react";
+import { Home, LogOut, Menu, PanelLeftClose, Settings2, Users, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSelectedLayoutSegments } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { consumePostSignInFocus } from "@/features/auth/post-sign-in-focus";
-import { CanvasHeader } from "./canvas-header";
+import { CanvasHeader, StudioHeader } from "./canvas-header";
 import { ClientIdentityProvider } from "./client-identity";
-import { Modal } from "@/features/shared/modal";
 import { PageStatus } from "@/features/shared/page-status";
 import { useWorkspaceSettings } from "@/features/workspace/workspace-settings";
 import { BrandMark } from "@/features/shared/brand-mark";
 import { AnimatedFavicon } from "./animated-favicon";
 import { ClientSwitcher } from "./client-switcher";
-import { NotificationsBell } from "./notifications-bell";
 import { FontToggle } from "./font-toggle";
 import { ThemeToggle } from "./theme-toggle";
 import { useClients, useProjectClient } from "./workspace-data";
@@ -66,7 +54,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => setCollapsed(before);
   }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLDivElement>(null);
   const mainContent = useRef<HTMLElement>(null);
@@ -180,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [session, loading, router, pathname]);
   const activeClientId = pathname.match(/\/clients\/([^/]+)/)?.[1] ?? projectClient.data?.client_id;
   const activeClient = clients.data?.find((client) => client.id === activeClientId);
-  const chromeShown = Boolean(activeClient && !canvasRoute);
+  const chromeShown = !canvasRoute;
   // The client header is sticky over the page; its measured height becomes the scroller's
   // scroll-padding, so anything scrolled into view (a validation summary, a step) lands below it.
   useEffect(() => {
@@ -340,16 +327,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
             <FontToggle />
             <ThemeToggle />
-            <button
-              className="nav-item"
-              onClick={() => {
-                setMobileOpen(false);
-                setHelpOpen(true);
-              }}
-            >
-              <CircleHelp size={17} />
-              <span>Help & support</span>
-            </button>
             <div className="profile-bar">
               <Link
                 href="/settings/account"
@@ -388,9 +365,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </div>
-        {/* All client routes share floating navigation; each canvas owns its own placement. */}
+        {/* Every page shares the floating header cards; each canvas owns its own placement. */}
         <div
-          className={`workspace ${activeClient ? "client-workspace" : ""} ${activeClient && !canvasRoute ? "client-page-workspace" : ""}`}
+          className={`workspace ${activeClient ? "client-workspace" : ""} ${canvasRoute ? "" : "card-workspace"}`}
           inert={mobileOpen || undefined}
         >
           <header className="topbar">
@@ -404,48 +381,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu size={20} />
             </button>
-            {!activeClient && (
-              <div className="topbar-identity">
-                <Layers3 size={16} />
-                <strong>{studioName}</strong>
-              </div>
-            )}
-            <div className="topbar-actions">{!activeClient && <NotificationsBell />}</div>
           </header>
           <ClientIdentityProvider>
             <main id="main-content" className="main-content" tabIndex={-1} ref={mainContent}>
-              {activeClient && !canvasRoute && (
-                <div className="client-page-chrome" ref={clientChrome}>
-                  <CanvasHeader
-                    client={activeClient}
-                    viewer={profile}
-                    showIdentity={pathname !== clientOverview}
-                  />
+              {chromeShown && (
+                <div className="page-chrome" ref={clientChrome}>
+                  {activeClient ? (
+                    <CanvasHeader
+                      client={activeClient}
+                      viewer={profile}
+                      showIdentity={pathname !== clientOverview}
+                    />
+                  ) : (
+                    <StudioHeader studioName={studioName} viewer={profile} />
+                  )}
                 </div>
               )}
               {children}
             </main>
           </ClientIdentityProvider>
         </div>
-        <Modal
-          open={helpOpen}
-          onClose={() => setHelpOpen(false)}
-          title="Help & support"
-          footer={
-            <button className="button primary" onClick={() => setHelpOpen(false)}>
-              Done
-            </button>
-          }
-        >
-          <div className="form-stack">
-            <p>
-              Open a project and use Comments to message the studio. Choose All activity for a
-              project note or This version for the round or client version on screen. The composer
-              shows where your message will be posted. Open the Miro board to work on the design.
-            </p>
-            <p>For account access or a new client, contact your studio representative.</p>
-          </div>
-        </Modal>
       </div>
     </SidebarFold.Provider>
   );

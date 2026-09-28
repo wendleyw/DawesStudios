@@ -65,7 +65,7 @@ function ClientBriefingsPage({ clientId }: { clientId: string }) {
   );
   return (
     <div className="page-content briefings-page">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Briefings</h1>
           <p>A clear starting point for your next project.</p>
@@ -80,7 +80,7 @@ function ClientBriefingsPage({ clientId }: { clientId: string }) {
         </div>
         {profile?.role !== "designer" && (
           <nav
-            className="briefing-tabs section-tabs client-page-tools"
+            className="briefing-tabs section-tabs card-heading-tools"
             aria-label="Filter briefings"
           >
             {[

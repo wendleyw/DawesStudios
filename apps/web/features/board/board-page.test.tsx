@@ -402,12 +402,22 @@ describe("BoardPage list sort", () => {
     expect(visibleTitleOrder()).toEqual(["Banana launch", "Apple launch", "Cherry launch"]);
 
     await user.click(screen.getByRole("button", { name: "Project" }));
-    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch", "Cherry launch"]);
 
-    await user.click(screen.getByRole("button", { name: "Project, A to Z" }));
-    expect(screen.getByRole("button", { name: "Project, Z to A" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }));
+    expect(
+      screen.getByRole("button", { name: "Project, Z to A. Click for the default order" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Cherry launch", "Banana launch", "Apple launch"]);
+
+    await user.click(
+      screen.getByRole("button", { name: "Project, Z to A. Click for the default order" }),
+    );
+    expect(screen.getByRole("button", { name: "Project" })).toBeInTheDocument();
+    expect(visibleTitleOrder()).toEqual(["Banana launch", "Apple launch", "Cherry launch"]);
   });
 
   it("sorts Due with undated projects always last, and a new column restarts ascending", async () => {
@@ -420,15 +430,21 @@ describe("BoardPage list sort", () => {
     ];
     mountBoard();
     await user.click(await screen.findByRole("button", { name: "Due" }));
-    expect(screen.getByRole("button", { name: "Due, earliest first" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Due, earliest first. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Cherry launch", "Banana launch", "Apple launch"]);
 
-    await user.click(screen.getByRole("button", { name: "Due, earliest first" }));
-    expect(screen.getByRole("button", { name: "Due, latest first" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Due, earliest first. Click to reverse" }));
+    expect(
+      screen.getByRole("button", { name: "Due, latest first. Click for the default order" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Banana launch", "Cherry launch", "Apple launch"]);
 
     await user.click(screen.getByRole("button", { name: "Project" }));
-    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch", "Cherry launch"]);
   });
 
@@ -446,7 +462,9 @@ describe("BoardPage list sort", () => {
     await user.click(screen.getByRole("button", { name: "Canvas view" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "List view" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "List view" }));
-    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
   });
 
@@ -470,7 +488,9 @@ describe("BoardPage list sort", () => {
         name: "Clear filters",
       }),
     );
-    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
   });
 
@@ -486,10 +506,12 @@ describe("BoardPage list sort", () => {
     expect(select).toHaveValue("default");
 
     await user.selectOptions(select, "project-asc");
-    expect(screen.getByRole("button", { name: "Project, A to Z" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }),
+    ).toBeInTheDocument();
     expect(visibleTitleOrder()).toEqual(["Apple launch", "Banana launch"]);
 
-    await user.click(screen.getByRole("button", { name: "Project, A to Z" }));
+    await user.click(screen.getByRole("button", { name: "Project, A to Z. Click to reverse" }));
     expect(select).toHaveValue("project-desc");
   });
 });

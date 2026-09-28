@@ -227,7 +227,7 @@ export function BriefingEditor({
       ref={editor}
       className={`page-content briefing-editor ${dialog ? "briefing-editor-modal" : ""}`}
     >
-      <header className={dialog ? "briefing-editor-header" : "page-heading client-page-heading"}>
+      <header className={dialog ? "briefing-editor-header" : "page-heading card-heading"}>
         {dialog ? (
           <span className="eyebrow">{clientName}</span>
         ) : (

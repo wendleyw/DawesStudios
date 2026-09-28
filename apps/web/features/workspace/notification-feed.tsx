@@ -31,7 +31,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
   const capped = (notifications.data?.length ?? 0) >= NOTIFICATION_FEED_LIMIT;
   return (
     <div className={compact ? "notification-feed" : "page-content"}>
-      <div className={compact ? "notification-feed-heading" : "page-heading"}>
+      <div className={compact ? "notification-feed-heading" : "page-heading card-heading"}>
         <div>
           {!compact && <h1>Notifications</h1>}
           <p>

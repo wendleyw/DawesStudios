@@ -30,8 +30,8 @@ describe("WelcomeHeader", () => {
     expect(screen.getByRole("button", { name: "New briefing" })).toBeInTheDocument();
   });
 
-  it("uses the client header card on client routes", () => {
-    const { container } = render(<WelcomeHeader card eyebrow="Overview" title="Welcome back" />);
-    expect(container.querySelector("header")).toHaveClass("page-heading", "client-page-heading");
+  it("uses the shared title card", () => {
+    const { container } = render(<WelcomeHeader eyebrow="Overview" title="Welcome back" />);
+    expect(container.querySelector("header")).toHaveClass("page-heading", "card-heading");
   });
 });

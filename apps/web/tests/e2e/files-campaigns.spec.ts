@@ -100,7 +100,7 @@ test.afterAll(async () => {
  * only for the studio). Counted through that role's own session rather than the service role, so row
  * security decides what counts, on the canonical seed and the local SABRE overlay alike.
  */
-async function expectedFolders(email: string, clientId: string, includeWorkingFiles: boolean) {
+async function expectedFolders(email: string, clientId: string) {
   const caller = await localCaller(email);
   const projects = await caller
     .from("projects")
@@ -108,15 +108,10 @@ async function expectedFolders(email: string, clientId: string, includeWorkingFi
     .eq("client_id", clientId);
   expect(projects.error).toBeNull();
   const ids = projects.data!.map((project) => project.id);
-  // The designs live in Miro, so the page lists delivery files and, for the studio, working files.
-  const [deliveries, working] = await Promise.all([
-    caller.from("delivery_files").select("project_id").in("project_id", ids),
-    includeWorkingFiles
-      ? caller.from("project_assets").select("project_id").in("project_id", ids)
-      : Promise.resolve({ data: [] as { project_id: string }[], error: null }),
-  ]);
-  for (const result of [deliveries, working]) expect(result.error).toBeNull();
-  const files = [...deliveries.data!, ...working.data!];
+  // The designs live in Miro, so Deliverables lists delivery files only, for every role.
+  const deliveries = await caller.from("delivery_files").select("project_id").in("project_id", ids);
+  expect(deliveries.error).toBeNull();
+  const files = deliveries.data!;
   const campaignOf = new Map(
     projects.data!.map((project) => [
       project.id,
@@ -157,12 +152,14 @@ test("files open as campaign folders and each campaign groups its files by proje
 }) => {
   test.setTimeout(120_000);
   const clientId = await sabreId();
-  const { folders, projects } = await expectedFolders(credentials.agency, clientId, true);
+  const { folders, projects } = await expectedFolders(credentials.agency, clientId);
   const base = `/clients/${clientId}/brand/files`;
   await signIn(page, credentials.agency);
   await page.goto(base);
 
-  await expect(page.getByRole("heading", { level: 2, name: "Files", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Deliverables", exact: true }),
+  ).toBeVisible();
   // Projects live inside their campaign, so the folder view has no project filter.
   await expect(page.getByLabel("Filter project", { exact: true })).toHaveCount(0);
   const cards = page.locator(".folder-tile");
@@ -227,10 +224,12 @@ test("files open as campaign folders and each campaign groups its files by proje
         .maybeSingle()
     ).data;
   if (sample) {
-    await page.getByRole("textbox", { name: "Search files", exact: true }).fill(sample.name);
+    await page.getByRole("textbox", { name: "Search deliverables", exact: true }).fill(sample.name);
     await expect(page.locator(`.folder-tile[href="${base}?campaign=${busiestId}"]`)).toBeVisible();
-    await page.getByRole("textbox", { name: "Search files", exact: true }).fill("no such file");
-    await expect(page.getByRole("heading", { name: "No matching files." })).toBeVisible();
+    await page
+      .getByRole("textbox", { name: "Search deliverables", exact: true })
+      .fill("no such file");
+    await expect(page.getByRole("heading", { name: "No matching deliverables." })).toBeVisible();
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     await expect(cards).toHaveCount(folders.size);
   }
@@ -252,7 +251,7 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
 }) => {
   test.setTimeout(90_000);
   const clientId = await sabreId();
-  const { folders } = await expectedFolders(credentials.client, clientId, false);
+  const { folders } = await expectedFolders(credentials.client, clientId);
   const base = `/clients/${clientId}/brand/files`;
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, credentials.client);
@@ -263,8 +262,8 @@ test("clients see their own folders, and a campaign opens at the top on a phone"
     await expect(page.locator(`.folder-tile[href="${base}?campaign=${id}"]`)).toContainText(
       `${plural(folder.files, "file")} · ${plural(folder.projects.size, "project")}`,
     );
-  // Clients have no uploads, so no working-file or delivery actions.
-  await expect(page.getByRole("button", { name: "Working file" })).toHaveCount(0);
+  // Clients have no uploads, so no delivery action.
+  await expect(page.getByRole("button", { name: "Delivery file" })).toHaveCount(0);
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `${screenshotDirectory}/files-folders-client-390.png` });
 

@@ -72,7 +72,7 @@ export function useCreditMonthSummary(clientId: string, month: string) {
   const { database, session, profile } = useAuth();
   return useQuery({
     queryKey: ["credit-account", session?.user.id, clientId, "month", month],
-    enabled: !!session && !!profile && profile.role !== "designer" && !!month,
+    enabled: !!session && !!profile && profile.role !== "designer" && !!clientId && !!month,
     // Switching months keeps the previous figures on screen until the next ones arrive.
     placeholderData: keepPreviousData,
     queryFn: async () => {

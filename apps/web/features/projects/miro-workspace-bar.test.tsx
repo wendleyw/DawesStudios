@@ -139,6 +139,19 @@ describe("MiroWorkspaceBar in Working files", () => {
     expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
     expect(screen.getByRole("group", { name: "Client versions" })).toBeInTheDocument();
   });
+  it("links a delivered project to its final files, and nothing before delivery", () => {
+    const href = "/clients/c/brand/files?project=p";
+    const { rerender } = render(<MiroWorkspaceBar {...props({ deliverableHref: href })} />);
+    expect(screen.queryByRole("link", { name: "Deliverable" })).toBeNull();
+    rerender(
+      <MiroWorkspaceBar
+        {...props({ delivered: true, channel: "client", deliverableHref: href })}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Deliverable" })).toHaveAttribute("href", href);
+    rerender(<MiroWorkspaceBar {...props({ delivered: true, deliverableHref: null })} />);
+    expect(screen.queryByRole("link", { name: "Deliverable" })).toBeNull();
+  });
   it("shows the agency the board's internal due date on the board's row", () => {
     const { container } = render(
       <MiroWorkspaceBar {...props({ boardDueLabel: "Board due Oct 3" })} />,

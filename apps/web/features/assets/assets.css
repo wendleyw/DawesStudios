@@ -1,38 +1,21 @@
-/* The heading, the toolbar and the file groups share the page's 16px rhythm. Qualified so the Brand
-   Hub rule that collapses an empty section heading (brand.css) does not remove this spacing. */
-.brand-section-heading.files-heading {
-  margin-bottom: 16px;
-}
-/* On a phone the campaign title keeps the full width and its upload actions sit on the row below. */
-@media (max-width: 640px) {
-  /* Qualified by the Brand Hub heading class it shares, whose later rule would centre it. */
-  .brand-section-heading.files-heading {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .files-heading .file-actions > .button {
-    flex: 1;
-  }
-}
-.files-toolbar {
+/* A campaign's heading: back to every campaign, its name and what it holds, on one row. */
+.files-heading {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 16px;
 }
-.files-toolbar .search-field {
-  flex: 1;
-  min-width: 180px;
+.files-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
-.files-toolbar select {
-  width: auto;
-  max-width: 290px;
-}
-.file-actions {
-  display: flex;
-  gap: 10px;
+.files-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 .file-grid {
   display: grid;
@@ -100,18 +83,30 @@
   color: var(--muted);
 }
 
-/* Campaign view: one section per project, newest file first. The heading carries the project link
+/* Campaign view: one card per project, newest file first. The heading carries the project link
    FileCard no longer repeats on every one of its own cards. */
 .file-groups {
   display: flex;
   flex-direction: column;
-  gap: var(--space-section);
+  gap: 16px;
+}
+.file-group {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .file-group h2 {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
-  margin: 0 0 var(--space-lg);
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+.file-group-drive {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 400;
 }
 .file-group h2 > span {
   font-size: var(--text-sm);
@@ -139,12 +134,8 @@
   color: var(--muted);
 }
 @media (max-width: 720px) {
-  .files-toolbar select {
-    max-width: 100%;
-    width: 100%;
-  }
-  .file-actions {
-    flex-wrap: wrap;
+  .file-group {
+    padding: 14px;
   }
   .delivery-callout {
     align-items: flex-start;

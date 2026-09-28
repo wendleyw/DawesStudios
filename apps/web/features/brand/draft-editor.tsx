@@ -98,7 +98,7 @@ function DraftEditorForm({ draft, template }: { draft: TemplateDraft; template: 
   }
   return (
     <div className="page-content brand-draft-editor">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Template draft</h1>
           <p>Edit the content and layout. Your changes stay private.</p>

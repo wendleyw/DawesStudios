@@ -8,24 +8,22 @@ export function welcomeTitle(displayName: string | null | undefined): string {
 
 /**
  * The greeting at the top of a dashboard: the page's role name as an eyebrow, the greeting, a
- * subtitle and the page's actions. On a client route it is the white client header card; on `/home`
- * it keeps that page's plain heading. Callers wrap `actions` in their own container.
+ * subtitle and the page's actions, in the white title card every page shares. Callers wrap `actions`
+ * in their own container.
  */
 export function WelcomeHeader({
   eyebrow,
   title,
   subtitle,
   actions,
-  card = false,
 }: {
   eyebrow: string;
   title: string;
   subtitle?: string;
   actions?: ReactNode;
-  card?: boolean;
 }) {
   return (
-    <header className={card ? "page-heading client-page-heading" : "page-heading"}>
+    <header className="page-heading card-heading">
       <div>
         <span className="eyebrow">{eyebrow}</span>
         <h1>{title}</h1>

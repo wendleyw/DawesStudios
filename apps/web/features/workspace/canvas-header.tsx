@@ -1,4 +1,5 @@
 "use client";
+import { Layers3 } from "lucide-react";
 import { AccountMenu } from "./account-menu";
 import { NotificationsPopover } from "./notifications-popover";
 import type { ReactNode } from "react";
@@ -46,6 +47,22 @@ export function CanvasHeader({
       <div className="board-account">
         <NotificationsPopover />
         <AccountMenu clientId={client.id} viewer={viewer} />
+      </div>
+    </header>
+  );
+}
+
+/** The same floating cards on studio-level pages (Overview, Team, Settings, Notifications). */
+export function StudioHeader({ studioName, viewer }: { studioName: string; viewer: Profile }) {
+  return (
+    <header className="board-header">
+      <div className="board-identity studio-identity">
+        <Layers3 size={18} aria-hidden="true" />
+        <strong>{studioName}</strong>
+      </div>
+      <div className="board-account">
+        <NotificationsPopover />
+        <AccountMenu viewer={viewer} />
       </div>
     </header>
   );

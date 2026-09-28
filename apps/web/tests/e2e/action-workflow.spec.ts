@@ -226,12 +226,12 @@ test("two designers complete release, review, feedback handoff, version approval
   await studio.getByRole("link", { name: "Prepare delivery" }).click();
   await expect(studio).toHaveURL(new RegExp(`/clients/${fixture.clientId}/brand/files`));
   await studio.getByRole("button", { name: "Delivery file", exact: true }).click();
-  dialog = studio.getByRole("dialog", { name: "Add a delivery file" });
+  dialog = studio.getByRole("dialog", { name: "Add a deliverable" });
   await dialog.getByLabel("File name").fill("Workflow final");
   await dialog
     .getByLabel("File", { exact: true })
     .setInputFiles(fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url)));
-  await dialog.getByRole("button", { name: "Add file", exact: true }).click();
+  await dialog.getByRole("button", { name: "Add deliverable", exact: true }).click();
   await expect(dialog).toBeHidden();
   await studio.getByRole("button", { name: "Complete delivery", exact: true }).click();
   dialog = studio.getByRole("dialog", { name: "Ready to wrap up?" });

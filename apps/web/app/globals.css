@@ -593,8 +593,8 @@ select {
   font-weight: 500;
 }
 /*
- * Client pages use this bar for their shared navigation; the board owns a floating equivalent.
- * The board shell hides this bar on desktop. On mobile it also opens the navigation drawer.
+ * Every page's header lives in the floating cards above it, so this bar is hidden on desktop
+ * (workspace.css). Below 901px it holds the button that opens the navigation drawer.
  */
 
 .topbar {
@@ -670,13 +670,7 @@ img.client-mark {
 .page-heading > .button {
   flex-shrink: 0;
 }
-/*
- * Inside a client workspace the bar above the page stands down (see
- * `features/workspace/workspace.css`), so the page's own header row carries the global actions
- * that bar would have held. Below 901px the bar is back — it holds the only way to open the
- * navigation drawer — so the page's copy of the bell stands down instead of showing a second
- * marker, and this wrapper gets out of the way of the heading's own stacking.
- */
+/* A page header's action group. Below 901px it gets out of the way of the heading's stacking. */
 .page-actions {
   display: flex;
   flex-shrink: 0;
@@ -902,7 +896,18 @@ img.client-mark {
   display: flex;
   flex-direction: column;
 
-  gap: var(--space-section);
+  gap: 16px;
+}
+/* The same white card as `.settings-section`, so Team, Clients and Presets match Studio and Account. */
+.settings-block {
+  padding: var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.settings-block .settings-list-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 .settings-block h2 {
   font-size: 18px;
@@ -1365,17 +1370,6 @@ img.client-mark {
     display: contents;
   }
 }
-/*
- * `.page-bell`'s own threshold, kept separate from the block above: the shell's topbar bell hides
- * at `min-width: 901px` (workspace.css), so this must clear that boundary rather than meet it at
- * an integer pixel, or a fractional viewport width (reachable through zoom or device pixel ratio)
- * would show both bells at once.
- */
-@media (max-width: 900.98px) {
-  .page-bell {
-    display: none;
-  }
-}
 /* `.settings-block`'s own breakpoint, matching where `features/settings/settings.css` broke it before this rule moved here. */
 @media (max-width: 800px) {
   .settings-block > header {
@@ -1822,13 +1816,50 @@ img.board-identity-mark {
   color: var(--muted);
 }
 
+/* One search-and-filter row under a title card: Brand Hub Assets and Files. */
+.hub-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.hub-toolbar > .search-field {
+  flex: 1;
+  min-width: 180px;
+}
+.hub-toolbar select {
+  width: auto;
+  max-width: 280px;
+  min-height: 40px;
+}
+@media (max-width: 720px) {
+  .hub-toolbar > .search-field {
+    flex-basis: 100%;
+  }
+  .hub-toolbar > label,
+  .hub-toolbar select {
+    flex: 1;
+    max-width: none;
+  }
+}
+/* A title card's section actions (shared/header-actions.tsx): one row, wrapping on a phone. */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.header-actions-slot:empty {
+  display: none;
+}
+
 /* Shared client title cards and responsive action groups. */
-.client-page-workspace > .main-content > .page-content {
+.card-workspace > .main-content > .page-content {
   max-width: none;
   /* With the sticky header's own 12px bottom band, the page starts 16px below its cards. */
   padding: 4px 16px 32px;
 }
-.client-page-heading {
+.card-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px 24px;
@@ -1840,7 +1871,7 @@ img.board-identity-mark {
   background: var(--surface);
   box-shadow: 0 3px 14px rgb(0 0 0 / 7%);
 }
-.client-page-heading h1 {
+.card-heading h1 {
   margin: 0;
   font-size: 28px;
   font-weight: 600;
@@ -1857,52 +1888,52 @@ img.board-identity-mark {
 .page-title-row > .icon-button {
   flex-shrink: 0;
 }
-.client-page-heading p {
+.card-heading p {
   margin: 6px 0 0;
   font-size: var(--text-base);
 }
-.client-page-heading > .page-actions {
+.card-heading > .page-actions {
   display: flex;
   flex-wrap: wrap;
   min-width: 0;
   align-self: start;
 }
-.client-page-heading > .client-page-tools {
+.card-heading > .card-heading-tools {
   grid-column: 1 / -1;
   min-width: 0;
   margin: 0;
 }
-.client-page-heading > .section-tabs {
+.card-heading > .section-tabs {
   padding-top: 2px;
 }
-.client-page-heading > .segmented-control {
+.card-heading > .segmented-control {
   width: fit-content;
 }
-.client-page-workspace .empty-state {
+.card-workspace .empty-state {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
 }
 @media (max-width: 720px) {
-  .client-page-workspace > .main-content > .page-content {
+  .card-workspace > .main-content > .page-content {
     padding: 8px 12px 24px;
   }
-  .client-page-heading {
+  .card-heading {
     padding: 16px;
     gap: 14px;
   }
-  .client-page-heading h1 {
+  .card-heading h1 {
     font-size: 24px;
   }
-  .client-page-heading > .page-actions {
+  .card-heading > .page-actions {
     justify-content: flex-end;
   }
 }
 @media (max-width: 480px) {
-  .client-page-heading:has(.page-actions > :not(.page-bell)) {
+  .card-heading {
     grid-template-columns: minmax(0, 1fr);
   }
-  .client-page-heading > .page-actions {
+  .card-heading > .page-actions {
     justify-content: flex-start;
   }
   /* Phones hold two tiles per row; a lone last tile (the client Overview's third) fills its row. */

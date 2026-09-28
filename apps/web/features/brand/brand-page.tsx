@@ -3,6 +3,7 @@
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { HeaderActions, HeaderActionsProvider } from "@/features/shared/header-actions";
 import { useAuth } from "@/features/auth/auth-provider";
 import { AssetsPage } from "@/features/assets/assets-page";
 import { useScrollRow } from "@/features/shared/use-scroll-row";
@@ -20,6 +21,7 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const clients = useClients();
   const sections = useBrandSections(clientId);
   const [editing, setEditing] = useState<EditableSectionId | null>(null);
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
   const client = clients.data?.find((item) => item.id === clientId);
   const sectionNav = useRef<HTMLElement>(null);
   // The section row scrolls sideways below desktop; it mounts once the Hub has loaded.
@@ -42,75 +44,75 @@ export function BrandPage({ clientId, section }: { clientId: string; section: st
   const agency = profile?.role === "agency";
   const contentOf = (id: string) => sections.data?.find((item) => item.section === id)?.content;
   return (
-    <div className="page-content brand-page">
-      <header className="page-heading client-page-heading">
-        <h1>Brand Hub</h1>
-        {/*
-        The nine sections read as one row beside the title rather than hiding inside a select or
-        taking a row of their own: where you are and what else there is are the same glance, and
-        the section itself starts higher. They are links because they are routes — a section opens
-        in a new tab or gets its own address, which a select could never offer. The row scrolls
-        sideways instead of wrapping, so the order stays the order of the groups.
+    <HeaderActionsProvider value={actionsSlot}>
+      <div className="page-content brand-page">
+        <header className="page-heading card-heading">
+          <h1>Brand Hub</h1>
+          {/* Every section's actions land here (shared/header-actions.tsx). */}
+          <div className="page-actions header-actions-slot" ref={setActionsSlot} />
+          {/*
+        The nine sections are one row of links under the title rather than a select: they are
+        routes, so a section opens in a new tab or gets its own address. The row scrolls sideways
+        instead of wrapping, so the order stays the order of the groups.
       */}
-        <nav
-          ref={sectionNav}
-          className="brand-section-nav section-tabs client-page-tools"
-          aria-label="Brand sections"
-        >
-          {brandNavigation.map((item) => (
-            <Link
-              key={item.id}
-              href={`/clients/${clientId}/brand/${item.id}`}
-              className={item.id === section ? "active" : ""}
-              aria-current={item.id === section ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </header>
-      {/* Files renders its own heading, with its upload actions and campaign back link. */}
-      {section !== "files" && (
-        <div className="brand-section-heading">
-          {/* The active tab already names the section; the heading stays for assistive technology. */}
-          <h2 className="visually-hidden">{title}</h2>
-          {agency && editable && (
-            <button className="button quiet" onClick={() => setEditing(section)}>
+          <nav
+            ref={sectionNav}
+            className="brand-section-nav section-tabs card-heading-tools"
+            aria-label="Brand sections"
+          >
+            {brandNavigation.map((item) => (
+              <Link
+                key={item.id}
+                href={`/clients/${clientId}/brand/${item.id}`}
+                className={item.id === section ? "active" : ""}
+                aria-current={item.id === section ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </header>
+        {/* Files renders its own heading with its campaign back link. The active tab already names
+        the section; this heading stays for assistive technology. */}
+        {section !== "files" && <h2 className="visually-hidden">{title}</h2>}
+        {agency && editable && (
+          <HeaderActions>
+            <button className="button" onClick={() => setEditing(section)}>
               <Pencil size={14} />
               Edit {title.toLowerCase()}
             </button>
-          )}
-        </div>
-      )}
-      {section === "files" ? (
-        <AssetsPage key={clientId} clientId={clientId} />
-      ) : section === "assets" ? (
-        <BrandAssets
-          key={clientId}
-          clientId={clientId}
-          products={contentOf("products")}
-          onEditProducts={agency ? () => setEditing("products") : undefined}
-        />
-      ) : (
-        <BrandSectionContent
-          key={`${clientId}-${section}`}
-          clientId={clientId}
-          clientName={client.name}
-          section={section}
-          content={content}
-          sections={sections.data ?? []}
-        />
-      )}
-      {editing && (
-        <SectionEditor
-          key={`${clientId}-${editing}`}
-          clientId={clientId}
-          section={editing}
-          title={editing === "products" ? "Products" : title}
-          content={contentOf(editing)}
-          onClose={() => setEditing(null)}
-        />
-      )}
-    </div>
+          </HeaderActions>
+        )}
+        {section === "files" ? (
+          <AssetsPage key={clientId} clientId={clientId} />
+        ) : section === "assets" ? (
+          <BrandAssets
+            key={clientId}
+            clientId={clientId}
+            products={contentOf("products")}
+            onEditProducts={agency ? () => setEditing("products") : undefined}
+          />
+        ) : (
+          <BrandSectionContent
+            key={`${clientId}-${section}`}
+            clientId={clientId}
+            clientName={client.name}
+            section={section}
+            content={content}
+            sections={sections.data ?? []}
+          />
+        )}
+        {editing && (
+          <SectionEditor
+            key={`${clientId}-${editing}`}
+            clientId={clientId}
+            section={editing}
+            title={editing === "products" ? "Products" : title}
+            content={contentOf(editing)}
+            onClose={() => setEditing(null)}
+          />
+        )}
+      </div>
+    </HeaderActionsProvider>
   );
 }

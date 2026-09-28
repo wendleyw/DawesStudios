@@ -29,11 +29,12 @@ import {
   NO_CAMPAIGN_TITLE,
 } from "./file-groups";
 import { FileCard } from "./file-card";
-import { UploadFileDialog } from "./upload-file-dialog";
+import { DeliveryFileDialog } from "./delivery-file-dialog";
 import "./assets.css";
 import { FormError } from "@/features/shared/form-error";
 import { SearchField } from "@/features/shared/search-field";
 import { PageStatus } from "@/features/shared/page-status";
+import { HeaderActions } from "@/features/shared/header-actions";
 import { FolderTile } from "@/features/shared/folder-tile";
 
 /** "1 file"/"1 project" stay singular; everything else takes the plural. */
@@ -53,14 +54,13 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   const invalidateWorkspace = useInvalidateWorkspace();
   const parameters = useSearchParams();
   const [search, setSearch] = useState("");
-  const [approved, setApproved] = useState(false);
   // The project filter as explicitly chosen, tagged with the campaign it was chosen under. A folder
   // navigation changes the resolved campaign id without touching this state, so a stale choice stops
   // matching on the very next render — see `effectiveProjectFilter` for why that needs no effect.
   const [projectEdit, setProjectEdit] = useState<{ campaign: string; project: string } | null>(
     null,
   );
-  const [upload, setUpload] = useState<"working" | "delivery" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [deliverProject, setDeliverProject] = useState<string | null>(null);
   const clients = useClients();
   const data = useProjectAssets(clientId);
@@ -88,11 +88,11 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       setDeliverProject(null);
     },
   });
-  if (data.isPending || clients.isPending) return <PageStatus>Loading files…</PageStatus>;
+  if (data.isPending || clients.isPending) return <PageStatus>Loading deliverables…</PageStatus>;
   if (data.error || !data.data || !clients.data?.some((client) => client.id === clientId))
     return (
       <div className="files-page">
-        <h2>Files unavailable.</h2>
+        <h2>Deliverables unavailable.</h2>
         <p className="brand-muted">This client is unavailable or you do not have access.</p>
         <button className="button" onClick={() => void data.refetch()}>
           Try again
@@ -112,9 +112,7 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   const project = campaignId ? effectiveProjectFilter(projectEdit, campaignId, defaultProject) : "";
 
   const matching = assets.filter(
-    (asset) =>
-      (!approved || asset.approved) &&
-      (!search || asset.name.toLowerCase().includes(search.trim().toLowerCase())),
+    (asset) => !search || asset.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const withPreviews = matching.map((asset) => ({
     ...asset,
@@ -134,7 +132,6 @@ export function AssetsPage({ clientId }: { clientId: string }) {
 
   const clearFilters = () => {
     setSearch("");
-    setApproved(false);
     if (campaignId) setProjectEdit({ campaign: campaignId, project: "" });
   };
 
@@ -167,67 +164,49 @@ export function AssetsPage({ clientId }: { clientId: string }) {
   const isEmpty = campaignId === null ? folders.length === 0 : groups.length === 0;
 
   return (
-    <section className="files-page" aria-label="Files">
-      <header className="brand-section-heading files-heading">
-        <div>
-          {campaignId !== null ? (
-            <div className="page-title-row">
-              <Link
-                href={filesHref}
-                className="icon-button"
-                aria-label="All campaigns"
-                title="All campaigns"
-              >
-                <ArrowLeft size={16} />
-              </Link>
-              <h2>{campaignTitle}</h2>
-            </div>
-          ) : (
-            // The Brand Hub's active tab already reads "Files"; the heading stays for assistive
-            // technology.
-            <h2 className="visually-hidden">Files</h2>
-          )}
-          <p className="brand-muted">
-            {campaignId !== null
-              ? `${countLabel(campaignCounts.fileCount, "file")} from ${countLabel(campaignCounts.projectCount, "project")}`
-              : profile?.role === "client"
-                ? "Final files, ready to download."
-                : "Working files and final deliveries."}
+    <section className="files-page" aria-label="Deliverables">
+      {campaignId !== null ? (
+        <header className="files-heading">
+          <Link
+            href={filesHref}
+            className="icon-button"
+            aria-label="All campaigns"
+            title="All campaigns"
+          >
+            <ArrowLeft size={16} />
+          </Link>
+          <h2>{campaignTitle}</h2>
+          <p>
+            {countLabel(campaignCounts.fileCount, "file")} from{" "}
+            {countLabel(campaignCounts.projectCount, "project")}
           </p>
-        </div>
-        <div className="page-actions">
-          {projects.length > 0 && profile?.role !== "client" && (
-            <div className="file-actions">
-              {profile?.role === "agency" && (
-                <button
-                  className="button"
-                  disabled={!deliverable.length}
-                  title="Available when a project is approved"
-                  onClick={() => setUpload("delivery")}
-                >
-                  <Plus size={15} />
-                  Delivery file
-                </button>
-              )}
-              {/* While the delivery callout is up, completing the delivery is the one action that
-                  matters, so this one steps back rather than competing with it. */}
-              <button
-                className={canDeliver ? "button" : "button primary"}
-                onClick={() => setUpload("working")}
-              >
-                <Plus size={15} />
-                Working file
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-      <div className="files-toolbar">
+        </header>
+      ) : (
+        // The Brand Hub's active tab already reads "Deliverables"; the heading stays for assistive
+        // technology.
+        <h2 className="visually-hidden">Deliverables</h2>
+      )}
+      {projects.length > 0 && profile?.role === "agency" && (
+        <HeaderActions>
+          {/* While the delivery callout is up, completing the delivery is the one action that
+              matters, so this one steps back rather than competing with it. */}
+          <button
+            className={canDeliver ? "button" : "button primary"}
+            disabled={!deliverable.length}
+            title={deliverable.length ? undefined : "Available when a project is approved"}
+            onClick={() => setUploading(true)}
+          >
+            <Plus size={15} />
+            Delivery file
+          </button>
+        </HeaderActions>
+      )}
+      <div className="hub-toolbar">
         <SearchField
-          label="Search files"
+          label="Search deliverables"
           value={search}
           onChange={setSearch}
-          placeholder="Find a file…"
+          placeholder="Find a deliverable…"
           iconSize={16}
         />
         {campaignId !== null && (
@@ -251,14 +230,6 @@ export function AssetsPage({ clientId }: { clientId: string }) {
             </select>
           </>
         )}
-        <div className="segmented-control" aria-label="File status">
-          <button className={!approved ? "active" : ""} onClick={() => setApproved(false)}>
-            All files
-          </button>
-          <button className={approved ? "active" : ""} onClick={() => setApproved(true)}>
-            Approved
-          </button>
-        </div>
       </div>
       {canDeliver && (
         <div className="delivery-callout">
@@ -276,11 +247,11 @@ export function AssetsPage({ clientId }: { clientId: string }) {
       {isEmpty ? (
         <div className="empty-state">
           <FileText size={28} />
-          <h2>{assets.length ? "No matching files." : "The right files, in one place."}</h2>
+          <h2>{assets.length ? "No matching deliverables." : "Final files, in one place."}</h2>
           <p>
             {assets.length
               ? "Try another filter or search."
-              : "Files will appear here as the project takes shape."}
+              : "Deliverables appear here once a project’s final files are added."}
           </p>
           {assets.length > 0 && (
             <button className="button quiet" onClick={clearFilters}>
@@ -308,14 +279,13 @@ export function AssetsPage({ clientId }: { clientId: string }) {
                 <span>{countLabel(group.files.length, "file")}</span>
                 {group.driveUrl && (
                   <a
-                    className="icon-button"
+                    className="button quiet file-group-drive"
                     href={group.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Open client Drive folder"
-                    title="Open client Drive folder"
                   >
                     <DriveIcon size={14} />
+                    Google Drive backup
                   </a>
                 )}
               </h2>
@@ -334,16 +304,11 @@ export function AssetsPage({ clientId }: { clientId: string }) {
           ))}
         </div>
       )}
-      {upload && (
-        <UploadFileDialog
-          kind={upload}
-          projects={upload === "delivery" ? deliverable : projects}
-          initialProject={
-            upload === "delivery"
-              ? initialUploadProject(deliverable, project)
-              : project || projects[0].id
-          }
-          onClose={() => setUpload(null)}
+      {uploading && (
+        <DeliveryFileDialog
+          projects={deliverable}
+          initialProject={initialUploadProject(deliverable, project)}
+          onClose={() => setUploading(false)}
         />
       )}
       <Modal

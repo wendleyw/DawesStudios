@@ -1,5 +1,7 @@
 "use client";
 
+import { PackageCheck } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { DriveIcon } from "@/features/shared/drive-icon";
 import { MiroBarShell, miroBarTone } from "./miro-view";
@@ -37,6 +39,11 @@ export type MiroWorkspaceBarProps = {
    * ever on `client`, so this is always the one link either of them may see.
    */
   driveUrl: string | null;
+  /**
+   * Where a delivered project's final files are: its Files view. Shown beside Open in Miro so the
+   * delivered work is one click from the board; left out for designers and undelivered projects.
+   */
+  deliverableHref?: string | null;
 };
 
 /**
@@ -60,6 +67,14 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
       tone={miroBarTone(props.role, props.channel)}
       lead={props.lead}
       link={shown}
+      primary={
+        props.delivered && props.deliverableHref ? (
+          <Link className="button" href={props.deliverableHref}>
+            <PackageCheck size={14} aria-hidden="true" />
+            <span className="miro-bar-open-label">Deliverable</span>
+          </Link>
+        ) : undefined
+      }
       menu={(close) => (
         <>
           {agency && internal && props.boards.length > 0 && (

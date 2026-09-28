@@ -16,7 +16,7 @@ export const brandNavigation = [
   { id: "typography", label: "Typography", group: "Identity" },
   { id: "visual-style", label: "Visual style", group: "Identity" },
   { id: "assets", label: "Assets", group: "Resources" },
-  { id: "files", label: "Files", group: "Resources" },
+  { id: "files", label: "Deliverables", group: "Resources" },
   { id: "messaging", label: "Messaging", group: "Guidance" },
   { id: "ai", label: "Brand context", group: "Guidance" },
 ] as const;
@@ -413,6 +413,27 @@ export function validateBrandFile(
   if (file.size > BUCKET_MAX_BYTES) throw new Error(uploadSizeMessage());
   return brandFileTypes[file.type];
 }
+
+/**
+ * A dropped file's starting name: its file name without the extension, separators read as spaces.
+ * The agency can rename it afterwards from the asset's own dialog.
+ */
+export function assetNameFromFileName(fileName: string): string {
+  const stem = fileName.replace(/\.[^.]+$/, "");
+  const name = stem.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
+  return name || "Untitled asset";
+}
+
+/** A dropped file's starting category, from its type: vectors are logos, PDFs documents. */
+export function assetCategoryForMime(mimeType: string): string {
+  if (mimeType === "image/svg+xml") return "Logo";
+  if (mimeType === "application/pdf") return "Document";
+  if (mimeType.startsWith("image/")) return "Photography";
+  return "Other";
+}
+
+/** The categories an asset can be filed under; a link is always "Link". */
+export const assetCategories = ["Logo", "Photography", "Product", "Document", "Other"] as const;
 
 /**
  * The Assets directory. Folders nest (up to six levels, enforced by the database); these pure

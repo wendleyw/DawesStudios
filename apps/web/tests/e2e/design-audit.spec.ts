@@ -52,12 +52,6 @@ test("representative task surfaces pass responsive layout and accessibility chec
   await page.goto("/login");
   await capture(page, "login");
   await signIn(page, credentials.agency);
-  await page.getByRole("button", { name: "Help & support", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Help & support", exact: true })).toContainText(
-    "Open a project and use Comments to message the studio.",
-  );
-  await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Help & support", exact: true })).not.toBeVisible();
   const boardPath = await page
     .locator(".workspace-card")
     .filter({ hasText: "SABRE" })

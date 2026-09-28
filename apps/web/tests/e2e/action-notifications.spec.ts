@@ -195,12 +195,12 @@ test("action notifications follow designer, studio and client work until complet
     await expect(projectAction(studio, fixture.name)).toContainText("Deliver project");
     await projectAction(studio, fixture.name).click();
     await studio.getByRole("button", { name: "Delivery file", exact: true }).click();
-    const upload = studio.getByRole("dialog", { name: "Add a delivery file" });
+    const upload = studio.getByRole("dialog", { name: "Add a deliverable" });
     await upload.getByLabel("File name").fill("Notification final");
     await upload
       .getByLabel("File", { exact: true })
       .setInputFiles(fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url)));
-    await upload.getByRole("button", { name: "Add file", exact: true }).click();
+    await upload.getByRole("button", { name: "Add deliverable", exact: true }).click();
     await expect(upload).toBeHidden();
     await studio.getByRole("button", { name: "Complete delivery", exact: true }).click();
     const complete = studio.getByRole("dialog", { name: "Ready to wrap up?" });

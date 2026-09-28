@@ -66,7 +66,7 @@ export function ClientOverviewPage({ clientId }: { clientId: string }) {
   const projectHref = (id: string) => `/projects/${id}?channel=client`;
   return (
     <div className="page-content overview-page">
-      <header className="page-heading client-page-heading overview-welcome">
+      <header className="page-heading card-heading overview-welcome">
         <div className="overview-welcome-identity">
           <ClientIdentity
             client={client}

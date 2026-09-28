@@ -49,15 +49,15 @@ for (const role of ["agency", "client"] as const) {
           nav.getByRole("link", { name: label, exact: true, includeHidden: true }),
         ).toHaveAttribute("aria-current", "page");
         await expect(page.locator(".client-navigation")).toHaveCount(1);
-        await expect(page.locator(".client-page-heading")).toBeVisible();
+        await expect(page.locator(".card-heading")).toBeVisible();
         // Sections are documents, not canvases: the canvas grid stays off their surface.
         await expect(page.locator(".main-content")).toHaveCSS("background-image", "none");
         await expect(page.getByRole("button", { name: /^Account menu:/ })).toBeVisible();
         await expect
           .poll(() =>
-            page.locator(".client-page-heading").evaluate((element) => {
+            page.locator(".card-heading").evaluate((element) => {
               const title = element.getBoundingClientRect();
-              const nav = document.querySelector(".client-page-chrome")!.getBoundingClientRect();
+              const nav = document.querySelector(".page-chrome")!.getBoundingClientRect();
               return (
                 title.top >= nav.bottom - 1 &&
                 title.left >= 0 &&
@@ -133,7 +133,7 @@ test("brand sections, private drafts and direct briefing pages retain the shared
         "ai",
       ]) {
         await page.goto(`/clients/${client!.id}/brand/${section}`);
-        await expect(page.locator(".client-page-heading")).toBeVisible();
+        await expect(page.locator(".card-heading")).toBeVisible();
         await expect(
           page
             .getByRole("navigation", { name: "Brand sections", exact: true })
@@ -144,20 +144,20 @@ test("brand sections, private drafts and direct briefing pages retain the shared
         );
       }
       await page.goto(`/clients/${client!.id}/briefings/${briefing!.id}`);
-      await expect(page.locator(".client-page-heading h1")).toHaveText(briefing!.title);
+      await expect(page.locator(".card-heading h1")).toHaveText(briefing!.title);
       await expect(page.getByRole("link", { name: "All briefings", exact: true })).toBeVisible();
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.screenshot({
         path: `${screenshotDirectory}/client-page-briefing-detail-${width}.png`,
       });
       await page.goto(`/clients/${client!.id}/briefings/new`);
-      await expect(page.locator(".client-page-heading h1")).toHaveText("New briefing");
+      await expect(page.locator(".card-heading h1")).toHaveText("New briefing");
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.screenshot({
         path: `${screenshotDirectory}/client-page-new-briefing-${width}.png`,
       });
       await page.goto(`/clients/${client!.id}/brand/drafts/${draft!.id}`);
-      await expect(page.locator(".client-page-heading h1")).toHaveText("Template draft");
+      await expect(page.locator(".card-heading h1")).toHaveText("Template draft");
       await expect(page.getByRole("button", { name: "Save draft", exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
@@ -171,7 +171,7 @@ test("brand sections, private drafts and direct briefing pages retain the shared
         .getByRole("navigation", { name: "SABRE navigation", exact: true })
         .getByRole("link", { name: "Briefings", exact: true })
         .click();
-      await expect(page.locator(".client-page-heading h1")).toHaveText("Briefings");
+      await expect(page.locator(".card-heading h1")).toHaveText("Briefings");
       await expect
         .poll(() => page.locator(".main-content").evaluate((element) => element.scrollTop))
         .toBe(0);

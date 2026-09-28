@@ -84,7 +84,7 @@ The styling boundary extends to color: a color that only one feature uses is wri
 
 [`features/shared/theme-colors.test.ts`](../../apps/web/features/shared/theme-colors.test.ts) is the standing gate behind all of this, parallel to `stylesheet-boundary.test.ts` above: it parses `globals.css` and every feature stylesheet and fails on any literal color found outside `light-dark()` unless its selector is named in `themeIndependent` (each with a stated reason) or its property ends in `shadow` and holds only black. The same file measures WCAG AA contrast on both the light and dark side: 4.5:1 or better for the text-on-surface token pairs (`--foreground`, `--muted` and `--on-ink` against their surfaces, plus the sidebar and status-tone pairs), and, for the board timeline's eight bar variants (the default bar and its seven statuses), 4.5:1 or better for the bar's text against its fill and 3:1 or better for the bar's edge against the lane surface — so a dark value that passes the color gate but reads poorly still fails the suite.
 
-Tokens are authored with `light-dark()`, but no browser ever receives that function literally: Tailwind's PostCSS step and Lightning CSS compile it into a `--lightningcss-light`/`--lightningcss-dark` custom-property fallback, toggled by `color-scheme` and `prefers-color-scheme`, so a browser without native `light-dark()` support still gets both themes rather than a missing color. Confirmed by serving `/login` and inspecting its compiled stylesheet: it contains no `light-dark(` and 40+ `--lightningcss-light`/`--lightningcss-dark` declarations toggled under `@media (prefers-color-scheme: dark)`. If the Content-Security-Policy in [`next.config.ts`](../../apps/web/next.config.ts) ever drops `script-src`'s `'unsafe-inline'`, allow the fixed [theme script](../../apps/web/features/workspace/theme.ts) by its sha256 hash instead, since its content is static and never varies per request. This sits beside the product's existing reliance on the top-layer `<dialog>` element (used by both [Modal](../../apps/web/features/shared/modal.tsx) and Playground) and the `inert` attribute (Playground's covered controls), and on the `:has()` selector, which `.client-page-heading:has(.page-actions > :not(.page-bell))` already depends on.
+Tokens are authored with `light-dark()`, but no browser ever receives that function literally: Tailwind's PostCSS step and Lightning CSS compile it into a `--lightningcss-light`/`--lightningcss-dark` custom-property fallback, toggled by `color-scheme` and `prefers-color-scheme`, so a browser without native `light-dark()` support still gets both themes rather than a missing color. Confirmed by serving `/login` and inspecting its compiled stylesheet: it contains no `light-dark(` and 40+ `--lightningcss-light`/`--lightningcss-dark` declarations toggled under `@media (prefers-color-scheme: dark)`. If the Content-Security-Policy in [`next.config.ts`](../../apps/web/next.config.ts) ever drops `script-src`'s `'unsafe-inline'`, allow the fixed [theme script](../../apps/web/features/workspace/theme.ts) by its sha256 hash instead, since its content is static and never varies per request. This sits beside the product's existing reliance on the top-layer `<dialog>` element (used by both [Modal](../../apps/web/features/shared/modal.tsx) and Playground) and the `inert` attribute (Playground's covered controls), and on the `:has()` selector, which `html:has(.react-flow)` in `app/globals.css` already depends on.
 
 ### Unified document surfaces
 
@@ -126,11 +126,14 @@ Keep one primary page title, one active context marker, and one action cluster p
 
 ### Workspace topbar
 
-Every client surface uses the shared floating `workspace/canvas-header.tsx`. The
-`board-workspace` and `client-page-workspace` shell classes hide the desktop topbar and zero
-`--topbar-height` at 901 px and above. Board/project headers overlay the canvas; other client
-sections keep the identity/profile header sticky inside the main scrolling region. Non-client
-routes retain the studio identity in the shell topbar.
+Every page uses the shared floating header cards from `workspace/canvas-header.tsx`:
+`CanvasHeader` on client surfaces and `StudioHeader` (studio name, notifications, account) on
+studio pages (Overview, Team, Settings, Notifications). The `board-workspace` and `card-workspace`
+shell classes hide the desktop topbar and zero `--topbar-height` at 901 px and above. Board/project
+headers overlay the canvas; every other page keeps the header sticky inside the main scrolling
+region (`.page-chrome`) and titles itself in the white `.card-heading` title card, with its actions
+top right and any tabs below. Nested sections place actions in that card through
+`shared/header-actions.tsx`.
 
 On mobile the topbar carries the navigation drawer trigger. Every client surface keeps one
 notification bell immediately left of the profile in the account card. Its nonmodal, top-layer
@@ -341,14 +344,14 @@ One concept, one word. The interface uses these nouns and no synonym of them:
 | A designer's named internal Miro board for a project | **Design board**                           | canvas                      |
 | A round of work a design board sends to the studio | **Round**                                    | version                     |
 | The numbered version and note the agency shares, with an agency-editable Miro link | **Client version**            | publication, snapshot       |
-| A downloadable file on `/clients/:id/brand/files` | **File**, and **Working file** for a source upload | asset                  |
+| A final file on `/clients/:id/brand/files` (Brand Hub → Deliverables) | **Delivery file**, listed under **Deliverables** | asset, working file |
 | A file in the Brand Hub library              | **Asset**                                          | file, resource              |
 | A brief document                             | **Briefing**                                       | brief                       |
 | A person a project is assigned to            | **Designer**                                       | creative partner            |
 | A record on `/notifications`                 | **Notification**                                   | update                      |
 | The billing unit                             | **credits**                                        | cr                          |
 
-Deliverable, asset, working file, design board, round and client version are distinct things and are never merged.
+Deliverable, delivery file, asset, design board, round and client version are distinct things and are never merged.
 `features/workspace/` keeps its directory name because it is the application shell, not a client
 record; "workspace" survives in the shell's own chrome (the navigation landmark, the shell's loading
 and connection states) and nowhere else.

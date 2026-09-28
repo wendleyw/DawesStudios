@@ -48,6 +48,15 @@ previewed through the same signed URL as any asset. The link must be a complete 
 empty. Readers see the Products entry only when products exist; the agency always sees it to add
 one. Specifications and usage guidance sit behind **Details** on each card.
 
+## Title card and actions
+
+Like Briefings and Credits, the Brand Hub title card holds the title and the section's actions on
+top and the section tabs below. Each section places its actions — **Edit …**, Assets' **New
+folder / Add link / Add files**, Deliverables' **Delivery file** — through
+`shared/header-actions.tsx`, so they always sit top right of the card; search and filters form one
+`.hub-toolbar` row under it. The tab that used to read Files is **Deliverables**
+(`features/assets`).
+
 ## Assets and folders
 
 `brand-assets.tsx` is a directory. Folders nest up to six levels and belong to one client; the top
@@ -68,14 +77,23 @@ A link is an asset with an HTTPS address instead of a file (`brand-link-dialog.t
 Link): its card shows the address's host and its detail dialog offers **Open link** in place of
 **Download file**. Addresses must be complete HTTPS URLs (`safeHttpsUrl` and a database check).
 
-The agency can create or rename folders, choose a destination when uploading, and move an asset
-from its detail dialog. Deleting a folder requires confirmation and moves its subfolders and assets
+Files are added in bulk (`brand-batch-upload.ts`): dropped anywhere over the directory — the
+overlay names the folder they land in — or picked several at a time with **Add files** (agency) /
+**Add images** (client). Each lands in the open folder as its own asset, named after its file
+(`assetNameFromFileName`) and categorized by type (`assetCategoryForMime`), with no form in
+between. They upload one at a time; a status row counts progress and lists any file that failed
+with its reason and **Try again**. Every file keeps its asset ID across retries, so a lost response
+never adds a second row, and a file whose row cannot be written is removed from Storage again.
+Details — name, category, description and tags — are added afterwards from the asset's own dialog:
+the agency's **Edit details** (`brand-asset-details.tsx`, `updateBrandAssetDetails`).
+
+The agency can create or rename folders and move an asset from its detail dialog. Deleting a folder requires confirmation and moves its subfolders and assets
 up to its parent; no asset record or Storage object is deleted. `brand-folder-dialog.tsx` owns form
 validation and a stable creation ID, including recovery after a committed response is lost. A
 renamed folder retains its ID; folders cannot be moved. `brand-asset-folder-picker.tsx` handles
 per-asset moves with the indented folder tree. A client may also create folders (at any level) and
-add images (PNG, JPEG or WebP; **Add image**) and links, but cannot rename or delete folders or
-move, edit or delete assets. Assigned designers browse folders and download files only.
+add images (PNG, JPEG or WebP; **Add images** or a drop) and links, but cannot rename or delete
+folders or move, edit or delete assets. Assigned designers browse folders and download files only.
 
 Migration `202609230009_brand_asset_folders.sql` adds `brand_asset_folders` and nullable
 `brand_assets.folder_id`. RLS enforces client-scoped reads and agency writes;
@@ -90,9 +108,9 @@ updated by authenticated users.
 
 The private `brand-assets` bucket keeps opaque `<client UUID>/<random UUID>.<extension>` paths.
 PNG, JPEG, WebP, SVG and PDF are accepted up to 50 MiB. Raster previews use short-lived caller-scoped
-signed URLs; SVG/PDF are downloaded instead of embedded as active content. `brand-asset-upload.tsx`
-retains an uploaded file and stable metadata ID across failed saves. Cancellation removes only an
-unregistered upload, with a retryable cleanup error. Downloads retrieve the authenticated blob.
+signed URLs; SVG/PDF are downloaded instead of embedded as active content. The bulk upload retains
+an uploaded file and stable asset ID across failed saves and removes only an unregistered upload.
+Downloads retrieve the authenticated blob.
 Search covers names, descriptions and tags; `category`, `search` and `asset` URL parameters retain
 filtered links and direct asset references. Folder organization does not change these references.
 

@@ -341,10 +341,10 @@ test("list sorts by a clicked column title and by the phone menu", async ({ page
     const head = page.locator(".board-list .table-head");
     const due = head.getByRole("button", { name: /^Due/ });
     await due.click();
-    await expect(due).toHaveAccessibleName("Due, earliest first");
+    await expect(due).toHaveAccessibleName("Due, earliest first. Click to reverse");
     await expectDueOrder("asc");
     await due.click();
-    await expect(due).toHaveAccessibleName("Due, latest first");
+    await expect(due).toHaveAccessibleName("Due, latest first. Click for the default order");
     await expectDueOrder("desc");
     await page.screenshot({ path: `${screenshotDirectory}/board-list-sorted-due-1600.png` });
 

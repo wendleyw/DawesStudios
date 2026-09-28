@@ -228,7 +228,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   const filesUrl = `/clients/${clientId}/brand/files?project=${projectId}`;
   await studio.goto(filesUrl);
   await studio.getByRole("button", { name: "Delivery file", exact: true }).click();
-  const uploadDialog = studio.getByRole("dialog", { name: "Add a delivery file" });
+  const uploadDialog = studio.getByRole("dialog", { name: "Add a deliverable" });
   await expect(uploadDialog.getByRole("combobox", { name: "Project", exact: true })).toHaveValue(
     projectId,
   );
@@ -236,7 +236,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await uploadDialog
     .getByLabel("File", { exact: true })
     .setInputFiles(fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url)));
-  await uploadDialog.getByRole("button", { name: "Add file", exact: true }).click();
+  await uploadDialog.getByRole("button", { name: "Add deliverable", exact: true }).click();
   await expect(uploadDialog).toBeHidden();
   await expect(studio.getByRole("button", { name: "Download Reviewed final" })).toBeVisible();
   const clientCaller = await localCaller(credentials.client);

@@ -148,10 +148,10 @@ export function ProjectDetails({
       setRevoking(null);
     },
   });
-  // Files (`assets-page.tsx`) shows the same Drive icon beside a project's file group, reading only
+  // Deliverables (`assets-page.tsx`) shows the same Drive link beside a project's file group, reading only
   // the `client` channel; a `client` save also refreshes that cache so the icon there never goes
   // stale for up to the assets query's own cache time. Non-widening: `assets-page.tsx`'s own writes
-  // already invalidate this same key. An `internal` save never reaches Files, which no designer's
+  // already invalidate this same key. An `internal` save never reaches Deliverables, which no designer's
   // channel does either.
   const onDriveLinkSaved = async (channel: ProjectChannel) => {
     await (channel === "client" ? Promise.all([invalidate(), invalidateAssets()]) : invalidate());
@@ -304,7 +304,7 @@ export function ProjectDetails({
             className="button quiet"
             href={`/clients/${project.client_id}/brand/files?project=${project.id}`}
           >
-            Files
+            Deliverables
             <ArrowUpRight size={14} />
           </Link>
           {profile?.role !== "designer" && (

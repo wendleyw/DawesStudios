@@ -163,7 +163,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
   }
   return (
     <div className="page-content credits-page">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Credits</h1>
           <p>A clear view of your creative investment.</p>
@@ -177,7 +177,7 @@ export function CreditsPage({ clientId }: { clientId: string }) {
             {isAgency ? "Adjust credits" : "Request credits"}
           </button>
         </div>
-        <div className="credit-navigation client-page-tools">
+        <div className="credit-navigation card-heading-tools">
           <nav className="credit-tabs section-tabs" aria-label="Credit views">
             <button
               className={tab === "activity" ? "active" : ""}

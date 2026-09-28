@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
@@ -53,17 +54,13 @@ test("brand folders persist, organize real files, and preserve files when delete
     await expect(page.getByText("A folder with this name already exists here.")).toBeVisible();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await folderTile("Campaign launch").click();
-    await page.getByRole("button", { name: "Add asset", exact: true }).click();
-    const upload = page.getByRole("dialog", { name: "Add a brand asset" });
-    await expect(
-      upload.getByRole("combobox", { name: "Folder", exact: true }).locator("option:checked"),
-    ).toHaveText("Campaign launch");
-    await upload
-      .getByLabel("File", { exact: true })
-      .setInputFiles(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url)));
-    await upload.getByLabel("Asset name", { exact: true }).fill("Approved campaign logo");
-    await upload.getByRole("button", { name: "Add asset", exact: true }).click();
-    await expect(upload).toHaveCount(0);
+    // Files added while a folder is open land in that folder, named after the file.
+    await page.getByLabel("Add files", { exact: true }).setInputFiles({
+      name: "Approved_campaign-logo.webp",
+      mimeType: "image/webp",
+      buffer: readFileSync(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url))),
+    });
+    await expect(page.locator(".brand-upload-queue")).toContainText("1 file added.");
     await expect(page.locator(".brand-asset-card")).toHaveCount(1);
     const folders = await localAdmin
       .from("brand_asset_folders")
@@ -103,10 +100,10 @@ test("brand folders persist, organize real files, and preserve files when delete
       await expect(viewer.locator(".brand-asset-card")).toHaveCount(1);
       // A client may add folders and images to its own Brand Hub; neither role organizes them.
       await expect(
-        viewer.getByRole("button", { name: /^(New folder|Add image|Add link)$/ }),
+        viewer.getByRole("button", { name: /^(New folder|Add images|Add link)$/ }),
       ).toHaveCount(role === "client" ? 3 : 0);
       await expect(
-        viewer.getByRole("button", { name: /^(Add asset|Rename folder|Delete folder)$/ }),
+        viewer.getByRole("button", { name: /^(Add files|Rename folder|Delete folder)$/ }),
       ).toHaveCount(0);
       await viewer.locator(".brand-asset-card").click();
       await expect(viewer.getByRole("button", { name: "Move asset", exact: true })).toHaveCount(0);

@@ -64,107 +64,129 @@ export function TeamPage() {
         </Link>
       </div>
     );
+  // The studio's own people lead, then the designers; each group reads alphabetically.
+  const agency = members.data?.filter((person) => person.role === "agency") ?? [];
+  const designers = members.data?.filter((person) => person.role !== "agency") ?? [];
+  const memberRow = (person: NonNullable<typeof members.data>[number]) => (
+    <div className="settings-list-row" key={person.id}>
+      <span className="settings-avatar">
+        {person.display_name
+          .split(" ")
+          .map((value) => value[0])
+          .slice(0, 2)
+          .join("")}
+      </span>
+      <div>
+        <strong>
+          {person.display_name}
+          {person.id === session?.user.id ? " (you)" : ""}
+        </strong>
+        <p>
+          {person.removed_at
+            ? "Access removed · Account block pending"
+            : person.role === "agency"
+              ? "Studio team"
+              : `Designer · ${person.activeProjectCount} active project${person.activeProjectCount === 1 ? "" : "s"}`}
+        </p>
+      </div>
+      {person.id === session?.user.id ? (
+        <span className="status-badge">{person.role === "agency" ? "Agency" : "Designer"}</span>
+      ) : (
+        <>
+          {!person.removed_at && (
+            <select
+              className="member-role-select"
+              aria-label={`Change ${person.display_name}'s role`}
+              value={person.role}
+              disabled={changeRole.isPending || remove.isPending}
+              onChange={(event) =>
+                changeRole.mutate({
+                  profileId: person.id,
+                  role: event.target.value as "agency" | "designer",
+                })
+              }
+            >
+              <option value="agency">Agency</option>
+              <option value="designer">Designer</option>
+            </select>
+          )}
+          <button
+            className="button quiet"
+            disabled={remove.isPending || changeRole.isPending}
+            onClick={() => {
+              remove.reset();
+              setRemoving({ id: person.id, name: person.display_name });
+            }}
+          >
+            {person.removed_at ? "Finish removal" : "Remove"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+  const group = (title: string, description: string, people: typeof agency, empty: string) => (
+    <section className="settings-block" aria-label={title}>
+      <header>
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </header>
+      {people.length ? (
+        <div className="settings-list">{people.map(memberRow)}</div>
+      ) : (
+        <p className="settings-note">{empty}</p>
+      )}
+    </section>
+  );
   return (
     <div className="page-content team-page">
-      <header className="page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Team</h1>
           <p>The people who work in the studio, and what they’re carrying right now.</p>
         </div>
+        <div className="page-actions">
+          <button
+            className="button primary"
+            onClick={() => {
+              setInviteOpen(true);
+              setSent(false);
+            }}
+          >
+            <Plus size={15} />
+            Invite someone
+          </button>
+        </div>
       </header>
+      {sent && <SettingsSuccess>Invitation email sent.</SettingsSuccess>}
       <div className="settings-sections">
-        <section className="settings-block">
-          <header>
-            <div>
-              <h2>Your team</h2>
-              <p>The people who keep good work moving.</p>
-            </div>
-            <button
-              className="button primary"
-              onClick={() => {
-                setInviteOpen(true);
-                setSent(false);
-              }}
-            >
-              <Plus size={15} />
-              Invite someone
+        {members.isPending ? (
+          <p role="status">Loading the team…</p>
+        ) : members.error ? (
+          <FormError>
+            Team members could not be loaded.{" "}
+            <button className="button quiet" onClick={() => void members.refetch()}>
+              Try again
             </button>
-          </header>
-          {sent && <SettingsSuccess>Invitation email sent.</SettingsSuccess>}
-          {members.isPending ? (
-            <p role="status">Loading the team…</p>
-          ) : members.error ? (
-            <FormError>
-              Team members could not be loaded.{" "}
-              <button className="button quiet" onClick={() => void members.refetch()}>
-                Try again
-              </button>
-            </FormError>
-          ) : (
-            <div className="settings-list">
-              {members.data?.map((person) => (
-                <div className="settings-list-row" key={person.id}>
-                  <span className="settings-avatar">
-                    {person.display_name
-                      .split(" ")
-                      .map((value) => value[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </span>
-                  <div>
-                    <strong>
-                      {person.display_name}
-                      {person.id === session?.user.id ? " (you)" : ""}
-                    </strong>
-                    <p>
-                      {person.removed_at
-                        ? "Access removed · Account block pending"
-                        : person.role === "agency"
-                          ? "Studio team"
-                          : `Designer · ${person.activeProjectCount} active project${person.activeProjectCount === 1 ? "" : "s"}`}
-                    </p>
-                  </div>
-                  {person.id === session?.user.id ? (
-                    <span className="status-badge">
-                      {person.role === "agency" ? "Agency" : "Designer"}
-                    </span>
-                  ) : (
-                    <>
-                      {!person.removed_at && (
-                        <select
-                          className="member-role-select"
-                          aria-label={`Change ${person.display_name}'s role`}
-                          value={person.role}
-                          disabled={changeRole.isPending || remove.isPending}
-                          onChange={(event) =>
-                            changeRole.mutate({
-                              profileId: person.id,
-                              role: event.target.value as "agency" | "designer",
-                            })
-                          }
-                        >
-                          <option value="agency">Agency</option>
-                          <option value="designer">Designer</option>
-                        </select>
-                      )}
-                      <button
-                        className="button quiet"
-                        disabled={remove.isPending || changeRole.isPending}
-                        onClick={() => {
-                          remove.reset();
-                          setRemoving({ id: person.id, name: person.display_name });
-                        }}
-                      >
-                        {person.removed_at ? "Finish removal" : "Remove"}
-                      </button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {changeRole.error && <FormError>{changeRole.error.message}</FormError>}
-        </section>
+          </FormError>
+        ) : (
+          <>
+            {group(
+              "Agency",
+              "Manages clients, credits and every project.",
+              agency,
+              "No agency members yet.",
+            )}
+            {group(
+              "Designers",
+              "Work only on the projects assigned to them.",
+              designers,
+              "No designers yet. Invite one to start assigning work.",
+            )}
+          </>
+        )}
+        {changeRole.error && <FormError>{changeRole.error.message}</FormError>}
         <section className="settings-block">
           <header>
             <div>

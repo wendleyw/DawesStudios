@@ -61,8 +61,7 @@ function asset(id: string, bucket: ProjectAsset["bucket"], mime: string): Projec
     mime,
     size: 1,
     date: "2026-09-23T12:00:00Z",
-    category: bucket === "delivery-files" ? "Delivery" : "Working file",
-    approved: false,
+    category: "Delivery",
   };
 }
 
@@ -95,18 +94,18 @@ describe("Files grid previews", () => {
     storage.from.mockClear();
   });
 
-  it("signs raster images only, one request per bucket, for ten minutes", async () => {
+  it("signs raster images only, in one request, for ten minutes", async () => {
     storage.createSignedUrls.mockImplementation(async (paths: string[]) => ({
       data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
       error: null,
     }));
     storage.from.mockImplementation(() => ({ createSignedUrls: storage.createSignedUrls }));
     const files = [
-      asset("working.png", "internal-assets", "image/png"),
+      asset("final.png", "delivery-files", "image/png"),
       asset("delivery.jpg", "delivery-files", "image/jpeg"),
       asset("guide.pdf", "delivery-files", "application/pdf"),
-      asset("cut.mp4", "internal-assets", "video/mp4"),
-      asset("mark.svg", "internal-assets", "image/svg+xml"),
+      asset("cut.mp4", "delivery-files", "video/mp4"),
+      asset("mark.svg", "delivery-files", "image/svg+xml"),
     ];
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
@@ -114,14 +113,14 @@ describe("Files grid previews", () => {
     const { result } = renderHook(() => useAssetPreviews(files), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(result.current.data).toEqual({
-      "internal-assets:working.png": "https://signed/project-1/working.png",
+      "delivery-files:final.png": "https://signed/project-1/final.png",
       "delivery-files:delivery.jpg": "https://signed/project-1/delivery.jpg",
     });
-    expect(storage.from.mock.calls.map(([bucket]) => bucket).sort()).toEqual([
-      "delivery-files",
-      "internal-assets",
-    ]);
-    expect(storage.createSignedUrls).toHaveBeenCalledWith(["project-1/working.png"], 600);
+    expect(storage.from.mock.calls.map(([bucket]) => bucket)).toEqual(["delivery-files"]);
+    expect(storage.createSignedUrls).toHaveBeenCalledWith(
+      ["project-1/final.png", "project-1/delivery.jpg"],
+      600,
+    );
   });
 
   it("signs a large image list in bounded requests", async () => {
@@ -153,7 +152,7 @@ describe("useProjectAssets", () => {
     storage.table.mockReset();
   });
 
-  it("lists working files and deliveries only, never a design copy", async () => {
+  it("lists deliveries only: no working files and no design copy", async () => {
     const file = (id: string) => ({
       id,
       name: id,
@@ -174,7 +173,6 @@ describe("useProjectAssets", () => {
         },
       ],
       delivery_files: [file("final")],
-      project_assets: [file("working")],
       project_drive_links: [
         {
           project_id: "project-1",
@@ -225,13 +223,9 @@ describe("useProjectAssets", () => {
 
     expect(
       result.current.data?.assets.map((item) => [item.id, item.category, item.bucket]),
-    ).toEqual([
-      ["final", "Delivery", "delivery-files"],
-      ["working", "Working file", "internal-assets"],
-    ]);
+    ).toEqual([["final", "Delivery", "delivery-files"]]);
     expect(storage.table.mock.calls.map(([table]) => table).toSorted()).toEqual([
       "delivery_files",
-      "project_assets",
       "project_drive_links",
       "projects",
     ]);

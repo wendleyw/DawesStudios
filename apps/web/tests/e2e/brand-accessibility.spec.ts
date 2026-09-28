@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
@@ -71,7 +72,7 @@ test("brand sections remain accessible across desktop, tablet, and narrow mobile
     await expect(page).toHaveURL(new RegExp("/brand/" + section + "$"));
     await expect(sections.locator('[aria-current="page"]')).toHaveText(sectionLabels[section]);
     if (section === "assets")
-      await expect(page.getByRole("button", { name: "Add asset", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Add files", exact: true })).toBeVisible();
     await verifySurface(page, section + "-desktop");
   }
 });
@@ -133,6 +134,7 @@ test("personal drafts persist privately and brand assets upload, filter, and dow
   const base = await openBrand(page);
   const clientId = base.split("/")[2];
   const name = "Acceptance brand " + crypto.randomUUID();
+  const droppedName = name.replaceAll("-", " ");
   let draftId: string | undefined;
   try {
     const template = await agency
@@ -169,19 +171,23 @@ test("personal drafts persist privately and brand assets upload, filter, and dow
     await page.setViewportSize({ width: 390, height: 844 });
     await verifySurface(page, "draft-mobile");
     await page.goto(base + "/assets");
-    await page.getByRole("button", { name: "Add asset", exact: true }).click();
-    await page
-      .getByLabel("File", { exact: true })
-      .setInputFiles(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url)));
+    await page.getByLabel("Add files", { exact: true }).setInputFiles({
+      name: name + ".webp",
+      mimeType: "image/webp",
+      buffer: readFileSync(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url))),
+    });
+    await expect(page.locator(".brand-upload-queue")).toContainText("1 file added.");
+    // A dropped file is named after itself (separators read as spaces); the dialog renames it.
+    await page.getByLabel("Search brand assets").fill(droppedName);
+    await expect(page.locator(".brand-asset-card")).toHaveCount(1);
+    await page.locator(".brand-asset-card").click();
+    await page.getByRole("button", { name: "Edit details", exact: true }).click();
     await page.getByLabel("Asset name", { exact: true }).fill(name);
     await page
       .getByLabel("Description", { exact: true })
       .fill("Temporary isolated acceptance asset; removed after verification.");
-    await page.getByRole("button", { name: "Add asset", exact: true }).last().click();
-    await expect(page.getByRole("dialog", { name: "Add a brand asset" })).not.toBeVisible();
-    await page.getByLabel("Search brand assets").fill(name);
-    await expect(page.locator(".brand-asset-card")).toHaveCount(1);
-    await page.locator(".brand-asset-card").click();
+    await page.getByRole("button", { name: "Save details", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Edit details", exact: true })).toBeVisible();
     const receiving = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download file", exact: true }).click();
     const download = await receiving;
@@ -212,7 +218,7 @@ test("personal drafts persist privately and brand assets upload, filter, and dow
       .from("brand_assets")
       .select("id,storage_path")
       .eq("client_id", clientId)
-      .eq("name", name);
+      .in("name", [name, droppedName]);
     expect(assets.error).toBeNull();
     for (const asset of assets.data ?? []) {
       expect((await agency.from("brand_assets").delete().eq("id", asset.id)).error).toBeNull();

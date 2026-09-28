@@ -328,7 +328,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       expect(await balance()).toBe(91);
       await page.goto(`/clients/${fixture.clientId}/credits?project=${projectId}`);
       // Tabs and export live in the header card, like Briefings; activity rows stay on one line.
-      const heading = page.locator(".client-page-heading");
+      const heading = page.locator(".card-heading");
       await expect(
         heading.getByRole("button", { name: "Client report", exact: true }),
       ).toBeVisible();

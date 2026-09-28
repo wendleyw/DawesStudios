@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  assetCategoryForMime,
+  assetNameFromFileName,
   colorAsRgb,
   formatBrandColor,
   makeBrandContext,
@@ -257,5 +259,18 @@ describe("products", () => {
 
   it("reads products saved before images and links existed", () => {
     expect(readProducts({ items: [{ name: "Old" }] })).toEqual([{ ...product, name: "Old" }]);
+  });
+});
+
+describe("dropped file defaults", () => {
+  it("names an asset after its file", () => {
+    expect(assetNameFromFileName("summer_hero--01.final.PNG")).toBe("summer hero 01.final");
+    expect(assetNameFromFileName(".png")).toBe("Untitled asset");
+  });
+  it("categorizes by type", () => {
+    expect(assetCategoryForMime("image/svg+xml")).toBe("Logo");
+    expect(assetCategoryForMime("application/pdf")).toBe("Document");
+    expect(assetCategoryForMime("image/webp")).toBe("Photography");
+    expect(assetCategoryForMime("application/zip")).toBe("Other");
   });
 });

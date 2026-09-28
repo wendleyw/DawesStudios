@@ -380,3 +380,31 @@ export async function moveBrandAsset(
       .single(),
   );
 }
+
+/** The agency's edit of an asset's details, from the asset's own dialog. */
+export async function updateBrandAssetDetails(
+  database: SupabaseDatabase,
+  input: {
+    id: string;
+    clientId: string;
+    name: string;
+    category: string;
+    description: string;
+    tags: string[];
+  },
+) {
+  return assertResult(
+    await database
+      .from("brand_assets")
+      .update({
+        name: input.name,
+        category: input.category,
+        description: input.description,
+        tags: input.tags,
+      })
+      .eq("id", input.id)
+      .eq("client_id", input.clientId)
+      .select("id")
+      .single(),
+  );
+}

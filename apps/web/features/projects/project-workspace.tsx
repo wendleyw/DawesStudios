@@ -201,6 +201,11 @@ export function ProjectWorkspace({
           channel={channel}
           role={role}
           delivered={project.status === "delivered"}
+          deliverableHref={
+            role === "designer"
+              ? null
+              : `/clients/${project.client_id}/brand/files?project=${projectId}`
+          }
           viewerId={profile?.id ?? ""}
           boardDueLabel={
             role === "agency" && board?.dueDate

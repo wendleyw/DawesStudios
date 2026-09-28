@@ -41,7 +41,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
   const visible = rows.filter((row) => inReviewTab(filter, row, profile?.role));
   return (
     <div className="page-content">
-      <header className="page-heading client-page-heading">
+      <header className="page-heading card-heading">
         <div>
           <h1>Reviews</h1>
           <p>
@@ -50,7 +50,7 @@ export function ReviewsPage({ clientId }: { clientId: string }) {
               : "Thoughtful feedback keeps good work moving."}
           </p>
         </div>
-        <div className="review-filters segmented-control client-page-tools">
+        <div className="review-filters segmented-control card-heading-tools">
           {[
             {
               id: "waiting",

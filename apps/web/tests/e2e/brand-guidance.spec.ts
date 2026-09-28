@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { credentials, localAgency, localCaller, signIn } from "./test-support";
@@ -238,7 +239,7 @@ test("agency guidance persists, reusable formats copy safely, and clients cannot
   }
 });
 
-test("failed brand registration retries one file and cancellation removes only its orphan", async ({
+test("a failed brand registration removes its orphan file and Try again adds the asset once", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -265,35 +266,24 @@ test("failed brand registration retries one file and cancellation removes only i
   try {
     await signIn(page, credentials.agency);
     await page.goto("/clients/" + fixture.clientId + "/brand/assets");
-    for (const name of ["Retry resource", "Abandoned resource"]) {
-      rejectNext = true;
-      await page.getByRole("button", { name: "Add asset", exact: true }).click();
-      await page
-        .getByLabel("File", { exact: true })
-        .setInputFiles(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url)));
-      await page.getByLabel("Asset name", { exact: true }).fill(name);
-      await page.getByRole("button", { name: "Add asset", exact: true }).last().click();
-      await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-        "Registration temporarily unavailable.",
-      );
-      await expect(page.getByLabel("File", { exact: true })).toBeDisabled();
-      if (name === "Retry resource") {
-        await page.getByRole("button", { name: "Add asset", exact: true }).last().click();
-        await expect(page.getByRole("dialog")).not.toBeVisible();
-        expect(paths).toHaveLength(2);
-        expect(paths[0]).toBe(paths[1]);
-        await expect(page.locator(".brand-asset-card")).toHaveCount(1);
-      } else {
-        await page.getByRole("button", { name: "Cancel", exact: true }).click();
-        await expect(page.getByRole("dialog")).not.toBeVisible();
-        const orphan = await agency.storage
-          .from("brand-assets")
-          .list(fixture.clientId, { search: paths.at(-1)!.split("/").at(-1)! });
-        expect(orphan.error).toBeNull();
-        expect(orphan.data).toEqual([]);
-        await expect(page.locator(".brand-asset-card")).toHaveCount(1);
-      }
-    }
+    await page.getByLabel("Add files", { exact: true }).setInputFiles({
+      name: "Retry resource.webp",
+      mimeType: "image/webp",
+      buffer: readFileSync(fileURLToPath(new URL("../../public/brand/logo.webp", import.meta.url))),
+    });
+    const queue = page.locator(".brand-upload-queue");
+    await expect(queue).toContainText("0 of 1 added. 1 could not be added.");
+    await expect(queue).toContainText("Retry resource.webp: Registration temporarily unavailable.");
+    const orphan = await agency.storage
+      .from("brand-assets")
+      .list(fixture.clientId, { search: paths[0].split("/").at(-1)! });
+    expect(orphan.error).toBeNull();
+    expect(orphan.data).toEqual([]);
+    await queue.getByRole("button", { name: "Try again", exact: true }).click();
+    await expect(queue).toContainText("1 file added.");
+    expect(paths).toHaveLength(2);
+    await expect(page.locator(".brand-asset-card")).toHaveCount(1);
+    await expect(page.locator(".brand-asset-card")).toContainText("Retry resource");
   } finally {
     expect(
       (await agency.from("brand_assets").delete().eq("client_id", fixture.clientId)).error,

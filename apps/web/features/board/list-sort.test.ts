@@ -136,32 +136,30 @@ describe("nextListSort", () => {
     });
   });
 
-  it("steps Status through every status the list holds, then starts over", () => {
+  it("steps Status through every status the list holds, then returns to the default order", () => {
     const present: ProjectStatus[] = ["delivered", "in_progress", "client_review", "in_progress"];
     const first = nextListSort(null, "status", present);
     expect(first).toEqual({ key: "status", direction: "asc", lead: "in_progress" });
     const second = nextListSort(first, "status", present);
-    expect(second.lead).toBe("client_review");
+    expect(second?.lead).toBe("client_review");
     const third = nextListSort(second, "status", present);
-    expect(third.lead).toBe("delivered");
-    expect(nextListSort(third, "status", present).lead).toBe("in_progress");
+    expect(third?.lead).toBe("delivered");
+    expect(nextListSort(third, "status", present)).toBeNull();
+    expect(nextListSort(null, "status", present)?.lead).toBe("in_progress");
   });
 
   it("starts the Status cycle over when another column was active", () => {
     expect(
-      nextListSort({ key: "due", direction: "desc" }, "status", ["approved", "planned"]).lead,
+      nextListSort({ key: "due", direction: "desc" }, "status", ["approved", "planned"])?.lead,
     ).toBe("planned");
   });
 
-  it("reverses the active column on a second click", () => {
+  it("reverses the active column on a second click and clears it on a third", () => {
     expect(nextListSort({ key: "due", direction: "asc" }, "due")).toEqual({
       key: "due",
       direction: "desc",
     });
-    expect(nextListSort({ key: "due", direction: "desc" }, "due")).toEqual({
-      key: "due",
-      direction: "asc",
-    });
+    expect(nextListSort({ key: "due", direction: "desc" }, "due")).toBeNull();
   });
 });
 
@@ -173,19 +171,19 @@ describe("listSortAccessibleName", () => {
 
   it("states direction once a column is active", () => {
     expect(listSortAccessibleName("due", { key: "due", direction: "asc" })).toBe(
-      "Due, earliest first",
+      "Due, earliest first. Click to reverse",
     );
     expect(listSortAccessibleName("due", { key: "due", direction: "desc" })).toBe(
-      "Due, latest first",
+      "Due, latest first. Click for the default order",
     );
     expect(listSortAccessibleName("project", { key: "project", direction: "asc" })).toBe(
-      "Project, A to Z",
+      "Project, A to Z. Click to reverse",
     );
     expect(listSortAccessibleName("project", { key: "project", direction: "desc" })).toBe(
-      "Project, Z to A",
+      "Project, Z to A. Click for the default order",
     );
     expect(listSortAccessibleName("campaign", { key: "campaign", direction: "asc" })).toBe(
-      "Campaign, A to Z",
+      "Campaign, A to Z. Click to reverse",
     );
     expect(
       listSortAccessibleName("status", { key: "status", direction: "asc", lead: "approved" }),

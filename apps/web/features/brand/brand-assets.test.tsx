@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BrandAssets } from "./brand-assets";
@@ -10,6 +10,10 @@ const fixture = vi.hoisted(() => ({
   assets: [] as BrandAsset[],
   folders: [] as BrandAssetFolder[],
   move: vi.fn(),
+  upload: vi.fn(),
+  insert: vi.fn(),
+  find: vi.fn(),
+  update: vi.fn(),
   role: "agency",
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
@@ -22,6 +26,10 @@ vi.mock("./brand-data", async (importOriginal) => ({
   useBrandAssetFolders: () => ({ data: fixture.folders }),
   useBrandAssetPreviewUrl: () => ({}),
   moveBrandAsset: fixture.move,
+  uploadBrandAssetFile: fixture.upload,
+  insertBrandAsset: fixture.insert,
+  findBrandAssetById: fixture.find,
+  updateBrandAssetDetails: fixture.update,
 }));
 vi.mock("@/features/shared/modal", () => ({
   Modal: ({
@@ -43,6 +51,10 @@ vi.mock("@/features/shared/modal", () => ({
 beforeEach(() => {
   fixture.role = "agency";
   fixture.move.mockReset().mockResolvedValue(undefined);
+  fixture.upload.mockReset().mockResolvedValue(undefined);
+  fixture.insert.mockReset().mockResolvedValue(undefined);
+  fixture.find.mockReset().mockResolvedValue(null);
+  fixture.update.mockReset().mockResolvedValue(undefined);
   fixture.folders = [
     { id: "logos", client_id: "client", name: "Logos", created_at: "2026-09-23", parent_id: null },
     {
@@ -153,7 +165,7 @@ describe("Brand asset roles and Products", () => {
     const user = userEvent.setup();
     mountAssets();
     expect(screen.getByRole("button", { name: "New folder" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Add image" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Add images" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Add link" })).toBeVisible();
     await user.click(folderTile("Logos"));
     expect(screen.queryByRole("button", { name: "Rename folder" })).not.toBeInTheDocument();
@@ -247,5 +259,74 @@ describe("Brand asset directory", () => {
       "https://example.com/portal",
     );
     expect(dialog.queryByRole("button", { name: "Download file" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Brand asset bulk upload and details", () => {
+  const image = (name: string) => new File(["pixels"], name, { type: "image/png" });
+
+  it("adds every dropped file to the open folder, named after the file", async () => {
+    const user = userEvent.setup();
+    mountAssets();
+    await user.click(folderTile("Campaign"));
+    const zone = document.querySelector(".brand-drop-zone")!;
+    const files = [image("summer_hero-01.png"), image("summer-detail.png")];
+    fireEvent.drop(zone, { dataTransfer: { files, types: ["Files"] } });
+    await waitFor(() => expect(fixture.insert).toHaveBeenCalledTimes(2));
+    expect(fixture.upload).toHaveBeenCalledTimes(2);
+    expect(fixture.insert.mock.calls.map(([, input]) => input)).toEqual([
+      expect.objectContaining({
+        name: "summer hero 01",
+        category: "Photography",
+        folderId: "campaign",
+        description: "",
+        tags: [],
+      }),
+      expect.objectContaining({ name: "summer detail", folderId: "campaign" }),
+    ]);
+    expect(await screen.findByText("2 files added.")).toBeInTheDocument();
+  });
+
+  it("lists a file that could not be added and keeps the others", async () => {
+    mountAssets();
+    const zone = document.querySelector(".brand-drop-zone")!;
+    const files = [new File(["x"], "notes.txt", { type: "text/plain" }), image("mark.png")];
+    fireEvent.drop(zone, { dataTransfer: { files, types: ["Files"] } });
+    expect(await screen.findByText(/1 of 2 added\. 1 could not be added\./)).toBeInTheDocument();
+    expect(screen.getByText(/notes\.txt:/)).toBeInTheDocument();
+    expect(fixture.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the agency edit an asset's details from its dialog", async () => {
+    const user = userEvent.setup();
+    mountAssets();
+    await user.click(folderTile("Logos"));
+    await user.click(screen.getByRole("button", { name: /Approved mark/ }));
+    await user.click(screen.getByRole("button", { name: "Edit details" }));
+    const name = screen.getByRole("textbox", { name: "Asset name" });
+    await user.clear(name);
+    await user.type(name, "Primary mark");
+    await user.type(screen.getByRole("textbox", { name: /^Tags/ }), "print, approved");
+    await user.click(screen.getByRole("button", { name: "Save details" }));
+    await waitFor(() =>
+      expect(fixture.update).toHaveBeenCalledWith(
+        {},
+        expect.objectContaining({
+          id: "logo",
+          name: "Primary mark",
+          category: "Logo",
+          tags: ["print", "approved"],
+        }),
+      ),
+    );
+  });
+
+  it("offers no detail editing to a client", async () => {
+    fixture.role = "client";
+    const user = userEvent.setup();
+    mountAssets();
+    await user.click(folderTile("Logos"));
+    await user.click(screen.getByRole("button", { name: /Approved mark/ }));
+    expect(screen.queryByRole("button", { name: "Edit details" })).not.toBeInTheDocument();
   });
 });

@@ -7,8 +7,7 @@ import { chunkItems, fetchAllPages } from "@/features/shared/pagination";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 
 /**
- * The one cache key this feature owns: the combined delivery/working file list behind
- * `useProjectAssets`.
+ * The one cache key this feature owns: the deliverables list behind `useProjectAssets`.
  *
  * Unlike `brand` and `briefings`, this feature does get an aggregate `useInvalidateAssets()`: both
  * of its write call sites (`assets-page.tsx`'s deliver mutation and `upload-file-dialog.tsx`'s
@@ -36,45 +35,36 @@ export type ProjectAsset = {
   name: string;
   projectId: string;
   path: string;
-  bucket: "internal-assets" | "delivery-files";
+  bucket: "delivery-files";
   mime: string;
   size: number | null;
   date: string;
-  category: "Working file" | "Delivery";
-  approved: boolean;
+  category: "Delivery";
 };
 
 /**
- * `delivery_files` and `project_assets` are two tables with the same seven column names, so the
- * only thing that distinguishes their rows as assets is which bucket holds them, what the list
- * calls them and whether they count as approved. The designs themselves live in Miro, so no
- * design copy is listed here.
+ * A `delivery_files` row as the Deliverables list shows it. Work in progress lives in Miro, so
+ * the Brand Hub lists final deliveries only — no working files and no design copies.
  */
-function fromStoredFile(
-  file: {
-    id: string;
-    name: string;
-    project_id: string;
-    storage_path: string;
-    mime_type: string;
-    file_size: number;
-    created_at: string;
-  },
-  bucket: ProjectAsset["bucket"],
-  category: ProjectAsset["category"],
-  approved: boolean,
-): ProjectAsset {
+function fromStoredFile(file: {
+  id: string;
+  name: string;
+  project_id: string;
+  storage_path: string;
+  mime_type: string;
+  file_size: number;
+  created_at: string;
+}): ProjectAsset {
   return {
     id: file.id,
     name: file.name,
     projectId: file.project_id,
     path: file.storage_path,
-    bucket,
+    bucket: "delivery-files",
     mime: file.mime_type,
     size: file.file_size,
     date: file.created_at,
-    category,
-    approved,
+    category: "Delivery",
   };
 }
 
@@ -135,7 +125,7 @@ export function useProjectAssets(clientId: string) {
       const assets: ProjectAsset[] = [];
       const driveUrlByProject = new Map<string, string>();
       for (const projectIds of chunkItems(ids)) {
-        const [deliveries, internal, driveLinks] = await Promise.all([
+        const [deliveries, driveLinks] = await Promise.all([
           fetchAllPages(
             async (from, to) =>
               assertResult(
@@ -150,22 +140,6 @@ export function useProjectAssets(clientId: string) {
               ),
             signal,
           ),
-          profile?.role !== "client"
-            ? fetchAllPages(
-                async (from, to) =>
-                  assertResult(
-                    await database
-                      .from("project_assets")
-                      .select("*")
-                      .in("project_id", projectIds)
-                      .order("created_at", { ascending: false })
-                      .order("id")
-                      .range(from, to)
-                      .abortSignal(signal),
-                  ),
-                signal,
-              )
-            : Promise.resolve([]),
           fetchAllPages(
             async (from, to) =>
               assertResult(
@@ -181,12 +155,7 @@ export function useProjectAssets(clientId: string) {
             signal,
           ),
         ]);
-        assets.push(
-          ...deliveries.map((file) => fromStoredFile(file, "delivery-files", "Delivery", true)),
-        );
-        assets.push(
-          ...internal.map((file) => fromStoredFile(file, "internal-assets", "Working file", false)),
-        );
+        assets.push(...deliveries.map(fromStoredFile));
         for (const row of driveLinks) driveUrlByProject.set(row.project_id, row.url);
       }
       for (const project of projects) {
@@ -215,54 +184,6 @@ export function initialUploadProject(
 ): string {
   if (candidates.some((candidate) => candidate.id === filteredProject)) return filteredProject;
   return candidates[0]?.id ?? "";
-}
-
-/**
- * Looks up whether a `project_assets` row already points at a storage path.
- *
- * Called from `upload-file-dialog.tsx`'s `close()` (deciding whether an unfinished upload's file can
- * be safely removed from storage) and from its upload `mutationFn` (deciding whether the same upload
- * already recorded its row on a previous, interrupted attempt). Neither call site renders this
- * result — both branch on it before performing a write — so it is a plain `(database, input)`
- * function per the contract's "reads that cannot be hooks" rule, not a `use<Thing>()` hook.
- */
-export async function findAssetByStoragePath(database: SupabaseDatabase, input: { path: string }) {
-  return assertResult(
-    await database.from("project_assets").select("id").eq("storage_path", input.path),
-  ) as { id: string }[];
-}
-
-/** Removes an unfinished upload's file from the private bucket once nothing else references it. */
-export async function removeUnusedUpload(database: SupabaseDatabase, input: { path: string }) {
-  assertResult(await database.storage.from("internal-assets").remove([input.path]));
-}
-
-/** Uploads a working file to the private bucket at an already-chosen path. */
-export async function uploadInternalAsset(
-  database: SupabaseDatabase,
-  input: { path: string; file: File },
-) {
-  assertResult(
-    await database.storage
-      .from("internal-assets")
-      .upload(input.path, input.file, { contentType: input.file.type, upsert: false }),
-  );
-}
-
-/** Records an uploaded working file's row for a project. */
-export async function recordProjectAsset(
-  database: SupabaseDatabase,
-  input: { projectId: string; name: string; path: string; mime: string; size: number },
-) {
-  assertResult(
-    await database.from("project_assets").insert({
-      project_id: input.projectId,
-      name: input.name,
-      storage_path: input.path,
-      mime_type: input.mime,
-      file_size: input.size,
-    }),
-  );
 }
 
 /** Marks an approved project as delivered, notifying its client. */
