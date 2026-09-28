@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { mkdirSync, readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { cleanupTestProject, createProductionFixture } from "./project-fixture";
 import { credentials, localAdmin, localAgency, localCaller, signIn } from "./test-support";
 
@@ -14,6 +15,8 @@ let designerA = "";
 let designerB = "";
 let designerAEmail = "";
 let designerBEmail = "";
+let designerAName = "";
+let designerBName = "";
 
 // Working captures for the visual audit land in the ignored outputs/ directory.
 const outputs = fileURLToPath(new URL("../../../../outputs/", import.meta.url));
@@ -39,6 +42,13 @@ test.beforeAll(async () => {
     .single();
   expect(second.error).toBeNull();
   designerB = second.data!.id;
+  const profiles = await localAdmin
+    .from("profiles")
+    .select("id,display_name")
+    .in("id", [designerA, designerB]);
+  expect(profiles.error).toBeNull();
+  designerAName = profiles.data!.find((profile) => profile.id === designerA)!.display_name;
+  designerBName = profiles.data!.find((profile) => profile.id === designerB)!.display_name;
   designerAEmail = (await localAdmin.auth.admin.getUserById(designerA)).data.user!.email!;
   designerBEmail = (await localAdmin.auth.admin.getUserById(designerB)).data.user!.email!;
   // The privacy test signs designer B in with the seeded second designer account.
@@ -70,6 +80,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await studio.goto(`/projects/${projectId}`);
   // Working files has B's board only, so there is no picker yet; add A's from the bar.
   await expect(studio.getByRole("combobox", { name: "Design board" })).toHaveCount(0);
+  await expect(studio.getByTitle(`Designer: ${designerBName}`)).toBeVisible();
   await studio.getByRole("button", { name: "Add design board" }).click();
   const boardDialog = studio.getByRole("dialog");
   await boardDialog.getByLabel("Board name").fill("Direction A");
@@ -86,6 +97,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await expect(designer.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVBoardA1/);
   // The designer has one board, so there is no picker, and nothing of B's.
   await expect(designer.getByRole("combobox", { name: "Design board" })).toHaveCount(0);
+  await expect(designer.locator(".miro-bar-designer")).toHaveCount(0);
   await designer.getByRole("button", { name: "Send to studio" }).click();
   await designer.getByRole("dialog").getByLabel("Note for the studio").fill("Ready for a look");
   await designer.getByRole("dialog").getByRole("button", { name: "Send to studio" }).click();
@@ -99,7 +111,24 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await studio
     .getByRole("combobox", { name: "Design board" })
     .selectOption({ label: "Direction A" });
+  await expect(studio.getByTitle(`Designer: ${designerAName}`)).toBeVisible();
+  await expect(studio.getByTitle(`Designer: ${designerBName}`)).toHaveCount(0);
   await studio.getByRole("button", { name: "Round 1" }).click();
+  for (const width of [1512, 390]) {
+    await studio.setViewportSize({ width, height: 900 });
+    const badge = studio.getByTitle(`Designer: ${designerAName}`);
+    await expect(badge).toBeVisible();
+    const bounds = await badge.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(
+      (await new AxeBuilder({ page: studio }).include(".miro-bar").analyze()).violations,
+    ).toEqual([]);
+    await studio.locator(".project-chrome").screenshot({
+      path: `${outputs}board-designer-${width}.png`,
+    });
+  }
+  await studio.setViewportSize({ width: 1600, height: 1000 });
   await capture(studio, "agency-working-files");
   await studio.getByRole("button", { name: "Share with client" }).click();
   const shareDialog = studio.getByRole("dialog");
@@ -134,6 +163,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await expect(client.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVClient1/);
   await expect(client.locator('iframe[src*="uXjVBoardA1"]')).toHaveCount(0);
   await expect(client.getByText(/Direction A|Board for B|Alex Morgan|Jordan Reed/)).toHaveCount(0);
+  await expect(client.locator(".miro-bar-designer")).toHaveCount(0);
   await capture(client, "client-shared-with-client");
   await client.getByRole("button", { name: "Request changes" }).click();
   const requestDialog = client.getByRole("dialog");
@@ -146,6 +176,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
     .getByRole("group", { name: "Project channel" })
     .getByRole("button", { name: "Shared with client" })
     .click();
+  await expect(studio.locator(".miro-bar-designer")).toHaveCount(0);
   await studio.getByRole("button", { name: "New client version" }).click();
   const versionDialog = studio.getByRole("dialog");
   await expect(versionDialog.getByLabel("Client Miro board")).toHaveValue(/uXjVClient1/);
@@ -327,10 +358,18 @@ test("a designer never sees another designer's board, rounds or comments", async
   const designerBClient = await localCaller(designerBEmail);
   const boards = await designerBClient
     .from("design_boards")
-    .select("name")
+    .select("name,designer:profiles!design_boards_designer_id_fkey(display_name)")
     .eq("project_id", projectId);
   expect(boards.error).toBeNull();
   expect(boards.data?.map((board) => board.name)).toEqual(["Board for B"]);
+  expect(boards.data?.map((board) => board.designer?.display_name)).toEqual([designerBName]);
+  const clientCaller = await localCaller(credentials.client);
+  const clientBoards = await clientCaller
+    .from("design_boards")
+    .select("name,designer:profiles!design_boards_designer_id_fkey(display_name)")
+    .eq("project_id", projectId);
+  expect(clientBoards.error).toBeNull();
+  expect(clientBoards.data).toEqual([]);
   const rounds = await designerBClient
     .from("design_versions")
     .select("id")

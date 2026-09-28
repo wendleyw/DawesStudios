@@ -66,6 +66,7 @@ const board = {
   projectId: "p",
   name: "Alpha",
   designerId: "d1",
+  designerName: "Alex Morgan",
   dueDate: null,
   miro: { boardId: "uXjVAlpha01=", widgetId: null },
 };

@@ -62,6 +62,7 @@ const board: DesignBoard = {
   projectId: "p",
   name: "Alpha",
   designerId: "d1",
+  designerName: "Alex Morgan",
   dueDate: null,
   miro: link,
 };

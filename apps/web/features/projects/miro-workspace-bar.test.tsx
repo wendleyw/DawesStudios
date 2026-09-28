@@ -10,6 +10,7 @@ const boardA = {
   projectId: "p",
   name: "Alpha",
   designerId: "d1",
+  designerName: "Alex Morgan",
   dueDate: null,
   miro: link,
 };
@@ -18,6 +19,7 @@ const boardB = {
   projectId: "p",
   name: "Beta",
   designerId: "d2",
+  designerName: "Jordan Reed",
   dueDate: null,
   miro: link,
 };
@@ -65,6 +67,30 @@ function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps
 }
 
 describe("MiroWorkspaceBar in Working files", () => {
+  it("identifies the current designer even when there is only one board", () => {
+    const { rerender } = render(<MiroWorkspaceBar {...props({ boards: [boardA] })} />);
+    expect(screen.getByTitle("Designer: Alex Morgan")).toHaveTextContent("Alex Morgan");
+    expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
+
+    rerender(<MiroWorkspaceBar {...props({ board: boardB })} />);
+    expect(screen.getByTitle("Designer: Jordan Reed")).toHaveTextContent("Jordan Reed");
+    expect(screen.queryByText("Alex Morgan")).toBeNull();
+  });
+  it("keeps designer identity out of client views and the designer's own controls", () => {
+    const { rerender } = render(
+      <MiroWorkspaceBar {...props({ channel: "client", role: "client" })} />,
+    );
+    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+    rerender(<MiroWorkspaceBar {...props({ channel: "client" })} />);
+    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+    rerender(<MiroWorkspaceBar {...props({ role: "designer", boards: [boardA] })} />);
+    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+  });
+  it("does not substitute a private identifier when the designer name is unavailable", () => {
+    render(<MiroWorkspaceBar {...props({ board: { ...boardA, designerName: null } })} />);
+    expect(screen.getByTitle("Designer: Name unavailable")).toBeVisible();
+    expect(screen.queryByText("d1")).toBeNull();
+  });
   it("lets the agency pick boards and rounds, add and edit boards, and share a round", async () => {
     const user = userEvent.setup();
     const onRound = vi.fn();

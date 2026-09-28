@@ -58,7 +58,17 @@ Delivered projects offer none of these three actions, matching the server's term
 delivery also dismisses an open round/share dialog. Existing boards, versions and feedback remain
 readable. A round marked **Shared** no longer offers to share it again. Project details resolves
 service names from the briefing catalog instead of showing codes.
-Both prefill the client board link from `useLatestSharedMiroLink` (the newest project-level client
+
+The agency's Working files bar identifies the selected board's **Designer** in a compact badge,
+with the name in bold, including when only one board exists. Switching boards updates that name;
+rounds retain their board's owner. `useDesignBoards` joins only `display_name` through the board's
+designer foreign key under the existing board/profile RLS. Clients receive no board rows and
+designers still receive only their own. The badge is absent from Shared with client and designer
+controls. Long names truncate visually with the full name available in the title and accessible
+text; a missing profile name reads **Name unavailable**, never a private identifier.
+See the [designer-badge verification](../../../../docs/verification/board-designer-2026-09-27.md).
+
+Sharing a round and adding a version prefill the client board link from `useLatestSharedMiroLink` (the newest project-level client
 version's link, read for the agency alone, so it works from Working files too); an action opened
 before that read finished reads the link itself and remounts its field when it arrives. The **+**
 icon (**Add design board**) adds another board, and the agency's **More** menu holds **Edit board**

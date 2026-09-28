@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Send, Share2 } from "lucide-react";
+import { Plus, Send, Share2, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { DriveIcon } from "@/features/shared/drive-icon";
 import { versionStatusLabel } from "@/features/workspace/workspace-data";
@@ -44,14 +44,15 @@ export type MiroWorkspaceBarProps = {
 /**
  * The Miro workspace's header. In Working files: the design board, its rounds, and the actions of
  * whoever is looking (the board's designer sends a round; the agency shares it and manages boards).
- * In Shared with client: the client versions and their status. Nothing here names a designer: a
- * designer only ever receives their own boards.
+ * The agency also sees the selected board's designer. Shared with client contains only client
+ * versions and their status; a designer only ever receives their own boards.
  */
 export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
   const agency = props.role === "agency";
   const internal = props.channel === "internal";
   const shown = internal ? (props.round?.miro ?? props.board?.miro) : props.version?.miro;
   const ownBoard = props.board?.designerId === props.viewerId;
+  const designerName = props.board?.designerName?.trim() || "Name unavailable";
   // One action at most: the board's designer sends a round, the agency shares the round on screen.
   const primary =
     !props.delivered && internal && props.board && props.role === "designer" && ownBoard ? (
@@ -131,6 +132,13 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
                 </option>
               ))}
             </select>
+          )}
+          {agency && props.board && (
+            <span className="miro-bar-designer" title={`Designer: ${designerName}`}>
+              <UserRound size={14} aria-hidden="true" />
+              <span>Designer</span>
+              <strong>{designerName}</strong>
+            </span>
           )}
           {agency && props.boards.length > 0 && (
             <button

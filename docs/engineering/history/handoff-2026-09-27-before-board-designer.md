@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; board designer emphasis integrated, spacing clarification pending**.
+Updated: 2026-09-27 EDT. Owner: **Codex; project context UX integrated, spacing clarification pending**.
 
 ## Objective and accepted decisions
 
@@ -41,28 +41,35 @@ Updated: 2026-09-27 EDT. Owner: **Codex; board designer emphasis integrated, spa
 
 ## Recovery/Resend evidence (prior task)
 
-- `a7b35e5` verified an isolated restore:10clients/68projects/72boards,237Storageobjects,
-  all118foreignkeys, four role logins and authenticated delivery hashes. Local overlay preserved.
-- [Recovery evidence](../verification/recovery-and-email-2026-09-27.md) and
-  [prior checkpoint](history/handoff-2026-09-27-before-board-designer.md) retain checks and caveats.
-- Keep ignored backup/orphan archives in `supabase/.backups/20260927-recovery-hardening/` and
-  the successful `supabase/.backups/20260927-recovery-verified/`. Older fixed clone is untouched.
+- Web gate: 127 files / 1,249 unit tests; types/lint/format pass.
+- Recovery safety: 11 tests pass. CI guard tests:4 pass. Proxy render:3 pass; Docker proxy checks
+  were not rerun (six skipped). Python parse, diff whitespace and AGENTS/CLAUDE sync pass.
+- Full isolated HTTP/Auth/Storage restore passed:10clients/68projects/72designboards/13Authusers,
+  237Storageobjects,81creditentries,totalbalance1278; all118foreignkeys valid.
+- Agency/client/both designers:4 password logins pass; agency scope, client tenant/internal-data
+  isolation and exact designer board scopes pass. Authenticated delivery hash and all237physical
+  file hashes match. No exhaustive xattr comparison rerun in this task.
+- Source/old-clone16container IDs/start times unchanged and allrunning. Successful and failed owned
+  drill stacks cleaned up. Local preserved data remains10/68/50; canonical staging was untouched.
+- Fixture cleanup:2 backend-only Playwright regressions pass with real persisted Storage bytes
+  and preferences. New spec passes targeted types/lint/format. Retained-target recheck passes;
+  its clone was removed after ownership validation. Final live counts and all118FK match.
+- Live `/login` returns200. No Acceptance clients/projects remain. Preview evidence docs being
+  updated by the separate UI thread are excluded from this task commit.
+- [Current evidence](../verification/recovery-and-email-2026-09-27.md). Original backup/orphan archive:
+  `supabase/.backups/20260927-recovery-hardening/`; successful backup:
+  `supabase/.backups/20260927-recovery-verified/`. Keep these ignored operational artifacts.
 
 ## Environment and next concrete work
 
-- Working files now highlights the selected board's designer for the agency, including one board.
-  Profile name joins existing RLS; client rows and other designers' boards remain inaccessible.
-- Current gate129files/1272tests and2Chromium full workflow/privacy journeys pass. Desktop/phone
-  badge checks and2Axe scans pass;118FK and live10/68/50 preserved. First browser run interrupted
-  by macOS sleep; unchanged rerun passed. [Designer evidence](../verification/board-designer-2026-09-27.md).
 - Project context UX: inline Briefing, named comment destinations, organized side panels,
   full-width image strip and centered copy/paste feedback. Mobile panels cover project chrome.
-- Prior context gate129files/1269tests passes; final81CSS checks pass. Browser3roles×4sizes×3panels,
+- Current web gate129files/1269tests passes; final81CSS checks pass. Browser3roles×4sizes×3panels,
   6realPNGcopies/30Axe scans, download fallback and light/dark inspection pass.
 - [Context UX evidence](../verification/project-context-ux-2026-09-27.md) and
   [handoff](handoffs/2026-09-27-project-context-ux.md). External Miro access/paste not verified.
 - Pending: user sent a tiny spacing crop; asked whether channel/+ or header/bar gap. Await answer.
-  Board designer emphasis is integrated; existing spacing selectors are unchanged.
+  Another thread owns assigned-designer emphasis in miro-workspace-bar.tsx; collect its report.
 
 - Compact Miro review controls now overlap padding and stay centred on phones; next UI action:
   user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;

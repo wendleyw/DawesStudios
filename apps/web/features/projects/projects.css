@@ -241,6 +241,32 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.miro-bar-designer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.miro-bar-designer > :is(svg, span) {
+  flex-shrink: 0;
+}
+.miro-bar-designer > strong {
+  min-width: 0;
+  max-width: 24ch;
+  overflow: hidden;
+  color: var(--foreground);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .miro-workspace-empty {
   position: absolute;
   inset: var(--project-chrome-height) 0 0;

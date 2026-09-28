@@ -319,6 +319,7 @@ export type DesignBoard = {
   projectId: string;
   name: string;
   designerId: string;
+  designerName: string | null;
   miro: MiroLink;
   /** The internal due date the agency set for this board's designer (`2026-10-03`), if any. */
   dueDate: string | null;
@@ -341,7 +342,9 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
       assertResult(
         await database
           .from("design_boards")
-          .select("id,project_id,name,designer_id,board_id,widget_id,due_date")
+          .select(
+            "id,project_id,name,designer_id,board_id,widget_id,due_date,designer:profiles!design_boards_designer_id_fkey(display_name)",
+          )
           .eq("project_id", projectId)
           .order("created_at"),
       ).map((row) => ({
@@ -349,6 +352,7 @@ export function useDesignBoards(projectId: string, enabled: boolean) {
         projectId: row.project_id,
         name: row.name,
         designerId: row.designer_id,
+        designerName: row.designer?.display_name ?? null,
         miro: { boardId: row.board_id, widgetId: row.widget_id },
         dueDate: row.due_date,
       })),
