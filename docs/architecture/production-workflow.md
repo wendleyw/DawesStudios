@@ -1,31 +1,139 @@
 # Production collaboration
 
-The application has one studio and isolated client workspaces. Routes compose feature modules; Supabase owns identity, permissions, project state, comments, credits and files. TanStack Query caches authorized reads. xyflow owns viewport interaction and renders database records; dragging a board card persists only its position and cannot change workflow status.
+This describes the implemented Miro workflow as inspected on 2026-09-27 EDT. It is a code/schema
+map, not a new claim that every journey was rerun. The application has one studio and isolated
+client workspaces. Supabase owns authorization, workflow state, comments, credits and files.
+Miro holds the creative work; the application records board/frame links, numbered rounds and
+client versions. Canvas, List, Timeline, Kanban and Calendar are views of the same authorized
+projects; moving a card does not change workflow status.
 
-## From request to delivery
+## Roles and entry points
 
-1. A client or agency creates a briefing with an explicitly selected campaign. Service scope, format variations, brand defaults and overrides are preserved in the draft. Submission is free.
-2. Agency confirms a quote and accepts the briefing. One database transaction checks available credits, creates the project/deliverables and records one debit. Repeated or concurrent acceptance returns the same project.
-3. Agency assigns a creative partner and plans project dates. The designer sees only assigned work and safe briefing/brand direction. Agency can revoke access. The client receives neither assignment nor internal author records.
-4. Agency or assigned designer creates working versions/designs, uploads artwork and discusses it privately. General conversation and design pins have separate scopes. Unsent comments remain scoped to user, project, channel and design in the query cache; signing out clears them.
-5. Designer submits work to the studio. Only agency can publish a client revision. Uploaded artwork passes through the trusted media service before a database command records a sanitized, immutable client snapshot. Later internal edits do not mutate its records or file bytes.
-6. The client reviews the latest published revision, requests changes with feedback or approves it. A new revision preserves prior feedback and comments. Stale or conflicting decisions cannot overwrite a later review.
-7. Agency adds real final files to an approved project through the media service and completes delivery. The client can download authorized files. Replays are idempotent and premature delivery is rejected.
+| Role | Scope | Main entry points |
+| --- | --- | --- |
+| Agency | Studio clients, budgets, assignments, internal review, sharing and delivery | Home, each client's Briefings/Board/Reviews, Team, Credits, project details and Files |
+| Designer | Assigned projects, own design boards, safe briefing/brand direction and internal comments | Home, assigned projects, Working files, Reviews and Files |
+| Client | Own client workspaces, briefing submission, shared versions, client comments and released delivery files | Overview, Briefings, Board, Reviews, Brand Hub/Files and Credits |
 
-## Interaction and recovery
+Agency uses **Team → Invite someone → Send invitation**; the client's People dialog also has
+**Invite person**. The recipient confirms the email and uses **Accept invitation**, setting a
+password when required. A client invitation is bound to its selected workspace. Merely creating
+an Auth identity does not grant designer or client membership. See the
+[Team feature](../../apps/web/features/team/README.md) and [email runbook](../operations/email.md).
 
-- Board Canvas, List, Timeline, Kanban and Calendar are mutually exclusive projections of the same scoped projects, selected by five icons with a personal saved preference. Search/campaign/status and header quarter filters persist across views. The floating header shows the client identity on the left and the signed-in viewer’s profile on the right; All periods is the default and quarter filtering retains undated projects. Timeline offers Fortnight/Month/Quarter periods; Calendar shows monthly due dates and undated work, with a narrow-screen agenda. Kanban shows workflow status without unrestricted status dragging.
-- The briefing form uses Service/Details/Review, service search/categories, project basics before creative questions, and prefilled sizes under expandable settings. Invalid submission focuses its error summary; saving a draft enables real attachments.
-- Project creation uses a dashed Add design tile beside each editable row and Add version below its deliverable’s versions. In the agency’s Shared with client tab, these actions explicitly switch to Working files; adding a design targets the latest internal version for the same deliverable. Client accounts keep review-only publication access. New working content is private until a separate agency publication.
-- One shared campaign dialog serves the board and briefing wizard. One project details inspector contains date editing, assignment, briefing, Brand Hub, files and version history. Secondary controls disappear while the design viewer is active.
-- Date/property editing captures the database revision when the editor opens. A conflicting write leaves the user's input visible, refreshes current data and requires reopening the editor before retrying. Reopening resets fields to the latest saved values.
-- Failed artwork registration retains the uploaded object for retry instead of uploading another file. Cancel removes an unregistered object; cleanup errors retain the dialog with recovery instructions. Trusted publication preparation also has a discard endpoint and delayed cleanup for abandoned objects.
-- Project comments and publications use authorized realtime subscriptions. The publication broadcasts inserts and updates only; deletions cannot bypass row-level scope through realtime events. Query invalidation also refreshes board counts and notifications.
-- Private image previews use short-lived signed URLs and bypass public image optimization caches. The viewer refreshes the URL and offers a retry when the preview fails. Previously downloaded files and unexpired signed capabilities cannot be retroactively erased by assignment revocation.
-- Share links point to authenticated project routes. They preserve the destination through login and do not grant public access. Clipboard failure exposes selectable text in the shared dialog.
+## Main funnel: actions, state and notifications
 
-## Verification
+“Activity” below means a persisted in-app event. “Action” means a current **Needs your action**
+item, not an email or a workflow button. Its link opens the screen containing the actual action.
 
-The browser suites under `apps/web/tests/e2e` exercise real Auth, database commands and Storage. The production journey compares immutable published records and SHA-256 file hashes after an internal edit. Recovery tests inject failed HTTP writes and inspect final object/record counts. Canonical traversal reconciles all 25 projects across agency, ten clients and both designers, recording navigation timings and runtime errors.
+| Step | Who acts, where, and exact controls | Result | Notification or next action |
+| --- | --- | --- | --- |
+| Draft | Client or agency: Briefings → **New briefing** → Service → **Continue to details** → Details → **Review briefing**. **Save draft** remains available. | Saved briefing draft with explicit campaign, scope and requested outputs; no credit debit. | No review event until submission. |
+| Submit | Client or agency: Review → **Send briefing**. | `draft → awaiting_review`; submission is free. | Agency activity **Briefing ready for review** and action **Review briefing**. |
+| Quote | Agency: briefing detail → Project budget → **Confirm budget**. | `awaiting_review → budget_confirmed`; no project or debit yet. | Agency action becomes **Start project**. No separate budget-confirmed activity event. Client sees **Scope confirmed** and waits for the studio. |
+| Start project | Agency: choose **Credit month**, then **Accept & create project**. | One atomic, idempotent project creation, deliverable creation and credit debit. Briefing becomes `accepted`; new project starts `planned`. | Eligible client activity **Your project is ready**; agency action **Prepare project**. |
+| Assign and prepare | Agency: project **Project details → Manage project → Assign a designer**; then Working files → **Add a design board** (empty state) or **+** (**Add design board**), and **Add board** in the dialog. | Designer gains project access; board stores its name, Miro link, one designer and optional internal due date. The + registers an existing Miro board/link; it does not create a board in Miro. | Assignment sends designer activity **New project assignment**. Board creation gives its designer action **Submit round**; it has no separate creation activity event. Agency preparation action clears after a board or client publication exists. |
+| Produce and submit | Designer: work in the Miro embed or **Open in Miro**; use **Send to studio**, optionally adding a note and frame link. | Creates numbered board round R1/R2/etc with `submitted` status; project becomes `internal_review` (**Studio review**). | Agency activity **Design ready for studio review** and action **Review round**. Nothing is published to the client. |
+| Studio review | Agency: open the round in Working files. Use internal **Comments → Send message** for direction, or **Share with client** to publish it. | An internal comment is discussion, not a rejection transition. Sharing requires the agency to copy work into the client board in Miro and provide that board/frame link plus a note. | Studio internal comments notify the relevant designer(s); sharing follows the next step. There is currently no explicit return-to-designer action. |
+| Client publication | Agency: **Share with client**, or **Shared with client → New version** (**New client version** in the empty state) to add a client version directly. | Creates V1/V2/etc for the whole project; project becomes `client_review` (**In review**). A linked source round becomes `reviewed` (**Shared**). | Eligible client activity **New designs ready for review** and action **Review version**. |
+| Client decision | Client: open the latest pending version, use **Approve** or **Request changes**, then **Send review**. Changes require feedback. | Project becomes `approved` or `changes_requested`. Previous versions retain their decisions; a conflicting second decision is refused. | Agency activity **Client approved a design** / **Client requested changes**; action **Deliver project** / **Respond to feedback**. |
+| Revision loop | Agency relays client feedback through internal Comments; designer updates their board and uses **Send to studio** again; agency shares the new round or uses **New version**. | New round and then new client version; client decides again. | Internal comment → designer activity; new round → agency activity/action; new version → client activity/action. See the current designer-action gap below. |
+| Final delivery | Agency: **Brand Hub → Files**, select the approved project, **Delivery file**, then **Complete delivery**. | At least one real delivery file and approved project required. Delivery sets `delivered`; client file reads/downloads become available. | Eligible client activity **Your project has been delivered**. Agency delivery action clears. Client uses each file's **Download** icon. |
 
-Database tests separately verify forbidden payloads, parent integrity, locking, retries and concurrent transitions. The [acceptance matrix](acceptance-matrix.md) and evidence under `docs/verification` record which checks actually passed. Local production containers and a configured local mailbox are not a claim of public DNS/TLS deployment, paid billing or external SMTP delivery.
+The credit month can be the current month or one of the next 11. Insufficient balance blocks
+acceptance; another eligible month or an explicit allocation is needed. The client does not have
+an **Accept budget** button: confirmation and acceptance belong to the agency in the current
+implementation. A briefing already accepted links to its project rather than reopening scope.
+
+Delivered projects refuse new round submission, new client versions and review decisions. Agency
+can still correct a shared version's Miro link through **More → Edit Miro link**; this retains the
+version, its review and comments and does not itself create a new version. Miro content is live:
+a numbered application version is not a frozen snapshot of everything inside that external board.
+
+## Persistent controls and supporting flows
+
+- **Board / R1 / R2** selects the live working board or an internal round; the designer label is
+  **Live board**. **V1 / V2** selects client versions. These controls navigate; they do not approve,
+  submit or change status.
+- **Project details** contains Overview/Briefing, timing, files and version history. Agency alone
+  sees **Manage project**, assignment/removal, credit adjustments and internal/client Drive links;
+  its header **Edit project details** action saves through **Save details**. The designer toolbar
+  opens **Briefing** first when linked, with **Project info** as the other tab; it omits the cover.
+- **Comments** replaces the older separate conversation/feedback controls. **All activity** and
+  **This round** (internal) or **This version** (client) choose context; **Send message** posts,
+  **Resolve** and **Reopen** track a comment.
+  Resolving a comment neither approves a version nor completes a workflow action. Internal and
+  client channels, including unsent drafts, remain separate.
+- Agency internal project comments notify assigned designers; a round comment targets that board's
+  designer. Designer internal comments notify agency. Client comments notify agency; agency client
+  comments notify eligible client recipients and prior active client conversation authors.
+- **More → Edit board** edits a board's name, Miro link, assigned designer and internal deadline.
+  The deadline cannot exceed the project's date. Agency sees the selected board's designer name
+  beside the + control. A designer never receives another designer's board.
+- **Files → Working file** is available to agency and assigned designers for supporting source
+  files; it is separate from the Miro creative workflow. Only agency adds a **Delivery file**.
+  Uploading a final file alone does not release it to the client; **Complete delivery** does.
+- **Credits → Request credits** lets a client request an allocation and notifies agency; its
+  **Review credit request** action opens Credits. Agency uses **Review → Allocate credits** or
+  **Decline request** with a reason. The client receives **Credits added to your workspace** or
+  **Credit request updated**. This is a separate request, not a budget acceptance or payment flow.
+- Agency project details offers **Move to another month** for unsettled charged work and
+  **Settle final credits** once approved/delivered. Settlement notifies the client with
+  **Final credits settled**; designers never receive billing data.
+
+## Notification rules
+
+The bell and `/notifications` combine two independent sections:
+
+| Section | Meaning | Behavior |
+| --- | --- | --- |
+| **Needs your action** | Something the current role can act on now | Re-evaluated from authorized workflow state; 15-second poll and refresh on opening. Disappears when its condition is resolved/replaced or access is lost. Cannot be dismissed as read. |
+| **Activity** | An event already occurred | Persists per recipient with read/unread state; 30-second poll. **Mark all read** or the per-event check only marks activity read. |
+
+Agency actions: **Review briefing**, **Start project**, **Prepare project**, **Review round**,
+**Respond to feedback**, **Deliver project**, **Review credit request**. Designer action:
+**Submit round**. Client action: **Review version**. Details and exact conditions are maintained in
+[action notifications](action-notifications.md).
+
+Agency activity reaches active agency members except the actor. Client project notifications
+reach the active briefing requester plus active client members who enabled **notify all**; if
+there is no active requester, they reach all active client members. Client-wide credit-request
+updates reach all active client members. Studio replies also reach prior active client authors in
+that project's conversation. Notification routing does not narrow an otherwise authorized client's
+ability to review. Removed accounts and people without the required scope cannot access the work.
+
+Workflow events are currently **in-app only**. Resend SMTP is prepared for Supabase Auth invitations
+and password recovery, and external delivery is still unconfigured. Configuring that SMTP alone
+will not send round, review, comment or delivery notifications by email. Editing content in Miro
+also does not automatically submit or publish it in this application.
+
+## Verified gaps for the next refactor
+
+1. **Revision handoff is incomplete.** Client changes create an agency response action, but no
+   designer notification or revision action. Designer Home derives **Your turn** from a shared
+   round plus the project's changes-requested status, while the bell's **Submit round** accepts
+   only no round or a latest draft. Those two surfaces therefore disagree. There is no explicit
+   agency return-to-designer transition; internal comments are the existing relay.
+2. **Production start is not recorded.** New Miro projects begin **Planned**; assignment and board
+   creation do not set **In progress**. The old function that did this was removed, so the current
+   UI normally advances directly to **Studio review** on first submission. An explicit start rule
+   or a simpler vocabulary is needed before presenting every enum as an active funnel stage.
+3. **Briefing rejection/cancellation is absent.** The current statuses and actions cover draft,
+   submission, quote confirmation and acceptance, without a decline/cancel path.
+4. **Reminder and delivery channels need a deliberate policy.** The existing notification model
+   is activity plus state-derived actions, without workflow email dispatch. The resolved/read
+   rules must stay separate when adding any reminder or external delivery mechanism.
+
+## Sources and verification scope
+
+Primary implementation references: [briefing detail](../../apps/web/features/briefings/briefing-detail.tsx),
+[Miro controls](../../apps/web/features/projects/miro-workspace-bar.tsx),
+[project details](../../apps/web/features/projects/project-details.tsx),
+[Files](../../apps/web/features/assets/assets-page.tsx),
+[notification feed](../../apps/web/features/workspace/notification-feed.tsx), and the latest
+[action view](../../supabase/migrations/202609270020_action_board_labels.sql).
+The [intake map](../engineering/handoffs/2026-09-28-funnel-intake-map.md) and
+[notification map](../engineering/handoffs/2026-09-28-funnel-notifications-map.md) record the bounded
+read-only audit. Relevant current browser suites are `miro-workspace.spec.ts`,
+`client-invitations.spec.ts`, `designer-invitation.spec.ts` and `action-notifications.spec.ts` under
+`apps/web/tests/e2e`. Their presence is not a claim they ran during this documentation task.

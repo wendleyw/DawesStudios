@@ -1,6 +1,6 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-27 EDT. Owner: **Codex; funnel map integrated; designer UI thread resumes checkpoint next**.
+Updated: 2026-09-27 EDT. Owner: **Codex; add-board icon placed before the designer**.
 
 ## Objective and accepted decisions
 
@@ -25,7 +25,8 @@ Updated: 2026-09-27 EDT. Owner: **Codex; funnel map integrated; designer UI thre
   [Prior checkpoint](history/handoff-2026-09-27-before-recovery.md) retains their detailed evidence.
 - UI thread promoted the project header in `44dba3b`;
   [current report](handoffs/2026-09-27-project-header-default.md) owns its visual evidence.
-  Follow-up `45439d2`: title weight700, fonts/phone/desktop and81tests verified; project pages only.
+  Follow-up `45439d2` sets title weight to700; its owner verified both fonts/phone and desktop
+  plus81targeted tests. The compact header remains limited to project pages.
 - Resend host SMTP fragment and [email runbook](../operations/email.md) prepared. Invitation and
   recovery APIs stay in Supabase Auth; actual delivery is still a target-environment gate.
 - Backup format2 retains owners/ACLs, checks all foreign keys, records image versions and binds
@@ -49,34 +50,27 @@ Updated: 2026-09-27 EDT. Owner: **Codex; funnel map integrated; designer UI thre
 
 ## Environment and next concrete work
 
-- User requested the full role/action/notification map before more refactoring. Corrected the
-  obsolete upload-based [production workflow](../architecture/production-workflow.md) to Miro.
-- [Intake audit](handoffs/2026-09-28-funnel-intake-map.md) and
-  [notification audit](handoffs/2026-09-28-funnel-notifications-map.md): current source/schema reviewed;
-  no workflow mutations/browser tests. Agency confirms/accepts budget; no client acceptance.
-- Next workflow fixes: designer revision action vs Home mismatch; no Miro production-start transition;
-  no briefing decline/cancel; workflow email not implemented by Auth SMTP. No behavior changed here.
-- Baseline gate before concurrent designer UI:129files/1272tests,types/lint/format and doc links pass.
-- Separate UI thread is improving designer project/briefing/comments controls; source paths theirs.
-
 - Latest user direction: icon-only **+** immediately before the designer badge, grouped8px apart.
   Add design board tooltip/dialog retained;44tests,lint/format,3responsive dialogs/Axe0 pass.
   [Action clarity evidence](../verification/board-action-clarity-2026-09-27.md). No records created.
 
 - Working files now highlights the selected board's designer for the agency, including one board.
   Profile name joins existing RLS; client rows and other designers' boards remain inaccessible.
-- Prior designer gate129files/1272tests,2Chromium workflows,desktop/phone+Axe,118FK,live10/68/50 pass;
-  sleep-interrupted first run passed on retry. [Designer evidence](../verification/board-designer-2026-09-27.md).
+- Current gate129files/1272tests and2Chromium full workflow/privacy journeys pass. Desktop/phone
+  badge checks and2Axe scans pass;118FK and live10/68/50 preserved. First browser run interrupted
+  by macOS sleep; unchanged rerun passed. [Designer evidence](../verification/board-designer-2026-09-27.md).
 - Project context UX: inline Briefing, named comment destinations, organized side panels,
   full-width image strip and centered copy/paste feedback. Mobile panels cover project chrome.
-- Prior context checks:129files/1269tests,81CSS,3roles×4sizes×3panels,6PNGcopies/30Axe; details below.
+- Prior context gate129files/1269tests passes; final81CSS checks pass. Browser3roles×4sizes×3panels,
+  6realPNGcopies/30Axe scans, download fallback and light/dark inspection pass.
 - [Context UX evidence](../verification/project-context-ux-2026-09-27.md) and
   [handoff](handoffs/2026-09-27-project-context-ux.md). External Miro access/paste not verified.
 - The latest explicit placement supersedes the earlier ambiguous crop: **+** precedes designer.
   Shared with client retains **New version**; no project content or Miro board was created.
 
-- Earlier Miro review controls and toolbar evidence remain linked in
-  [the previous checkpoint](history/handoff-2026-09-27-before-funnel-map.md).
+- Compact Miro review controls now overlap padding and stay centred on phones; next UI action:
+  user reviews the compact stack. Web gate128files/1259tests and14Chromium light/dark size checks pass;
+  [review-control evidence](../verification/compact-miro-review-2026-09-27.md) records scope and captures.
 
 - Sidebar control and optional new-account full name: [prior evidence](../verification/team-invitation-and-sidebar-2026-09-27.md).
 - Prior invitation gate:128files/1262tests, types/lint/format pass. Chromium designer invitation passes
@@ -87,6 +81,9 @@ Updated: 2026-09-27 EDT. Owner: **Codex; funnel map integrated; designer UI thre
   retired test message was archived/removed. User received their specific inbox message link.
   Manual acceptance is pending; Resend delivery still requires sender and host credentials.
 
+- Current toolbar checks: web gate127files/1249tests and Chromium search/filter/focus/Axe across
+  five sizes, including1512×696 and1440×600, pass. Desktop captures inspected; live10/68/50 and
+  all118FK preserved. [Toolbar evidence](../verification/board-left-toolbar-2026-09-27.md).
 - Live app3003/API55421/DB55422/media55430 left available. Existing older fixed clone retained.
 - Filesystem staging remains stopped with data/volumes retained. When resumed:
   API56110/DB56111/web3113/media56114/mail56115. Do not provision or reseed it again.
