@@ -29,11 +29,16 @@ export function BoardCanvasControls({
   const fit = useCallback(
     (duration = 0) => {
       if (content.width <= 0 || view.width <= 0) return;
-      // Keep the opening content below the floating identity/profile cards while the grid stays full bleed.
-      const topInset = canvas
-        ? Number.parseFloat(getComputedStyle(canvas).getPropertyValue("--board-header-space")) || 88
-        : 88;
-      void setViewport(boardFit(content, view, topInset), { duration });
+      // Keep the opening content below the floating identity/profile cards and beside the tool
+      // dock, while the grid stays full bleed.
+      const style = canvas ? getComputedStyle(canvas) : null;
+      const inset = (name: string, fallback: number) => {
+        const value = Number.parseFloat(style?.getPropertyValue(name) ?? "");
+        return Number.isFinite(value) ? value : fallback;
+      };
+      const topInset = inset("--board-header-space", 88) || 88;
+      const leftInset = inset("--board-rail-space", 0);
+      void setViewport(boardFit(content, view, topInset, leftInset), { duration });
     },
     [content, view, canvas, setViewport],
   );

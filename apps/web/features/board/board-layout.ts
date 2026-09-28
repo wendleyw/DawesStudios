@@ -368,12 +368,15 @@ export function boardFit(
   content: { width: number; height: number },
   view: { width: number; height: number },
   topInset = 0,
+  leftInset = 0,
 ): { x: number; y: number; zoom: number } {
   // The board fits both axes; a ten-campaign column that will not shrink to fit pans instead.
+  // Insets keep the opening view clear of the floating header and tool dock, so a board wider than
+  // the canvas starts beside the dock instead of under it.
   const fitted = fitToContent(
     content,
-    { ...view, height: Math.max(0, view.height - topInset) },
+    { width: Math.max(0, view.width - leftInset), height: Math.max(0, view.height - topInset) },
     { minZoom: MIN_FIT_ZOOM, constrainHeight: true },
   );
-  return { ...fitted, y: fitted.y + topInset };
+  return { ...fitted, x: fitted.x + leftInset, y: fitted.y + topInset };
 }

@@ -443,6 +443,18 @@ describe("fitting the view to the board", () => {
     expect(fit.y).toBe(FIT_PAD);
   });
 
+  it("starts a board wider than the view beside the tool dock, not under it", () => {
+    // SABRE's canvas at the legible floor is wider than a laptop view, so it opens at its left
+    // edge; that edge must clear the 92px dock column and the header above it.
+    const fit = boardFit({ width: 4000, height: 1200 }, view, 88, 92);
+    expect(fit.zoom).toBe(MIN_FIT_ZOOM);
+    expect(fit.x).toBe(92 + FIT_PAD);
+    expect(fit.y).toBe(88 + FIT_PAD);
+    // A board that fits is centred in the room right of the dock.
+    const small = boardFit({ width: 400, height: 300 }, view, 88, 92);
+    expect(small.x).toBe(92 + Math.round((view.width - 92 - 400) / 2));
+  });
+
   it("returns a usable viewport before the board has been measured", () => {
     expect(boardFit({ width: 0, height: 0 }, view)).toEqual({ x: FIT_PAD, y: FIT_PAD, zoom: 1 });
   });

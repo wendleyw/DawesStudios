@@ -97,6 +97,8 @@
   /* The gap under the floating header; use-board-measurements.ts adds it to the measured header height. */
   --board-header-gap: 16px;
   --board-header-space: 88px;
+  /* The floating tool dock's column; the canvas fit and the structured views both start after it. */
+  --board-rail-space: 92px;
   position: relative;
   display: flex;
   min-width: 0;
@@ -109,7 +111,7 @@
   z-index: 22;
   top: var(--board-header-space);
   right: var(--space-page);
-  left: 92px;
+  left: var(--board-rail-space);
   display: grid;
   gap: 8px;
 }
@@ -811,7 +813,7 @@
   margin: 0;
 }
 .board-work-area > :is(.board-list, .board-planning-view, .board-calendar) {
-  margin: var(--board-header-space) var(--space-page) 24px 92px;
+  margin: var(--board-header-space) var(--space-page) 24px var(--board-rail-space);
 }
 .board-tool-dock {
   --board-tool-size: 40px;
@@ -931,6 +933,10 @@
 }
 /* A short desktop window still keeps the view selector on the left. */
 @media (max-width: 900px) {
+  .board-work-area {
+    /* The tool dock moves to the bottom here, so nothing floats over the canvas's left edge. */
+    --board-rail-space: 0px;
+  }
   .board-tool-dock {
     --board-tool-size: clamp(32px, 9vw, 36px);
     top: auto;
