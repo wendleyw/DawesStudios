@@ -67,28 +67,32 @@ function props(overrides: Partial<MiroWorkspaceBarProps>): MiroWorkspaceBarProps
 }
 
 describe("MiroWorkspaceBar in Working files", () => {
-  it("identifies the current designer even when there is only one board", () => {
+  it("names the board with its designer for the agency, even when there is only one board", () => {
     const { rerender } = render(<MiroWorkspaceBar {...props({ boards: [boardA] })} />);
-    expect(screen.getByTitle("Designer: Alex Morgan")).toHaveTextContent("Alex Morgan");
+    expect(screen.getByText("Alpha · Alex Morgan")).toBeVisible();
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
 
     rerender(<MiroWorkspaceBar {...props({ board: boardB })} />);
-    expect(screen.getByTitle("Designer: Jordan Reed")).toHaveTextContent("Jordan Reed");
-    expect(screen.queryByText("Alex Morgan")).toBeNull();
+    const picker = screen.getByRole("combobox", { name: "Design board" });
+    expect(picker).toHaveValue("b");
+    expect(within(picker).getByRole("option", { name: "Beta · Jordan Reed" })).toBeInTheDocument();
+    expect(within(picker).getByRole("option", { name: "Alpha · Alex Morgan" })).toBeInTheDocument();
   });
   it("keeps designer identity out of client views and the designer's own controls", () => {
     const { rerender } = render(
       <MiroWorkspaceBar {...props({ channel: "client", role: "client" })} />,
     );
-    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+    expect(screen.queryByText(/Alex Morgan/)).toBeNull();
     rerender(<MiroWorkspaceBar {...props({ channel: "client" })} />);
-    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+    expect(screen.queryByText(/Alex Morgan/)).toBeNull();
     rerender(<MiroWorkspaceBar {...props({ role: "designer", boards: [boardA] })} />);
-    expect(screen.queryByTitle("Designer: Alex Morgan")).toBeNull();
+    expect(screen.getByText("Alpha")).toBeVisible();
+    expect(screen.queryByText(/Alex Morgan/)).toBeNull();
   });
   it("does not substitute a private identifier when the designer name is unavailable", () => {
-    render(<MiroWorkspaceBar {...props({ board: { ...boardA, designerName: null } })} />);
-    expect(screen.getByTitle("Designer: Name unavailable")).toBeVisible();
+    const unnamed = { ...boardA, designerName: null };
+    render(<MiroWorkspaceBar {...props({ boards: [unnamed], board: unnamed })} />);
+    expect(screen.getByText("Alpha · Designer unavailable")).toBeVisible();
     expect(screen.queryByText("d1")).toBeNull();
   });
   it("lets the agency pick boards and rounds while advances stay in the action bar", async () => {
@@ -98,11 +102,15 @@ describe("MiroWorkspaceBar in Working files", () => {
     render(<MiroWorkspaceBar {...props({ round, onRound, onShareRound })} />);
     expect(screen.getByRole("combobox", { name: "Design board" })).toHaveValue("a");
     const rounds = screen.getByRole("group", { name: "Rounds" });
-    await user.click(within(rounds).getByRole("button", { name: "Board" }));
+    await user.click(within(rounds).getByRole("button", { name: "Live" }));
     expect(onRound).toHaveBeenCalledWith(null);
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(onShareRound).not.toHaveBeenCalled();
+    // Board management lives in the More menu, not beside the board.
+    expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "More" }));
     expect(screen.getByRole("button", { name: "Add design board" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit board" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
   });
   it("shows the designer's board navigation without an advance control", () => {
@@ -110,10 +118,8 @@ describe("MiroWorkspaceBar in Working files", () => {
     // One board needs no picker.
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
     expect(screen.getByText("Alpha")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Live board" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // The designer's live board is their work; sent rounds are the agency's review history.
+    expect(screen.queryByRole("group", { name: "Rounds" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add design board" })).toBeNull();
@@ -145,17 +151,18 @@ describe("MiroWorkspaceBar in Working files", () => {
   });
   it("keeps an already shared round readable without offering to share it again", () => {
     render(<MiroWorkspaceBar {...props({ round: { ...round, status: "reviewed" } })} />);
-    expect(screen.getByText("Shared")).toBeInTheDocument();
+    // The round's state is read once, in the action bar below the board.
+    expect(screen.queryByText("Shared")).toBeNull();
     expect(screen.queryByRole("button", { name: "Share with client" })).toBeNull();
     expect(screen.getByRole("button", { name: "Round 1" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 
 describe("MiroWorkspaceBar in Shared with client", () => {
-  it("shows the versions and status without a second publication control", () => {
+  it("shows the versions without repeating their status or a second publication control", () => {
     render(<MiroWorkspaceBar {...props({ channel: "client" })} />);
     expect(screen.getByRole("group", { name: "Client versions" })).toHaveTextContent("V1");
-    expect(screen.getByText("In review")).toBeInTheDocument();
+    expect(screen.queryByText("In review")).toBeNull();
     expect(screen.queryByRole("button", { name: "New client version" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Design board" })).toBeNull();
   });

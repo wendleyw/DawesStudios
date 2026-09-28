@@ -27,7 +27,10 @@ async function captureResponsive(page: Page, name: string, dialog = false) {
 }
 
 async function selectBoard(page: Page, name: string) {
-  await page.getByRole("combobox", { name: "Design board" }).selectOption({ label: name });
+  // The agency's picker names each board with its designer ("Direction Alpha · Alex Morgan").
+  const picker = page.getByRole("combobox", { name: "Design board" });
+  const value = await picker.locator("option", { hasText: name }).first().getAttribute("value");
+  await picker.selectOption(value!);
 }
 
 async function release(page: Page, name: string) {

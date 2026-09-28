@@ -78,9 +78,11 @@ test("agency, designer and client complete Miro review and final-file delivery",
   const studio = await (await browser.newContext()).newPage();
   await signIn(studio, credentials.agency);
   await studio.goto(`/projects/${projectId}`);
-  // Working files has B's board only, so there is no picker yet; add A's from the bar.
+  // Working files has B's board only, so there is no picker yet: the bar names the board with its
+  // designer, and a second board is added from the More menu.
   await expect(studio.getByRole("combobox", { name: "Design board" })).toHaveCount(0);
-  await expect(studio.getByTitle(`Designer: ${designerBName}`)).toBeVisible();
+  await expect(studio.locator(".miro-bar")).toContainText(`Board for B · ${designerBName}`);
+  await studio.locator(".miro-bar").getByRole("button", { name: "More" }).click();
   await studio.getByRole("button", { name: "Add design board" }).click();
   const boardDialog = studio.getByRole("dialog");
   await boardDialog.getByLabel("Board name").fill("Direction A");
@@ -106,26 +108,28 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await expect(designer.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVBoardA1/);
   // The designer has one board, so there is no picker, and nothing of B's.
   await expect(designer.getByRole("combobox", { name: "Design board" })).toHaveCount(0);
-  await expect(designer.locator(".miro-bar-designer")).toHaveCount(0);
+  await expect(designer.locator(".miro-bar")).not.toContainText(designerAName);
   await designer.getByRole("button", { name: "Send to studio" }).click();
   await designer.getByRole("dialog").getByLabel("Note for the studio").fill("Ready for a look");
   await designer.getByRole("dialog").getByRole("button", { name: "Send to studio" }).click();
   await expect(designer.getByRole("dialog")).toHaveCount(0);
-  await expect(designer.getByRole("group", { name: "Rounds" })).toContainText("R1");
+  // A designer works on the live board only; the sent round is the agency's review history.
+  await expect(designer.getByRole("group", { name: "Rounds" })).toHaveCount(0);
+  await expect(designer.getByRole("group", { name: "Workflow actions" })).toContainText(
+    "Studio review",
+  );
   await expect(designer.getByText("Board for B")).toHaveCount(0);
   await capture(designer, "designer-working-files");
 
   // The agency shares round 1 with a client link.
   await studio.reload();
-  await studio
-    .getByRole("combobox", { name: "Design board" })
-    .selectOption({ label: "Direction A" });
-  await expect(studio.getByTitle(`Designer: ${designerAName}`)).toBeVisible();
-  await expect(studio.getByTitle(`Designer: ${designerBName}`)).toHaveCount(0);
+  const picker = studio.getByRole("combobox", { name: "Design board" });
+  await picker.selectOption({ label: `Direction A · ${designerAName}` });
+  await expect(picker.locator("option:checked")).toHaveText(`Direction A · ${designerAName}`);
   await studio.getByRole("button", { name: "Round 1" }).click();
   for (const width of [1512, 390]) {
     await studio.setViewportSize({ width, height: 900 });
-    const badge = studio.getByTitle(`Designer: ${designerAName}`);
+    const badge = picker;
     await expect(badge).toBeVisible();
     const bounds = await badge.boundingBox();
     expect(bounds).not.toBeNull();
@@ -148,7 +152,9 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await shareDialog.getByRole("button", { name: "Share with client" }).click();
   await expect(studio.getByRole("dialog")).toHaveCount(0);
   await expect(studio.getByRole("button", { name: "Share with client" })).toHaveCount(0);
-  await expect(studio.locator(".miro-bar-status")).toHaveText("Shared");
+  await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(
+    "Shared with client",
+  );
 
   // The client requests changes, the agency adds V2 directly, the client approves.
   const client = await (await browser.newContext()).newPage();
@@ -172,7 +178,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
   await expect(client.locator("iframe.miro-view-frame")).toHaveAttribute("src", /uXjVClient1/);
   await expect(client.locator('iframe[src*="uXjVBoardA1"]')).toHaveCount(0);
   await expect(client.getByText(/Direction A|Board for B|Alex Morgan|Jordan Reed/)).toHaveCount(0);
-  await expect(client.locator(".miro-bar-designer")).toHaveCount(0);
+  await expect(client.locator(".miro-bar")).not.toContainText(designerAName);
   await capture(client, "client-shared-with-client");
   await client.getByRole("button", { name: "Request changes" }).click();
   const requestDialog = client.getByRole("dialog");
@@ -185,7 +191,7 @@ test("agency, designer and client complete Miro review and final-file delivery",
     .getByRole("group", { name: "Project channel" })
     .getByRole("button", { name: "Shared with client" })
     .click();
-  await expect(studio.locator(".miro-bar-designer")).toHaveCount(0);
+  await expect(studio.locator(".miro-bar")).not.toContainText(designerAName);
   // The agency handles these changes itself once the client's decision reaches its page: the
   // action bar then shares the next client version.
   await expect(studio.getByRole("group", { name: "Workflow actions" })).toContainText(

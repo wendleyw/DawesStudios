@@ -48,12 +48,13 @@ wraps on narrow screens, preserving all authorized actions. See the
 [design system](../../../../docs/architecture/design-system.md) and the
 [default-header verification](../../../../docs/verification/project-header-default-2026-09-27.md).
 
-In Working files the bar shows a compact board picker (only with more than one board; sized to the
-chosen name up to 200 px), a **Board / R1 / R2…** round toggle once the board has rounds, and the
-round's status. Designers also see the board name when only one is assigned, and their base toggle
-reads **Live board** to distinguish it from submitted rounds. In Shared with client a **V1, V2…**
-toggle shows the client versions and the selected version's status. A client with nothing shared
-yet retains Back and More without version controls. The bottom bar shows the selected context and
+In Working files the agency's bar names the board with its designer ("Direction A · Alex Morgan"),
+as a picker when there is more than one board, and a **Live / R1 / R2…** round toggle once the
+board has rounds. A designer sees only their board's name: no round toggle, since the live board is
+their work and a designer is always on it (`round` is null for designers). In Shared with client a
+**V1, V2…** toggle shows the client versions. The bar never repeats the state; the docked action bar
+below shows it. Add design board and Edit board are in the ⋯ menu with Edit Miro link and Drive. A
+client with nothing shared yet retains Back and More without version controls. The bottom bar shows the selected context and
 actions allowed by `get_project_workflow`: agency production release, internal change request or
 publication; the current designer's submission; agency feedback handoff, new publication or delivery
 preparation; and the latest client's review. Backlog and closed boards show a waiting state. Older

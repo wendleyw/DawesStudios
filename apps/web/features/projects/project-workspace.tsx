@@ -93,7 +93,9 @@ export function ProjectWorkspace({
 
   const board = pickById(boards, boardId);
   const rounds = board ? boardRounds(versions, board.id) : [];
-  const round = roundId ? (rounds.find((item) => item.id === roundId) ?? null) : null;
+  // A designer works on the live board only; rounds are the agency's review history.
+  const round =
+    role !== "designer" && roundId ? (rounds.find((item) => item.id === roundId) ?? null) : null;
   const shared = sharedVersions(versions);
   const version = pickById(shared, versionId);
   const internal = channel === "internal";
@@ -358,7 +360,9 @@ export function ProjectWorkspace({
                                 ? "Designer working"
                                 : workflowBoard?.currentRequest?.outcome === "submitted"
                                   ? "Studio review"
-                                  : "Waiting for production instructions"
+                                  : workflowBoard?.currentRequest?.outcome === "shared"
+                                    ? "Shared with client"
+                                    : "Waiting for production instructions"
                             : !version
                               ? role === "client"
                                 ? "The studio is preparing your first version"

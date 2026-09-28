@@ -273,7 +273,7 @@ describe("ProjectWorkspace", () => {
     await user.click(within(rounds).getByRole("button", { name: "Round 1" }));
     await user.click(screen.getByRole("button", { name: "Comments" }));
     expect(screen.getByText("Comments panel r1")).toBeInTheDocument();
-    await user.click(within(rounds).getByRole("button", { name: "Board" }));
+    await user.click(within(rounds).getByRole("button", { name: "Live" }));
     expect(screen.queryByText("Comments panel r1")).toBeNull();
     expect(screen.getByText("Comments panel project")).toBeInTheDocument();
   });
@@ -387,7 +387,8 @@ describe("ProjectWorkspace", () => {
     );
     expect(dialog.action).toBeNull();
     expect(screen.queryByRole("button", { name: "Send to studio" })).toBeNull();
-    expect(screen.getByRole("group", { name: "Rounds" })).toBeInTheDocument();
+    // A designer works on the live board only; the rounds they sent are the agency's history.
+    expect(screen.queryByRole("group", { name: "Rounds" })).toBeNull();
   });
 
   it("offers no first client version for a delivered project", () => {

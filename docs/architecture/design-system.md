@@ -158,11 +158,15 @@ Two compact cards float over the work area: the approved client logo alone (48px
 Canvas has the shared zoom pill (zoom out, zoom level, zoom in, fit) at the bottom left of the work area, under the rail's column. Manual zoom reaches 10%, while automatic fitting keeps a 75% readability floor (a 280 px card shows at 210 px); a larger board pans instead of shrinking further. The grid fills the entire work area beneath both cards; it has no reserved side strip. List, Timeline, Kanban and Calendar reserve a gutter to keep their content clear of the toolbar. Only on viewports up to 900 px wide do the cards become horizontal bars at the bottom, with zoom below the main bar and panels opening above it. Structured views reserve bottom space, while Canvas continues beneath the cards. Short desktop windows retain the left toolbar; height alone never changes its orientation. The board fills the height below the shared mobile topbar. Its identity/profile cards overlay Canvas, while structured views leave their top edge clear. Each work surface contains its own scrolling. Canvas fits only after its current element is measured, leaves room below the identity card and refits when that viewport changes size. Save/load failures expose usable retry controls below the floating header.
 
 Project pages put campaign, title and deadline in the shared floating client identity header,
-then the project's single Miro controls bar (see the Decision above): navigation, the agency's
-Working files/Shared with client channel (or the designer's Working files label), rounds or client
-versions, and the embedded board's actions. Below 1000 px "Open in Miro" becomes its icon and the
-designer chip shows only the name (both labels stay for assistive technology); on phones the bar
-keeps two rows. The embedded Miro board sits in its own framed area between the header and a docked
+then the project's single Miro controls bar (see the Decision above), in the same order for every
+role: back, channel (the agency's Working files/Shared with client tabs or the designer's Working
+files label), board, then rounds (**Live, R1, R2…**) or client versions (**V1, V2…**), and Open in
+Miro with the ⋯ menu. The agency's board reads "Direction A · Alex Morgan" (a picker when there is
+more than one board); a designer sees only their board's name and no rounds, because the live board
+is their work and sent rounds are the agency's review history. The state is not repeated here: it
+lives once in the docked action bar. Add design board, Edit board, Edit Miro link and Drive sit in
+the ⋯ menu. Below 1000 px "Open in Miro" becomes its icon (its name stays for assistive
+technology); on phones the agency's bar keeps two rows. The embedded Miro board sits in its own framed area between the header and a docked
 footer, 12 px from each, so nothing of ours floats over Miro's canvas or its own controls. The
 footer (`.project-dock`) spans the work area 16 px from the window's bottom edge: Details, Comments
 and Playground first, then the board or version, its state and the workflow actions. An open side
@@ -174,8 +178,8 @@ Comments and details share a floating inspector with close/Escape and focus retu
 Designers open the studio's released **Briefing** directly from the document tool; **Project info**
 holds dates and resources. Original client requests/quantities are not rendered. Agency **Production**
 opens the per-board instruction editor, with persistent Save draft/Send to designer actions. The designer inspector omits the project cover. Agency/client sessions
-retain **Project details** and **Overview**. The designer Miro bar identifies the assigned board
-even when there is only one and calls its editable base **Live board**.
+retain **Project details** and **Overview**. The designer Miro bar names the assigned board even
+when there is only one, without round controls.
 Comments uses a 310–380 px column, compact heading and All activity/This round (internal) or
 This version (client) controls, an
 independently scrolling history and a growing 60–120 px composer with adjacent send action. Show

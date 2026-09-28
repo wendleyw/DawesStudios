@@ -15,6 +15,8 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - `npm run check` PASS (1,293 tests). Updated stale e2e assertions (miro-workspace, project-feedback,
   client-navigation). Client-switcher, overview-notes and sabre-development specs need other data.
 - The dev server does not hot-reload `globals.css`: restart with `outputs/funnel-harness/restart-web.sh`.
+- Status walkthrough (S02): 16/16 checkpoints; Miro bar standardized (board · designer, Live/R#,
+  no repeated state, designers see only their live board). [Record](../verification/status-walkthrough-2026-09-28.md).
 
 ## Latest UI change
 

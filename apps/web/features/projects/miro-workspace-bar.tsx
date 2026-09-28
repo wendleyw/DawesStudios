@@ -1,9 +1,7 @@
 "use client";
 
-import { Plus, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { DriveIcon } from "@/features/shared/drive-icon";
-import { versionStatusLabel } from "@/features/workspace/workspace-data";
 import { MiroBarShell, miroBarTone } from "./miro-view";
 import type { CanvasVersion, DesignBoard, ProjectChannel } from "./project-data";
 
@@ -42,16 +40,19 @@ export type MiroWorkspaceBarProps = {
 };
 
 /**
- * The Miro workspace's header. In Working files: the design board, its rounds, and the actions of
- * whoever is looking (the board's designer sends a round; the agency shares it and manages boards).
- * The agency also sees the selected board's designer. Shared with client contains only client
- * versions and their status; a designer only ever receives their own boards.
+ * The Miro workspace's header: what is on screen, in the same order for every role — back, channel,
+ * board, then the board's rounds (Live, R1, R2…) or the client versions (V1, V2…). A designer sees
+ * only their live board: the rounds they sent are the agency's review history. The state and the
+ * workflow actions live once, in the docked action bar below the board. The agency's board picker
+ * names each board's designer; a designer only ever receives their own boards, and the client none.
+ * Board management (add, edit, Miro link, Drive) sits in the ⋯ menu.
  */
 export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
   const agency = props.role === "agency";
   const internal = props.channel === "internal";
   const shown = internal ? (props.round?.miro ?? props.board?.miro) : props.version?.miro;
-  const designerName = props.board?.designerName?.trim() || "Name unavailable";
+  const boardLabel = (board: DesignBoard) =>
+    agency ? `${board.name} · ${board.designerName?.trim() || "Designer unavailable"}` : board.name;
   // Workflow advances live in the single contextual bar below the canvas.
   return (
     <MiroBarShell
@@ -61,6 +62,17 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
       link={shown}
       menu={(close) => (
         <>
+          {agency && internal && props.boards.length > 0 && (
+            <button
+              className="button quiet"
+              onClick={() => {
+                close();
+                props.onAddBoard();
+              }}
+            >
+              Add design board
+            </button>
+          )}
           {agency && internal && props.board && (
             <button
               className="button quiet"
@@ -101,9 +113,9 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
     >
       {internal ? (
         <>
-          {props.role === "designer" && props.board && props.boards.length === 1 && (
-            <span className="miro-bar-board-name" title={props.board.name}>
-              {props.board.name}
+          {props.board && props.boards.length === 1 && (
+            <span className="miro-bar-board-name" title={boardLabel(props.board)}>
+              {boardLabel(props.board)}
             </span>
           )}
           {props.boards.length > 1 && (
@@ -115,40 +127,20 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
             >
               {props.boards.map((board) => (
                 <option key={board.id} value={board.id}>
-                  {board.name}
+                  {boardLabel(board)}
                 </option>
               ))}
             </select>
           )}
-          {agency && (props.board || props.boards.length > 0) && (
-            <div className="miro-bar-board-owner">
-              {props.boards.length > 0 && (
-                <button
-                  className="icon-button"
-                  aria-label="Add design board"
-                  title="Add design board"
-                  onClick={props.onAddBoard}
-                >
-                  <Plus size={16} aria-hidden="true" />
-                </button>
-              )}
-              {props.board && (
-                <span className="miro-bar-designer" title={`Designer: ${designerName}`}>
-                  <UserRound size={14} aria-hidden="true" />
-                  <span>Designer</span>
-                  <strong>{designerName}</strong>
-                </span>
-              )}
-            </div>
-          )}
-          {props.board && props.rounds.length > 0 && (
+          {props.role !== "designer" && props.board && props.rounds.length > 0 && (
             <div className="segmented-control" role="group" aria-label="Rounds">
               <button
                 className={props.round ? "" : "active"}
                 aria-pressed={!props.round}
+                title="The board as it is now"
                 onClick={() => props.onRound(null)}
               >
-                {props.role === "designer" ? "Live board" : "Board"}
+                Live
               </button>
               {[...props.rounds].reverse().map((round) => (
                 <button
@@ -163,29 +155,21 @@ export function MiroWorkspaceBar(props: MiroWorkspaceBarProps) {
               ))}
             </div>
           )}
-          {props.round && (
-            <span className="miro-bar-status">{versionStatusLabel(props.round.status)}</span>
-          )}
           {props.boardDueLabel && <span className="miro-bar-due">{props.boardDueLabel}</span>}
         </>
       ) : props.shared.length === 0 ? null : (
-        <>
-          <div className="segmented-control" role="group" aria-label="Client versions">
-            {[...props.shared].reverse().map((version) => (
-              <button
-                key={version.id}
-                className={props.version?.id === version.id ? "active" : ""}
-                aria-pressed={props.version?.id === version.id}
-                onClick={() => props.onVersion(version.id)}
-              >
-                V{version.number}
-              </button>
-            ))}
-          </div>
-          {props.version && (
-            <span className="miro-bar-status">{versionStatusLabel(props.version.status)}</span>
-          )}
-        </>
+        <div className="segmented-control" role="group" aria-label="Client versions">
+          {[...props.shared].reverse().map((version) => (
+            <button
+              key={version.id}
+              className={props.version?.id === version.id ? "active" : ""}
+              aria-pressed={props.version?.id === version.id}
+              onClick={() => props.onVersion(version.id)}
+            >
+              V{version.number}
+            </button>
+          ))}
+        </div>
       )}
     </MiroBarShell>
   );

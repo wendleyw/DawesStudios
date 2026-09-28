@@ -247,13 +247,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.miro-bar-board-owner {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-}
 .miro-bar-board-name {
   min-width: 0;
   max-width: min(28ch, 100%);
@@ -261,35 +254,6 @@
   color: var(--foreground);
   font-size: var(--text-sm);
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.miro-bar-board-owner > .icon-button {
-  flex-shrink: 0;
-}
-.miro-bar-designer {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 34px;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.miro-bar-designer > :is(svg, span) {
-  flex-shrink: 0;
-}
-.miro-bar-designer > strong {
-  min-width: 0;
-  max-width: 24ch;
-  overflow: hidden;
-  color: var(--foreground);
-  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -305,19 +269,18 @@
   color: var(--muted);
   text-align: center;
 }
-.miro-bar-status,
 .miro-bar-due {
   flex-shrink: 0;
   color: var(--muted);
   font-size: var(--text-sm);
   white-space: nowrap;
 }
-.miro-bar-status {
-  color: var(--foreground);
-  font-weight: 500;
-}
 .miro-bar-popover > .project-credits-chip {
   align-self: flex-start;
+}
+/* Menu items read as a list: every entry starts on the same left edge. */
+.miro-bar-popover > .button {
+  justify-content: flex-start;
 }
 .miro-bar-actions {
   display: flex;
@@ -349,16 +312,15 @@
   background: var(--surface);
   box-shadow: 0 6px 24px rgb(0 0 0 / 10%);
 }
-/* Below 1000px "Open in Miro" becomes its icon and the designer chip shows only the name, so the bar
-   keeps one row on a tablet; both labels stay for assistive technology. */
+/* Below 1000px "Open in Miro" becomes its icon so the bar keeps one row on a tablet; its name stays
+   for assistive technology. */
 @container board (max-width: 1000px) {
   .miro-bar-actions > a.button {
     width: 34px;
     padding: 0;
     justify-content: center;
   }
-  .miro-bar-open-label,
-  .miro-bar-designer > span {
+  .miro-bar-open-label {
     position: absolute;
     width: 1px;
     height: 1px;
