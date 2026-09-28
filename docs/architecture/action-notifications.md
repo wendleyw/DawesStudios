@@ -1,5 +1,9 @@
 # Action notifications
 
+This page describes the current predicates. The [action-driven workflow plan](../superpowers/plans/2026-09-27-action-driven-workflow.md)
+will replace round/global-status inference with board work requests, recorded agency handoffs,
+and Backlog/closed-board suppression. Those changes are planned, not current behavior.
+
 `public.action_notifications` is an authenticated, read-only view of work that can be acted on
 now. It has no table, scheduler, acknowledgement flag, or retry state. `public.notifications`
 continues to hold historical events and `read_at`; reading an event does not clear an action.

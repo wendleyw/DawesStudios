@@ -1,5 +1,10 @@
 # Production collaboration
 
+The approved target is recorded in the [action-driven workflow design](../superpowers/specs/2026-09-27-action-driven-workflow-design.md)
+and its [implementation plan](../superpowers/plans/2026-09-27-action-driven-workflow.md). That work
+is planned: contextual action bars, public In progress on acceptance, independent board revision
+tasks/closure and project Backlog are not implemented by the current workflow described below.
+
 This describes the implemented Miro workflow as inspected on 2026-09-27 EDT. It is a code/schema
 map, not a new claim that every journey was rerun. The application has one studio and isolated
 client workspaces. Supabase owns authorization, workflow state, comments, credits and files.
