@@ -10,6 +10,7 @@ import { safeReturnPath } from "./return-path";
 import { FormError } from "@/features/shared/form-error";
 import { describeSupabaseError } from "@/lib/supabase";
 import { markPostSignInFocus } from "./post-sign-in-focus";
+import { markSignInIntro } from "@/features/workspace/sign-in-intro";
 import "./auth.css";
 
 export function LoginPage() {
@@ -22,6 +23,7 @@ export function LoginPage() {
   useEffect(() => {
     if (session && !loading) {
       markPostSignInFocus();
+      markSignInIntro();
       router.replace(destination);
     }
   }, [session, loading, router, destination]);
@@ -39,6 +41,7 @@ export function LoginPage() {
     if (result.error) setError(describeSupabaseError(result.error));
     else {
       markPostSignInFocus();
+      markSignInIntro();
       router.replace(destination);
     }
   }

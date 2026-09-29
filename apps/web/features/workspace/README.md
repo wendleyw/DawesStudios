@@ -288,6 +288,20 @@ The crop box is the mark's full motion across every frame, and the levels step k
 background pure black so screening leaves the sidebar color untouched. The still is the last
 frame, cropped the same way, with its opacity taken from the mark's darkness.
 
+Entering the system after a sign-in plays a full-screen intro: `sign-in-intro.tsx`, mounted by
+`app/(workspace)/layout.tsx` outside the shell, shows `public/brand/intro.webm` centred on white
+(whatever the theme), holds the finished mark until auth and the profile have loaded, then fades
+out over 400 ms. The login redirect sets a `sessionStorage` flag (`markSignInIntro`) and the intro
+clears it once it has faded, so reloads and in-app navigation open the workspace directly. A click
+or key skips it, a six-second limit covers a stalled video, it is `aria-hidden`, and it never plays
+with reduced motion. The video is a 640 × 640 silent cut of the master (a CSS `brightness` lift
+takes its decoded white to `#fff`):
+
+```sh
+ffmpeg -i brand/logo-animation.webm -an -vf scale=640:640 -pix_fmt yuv420p \
+  -c:v libvpx-vp9 -b:v 0 -crf 34 -row-mt 1 apps/web/public/brand/intro.webm
+```
+
 ## Shared primitives
 
 `notification-feed.tsx` uses `FormError` for its mutation error and `PageStatus` is used by

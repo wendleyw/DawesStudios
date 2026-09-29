@@ -2,7 +2,15 @@
 
 Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Latest task (Claude, 2026-09-28) — page consistency, Deliverables, bulk brand uploads
+## Latest task (Claude, 2026-09-28) — sign-in intro
+
+- After a sign-in the workspace opens behind a one-time full-screen intro (`workspace/sign-in-intro.tsx`,
+  `public/brand/intro.webm`, black mark on white): holds until auth/profile load, fades, skippable,
+  never with reduced motion; reloads/navigation skip it. `npm run check` PASS (1,314 tests); browser
+  check on :3003 (agency sign-in → intro → Overview; reload shows no intro). Uncommitted: `D login.png`
+  remains preexisting and unrelated.
+
+## Previous task (Claude, 2026-09-28) — page consistency, Deliverables, bulk brand uploads
 
 - Studio pages share the client pages' floating header/title cards; Team orders Agency first; Help &
   support removed; List sort returns to default; delivered Miro bar links to Deliverable.

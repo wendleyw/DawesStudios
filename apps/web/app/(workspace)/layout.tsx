@@ -1,4 +1,5 @@
 import { AppShell } from "@/features/workspace/app-shell";
+import { SignInIntro } from "@/features/workspace/sign-in-intro";
 export default function WorkspaceLayout({
   children,
   modal,
@@ -7,9 +8,13 @@ export default function WorkspaceLayout({
   modal: React.ReactNode;
 }) {
   return (
-    <AppShell>
-      {children}
-      {modal}
-    </AppShell>
+    <>
+      {/* Outside the shell, which swaps its whole tree while auth loads. */}
+      <SignInIntro />
+      <AppShell>
+        {children}
+        {modal}
+      </AppShell>
+    </>
   );
 }

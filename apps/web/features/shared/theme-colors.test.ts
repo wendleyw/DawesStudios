@@ -26,6 +26,8 @@ const themeIndependent: Record<string, string> = {
   ".login-story": "The login story panel always uses the dark sidebar colour.",
   ".sidebar-collapse:hover:not(:disabled)": "The sidebar is dark in both themes.",
   ".mobile-sidebar-close:hover:not(:disabled)": "The sidebar is dark in both themes.",
+  ".sign-in-intro":
+    "The intro video is a black mark on white, so its backdrop is white in both themes.",
 };
 
 type Declaration = { selector: string; property: string; value: string };

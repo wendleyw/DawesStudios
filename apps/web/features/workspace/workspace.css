@@ -948,3 +948,24 @@ a.action-notification-item:focus-visible {
 .account-menu-links svg {
   color: var(--muted);
 }
+
+/* The intro after signing in (`sign-in-intro.tsx`): the mark on white, whatever the theme. */
+.sign-in-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  transition: opacity 400ms ease;
+}
+.sign-in-intro.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.sign-in-intro > video {
+  width: min(48vmin, 320px);
+  height: auto;
+  /* The video's white decodes a shade short of #fff; this lifts it into the page, leaving the black. */
+  filter: brightness(1.03);
+}
