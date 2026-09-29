@@ -9,6 +9,7 @@ const catalog = JSON.parse(
   types: ServiceDefinition[];
   formats: { id: string; name: string; width?: number; height?: number; layout: string }[];
 };
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const services = catalog.types;
 function newDeliverable(id: string) {
   const format = catalog.formats.find((item) => item.id === id)!;
@@ -69,19 +70,32 @@ test.describe("Briefing intake, credits, and account administration", () => {
     const title = `Acceptance Intake project ${fixture.tag}`;
     await signIn(page, fixture.email);
     await page.goto(`/clients/${fixture.clientId}/briefings/new`);
-    await expect(page.locator(".service-card")).toHaveCount(20);
-    for (const service of services)
+    // Every catalog service is reachable from its category.
+    await expect(page.locator(".service-category-card")).toHaveCount(6);
+    for (const service of services) {
+      await page
+        .getByRole("button", { name: new RegExp(`^${escapeRegExp(service.category)}`) })
+        .click();
       await expect(
         page
           .locator(".service-card")
           .filter({ has: page.getByRole("heading", { name: service.name, exact: true }) }),
       ).toBeVisible();
+      await page.getByRole("button", { name: "All categories", exact: true }).click();
+    }
+    await page.getByRole("button", { name: /^Video/ }).click();
     await page.getByRole("button", { name: /Short Video \/ Reel/ }).click();
     await page.getByRole("button", { name: "Continue to details" }).click();
     await page.getByRole("button", { name: "Instagram Reels", exact: true }).click();
     await page.getByRole("button", { name: "Change", exact: true }).click();
+    // Changing opens on the chosen service's category.
+    await expect(page.getByRole("heading", { name: "Video", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All categories", exact: true }).click();
+    await page.getByRole("button", { name: /^Brand & print/ }).click();
     await page.getByRole("button", { name: /Simple Branding Package/ }).click();
     await expect(page.getByText(/Formats outside its scope were removed/)).toBeVisible();
+    await page.getByRole("button", { name: "All categories", exact: true }).click();
+    await page.getByRole("button", { name: /^Video/ }).click();
     await page.getByRole("button", { name: /Short Video \/ Reel/ }).click();
     await page.getByRole("button", { name: "Continue to details" }).click();
     await expect(page.getByLabel("Custom name")).toHaveCount(0);
@@ -530,6 +544,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
         ).data?.confirmed_credits,
       ).toBe(9);
       await page.goto(`/clients/${fixture.clientId}/briefings/new`);
+      await page.getByRole("button", { name: /^Video/ }).click();
       await expect(page.getByRole("button", { name: /Short Video \/ Reel/ })).toContainText(
         `${preset.min_credits! + 1}–${preset.max_credits! + 1} credits`,
       );

@@ -185,6 +185,7 @@ test("two people at one client act separately, and the product attributes and no
 
     // The studio files a briefing on behalf of the teammate: with two people it must choose.
     await studioPage.goto(`/clients/${sabre.id}/briefings/new`);
+    await studioPage.getByRole("button", { name: /^Social & ads/ }).click();
     await studioPage.getByRole("button", { name: /Digital Ad \(Static\)/ }).click();
     await studioPage.getByRole("button", { name: "Continue to details", exact: true }).click();
     await studioPage

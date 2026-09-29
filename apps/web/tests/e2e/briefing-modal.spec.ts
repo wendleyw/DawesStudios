@@ -20,21 +20,20 @@ for (const role of ["agency", "client"] as const)
       const dialog = page.getByRole("dialog", { name: "New briefing", exact: true });
       await expect(dialog).toBeVisible();
       await expect(page.locator(".board-calendar")).toBeVisible();
-      await expect(dialog.locator(".service-card")).toHaveCount(20);
+      // The Service step opens on the six categories, not the whole catalog.
+      await expect(dialog.locator(".service-category-card")).toHaveCount(6);
+      await expect(dialog.locator(".service-card")).toHaveCount(0);
       const serviceSearch = dialog.getByRole("textbox", { name: "Find a service", exact: true });
       await serviceSearch.fill("no matching service");
       await expect(dialog.getByText("No services match your search.")).toBeVisible();
-      await dialog.getByRole("button", { name: "Show all services", exact: true }).click();
-      await dialog
-        .getByRole("combobox", { name: "Service category", exact: true })
-        .selectOption("Video");
+      await dialog.getByRole("button", { name: "Show all categories", exact: true }).click();
+      await dialog.getByRole("button", { name: /^Video/ }).click();
+      await expect(dialog.locator(".service-card")).toHaveCount(4);
       await serviceSearch.fill("rEeL");
       await expect(dialog.locator(".service-card")).toHaveCount(1);
       await expect(dialog.locator(".service-card")).toContainText("Short Video / Reel");
       await serviceSearch.fill("");
-      await dialog
-        .getByRole("combobox", { name: "Service category", exact: true })
-        .selectOption("");
+      await dialog.getByRole("button", { name: "All categories", exact: true }).click();
       for (const [width, height] of [
         [1440, 900],
         [1024, 700],
@@ -51,8 +50,8 @@ for (const role of ["agency", "client"] as const)
           await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
         ).toBe(true);
         if (width === 1440) {
-          // Wide enough to see most services at once: four compact columns, and the steps, the
-          // title and the search each share a row instead of stacking.
+          // Wide enough for three category columns, and the steps, the title and the search each
+          // share a row instead of stacking.
           expect(bounds!.width).toBeGreaterThan(1100);
           const layout = await dialog.evaluate((element) => {
             const middle = (selector: string) => {
@@ -60,7 +59,7 @@ for (const role of ["agency", "client"] as const)
               return (box.top + box.bottom) / 2;
             };
             const lefts = new Set(
-              Array.from(element.querySelectorAll(".service-card")).map((card) =>
+              Array.from(element.querySelectorAll(".service-category-card")).map((card) =>
                 Math.round(card.getBoundingClientRect().left),
               ),
             );
@@ -76,7 +75,7 @@ for (const role of ["agency", "client"] as const)
               ),
             };
           });
-          expect(layout.columns).toBe(4);
+          expect(layout.columns).toBe(3);
           expect(layout.stepsInHeader).toBe(true);
           expect(layout.headerRow).toBeLessThan(4);
           expect(layout.searchRow).toBeLessThan(12);
@@ -95,6 +94,7 @@ for (const role of ["agency", "client"] as const)
       await expect(trigger).toBeFocused();
       await page.setViewportSize({ width: 1440, height: 900 });
       await trigger.click();
+      await dialog.getByRole("button", { name: /^Social & ads/ }).click();
       await dialog.getByRole("button", { name: /Digital Ad \(Static\)/ }).click();
       await serviceSearch.fill("video");
       await expect(dialog.locator(".briefing-service-choice")).toContainText("Digital Ad (Static)");
