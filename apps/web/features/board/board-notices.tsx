@@ -9,6 +9,7 @@ import { FormError } from "@/features/shared/form-error";
 export function BoardNotices({
   selectedProjectTitle,
   moveError,
+  foldError,
   preferencesError,
   onRetryPreferences,
   saveError,
@@ -17,6 +18,8 @@ export function BoardNotices({
 }: {
   selectedProjectTitle: string | null;
   moveError: boolean;
+  /** A campaign fold/unfold that did not save; the frame is already back where it was. */
+  foldError: boolean;
   preferencesError: boolean;
   onRetryPreferences: () => void;
   saveError: boolean;
@@ -30,10 +33,13 @@ export function BoardNotices({
       <p className="visually-hidden" role="status">
         {selectedProjectTitle ? `${selectedProjectTitle} selected.` : ""}
       </p>
-      {(moveError || preferencesError || saveError) && (
+      {(moveError || foldError || preferencesError || saveError) && (
         <div className="board-notices">
           {moveError && (
             <FormError>The new position could not be saved. Please try again.</FormError>
+          )}
+          {foldError && (
+            <FormError>That campaign could not be folded or unfolded. Please try again.</FormError>
           )}
           {preferencesError && (
             <FormError>

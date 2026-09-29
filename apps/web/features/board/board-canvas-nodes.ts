@@ -63,6 +63,9 @@ export function useBoardCanvasNodes(input: {
   artwork: ProjectArtworkMap | undefined;
   /** Absent for viewers who do not see requesters. */
   requesterOf?: RequesterOf;
+  /** Campaign ids the viewer folded (`"none"` for Studio projects) and the toggle that flips one. */
+  collapsedCampaigns: ReadonlySet<string>;
+  onToggleCampaign: (campaignId: string) => void;
   /** Present for the studio side when the widget is on the board. */
   competitorWidget?: { count: number; canEdit: boolean; removing: boolean; onRemove: () => void };
 }): { nodes: Node[]; content: { width: number; height: number } } {
@@ -83,6 +86,8 @@ export function useBoardCanvasNodes(input: {
     selectedProjectId,
     artwork,
     requesterOf,
+    collapsedCampaigns,
+    onToggleCampaign,
     competitorWidget,
   } = input;
   return useMemo(() => {
@@ -101,6 +106,7 @@ export function useBoardCanvasNodes(input: {
       overrides: positions,
       dragging,
       competitorWidget: competitorWidget ? { count: competitorWidget.count } : undefined,
+      collapsed: collapsedCampaigns,
     });
     const built: Node[] = [];
     for (const frame of frames) {
@@ -150,8 +156,14 @@ export function useBoardCanvasNodes(input: {
           id: frame.id,
           type: "campaign",
           ariaLabel: `Campaign ${group.title}`,
-          data: { campaign: group, count: frame.projects?.length ?? 0 },
+          data: {
+            campaign: group,
+            count: frame.projects?.length ?? 0,
+            collapsed: frame.collapsed ?? false,
+            onToggle: onToggleCampaign,
+          },
         });
+        if (frame.collapsed) continue;
         const width = cardWidth();
         (frame.projects ?? []).forEach((project, index) => {
           built.push({
@@ -215,6 +227,8 @@ export function useBoardCanvasNodes(input: {
     selectedProjectId,
     artwork,
     requesterOf,
+    collapsedCampaigns,
+    onToggleCampaign,
     competitorWidget,
   ]);
 }

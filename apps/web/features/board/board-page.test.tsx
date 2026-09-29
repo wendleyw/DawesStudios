@@ -52,6 +52,8 @@ vi.mock("./board-data", () => ({
     refetch: fixture.refetchCampaigns,
   }),
   useProjectArtwork: () => ({ data: {} }),
+  useCollapsedCampaigns: () => ({ data: [] }),
+  setCampaignCollapsed: vi.fn(),
   moveProjectPosition: vi.fn(),
   useBoardWidgets: (_clientId: string, enabled: boolean) => {
     fixture.widgetsEnabled.push(enabled);

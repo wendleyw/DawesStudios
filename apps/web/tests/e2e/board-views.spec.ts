@@ -718,3 +718,38 @@ test("floating tools open usable search and filter panels at desktop and mobile 
     await fixture.cleanup();
   }
 });
+
+test("a folded canvas campaign hides its projects and stays folded after a reload", async ({
+  page,
+}) => {
+  const sabre = await localAdmin.from("clients").select("id").eq("slug", "sabre").single();
+  expect(sabre.error).toBeNull();
+  const clientId = sabre.data!.id;
+  const project = await localAdmin
+    .from("projects")
+    .select("title,campaign:campaigns(title)")
+    .eq("client_id", clientId)
+    .not("campaign_id", "is", null)
+    .limit(1)
+    .single();
+  expect(project.error).toBeNull();
+  const campaign = (project.data!.campaign as unknown as { title: string }).title;
+  const card = page.locator(".react-flow__node-project").filter({ hasText: project.data!.title });
+  const restoreBoard = await preserveBoardPreference(credentials.agency, clientId);
+  try {
+    await signIn(page, credentials.agency);
+    await page.goto(`/clients/${clientId}/board`);
+    await chooseView(page, "canvas");
+    await expect(card).toHaveCount(1);
+    await page.getByRole("button", { name: `Hide projects in ${campaign}`, exact: true }).click();
+    await expect(card).toHaveCount(0);
+    await page.reload();
+    const show = page.getByRole("button", { name: `Show projects in ${campaign}`, exact: true });
+    await expect(show).toHaveAttribute("aria-expanded", "false");
+    await expect(card).toHaveCount(0);
+    await show.click();
+    await expect(card).toHaveCount(1);
+  } finally {
+    await restoreBoard();
+  }
+});

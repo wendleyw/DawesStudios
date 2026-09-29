@@ -13,18 +13,21 @@ export type Database = {
         Row: {
           active_view: string | null
           client_id: string
+          collapsed_campaigns: string[]
           user_id: string
           visible_widgets: string[]
         }
         Insert: {
           active_view?: string | null
           client_id: string
+          collapsed_campaigns?: string[]
           user_id?: string
           visible_widgets?: string[]
         }
         Update: {
           active_view?: string | null
           client_id?: string
+          collapsed_campaigns?: string[]
           user_id?: string
           visible_widgets?: string[]
         }
@@ -2523,6 +2526,14 @@ export type Database = {
           p_request_id: string
         }
         Returns: string
+      }
+      set_board_campaign_collapsed: {
+        Args: {
+          p_campaign_id: string
+          p_client_id: string
+          p_collapsed: boolean
+        }
+        Returns: string[]
       }
       set_briefing_requester: {
         Args: { p_briefing_id: string; p_requested_by: string }

@@ -12,7 +12,9 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - "Requested by" (briefing `requested_by`) on every board view for agency/client, never designers
   (`board/project-requester.tsx`, `useBriefingRequesters`); List column sortable. `npm run check` PASS
   (1,328 tests); "list sorts" Playwright PASS; screenshots checked for all five views + designer.
-- Next: Canvas campaign collapse toggle saved per user (`board_preferences`, new migration + pgTAP).
+- Canvas campaign fold saved per viewer: migration `202609280010` (applied with `migration up
+  --local`), pgTAP `board_collapsed_campaigns` 12/12, Playwright fold/reload PASS.
+- Next: move the Canvas zoom pill into the left tool rail, below the menu (user request).
 
 ## Earlier task (Claude, 2026-09-28) — sign-in intro
 

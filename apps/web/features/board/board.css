@@ -306,6 +306,28 @@
   padding: 0 12px 0 18px;
   color: var(--muted);
 }
+/* The fold control leads the head; a folded frame is only this head. */
+.board-campaign-toggle {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  margin-left: -6px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+}
+.board-campaign-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+.board-campaign-toggle svg {
+  transition: transform 140ms ease;
+}
+.board-campaign.collapsed .board-campaign-toggle svg {
+  transform: rotate(-90deg);
+}
 .board-campaign-head h2 {
   min-width: 0;
   overflow: hidden;

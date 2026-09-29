@@ -83,6 +83,49 @@ export function useBoardPreferences(clientId: string) {
   });
 }
 
+/** The Studio projects frame has no campaign; the database stores it as the all-zero id. */
+const NO_CAMPAIGN_ID = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * The Canvas campaign frames this viewer folded on this client's board, as frame keys: campaign
+ * ids, and `"none"` for Studio projects.
+ */
+export function useCollapsedCampaigns(clientId: string) {
+  const { database, session } = useAuth();
+  return useQuery({
+    queryKey: ["board-collapsed-campaigns", session?.user.id, clientId],
+    enabled: !!session,
+    queryFn: async () => {
+      const result = await database
+        .from("board_preferences")
+        .select("collapsed_campaigns")
+        .eq("user_id", session!.user.id)
+        .eq("client_id", clientId)
+        .maybeSingle();
+      if (result.error) throw result.error;
+      return (result.data?.collapsed_campaigns ?? []).map((id) =>
+        id === NO_CAMPAIGN_ID ? "none" : id,
+      );
+    },
+  });
+}
+
+/** Folds or unfolds one campaign frame (`"none"` for Studio projects); returns the stored keys. */
+export async function setCampaignCollapsed(
+  database: SupabaseDatabase,
+  input: { clientId: string; campaignId: string; collapsed: boolean },
+) {
+  const stored = assertResult(
+    await database.rpc("set_board_campaign_collapsed", {
+      p_client_id: input.clientId,
+      // The generated type says `string`, but the function reads null as the Studio projects frame.
+      p_campaign_id: (input.campaignId === "none" ? null : input.campaignId) as string,
+      p_collapsed: input.collapsed,
+    }),
+  ) as string[];
+  return stored.map((id) => (id === NO_CAMPAIGN_ID ? "none" : id));
+}
+
 export async function saveBoardView(
   database: SupabaseDatabase,
   input: { clientId: string; view: BoardView },

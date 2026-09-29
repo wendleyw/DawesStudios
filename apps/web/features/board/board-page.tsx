@@ -29,6 +29,7 @@ import { useBoardFilters } from "./use-board-filters";
 import { BoardListView } from "./board-list-view";
 import type { ListGroupKey } from "./list-groups";
 import { useRequesterOf } from "./project-requester";
+import { useBoardCollapsedCampaigns } from "./use-board-collapsed-campaigns";
 import { BoardCanvasView } from "./board-canvas-view";
 import { BoardPlanningPanel } from "./board-planning-panel";
 import { BoardNotices } from "./board-notices";
@@ -73,6 +74,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
 
   const campaigns = useBoardCampaigns(clientId);
   const requesterOf = useRequesterOf(clientId);
+  const folds = useBoardCollapsedCampaigns(clientId);
   const client = clients.data?.find((item) => item.id === clientId);
   const canMove = profile?.role === "agency";
   const canCreate = profile?.role !== "designer";
@@ -133,6 +135,8 @@ function ClientBoard({ clientId }: { clientId: string }) {
     selectedProjectId,
     artwork: artwork.data,
     requesterOf,
+    collapsedCampaigns: folds.collapsed,
+    onToggleCampaign: folds.toggle,
     competitorWidget: competitor.competitorWidget,
   });
 
@@ -206,6 +210,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
         <BoardNotices
           selectedProjectTitle={selectedProject?.title ?? null}
           moveError={!!cardPositions.moveError}
+          foldError={!!folds.saveError}
           preferencesError={!!view.preferencesError}
           onRetryPreferences={view.retryPreferences}
           saveError={!!view.saveError}

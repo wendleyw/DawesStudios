@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowUpRight, CalendarDays, Folder, GripHorizontal, Plus } from "lucide-react";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  ChevronDown,
+  Folder,
+  GripHorizontal,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
@@ -22,7 +29,16 @@ export type NoticeNode = Node<
   { filtered: boolean; hasSearch: boolean; onClear: () => void },
   "notice"
 >;
-export type CampaignNode = Node<{ campaign: BoardCampaign; count: number }, "campaign">;
+export type CampaignNode = Node<
+  {
+    campaign: BoardCampaign;
+    count: number;
+    /** Folded: the frame is only its head and the cards are not drawn. */
+    collapsed: boolean;
+    onToggle: (campaignId: string) => void;
+  },
+  "campaign"
+>;
 export type ProjectCardNode = Node<
   {
     project: Project;
@@ -67,8 +83,18 @@ const NoticeFrame = memo(function NoticeFrame({ data }: NodeProps<NoticeNode>) {
 const CampaignFrame = memo(function CampaignFrame({ data }: NodeProps<CampaignNode>) {
   const { formatDate } = useDateFormat();
   return (
-    <section className="board-campaign">
+    <section className={`board-campaign${data.collapsed ? " collapsed" : ""}`}>
       <header className="board-campaign-head">
+        <button
+          type="button"
+          className="nodrag board-campaign-toggle"
+          aria-expanded={!data.collapsed}
+          aria-label={`${data.collapsed ? "Show" : "Hide"} projects in ${data.campaign.title}`}
+          title={data.collapsed ? "Show projects" : "Hide projects"}
+          onClick={() => data.onToggle(data.campaign.id)}
+        >
+          <ChevronDown size={16} aria-hidden="true" />
+        </button>
         <Folder size={18} />
         <h2>{data.campaign.title}</h2>
         <span className="count-badge">{data.count}</span>

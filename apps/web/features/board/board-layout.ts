@@ -231,6 +231,8 @@ type StackFrame = {
   briefingSlot?: boolean;
   /** Every card's cell and the briefing slot's, for campaign frames. */
   arrangement?: FrameArrangement;
+  /** A folded campaign frame: only its head is drawn, and its cards and slot are not. */
+  collapsed?: boolean;
 };
 
 type StackInput = {
@@ -254,6 +256,8 @@ type StackInput = {
   dragging?: string | null;
   /** Present when the studio placed the Competitor ads widget on this board. */
   competitorWidget?: { count: number };
+  /** Campaign ids the viewer folded; `"none"` is the Studio projects frame. */
+  collapsed?: ReadonlySet<string>;
 };
 
 /**
@@ -307,15 +311,20 @@ export function buildStack(input: StackInput): StackFrame[] {
       overrides: input.overrides,
       dragging: input.dragging,
     });
+    // A folded frame keeps its width and cards' stored places, so unfolding puts everything back.
+    const collapsed = input.collapsed?.has(campaign.id) ?? false;
     push({
       id,
       kind: "campaign",
       width,
-      height: campaignFrameHeight(Object.values(arrangement.cards).map((card) => card.y)),
+      height: collapsed
+        ? FRAME_HEAD
+        : campaignFrameHeight(Object.values(arrangement.cards).map((card) => card.y)),
       campaign,
       projects,
       briefingSlot,
       arrangement,
+      collapsed,
     });
   };
 

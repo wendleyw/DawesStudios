@@ -219,6 +219,28 @@ describe("stack assembly", () => {
     expect(frames.every((frame) => frame.x === 0)).toBe(true);
   });
 
+  it("draws a folded campaign as its head only and moves the frames below up", () => {
+    const input = {
+      ...base,
+      projects: [project("p1", "c1"), project("p2", "c2"), project("loose", null)],
+      campaigns: [campaign("c1", "First", "2026-09-01"), campaign("c2", "Second", "2026-10-01")],
+    };
+    const open = buildStack(input);
+    const folded = buildStack({ ...input, collapsed: new Set(["c1", "none"]) });
+    expect(folded[0]).toMatchObject({ id: "campaign:c1", height: FRAME_HEAD, collapsed: true });
+    expect(folded[0].projects?.map((item) => item.id)).toEqual(["p1"]);
+    expect(folded[0].width).toBe(open[0].width);
+    expect(folded[1]).toMatchObject({
+      id: "campaign:c2",
+      collapsed: false,
+      y: FRAME_HEAD + STACK_GAP,
+    });
+    expect(folded.find((frame) => frame.id === "campaign:none")).toMatchObject({
+      height: FRAME_HEAD,
+      collapsed: true,
+    });
+  });
+
   it("groups every project under its own campaign", () => {
     const frames = buildStack({
       ...base,
