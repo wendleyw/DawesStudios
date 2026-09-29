@@ -19,7 +19,7 @@ docker compose --env-file .env.production stop web
 npm run dev
 ```
 
-Keep the terminal running and open `http://localhost:3003`. Edit `apps/web/app` and `apps/web/features` in this same checkout; changes appear without rebuilding a Docker image. Existing ignored environment files connect the app to the same backend. Do not reset or re-provision the database to switch web runtimes. See the [web setup](apps/web/README.md) for installing a fresh checkout and switching back to a production preview.
+Keep the terminal running and open `http://localhost:3003`. To try it on a phone on the same Wi-Fi, run `npm --prefix apps/web run dev:lan` instead: it prints `http://<this Mac's address>:3003` to open on the phone, listens on the network and points the browser at the local Supabase API through that address (set `LAN_IP` to choose an address). macOS may ask to allow incoming connections for `node`; allow it. The media worker still listens only on this Mac, so uploads that go through it (covers, delivery files) work only from this machine. Edit `apps/web/app` and `apps/web/features` in this same checkout; changes appear without rebuilding a Docker image. Existing ignored environment files connect the app to the same backend. Do not reset or re-provision the database to switch web runtimes. See the [web setup](apps/web/README.md) for installing a fresh checkout and switching back to a production preview.
 
 ## Project documentation
 

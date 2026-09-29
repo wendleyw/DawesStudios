@@ -106,6 +106,12 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Keep the development overlay from covering the mobile board toolbar.
   devIndicators: false,
+  // `npm run dev:lan` opens the dev server to phones on the same Wi-Fi; Next only serves its dev
+  // assets to the origins listed here (hosts, comma separated). Unset, nothing extra is allowed.
+  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   poweredByHeader: false,
   async headers() {
