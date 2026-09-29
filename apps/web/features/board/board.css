@@ -188,6 +188,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
   color: var(--muted);
   font-size: var(--text-xs);
 }
@@ -247,6 +248,7 @@
   font-size: var(--text-xs);
 }
 .board-list {
+  --list-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(140px, 0.9fr) 150px 40px;
   --list-group-color: var(--tone-active-fg);
   --list-overdue: light-dark(#b42318, #f29b8f);
   display: flex;
@@ -697,6 +699,12 @@
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+/* The requester's initials take the card's bottom-right corner, level with the status. */
+.board-calendar-project > .project-requester {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
 }
 .board-calendar-campaign {
   max-width: 100%;
@@ -1229,12 +1237,67 @@
   font-size: var(--text-sm);
 }
 
+/* A Kanban card names its requester on its own line under the due date. */
+.board-card-requester {
+  display: flex;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.board-card-footer .project-requester-avatar {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
+  margin-left: 4px;
+  font-size: 9px;
+}
+
+/* Project and requester avatar share the cell's line; the avatar is a small initials disc. */
+.project-requester {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.project-requester-avatar {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.project-requester-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The List's columns are named by class (`list-col-*`) rather than position, because the Requested
+ * by column exists only for viewers who see requesters. These rules take over from the positional
+ * `.table-head`/`.project-row` rules in globals.css, which Home still uses.
+ */
+.board-list.has-requester {
+  --list-columns: minmax(160px, 2fr) minmax(100px, 1fr) minmax(130px, 1fr) minmax(140px, 0.9fr)
+    150px 40px;
+}
 /* Above phones the cells butt together with dividers, so the status fill reads as a cell. */
 @media (min-width: 641px) {
   .board-list .table-head,
   .board-list .project-row {
+    grid-template-columns: var(--list-columns);
     gap: 0;
+    min-height: 56px;
     padding: 0;
+  }
+  .board-list .table-head {
+    min-height: 44px;
   }
   .board-list .table-head > *,
   .board-list .project-row > * {
@@ -1248,26 +1311,19 @@
   .board-list .project-row > * + * {
     border-left: 1px solid var(--border);
   }
-  .board-list .table-head > :last-child,
-  .board-list .project-row > :last-child {
+  .board-list .project-row > .list-col-project {
+    display: block;
+    line-height: 56px;
+  }
+  .board-list .table-head > .list-col-open,
+  .board-list .project-row > .list-col-open {
     border-left: 0;
     padding: 0;
   }
-  .board-list .project-row {
-    min-height: 56px;
-    grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(140px, 0.9fr) 150px 40px;
-  }
-  .board-list .table-head {
-    grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(140px, 0.9fr) 150px 40px;
-  }
-  .board-list .project-row > svg {
+  .board-list .project-row > svg.list-col-open {
     display: block;
     align-self: center;
     justify-self: center;
-  }
-  .board-list .project-row > strong {
-    display: block;
-    line-height: 56px;
   }
   .board-list-status {
     justify-content: center;
@@ -1282,18 +1338,22 @@
   .board-list .board-list-summary > * {
     border-left-color: transparent;
   }
-  .board-list .board-list-summary > .board-list-mix + span {
-    border-left: 0;
-  }
 }
 @media (min-width: 641px) and (max-width: 1000px) {
-  .board-list .table-head,
-  .board-list .project-row {
-    grid-template-columns: minmax(135px, 1.6fr) minmax(100px, 1fr) minmax(120px, 1fr) 40px;
+  .board-list,
+  .board-list.has-requester {
+    --list-columns: minmax(135px, 1.6fr) minmax(100px, 1fr) minmax(120px, 1fr) 40px;
   }
-  .board-list .table-head > :nth-child(4),
-  .board-list .project-row > :nth-child(4) {
+}
+/* Tablets and phones drop Due (as Home does) and Requested by; Status keeps its place. */
+@media (max-width: 1000px) {
+  .board-list .list-col-requester,
+  .board-list .list-col-due {
     display: none;
+  }
+  .board-list .table-head > .list-col-status,
+  .board-list .project-row > .list-col-status {
+    display: flex;
   }
 }
 @media (max-width: 640px) {
@@ -1301,15 +1361,26 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
   }
-  .board-list-status {
+  .board-list .project-row > .list-col-status {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
     padding: 3px 10px;
     border-radius: 999px;
   }
-  .board-list-summary {
+  /* On a phone card the requester reads under the campaign, across the full width. */
+  .board-list .project-row > .list-col-requester {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: start;
+    font-size: var(--text-sm);
+  }
+  .board-list .board-list-summary {
     display: flex;
     min-height: 0;
   }
-  .board-list-summary > :not(.board-list-mix) {
+  .board-list .board-list-summary > :not(.board-list-mix) {
     display: none;
   }
   .board-list-mix {

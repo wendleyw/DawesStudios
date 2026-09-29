@@ -28,6 +28,7 @@ import { useBoardCardPositions } from "./use-board-card-positions";
 import { useBoardFilters } from "./use-board-filters";
 import { BoardListView } from "./board-list-view";
 import type { ListGroupKey } from "./list-groups";
+import { useRequesterOf } from "./project-requester";
 import { BoardCanvasView } from "./board-canvas-view";
 import { BoardPlanningPanel } from "./board-planning-panel";
 import { BoardNotices } from "./board-notices";
@@ -71,6 +72,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
   const cardPositions = useBoardCardPositions({ database, invalidateWorkspace });
 
   const campaigns = useBoardCampaigns(clientId);
+  const requesterOf = useRequesterOf(clientId);
   const client = clients.data?.find((item) => item.id === clientId);
   const canMove = profile?.role === "agency";
   const canCreate = profile?.role !== "designer";
@@ -86,8 +88,8 @@ function ClientBoard({ clientId }: { clientId: string }) {
   );
   // Only the List view reads this; other views keep reading `filters.filteredProjects` directly.
   const sortedProjects = useMemo(
-    () => sortProjects(filters.filteredProjects, listSort, campaignName),
-    [filters.filteredProjects, listSort, campaignName],
+    () => sortProjects(filters.filteredProjects, listSort, campaignName, requesterOf),
+    [filters.filteredProjects, listSort, campaignName, requesterOf],
   );
   const campaignOrder = useMemo(
     () => orderCampaigns(campaigns.data ?? []).map((item) => item.id),
@@ -130,6 +132,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
     openProject,
     selectedProjectId,
     artwork: artwork.data,
+    requesterOf,
     competitorWidget: competitor.competitorWidget,
   });
 
@@ -239,6 +242,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
             hasSearch={Boolean(filters.search)}
             onClearFilters={filters.clearFilters}
             campaignName={campaignName}
+            requesterOf={requesterOf}
             collapsedGroups={collapsedGroups}
             onToggleGroup={(key) =>
               setCollapsedGroups((current) => {
@@ -252,6 +256,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
           <BoardCalendar
             projects={filters.filteredProjects}
             campaignName={campaignName}
+            requesterOf={requesterOf}
             month={filters.month}
             onMonth={filters.setMonth}
             selectedId={selectedProjectId}
@@ -264,6 +269,7 @@ function ClientBoard({ clientId }: { clientId: string }) {
             projects={filters.filteredProjects}
             campaignName={campaignName}
             campaignOrder={campaignOrder}
+            requesterOf={requesterOf}
             period={filters.period}
             onPeriod={filters.setPeriod}
             scale={scale}

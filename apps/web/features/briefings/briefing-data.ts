@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/auth-provider";
+import { fetchAllPages } from "@/features/shared/pagination";
 import { assertResult, type SupabaseDatabase } from "@/lib/supabase";
 import { decodeBriefing, type BrandSection, type Campaign } from "./briefing-model";
 import type { Database } from "@database";
@@ -141,6 +142,38 @@ export function useBriefingRequester(briefingId: string | null) {
             .maybeSingle(),
         ) as { requested_by: string | null } | null
       )?.requested_by ?? null,
+  });
+}
+
+/**
+ * Who asked for each of a client's briefings, keyed by briefing id, so the board can name the
+ * requester on every project (`projects.briefing_id`). Keyed under `briefings`, so every briefing
+ * write, including `setBriefingRequester`, refreshes it. Designers never read requesters.
+ */
+export function useBriefingRequesters(clientId: string | undefined) {
+  const { database, session, profile } = useAuth();
+  return useQuery({
+    queryKey: [briefingQueryKeys.briefings, "requesters", session?.user.id, clientId],
+    enabled: !!session && !!clientId && (profile?.role === "agency" || profile?.role === "client"),
+    queryFn: async ({ signal }) => {
+      const rows = await fetchAllPages(
+        async (from, to) =>
+          assertResult(
+            await database
+              .from("briefings")
+              .select("id,requested_by")
+              .eq("client_id", clientId!)
+              .order("id")
+              .range(from, to)
+              .abortSignal(signal),
+          ) as { id: string; requested_by: string | null }[],
+        signal,
+      );
+      return Object.fromEntries(rows.map((row) => [row.id, row.requested_by])) as Record<
+        string,
+        string | null
+      >;
+    },
   });
 }
 

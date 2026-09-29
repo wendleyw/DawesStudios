@@ -13,10 +13,12 @@ import { statusToneClass } from "@/features/shared/status-tone";
 import { calendarDays, calendarMonthLabel, monthStart, shiftMonth } from "./calendar-model";
 import { distinctTitle, longDate, sharedTitlePrefix } from "./timeline-model";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
+import { ProjectRequester, type RequesterOf } from "./project-requester";
 
 export function BoardCalendar({
   projects,
   campaignName,
+  requesterOf,
   month,
   onMonth,
   selectedId,
@@ -25,6 +27,7 @@ export function BoardCalendar({
 }: {
   projects: Project[];
   campaignName: (id: string | null) => string;
+  requesterOf?: RequesterOf;
   month: string;
   onMonth: (month: string) => void;
   selectedId: string | null;
@@ -47,12 +50,13 @@ export function BoardCalendar({
   const undated = grouped.get("undated") ?? [];
 
   function projectCard(project: Project) {
+    const requester = requesterOf?.(project);
     return (
       <article
         key={project.id}
         className={`board-calendar-project ${project.id === selectedId ? "selected" : ""}`}
         aria-current={project.id === selectedId ? "true" : undefined}
-        title={`${project.title} — ${projectStatusLabel(project)} — ${campaignName(project.campaign_id)}`}
+        title={`${project.title} — ${projectStatusLabel(project)} — ${campaignName(project.campaign_id)}${requester ? ` — Requested by ${requester}` : ""}`}
         {...selectOrOpen({
           onSelect: () => onSelect(project.id),
           onOpen: () => onOpen(project.id),
@@ -63,6 +67,7 @@ export function BoardCalendar({
         <span className={statusToneClass(projectStatusTone(project))}>
           {projectStatusLabel(project)}
         </span>
+        {requester && <ProjectRequester name={requester} compact />}
         <Link
           className="board-calendar-open"
           href={projectHref(project.id)}

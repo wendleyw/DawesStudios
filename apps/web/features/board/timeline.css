@@ -372,3 +372,18 @@
     font-size: var(--text-xs);
   }
 }
+
+/* The requester's initials sit under the open control, beside the campaign line. */
+.timeline-label > .project-requester {
+  grid-area: 2 / 2;
+  justify-self: end;
+  overflow: visible;
+}
+.timeline-label .project-requester-avatar {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  color: var(--foreground);
+  font-size: 9px;
+  line-height: 1;
+}

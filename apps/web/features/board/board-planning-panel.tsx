@@ -4,6 +4,7 @@ import type { Project } from "@/features/workspace/workspace-data";
 import { ProjectTimeline } from "./project-timeline";
 import { BoardKanban } from "./board-kanban";
 import { timelineScales, type TimelineScale } from "./timeline-model";
+import type { RequesterOf } from "./project-requester";
 
 /** The board's Timeline and Kanban views, sharing one header and, for Timeline, its scale control. */
 export function BoardPlanningPanel({
@@ -11,6 +12,7 @@ export function BoardPlanningPanel({
   projects,
   campaignName,
   campaignOrder,
+  requesterOf,
   period,
   onPeriod,
   scale,
@@ -23,6 +25,7 @@ export function BoardPlanningPanel({
   projects: Project[];
   campaignName: (id: string | null) => string;
   campaignOrder: string[];
+  requesterOf?: RequesterOf;
   period: number;
   onPeriod: (period: number) => void;
   scale: TimelineScale;
@@ -57,6 +60,7 @@ export function BoardPlanningPanel({
           projects={projects}
           campaignName={campaignName}
           campaignOrder={campaignOrder}
+          requesterOf={requesterOf}
           start={period}
           onStart={onPeriod}
           scale={scale}
@@ -68,6 +72,7 @@ export function BoardPlanningPanel({
         <BoardKanban
           projects={projects}
           campaignName={campaignName}
+          requesterOf={requesterOf}
           selectedId={selectedId}
           onSelect={onSelect}
           onOpen={onOpen}

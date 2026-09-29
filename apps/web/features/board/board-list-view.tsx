@@ -27,6 +27,7 @@ import {
   type ListSortKey,
 } from "./list-sort";
 import { projectHref } from "./project-open";
+import { ProjectRequester, type RequesterOf } from "./project-requester";
 
 /**
  * The board's List view: an Active and a Delivered group, each a collapsible table with
@@ -45,6 +46,7 @@ export function BoardListView({
   campaignName,
   collapsedGroups,
   onToggleGroup,
+  requesterOf,
 }: {
   projects: Project[];
   listSort: ListSort;
@@ -56,12 +58,20 @@ export function BoardListView({
   campaignName: (id: string | null) => string;
   collapsedGroups: ReadonlySet<ListGroupKey>;
   onToggleGroup: (key: ListGroupKey) => void;
+  /** Absent for viewers who do not see requesters; the column and its sort options go with it. */
+  requesterOf?: RequesterOf;
 }) {
   const { formatDate, formatDayKey } = useDateFormat();
   const selectId = useId();
   const todayKey = formatDayKey(new Date().toISOString());
+  const columns = requesterOf
+    ? LIST_SORT_COLUMNS
+    : LIST_SORT_COLUMNS.filter((column) => column.key !== "requester");
+  const sortOptions = requesterOf
+    ? LIST_SORT_OPTIONS
+    : LIST_SORT_OPTIONS.filter((option) => option.sort?.key !== "requester");
   return (
-    <div className="board-list">
+    <div className={`board-list${requesterOf ? " has-requester" : ""}`}>
       {/* Phones hide `.table-head` below (globals.css); this compact control keeps sorting
         reachable there, reading and writing the same `listSort` state as the header buttons. */}
       <div className="board-list-sort-mobile">
@@ -73,7 +83,7 @@ export function BoardListView({
           value={listSortOptionValue(listSort)}
           onChange={(event) => onSelectSort(listSortFromOptionValue(event.target.value))}
         >
-          {LIST_SORT_OPTIONS.map((option) => (
+          {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -83,7 +93,7 @@ export function BoardListView({
       {/* When nothing matches, one empty state replaces both groups. */}
       {projects.length === 0 ? (
         <div className="project-table">
-          <ListHead listSort={listSort} onHeaderSort={onHeaderSort} />
+          <ListHead columns={columns} listSort={listSort} onHeaderSort={onHeaderSort} />
           <div className="empty-state board-list-empty">
             <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
             <p>
@@ -123,7 +133,7 @@ export function BoardListView({
               </button>
               {open && (
                 <div id={bodyId} className="project-table board-list-table">
-                  <ListHead listSort={listSort} onHeaderSort={onHeaderSort} />
+                  <ListHead columns={columns} listSort={listSort} onHeaderSort={onHeaderSort} />
                   {group.projects.length === 0 && (
                     <p className="board-list-group-empty">
                       No {group.label.toLowerCase()} projects.
@@ -134,28 +144,40 @@ export function BoardListView({
                     const delivered = project.status === "delivered" && Boolean(project.due_date);
                     return (
                       <Link key={project.id} href={projectHref(project.id)} className="project-row">
-                        <strong title={project.title}>{project.title}</strong>
-                        <span>{campaignName(project.campaign_id)}</span>
-                        <span className={`board-list-status tone-${projectStatusTone(project)}`}>
+                        <strong className="list-col-project" title={project.title}>
+                          {project.title}
+                        </strong>
+                        <span className="list-col-campaign">
+                          {campaignName(project.campaign_id)}
+                        </span>
+                        {requesterOf && (
+                          <span className="list-col-requester">
+                            {requesterName(project, requesterOf)}
+                          </span>
+                        )}
+                        <span
+                          className={`list-col-status board-list-status tone-${projectStatusTone(project)}`}
+                        >
                           {projectStatusLabel(project)}
                         </span>
                         <span
-                          className={`board-list-due${overdue ? " is-overdue" : ""}${delivered ? " is-done" : ""}`}
+                          className={`list-col-due board-list-due${overdue ? " is-overdue" : ""}${delivered ? " is-done" : ""}`}
                         >
                           {overdue && <AlertCircle size={15} aria-label="Overdue" />}
                           {delivered && <Check size={15} aria-label="Delivered" />}
                           <span>{formatDate(project.due_date, "No due date")}</span>
                         </span>
-                        <ArrowUpRight size={16} />
+                        <ArrowUpRight className="list-col-open" size={16} />
                       </Link>
                     );
                   })}
                   {group.projects.length > 0 && (
                     <div className="project-row board-list-summary">
-                      <span />
-                      <span />
+                      <span className="list-col-project" />
+                      <span className="list-col-campaign" />
+                      {requesterOf && <span className="list-col-requester" />}
                       <span
-                        className="board-list-mix"
+                        className="list-col-status board-list-mix"
                         role="img"
                         aria-label={segments.map((s) => `${s.count} ${s.label}`).join(", ")}
                       >
@@ -168,7 +190,7 @@ export function BoardListView({
                           />
                         ))}
                       </span>
-                      <span>
+                      <span className="list-col-due">
                         {range && (
                           <span className="board-list-range">
                             {range.from === range.to
@@ -177,7 +199,7 @@ export function BoardListView({
                           </span>
                         )}
                       </span>
-                      <span />
+                      <span className="list-col-open" />
                     </div>
                   )}
                 </div>
@@ -192,19 +214,21 @@ export function BoardListView({
 
 /** The sortable header row, repeated at the top of each group's table. */
 function ListHead({
+  columns,
   listSort,
   onHeaderSort,
 }: {
+  columns: typeof LIST_SORT_COLUMNS;
   listSort: ListSort;
   onHeaderSort: (key: ListSortKey) => void;
 }) {
   return (
     <div className="table-head">
-      {LIST_SORT_COLUMNS.map(({ key, label }) => (
+      {columns.map(({ key, label }) => (
         <button
           key={key}
           type="button"
-          className="board-list-sort-button"
+          className={`board-list-sort-button list-col-${key}`}
           onClick={() => onHeaderSort(key)}
           aria-label={listSortAccessibleName(key, listSort)}
         >
@@ -223,7 +247,13 @@ function ListHead({
           )}
         </button>
       ))}
-      <span />
+      <span className="list-col-open" />
     </div>
   );
+}
+
+/** The requester cell: avatar and name, or a dash when the project has nobody to name. */
+function requesterName(project: Project, requesterOf: RequesterOf) {
+  const name = requesterOf(project);
+  return name ? <ProjectRequester name={name} /> : <span aria-label="No requester">—</span>;
 }

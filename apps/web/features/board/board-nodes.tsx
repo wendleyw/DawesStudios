@@ -14,6 +14,7 @@ import { statusToneClass } from "@/features/shared/status-tone";
 import { campaignDateRange, type BoardCampaign } from "./board-layout";
 import { openLabel } from "./project-open";
 import { distinctTitle } from "./timeline-model";
+import { ProjectRequester } from "./project-requester";
 import { ProjectThumbnail, type SignedProjectArtwork } from "./project-thumbnail";
 import { CompetitorAdsWidget } from "@/features/competitors/competitor-ads-widget";
 
@@ -30,6 +31,8 @@ export type ProjectCardNode = Node<
     canMove: boolean;
     /** A signed URL for the project's leading artwork, when the viewer is allowed one. */
     artwork: SignedProjectArtwork;
+    /** Who asked for the project; absent when the viewer does not see requesters or nobody did. */
+    requester?: string | null;
     onOpen: (projectId: string) => void;
   },
   "project"
@@ -111,6 +114,7 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
           <span>
             <CalendarDays size={13} />
             {formatDate(data.project.due_date, "No due date")}
+            {data.requester && <ProjectRequester name={data.requester} compact />}
           </span>
         </div>
         <button

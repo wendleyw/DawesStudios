@@ -9,7 +9,10 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
   (`features/board/list-groups.ts`). Home's `.project-table` is unchanged. `npm run check` PASS
   (1,320 tests); Playwright `board-views` "list sorts" PASS. Local data has no due dates, so the
   overdue mark and range pill are covered by unit tests only.
-- Next requested: author on every board view; Canvas campaign collapse toggle (designs pending).
+- "Requested by" (briefing `requested_by`) on every board view for agency/client, never designers
+  (`board/project-requester.tsx`, `useBriefingRequesters`); List column sortable. `npm run check` PASS
+  (1,328 tests); "list sorts" Playwright PASS; screenshots checked for all five views + designer.
+- Next: Canvas campaign collapse toggle saved per user (`board_preferences`, new migration + pgTAP).
 
 ## Earlier task (Claude, 2026-09-28) — sign-in intro
 

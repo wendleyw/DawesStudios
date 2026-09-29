@@ -203,3 +203,30 @@ describe("list sort select options", () => {
     expect(listSortFromOptionValue("nonsense")).toBeNull();
   });
 });
+
+describe("requester sort", () => {
+  const people: Record<string, string | null> = { a: "Zoe Park", b: null, c: "Ana Silva" };
+  const requesterOf = (item: Project) => people[item.id] ?? null;
+  const projects = [
+    project({ id: "a", title: "One" }),
+    project({ id: "b", title: "Two" }),
+    project({ id: "c", title: "Three" }),
+  ];
+
+  it("sorts by requester name with projects nobody requested last in both directions", () => {
+    const ids = (direction: "asc" | "desc") =>
+      sortProjects(projects, { key: "requester", direction }, campaignName, requesterOf).map(
+        (item) => item.id,
+      );
+    expect(ids("asc")).toEqual(["c", "a", "b"]);
+    expect(ids("desc")).toEqual(["a", "c", "b"]);
+  });
+
+  it("reads every requester as missing when the viewer does not see requesters", () => {
+    expect(
+      sortProjects(projects, { key: "requester", direction: "asc" }, campaignName).map(
+        (item) => item.title,
+      ),
+    ).toEqual(["One", "Three", "Two"]);
+  });
+});

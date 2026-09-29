@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { statusLabels, useDateFormat, type Project } from "@/features/workspace/workspace-data";
 import { distinctTitle, sharedTitlePrefix } from "./timeline-model";
 import { boardStatuses } from "./planning-view";
+import { CardRequester, type RequesterOf } from "./project-requester";
 
 /**
  * Groups the same filtered projects by status in the Kanban view.
@@ -18,12 +19,14 @@ import { boardStatuses } from "./planning-view";
 export function BoardKanban({
   projects,
   campaignName,
+  requesterOf,
   selectedId,
   onSelect,
   onOpen,
 }: {
   projects: Project[];
   campaignName: (id: string | null) => string;
+  requesterOf?: RequesterOf;
   selectedId: string | null;
   onSelect: (projectId: string) => void;
   onOpen: (projectId: string) => void;
@@ -70,6 +73,7 @@ export function BoardKanban({
                     <span className="eyebrow">{campaignName(project.campaign_id)}</span>
                     <h4 title={project.title}>{distinctTitle(project.title, prefix)}</h4>
                     <p>{formatDate(project.due_date, "No due date")}</p>
+                    <CardRequester name={requesterOf?.(project)} />
                     <Link
                       className="board-card-open"
                       href={projectHref(project.id)}

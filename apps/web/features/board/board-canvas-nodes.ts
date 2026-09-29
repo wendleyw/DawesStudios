@@ -4,6 +4,7 @@ import type { Project } from "@/features/workspace/workspace-data";
 import { CARD_H, buildStack, cardWidth, slotPosition, type BoardCampaign } from "./board-layout";
 import { sharedTitlePrefix } from "./timeline-model";
 import { artworkFor, type ProjectArtworkMap } from "./project-thumbnail";
+import type { RequesterOf } from "./project-requester";
 
 /** The box the built nodes occupy, which is what a fit has to cover. */
 function contentBounds(nodes: Node[]): { width: number; height: number } {
@@ -60,6 +61,8 @@ export function useBoardCanvasNodes(input: {
   openProject: (projectId: string) => void;
   selectedProjectId: string | null;
   artwork: ProjectArtworkMap | undefined;
+  /** Absent for viewers who do not see requesters. */
+  requesterOf?: RequesterOf;
   /** Present for the studio side when the widget is on the board. */
   competitorWidget?: { count: number; canEdit: boolean; removing: boolean; onRemove: () => void };
 }): { nodes: Node[]; content: { width: number; height: number } } {
@@ -79,6 +82,7 @@ export function useBoardCanvasNodes(input: {
     openProject,
     selectedProjectId,
     artwork,
+    requesterOf,
     competitorWidget,
   } = input;
   return useMemo(() => {
@@ -161,6 +165,7 @@ export function useBoardCanvasNodes(input: {
               titlePrefix,
               canMove,
               artwork: artworkFor(artwork, project.id),
+              requester: requesterOf?.(project),
               onOpen: openProject,
             },
             draggable: canMove,
@@ -209,6 +214,7 @@ export function useBoardCanvasNodes(input: {
     openProject,
     selectedProjectId,
     artwork,
+    requesterOf,
     competitorWidget,
   ]);
 }

@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
+import { ProjectRequester, type RequesterOf } from "./project-requester";
 import { useMemo, type CSSProperties } from "react";
 import { projectStatusLabel, type Project } from "@/features/workspace/workspace-data";
 import {
@@ -45,6 +46,7 @@ export function ProjectTimeline({
   projects,
   campaignName,
   campaignOrder,
+  requesterOf,
   start,
   onStart,
   scale,
@@ -55,6 +57,7 @@ export function ProjectTimeline({
   projects: Project[];
   campaignName: (id: string | null) => string;
   campaignOrder: string[];
+  requesterOf?: RequesterOf;
   start: number;
   onStart: (start: number) => void;
   scale: TimelineScale;
@@ -150,6 +153,9 @@ export function ProjectTimeline({
                       bar used to repeat, so a screen reader hears the row once rather than twice. */}
                   <strong title={project.title}>{label}</strong>
                   <span>{campaignName(project.campaign_id)}</span>
+                  {requesterOf?.(project) && (
+                    <ProjectRequester name={requesterOf(project)!} compact />
+                  )}
                   <Link
                     className="timeline-open"
                     href={projectHref(project.id)}

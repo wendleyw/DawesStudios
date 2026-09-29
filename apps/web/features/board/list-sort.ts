@@ -10,7 +10,7 @@ import {
  * button replaces that with an explicit key and direction; clicking past the column's last state
  * returns to `null`, so every sort can be switched off again.
  */
-export type ListSortKey = "project" | "campaign" | "status" | "due";
+export type ListSortKey = "project" | "campaign" | "requester" | "status" | "due";
 export type SortDirection = "asc" | "desc";
 /**
  * Status does not sort in two directions: each click brings the next status to the top (`lead`),
@@ -25,6 +25,7 @@ const STATUSES = publicProjectStatuses;
 export const LIST_SORT_COLUMNS: readonly { key: ListSortKey; label: string }[] = [
   { key: "project", label: "Project" },
   { key: "campaign", label: "Campaign" },
+  { key: "requester", label: "Requested by" },
   { key: "status", label: "Status" },
   { key: "due", label: "Due" },
 ];
@@ -42,6 +43,7 @@ const STATUS_RANK: Record<ProjectStatus, number> = Object.fromEntries(
 const HEADER_STATE_LABELS: Record<ListSortKey, Record<SortDirection, string>> = {
   project: { asc: "A to Z", desc: "Z to A" },
   campaign: { asc: "A to Z", desc: "Z to A" },
+  requester: { asc: "A to Z", desc: "Z to A" },
   status: { asc: "workflow order", desc: "reverse workflow order" },
   due: { asc: "earliest first", desc: "latest first" },
 };
@@ -86,6 +88,16 @@ export const LIST_SORT_OPTIONS: readonly ListSortOption[] = [
   { value: "project-desc", label: "Project Z–A", sort: { key: "project", direction: "desc" } },
   { value: "campaign-asc", label: "Campaign A–Z", sort: { key: "campaign", direction: "asc" } },
   { value: "campaign-desc", label: "Campaign Z–A", sort: { key: "campaign", direction: "desc" } },
+  {
+    value: "requester-asc",
+    label: "Requested by A–Z",
+    sort: { key: "requester", direction: "asc" },
+  },
+  {
+    value: "requester-desc",
+    label: "Requested by Z–A",
+    sort: { key: "requester", direction: "desc" },
+  },
   ...STATUSES.map((status) => ({
     value: `status-${status}`,
     label: `Status: ${statusLabels[status]} first`,
@@ -119,6 +131,7 @@ function applyDirection(value: number, direction: SortDirection): number {
 function comparatorFor(
   sort: ActiveListSort,
   campaignName: (id: string | null) => string,
+  requesterOf: (project: Project) => string | null,
 ): (a: Project, b: Project) => number {
   const { key, direction } = sort;
   switch (key) {
@@ -127,6 +140,15 @@ function comparatorFor(
     case "campaign":
       return (a, b) => {
         const primary = compareText(campaignName(a.campaign_id), campaignName(b.campaign_id));
+        return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
+      };
+    case "requester":
+      // Like Due, projects with no requester to name stay last in both directions.
+      return (a, b) => {
+        const first = requesterOf(a);
+        const second = requesterOf(b);
+        if (!first || !second) return first === second ? compareTitle(a, b) : first ? -1 : 1;
+        const primary = compareText(first, second);
         return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);
       };
     case "status": {
@@ -151,12 +173,16 @@ function comparatorFor(
   }
 }
 
-/** Sorts `projects` by the given key/direction; `null` returns the input order unchanged. */
+/**
+ * Sorts `projects` by the given key/direction; `null` returns the input order unchanged. Without
+ * `requesterOf` (a viewer who does not see requesters) every requester reads as missing.
+ */
 export function sortProjects(
   projects: Project[],
   sort: ListSort,
   campaignName: (id: string | null) => string,
+  requesterOf: (project: Project) => string | null = () => null,
 ): Project[] {
   if (!sort) return projects;
-  return [...projects].sort(comparatorFor(sort, campaignName));
+  return [...projects].sort(comparatorFor(sort, campaignName, requesterOf));
 }
