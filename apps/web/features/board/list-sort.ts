@@ -154,8 +154,11 @@ function comparatorFor(
     case "status": {
       // Workflow order rotated so the lead status comes first and the rest follow it, wrapping.
       const lead = STATUS_RANK[sort.lead ?? STATUSES[0]];
+      // A status outside the public stages (a historical Planned) sorts after all of them.
       const rank = (status: ProjectStatus) =>
-        (STATUS_RANK[status] - lead + STATUSES.length) % STATUSES.length;
+        status in STATUS_RANK
+          ? (STATUS_RANK[status] - lead + STATUSES.length) % STATUSES.length
+          : STATUSES.length;
       return (a, b) => {
         const primary = rank(a.status) - rank(b.status);
         return primary !== 0 ? applyDirection(primary, direction) : compareTitle(a, b);

@@ -15,7 +15,9 @@ export function useBoardFilters(projects: Project[]) {
   const [search, setSearch] = useState("");
   const [campaign, setCampaign] = useState("");
   const [status, setStatus] = useState("");
-  const [activity, setActivity] = useState("active");
+  // Paused (Backlog) work shows by default — the Kanban gives it its own column — and the Activity
+  // filter narrows to Active or Backlog when asked.
+  const [activity, setActivity] = useState("");
   const [quarter, setQuarter] = useState("");
   // Each planning view keeps its period while the viewer switches views.
   const [month, setMonth] = useState(() => monthStart(new Date().toISOString().slice(0, 10)));
@@ -48,7 +50,7 @@ export function useBoardFilters(projects: Project[]) {
     }
   }
 
-  const filtered = Boolean(search || campaign || status || quarter || activity !== "active");
+  const filtered = Boolean(search || campaign || status || quarter || activity);
   const filteredProjects = useMemo(
     () =>
       projects.filter(
@@ -68,7 +70,7 @@ export function useBoardFilters(projects: Project[]) {
   const clearFilters = useCallback(() => {
     setCampaign("");
     setStatus("");
-    setActivity("active");
+    setActivity("");
     setSearch("");
     setQuarter("");
   }, []);

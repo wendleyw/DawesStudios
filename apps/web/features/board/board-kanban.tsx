@@ -12,6 +12,9 @@ import {
 } from "@/features/workspace/workspace-data";
 import { distinctTitle, sharedTitlePrefix } from "./timeline-model";
 import { boardStatuses } from "./planning-view";
+
+/** Backlog first (paused work, grey), then the public stages in workflow order. */
+const kanbanColumns = ["backlog", ...boardStatuses] as const;
 import { CardRequester, type RequesterOf } from "./project-requester";
 
 /**
@@ -53,12 +56,18 @@ export function BoardKanban({
       role="group"
       aria-label="Projects by status"
     >
-      {boardStatuses.map((column) => {
-        const inColumn = projects.filter((project) => project.status === column);
+      {kanbanColumns.map((column) => {
+        // A paused project sits in Backlog alone and returns to its stage column when resumed.
+        const inColumn = projects.filter((project) =>
+          column === "backlog"
+            ? project.activity === "backlog"
+            : project.activity !== "backlog" && project.status === column,
+        );
+        const tone = column === "backlog" ? "neutral" : projectStatusTones[column];
         return (
           <section className="kanban-column" key={column}>
-            <div className={`kanban-heading tone-${projectStatusTones[column]}`}>
-              <h3>{statusLabels[column]}</h3>
+            <div className={`kanban-heading tone-${tone}`}>
+              <h3>{column === "backlog" ? "Backlog" : statusLabels[column]}</h3>
               <span className="count-badge">{inColumn.length}</span>
             </div>
             {inColumn.length ? (

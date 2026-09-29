@@ -18,6 +18,8 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - One colour per project stage system-wide (new `review` violet / `approved` teal tones); List summary
   is written counts + "Due" range; Canvas open arrow beside the title, blurred-art backdrop.
   Dev server restarted (stale Turbopack `globals.css`; `.next/dev` cleared, `npm run dev:lan`).
+- Kanban: stage-coloured headings; Planned column replaced by Backlog (paused work); board Activity
+  filter defaults to All projects. Next: briefing service step by category (design pending).
 - Local SABRE data now has project/board due dates and members Alexia/Molly as requesters
   ([dataset guide](../operations/sabre-development.md#dates-and-team-members); restore script in
   the ignored `supabase/.backups/20260928-before-due-dates`).

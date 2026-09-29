@@ -519,7 +519,7 @@ describe("BoardPage list sort", () => {
 });
 
 describe("project activity filters", () => {
-  it("keeps paused projects out of Active and makes them reachable in Backlog", async () => {
+  it("shows paused projects by default and narrows to Active or Backlog on request", async () => {
     const user = userEvent.setup();
     fixture.view = "list";
     fixture.projects = [
@@ -533,8 +533,10 @@ describe("project activity filters", () => {
     ];
     mountBoard();
     expect(await screen.findByText("Active campaign")).toBeInTheDocument();
-    expect(screen.queryByText("Paused campaign")).not.toBeInTheDocument();
+    expect(screen.getByText("Paused campaign")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Activity" }), "active");
+    expect(screen.queryByText("Paused campaign")).not.toBeInTheDocument();
     await user.selectOptions(screen.getByRole("combobox", { name: "Activity" }), "backlog");
     expect(screen.getByText("Paused campaign")).toBeInTheDocument();
     expect(screen.queryByText("Active campaign")).not.toBeInTheDocument();

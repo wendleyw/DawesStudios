@@ -358,7 +358,7 @@ The role/state matrix and RLS contract are documented in
 ## Action-driven workflow
 
 Project phase labels are public; legacy internal-review values defensively render In progress.
-`publicProjectStatuses` excludes Studio review; `projectStatusLabel`/`projectStatusTone` render Backlog
+`publicProjectStatuses` excludes Studio review and Planned (no current path creates a Planned project); `projectStatusLabel`/`projectStatusTone` render Backlog
 without overwriting phase. Home excludes Backlog work. Board-level prepare/revise notifications link
 to the exact internal board; current requests determine tasks independently of client decisions.
 See [production workflow](../../../../docs/architecture/production-workflow.md).

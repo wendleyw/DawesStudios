@@ -346,8 +346,10 @@ export function useWorkspaceCampaigns() {
 // ---------------------------------------------------------------------------------------------
 
 /** Public phases; internal reviews belong to board work requests. */
+// Planned is not a public stage: accepting a briefing starts the project In progress, and migration
+// `202609280003` moved every accepted Planned project forward. The value stays in the enum for
+// history only.
 export const publicProjectStatuses: ProjectStatus[] = [
-  "planned",
   "in_progress",
   "client_review",
   "changes_requested",

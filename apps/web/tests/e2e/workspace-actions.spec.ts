@@ -88,7 +88,8 @@ test("board views, filters, campaign validation, movement and scoped search", as
     await expect(
       page.locator(`.kanban-board a[href="/projects/${fixture.projectId}"]`),
     ).toBeVisible();
-    await expect(page.locator(".kanban-column")).toHaveCount(7);
+    // Backlog plus the five public stages.
+    await expect(page.locator(".kanban-column")).toHaveCount(6);
     await page.getByRole("button", { name: "Timeline view", exact: true }).click();
     await expect(page.getByRole("region", { name: "Project timeline", exact: true })).toBeVisible();
     // Start from a known scale. Without an explicit choice the timeline opens on the smallest

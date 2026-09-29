@@ -24,7 +24,7 @@ export function BoardToolbar({
   onCampaign,
   status,
   onStatus,
-  activity = "active",
+  activity = "",
   onActivity,
   campaigns,
   resultCount,
@@ -121,7 +121,7 @@ export function BoardToolbar({
           onClick={() => setPanel(panel === "filters" ? null : "filters")}
         >
           <SlidersHorizontal size={18} aria-hidden="true" />
-          {(campaign || status || activity !== "active") && (
+          {(campaign || status || activity) && (
             <span className="board-tool-indicator" aria-hidden="true" />
           )}
         </button>
@@ -241,9 +241,9 @@ export function BoardToolbar({
                 <label>
                   Activity
                   <select value={activity} onChange={(event) => onActivity(event.target.value)}>
+                    <option value="">All projects</option>
                     <option value="active">Active</option>
                     <option value="backlog">Backlog</option>
-                    <option value="">All projects</option>
                   </select>
                 </label>
               )}
@@ -265,7 +265,7 @@ export function BoardToolbar({
               <span className="board-result-count" role="status">
                 {resultCount} project{resultCount === 1 ? "" : "s"}
               </span>
-              {(search || campaign || status || activity !== "active") && (
+              {(search || campaign || status || activity) && (
                 <button type="button" className="button quiet" onClick={onClear}>
                   Clear filters
                 </button>

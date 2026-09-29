@@ -75,7 +75,7 @@ describe("sortProjects", () => {
   it("puts the lead status first, then the rest in workflow order, wrapping", () => {
     const projects = [
       project({ id: "1", title: "B", status: "delivered" }),
-      project({ id: "2", title: "A", status: "planned" }),
+      project({ id: "2", title: "A", status: "approved" }),
       project({ id: "3", title: "C", status: "in_progress" }),
       project({ id: "4", title: "D", status: "client_review" }),
     ];
@@ -83,9 +83,23 @@ describe("sortProjects", () => {
       sortProjects(projects, { key: "status", direction: "asc", lead }, campaignName).map(
         (p) => p.id,
       );
-    expect(by("planned")).toEqual(["2", "3", "4", "1"]);
-    expect(by("client_review")).toEqual(["4", "1", "2", "3"]);
-    expect(by("delivered")).toEqual(["1", "2", "3", "4"]);
+    expect(by("in_progress")).toEqual(["3", "4", "2", "1"]);
+    expect(by("client_review")).toEqual(["4", "2", "1", "3"]);
+    expect(by("delivered")).toEqual(["1", "3", "4", "2"]);
+  });
+
+  it("sorts a historical Planned project after every public stage", () => {
+    const projects = [
+      project({ id: "old", title: "A", status: "planned" }),
+      project({ id: "now", title: "B", status: "delivered" }),
+    ];
+    expect(
+      sortProjects(
+        projects,
+        { key: "status", direction: "asc", lead: "in_progress" },
+        campaignName,
+      ).map((p) => p.id),
+    ).toEqual(["now", "old"]);
   });
 
   it("breaks status ties by title", () => {
@@ -150,8 +164,8 @@ describe("nextListSort", () => {
 
   it("starts the Status cycle over when another column was active", () => {
     expect(
-      nextListSort({ key: "due", direction: "desc" }, "status", ["approved", "planned"])?.lead,
-    ).toBe("planned");
+      nextListSort({ key: "due", direction: "desc" }, "status", ["approved", "in_progress"])?.lead,
+    ).toBe("in_progress");
   });
 
   it("reverses the active column on a second click and clears it on a third", () => {
