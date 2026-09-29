@@ -172,34 +172,22 @@ export function BoardListView({
                     );
                   })}
                   {group.projects.length > 0 && (
-                    <div className="project-row board-list-summary">
-                      <span className="list-col-project" />
-                      <span className="list-col-campaign" />
-                      {requesterOf && <span className="list-col-requester" />}
-                      <span
-                        className="list-col-status board-list-mix"
-                        role="img"
-                        aria-label={segments.map((s) => `${s.count} ${s.label}`).join(", ")}
-                      >
+                    <div className="board-list-summary">
+                      <p className="board-list-mix">
                         {segments.map((segment) => (
-                          <span
-                            key={segment.label}
-                            className={`tone-${segment.tone}`}
-                            style={{ flexGrow: segment.count }}
-                            title={`${segment.count} ${segment.label}`}
-                          />
-                        ))}
-                      </span>
-                      <span className="list-col-due">
-                        {range && (
-                          <span className="board-list-range">
-                            {range.from === range.to
-                              ? formatDate(range.from)
-                              : `${formatDate(range.from)} – ${formatDate(range.to)}`}
+                          <span key={segment.label} className={`tone-${segment.tone}`}>
+                            {segment.count} {segment.label.toLowerCase()}
                           </span>
-                        )}
-                      </span>
-                      <span className="list-col-open" />
+                        ))}
+                      </p>
+                      {range && (
+                        <p className="board-list-range">
+                          Due{" "}
+                          {range.from === range.to
+                            ? formatDate(range.from)
+                            : `${formatDate(range.from)} – ${formatDate(range.to)}`}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

@@ -88,6 +88,12 @@
   --tone-complete-fg: light-dark(#2f5d34, #a8d08e);
   --tone-complete-bg: light-dark(#e7f0df, #1a2716);
   --tone-complete-border: light-dark(#a9c48a, #3e5b32);
+  --tone-review-fg: light-dark(#5b3a9e, #cdb8f6);
+  --tone-review-bg: light-dark(#f2ecfb, #231a35);
+  --tone-review-border: light-dark(#c4b0ea, #4d3a74);
+  --tone-approved-fg: light-dark(#155e63, #93d6d3);
+  --tone-approved-bg: light-dark(#e3f3f2, #10292a);
+  --tone-approved-border: light-dark(#94cfcb, #2c5a58);
 }
 /* `app/layout.tsx` pins a saved choice before the first paint; without it the system decides. */
 :root[data-theme="light"] {
@@ -814,12 +820,14 @@ img.client-mark {
   white-space: nowrap;
 }
 /*
- * The badge styles four meanings, not four enum values: `neutral` (the base), `active`,
- * `attention` and `complete`. Every domain maps its own enum onto that vocabulary in TypeScript
+ * The badge styles six meanings, not enum values: `neutral` (the base), `active`, `attention`,
+ * `review`, `approved` and `complete`; the last two exist so each public project stage has its own
+ * colour. Every domain maps its own enum onto that vocabulary in TypeScript
  * beside its label map (see `features/shared/status-tone.ts`), so a new domain needs no CSS and no
  * database enum value appears in a selector here. Shape still carries the meaning on its own —
  * dot, ring, dashed border, square dot — and each tone additionally carries a restrained hue
- * (`--tone-active-*` blue, `--tone-attention-*` amber, `--tone-complete-*` green) so status is
+ * (`--tone-active-*` blue, `--tone-attention-*` amber, `--tone-review-*` violet,
+ * `--tone-approved-*` teal, `--tone-complete-*` green) so status is
  * never read from color alone. `neutral` stays the existing grey.
  */
 .status-badge {
@@ -868,6 +876,23 @@ img.client-mark {
   border-color: var(--tone-attention-border);
   background: var(--tone-attention-bg);
   color: var(--tone-attention-fg);
+}
+/* Out with the client for a decision: a dashed edge like attention, in violet, with a ring. */
+.status-badge.tone-review {
+  border-style: dashed;
+  border-color: var(--tone-review-border);
+  background: var(--tone-review-bg);
+  color: var(--tone-review-fg);
+}
+.status-badge.tone-review::before {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+/* Accepted but not yet handed over: a solid teal fill with the round mark. */
+.status-badge.tone-approved {
+  border-color: var(--tone-approved-border);
+  background: var(--tone-approved-bg);
+  color: var(--tone-approved-fg);
 }
 /* Finished: a solid green fill, full-strength text and a square mark. */
 .status-badge.tone-complete {

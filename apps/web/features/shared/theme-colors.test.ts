@@ -157,6 +157,8 @@ describe("text keeps WCAG AA contrast in both themes", () => {
     ["--tone-active-fg", "--tone-active-bg"],
     ["--tone-attention-fg", "--tone-attention-bg"],
     ["--tone-complete-fg", "--tone-complete-bg"],
+    ["--tone-review-fg", "--tone-review-bg"],
+    ["--tone-approved-fg", "--tone-approved-bg"],
   ])("%s on %s", (text, surface) => {
     const [lightText, darkText] = token(text);
     const [lightSurface, darkSurface] = token(surface);
@@ -173,15 +175,21 @@ describe("timeline bars stay legible in both themes", () => {
       bars.get(selector)!.set(property, value);
     }
 
-  it("finds the default bar and its seven statuses", () => {
-    expect(bars.size).toBe(8);
+  it("finds the default bar and its six stage tones", () => {
+    expect(bars.size).toBe(7);
   });
+
+  // A bar colour is either a literal `light-dark()` pair or a stage token from `:root`.
+  const pair = (value: string) => {
+    const name = value.match(/^var\((--[\w-]+)\)$/)?.[1];
+    return name ? token(name) : sides(value);
+  };
 
   it.each([...bars.keys()])("%s", (selector) => {
     const bar = bars.get(selector)!;
-    const [lightFill, darkFill] = sides(bar.get("--bar-fill") ?? "");
-    const [lightInk, darkInk] = sides(bar.get("--bar-ink") ?? "");
-    const [lightEdge, darkEdge] = sides(bar.get("--bar-edge") ?? "");
+    const [lightFill, darkFill] = pair(bar.get("--bar-fill") ?? "");
+    const [lightInk, darkInk] = pair(bar.get("--bar-ink") ?? "");
+    const [lightEdge, darkEdge] = pair(bar.get("--bar-edge") ?? "");
     const [lightLane, darkLane] = token("--surface");
     expect(contrast(lightInk, lightFill)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(darkInk, darkFill)).toBeGreaterThanOrEqual(4.5);

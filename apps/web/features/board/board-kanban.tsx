@@ -4,7 +4,12 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
 import { useMemo } from "react";
-import { statusLabels, useDateFormat, type Project } from "@/features/workspace/workspace-data";
+import {
+  projectStatusTones,
+  statusLabels,
+  useDateFormat,
+  type Project,
+} from "@/features/workspace/workspace-data";
 import { distinctTitle, sharedTitlePrefix } from "./timeline-model";
 import { boardStatuses } from "./planning-view";
 import { CardRequester, type RequesterOf } from "./project-requester";
@@ -53,7 +58,9 @@ export function BoardKanban({
         return (
           <section className="kanban-column" key={column}>
             <div className="kanban-heading">
-              <h3>{statusLabels[column]}</h3>
+              <h3 className={`kanban-stage tone-${projectStatusTones[column]}`}>
+                {statusLabels[column]}
+              </h3>
               <span className="count-badge">{inColumn.length}</span>
             </div>
             {inColumn.length ? (

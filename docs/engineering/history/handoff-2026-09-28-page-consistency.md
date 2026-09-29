@@ -18,3 +18,13 @@ Moved from `handoff.md` when newer tasks superseded it.
 
 - Earlier 2026-09-28 entries (funnel test, Overview identity):
   [history](history/handoff-2026-09-28-funnel-and-overview.md).
+
+## Earlier task (Claude, 2026-09-28) — sign-in intro
+
+- After a sign-in the workspace opens behind a one-time full-screen intro (`workspace/sign-in-intro.tsx`,
+  `public/brand/intro.webm`, black mark on white): holds until auth/profile load, fades, skippable,
+  never with reduced motion; reloads/navigation skip it. `npm run check` PASS (1,314 tests); browser
+  check on :3003 (agency sign-in → intro → Overview; reload shows no intro). Uncommitted: `D login.png`
+  remains preexisting and unrelated.
+
+- Page consistency / Deliverables / Approve round entry: [history](history/handoff-2026-09-28-page-consistency.md).

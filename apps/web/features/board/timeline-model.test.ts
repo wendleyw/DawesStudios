@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { projectStatusTones } from "@/features/workspace/workspace-data";
 import { boardStatuses } from "./planning-view";
 import {
   dateLabel,
@@ -539,11 +540,11 @@ describe("bar status vocabulary", () => {
     join(dirname(fileURLToPath(import.meta.url)), "timeline.css"),
     "utf8",
   );
-  it("gives every board status its own bar treatment", () => {
-    // A status added to the board without a bar rule would fall back to the shared tint and read
-    // as a different status, so the stylesheet is held to the same list the Kanban columns use.
+  it("gives every board status's tone its own bar treatment", () => {
+    // A tone without a bar rule would fall back to the shared tint and read as a different stage,
+    // so the stylesheet is held to the tones of the statuses the Kanban columns use.
     for (const status of boardStatuses)
-      expect(stylesheet).toContain(`.timeline-project-bar.${status} {`);
+      expect(stylesheet).toContain(`.timeline-project-bar.tone-${projectStatusTones[status]} {`);
   });
   it("keeps the calendar out of the application stylesheet's `.timeline-row`", () => {
     // A shared class name silently handed the calendar that rule's padding and its vertical

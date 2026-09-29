@@ -374,17 +374,16 @@ export const statusLabels: Record<ProjectStatus, string> = {
 };
 
 /**
- * A project status read as a badge tone. Three states wait on a person — the studio's own review,
- * the client's review, and a change request — so all three read as `attention`; the label says
- * whose turn it is.
+ * A project status read as a badge tone: one colour per public stage, so neighbouring stages never
+ * share a colour. Studio review reads as In progress publicly, so it shares that tone.
  */
 export const projectStatusTones: Record<ProjectStatus, StatusTone> = {
   planned: "neutral",
   in_progress: "active",
   internal_review: "active",
-  client_review: "attention",
+  client_review: "review",
   changes_requested: "attention",
-  approved: "complete",
+  approved: "approved",
   delivered: "complete",
 };
 

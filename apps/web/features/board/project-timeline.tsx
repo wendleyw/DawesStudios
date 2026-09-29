@@ -5,7 +5,11 @@ import Link from "next/link";
 import { openLabel, projectHref, selectOrOpen } from "./project-open";
 import { ProjectRequester, type RequesterOf } from "./project-requester";
 import { useMemo, type CSSProperties } from "react";
-import { projectStatusLabel, type Project } from "@/features/workspace/workspace-data";
+import {
+  projectStatusLabel,
+  projectStatusTone,
+  type Project,
+} from "@/features/workspace/workspace-data";
 import {
   timelineColumns,
   timelineScaleSpan,
@@ -174,7 +178,7 @@ export function ProjectTimeline({
                     link already names this project, so a duplicate would be read twice. */}
                 {interval ? (
                   <span
-                    className={`timeline-project-bar ${project.status} ${interval.clippedStart ? "clipped-start" : ""} ${interval.clippedEnd ? "clipped-end" : ""}`}
+                    className={`timeline-project-bar tone-${projectStatusTone(project)} ${interval.clippedStart ? "clipped-start" : ""} ${interval.clippedEnd ? "clipped-end" : ""}`}
                     style={{ gridColumn: `${interval.left + 2} / span ${interval.width}` }}
                     title={`${project.title} — ${projectStatusLabel(project)} — ${scheduleLabel(project.start_date, project.due_date)}`}
                   >

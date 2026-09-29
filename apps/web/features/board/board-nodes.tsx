@@ -126,6 +126,15 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
         <div className="board-card-head">
           {/* The full title stays the card's accessible name and its tooltip. */}
           <h2 title={data.project.title}>{distinctTitle(data.project.title, data.titlePrefix)}</h2>
+          {/* Beside the title rather than over the artwork, so the design reads uncovered. */}
+          <button
+            type="button"
+            className="nodrag board-card-open"
+            aria-label={openLabel(data.project.title)}
+            onClick={() => data.onOpen(data.project.id)}
+          >
+            <ArrowUpRight size={15} />
+          </button>
         </div>
         {/* The leading deliverable's type, shown even without a cover. */}
         {data.artwork.typeLabel && (
@@ -143,14 +152,6 @@ const ProjectCard = memo(function ProjectCard({ data }: NodeProps<ProjectCardNod
             {data.requester && <ProjectRequester name={data.requester} compact />}
           </span>
         </div>
-        <button
-          type="button"
-          className="nodrag board-card-open"
-          aria-label={openLabel(data.project.title)}
-          onClick={() => data.onOpen(data.project.id)}
-        >
-          <ArrowUpRight size={15} />
-        </button>
       </div>
     </article>
   );

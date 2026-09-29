@@ -257,46 +257,43 @@
   border-right-width: 3px;
   border-radius: 5px 0 0 5px;
 }
-.timeline-project-bar.planned {
+/* Bars take the same stage colours as the status badges (see `projectStatusTones`); Planned keeps
+   a dashed neutral edge because nothing has started. */
+.timeline-project-bar.tone-neutral {
   --bar-fill: light-dark(#fff, #1c1e21);
   --bar-edge: light-dark(#93938a, #86867f);
   --bar-ink: light-dark(#5d5d57, #c9c9c2);
 
   border-style: dashed;
 }
-.timeline-project-bar.in_progress {
-  --bar-fill: light-dark(#d3dcbc, #2f3a1f);
-  --bar-edge: light-dark(#7f9152, #93a664);
-  --bar-ink: light-dark(#333f1e, #e0e9c9);
+.timeline-project-bar.tone-active {
+  --bar-fill: var(--tone-active-bg);
+  --bar-edge: var(--tone-active-fg);
+  --bar-ink: var(--tone-active-fg);
 }
-.timeline-project-bar.internal_review {
-  --bar-fill: light-dark(#e7ebde, #262b1e);
-  --bar-edge: light-dark(#8b9a6b, #86956a);
-  --bar-ink: light-dark(#3f4d2c, #d3dcc0);
+.timeline-project-bar.tone-attention {
+  --bar-fill: var(--tone-attention-bg);
+  --bar-edge: var(--tone-attention-fg);
+  --bar-ink: var(--tone-attention-fg);
 }
-.timeline-project-bar.client_review {
-  --bar-fill: light-dark(#e0e7d0, #29321c);
-  --bar-edge: light-dark(#87975f, #8fa062);
-  --bar-ink: light-dark(#3b4828, #d7e2bf);
+.timeline-project-bar.tone-review {
+  --bar-fill: var(--tone-review-bg);
+  --bar-edge: var(--tone-review-fg);
+  --bar-ink: var(--tone-review-fg);
 }
-.timeline-project-bar.changes_requested {
-  --bar-fill: light-dark(#f6ead0, #33280f);
-  --bar-edge: light-dark(#b08b2f, #b6923a);
-  --bar-ink: light-dark(#61470e, #f0d99c);
+.timeline-project-bar.tone-approved {
+  --bar-fill: var(--tone-approved-bg);
+  --bar-edge: var(--tone-approved-fg);
+  --bar-ink: var(--tone-approved-fg);
 }
-.timeline-project-bar.approved {
-  --bar-fill: light-dark(#e8e8e0, #28292a);
-  --bar-edge: light-dark(#93938a, #8a8a83);
-  --bar-ink: light-dark(#45453f, #d6d6cf);
-}
-.timeline-project-bar.delivered {
-  --bar-fill: light-dark(#dededa, #2c2c2e);
-  --bar-edge: light-dark(#8e8e86, #85857e);
-  --bar-ink: light-dark(#4c4c45, #cfcfc8);
+.timeline-project-bar.tone-complete {
+  --bar-fill: var(--tone-complete-bg);
+  --bar-edge: var(--tone-complete-fg);
+  --bar-ink: var(--tone-complete-fg);
 }
 
-/* Dot shapes follow the status badge: hollow while the studio still holds the work, square once it
-   has been handed over. The status is also written out, so shape and tint are never the only cue. */
+/* Dot shapes follow the status badge: a ring while work is underway or out for review, square once
+   it has been handed over. The status is also written out, so shape and tint are never the only cue. */
 .timeline-status-dot {
   width: 6px;
   height: 6px;
@@ -304,11 +301,11 @@
   border-radius: 50%;
   background: currentcolor;
 }
-.timeline-project-bar.internal_review .timeline-status-dot {
+.timeline-project-bar:is(.tone-active, .tone-review) .timeline-status-dot {
   border: 1px solid currentcolor;
   background: transparent;
 }
-.timeline-project-bar.delivered .timeline-status-dot {
+.timeline-project-bar.tone-complete .timeline-status-dot {
   border-radius: 1px;
 }
 

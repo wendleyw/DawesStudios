@@ -15,19 +15,14 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
 - Canvas campaign fold saved per viewer: migration `202609280010` (applied with `migration up
   --local`), pgTAP `board_collapsed_campaigns` 12/12, Playwright fold/reload PASS.
 - Canvas zoom pill stacked under the tool rail (horizontal fallback under 721px tall; bar at ≤900px).
+- One colour per project stage system-wide (new `review` violet / `approved` teal tones); List summary
+  is written counts + "Due" range; Canvas open arrow beside the title, blurred-art backdrop.
+  Dev server restarted (stale Turbopack `globals.css`; `.next/dev` cleared, `npm run dev:lan`).
 - Local SABRE data now has project/board due dates and members Alexia/Molly as requesters
   ([dataset guide](../operations/sabre-development.md#dates-and-team-members); restore script in
   the ignored `supabase/.backups/20260928-before-due-dates`).
 
-## Earlier task (Claude, 2026-09-28) — sign-in intro
-
-- After a sign-in the workspace opens behind a one-time full-screen intro (`workspace/sign-in-intro.tsx`,
-  `public/brand/intro.webm`, black mark on white): holds until auth/profile load, fades, skippable,
-  never with reduced motion; reloads/navigation skip it. `npm run check` PASS (1,314 tests); browser
-  check on :3003 (agency sign-in → intro → Overview; reload shows no intro). Uncommitted: `D login.png`
-  remains preexisting and unrelated.
-
-- Page consistency / Deliverables / Approve round entry: [history](history/handoff-2026-09-28-page-consistency.md).
+- Sign-in intro entry: [history](history/handoff-2026-09-28-page-consistency.md).
 
 ## Current objective and completed workflow task
 

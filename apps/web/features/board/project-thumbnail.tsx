@@ -126,9 +126,21 @@ export function ProjectThumbnail({ src }: { src?: string }) {
     // project starts without a cover, so this is a normal state, not a fault.
     <div className={`board-card-media ${src ? "" : "empty"}`} aria-hidden="true">
       {src ? (
-        // Keep expiring, caller-scoped signed URLs out of Next.js's shared image optimization cache.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" draggable={false} />
+        <>
+          {/* A blurred copy of the same artwork fills the letterbox, so the band takes the design's
+              own colours and the sharp copy on top reads as the focus. Keep expiring,
+              caller-scoped signed URLs out of Next.js's shared image optimization cache. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="board-card-media-backdrop"
+            src={src}
+            alt=""
+            loading="lazy"
+            draggable={false}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" loading="lazy" draggable={false} />
+        </>
       ) : (
         <>
           <ImageIcon size={15} />

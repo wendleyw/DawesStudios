@@ -225,6 +225,35 @@
   border-radius: 11px 11px 0 0;
   background: var(--surface-subtle);
 }
+/* Each stage's heading carries its colour as a dot, matching the badges and List cells. */
+.kanban-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.kanban-stage::before {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  content: "";
+}
+.kanban-stage.tone-active::before {
+  background: var(--tone-active-fg);
+}
+.kanban-stage.tone-attention::before {
+  background: var(--tone-attention-fg);
+}
+.kanban-stage.tone-review::before {
+  background: var(--tone-review-fg);
+}
+.kanban-stage.tone-approved::before {
+  background: var(--tone-approved-fg);
+}
+.kanban-stage.tone-complete::before {
+  background: var(--tone-complete-fg);
+}
 .kanban-heading > span {
   color: var(--muted);
   font-size: var(--text-sm);
@@ -426,6 +455,10 @@
   min-width: 0;
   color: var(--foreground);
 }
+.board-card-head > .board-card-open {
+  position: static;
+  flex: 0 0 auto;
+}
 
 /* One explicit card height keeps a row aligned when a title wraps; the footer stays at the bottom. */
 .board-canvas .react-flow__node-project .board-card {
@@ -457,8 +490,10 @@
  * card — which gives 22px to its drag grip — and the shorter card the other roles read.
  */
 .board-card-media {
+  position: relative;
   display: flex;
-  min-height: 158px;
+  /* Shrinks below its usual share when a two-line title needs the room, so the footer stays inside. */
+  min-height: 120px;
   flex: 1 1 auto;
   align-items: center;
   justify-content: center;
@@ -475,6 +510,22 @@
   color: var(--muted);
   font-size: var(--text-xs);
   letter-spacing: 0.01em;
+}
+.board-card-media > .board-card-media-backdrop {
+  position: absolute;
+  inset: -16px;
+  width: calc(100% + 32px);
+  max-width: none;
+  height: calc(100% + 32px);
+  max-height: none;
+  object-fit: cover;
+  filter: blur(18px) saturate(1.1);
+  opacity: 0.55;
+  transform: scale(1.05);
+}
+.board-card-media > img:not(.board-card-media-backdrop) {
+  position: relative;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
 }
 .board-card-media > img {
   /* The whole design, not a crop of its middle. A reel is 1080x1920, and covering a wide box with
@@ -1222,16 +1273,33 @@
   font-weight: 500;
   text-align: center;
 }
+/* A 60% mix of each tone's edge into its tint keeps the fill strong and its text at 4.5:1 or more. */
+.board-list-status:is(.tone-active, .tone-attention, .tone-review, .tone-approved, .tone-complete) {
+  background: color-mix(in srgb, var(--stage-fill) 60%, var(--stage-soft));
+}
 .board-list-status.tone-active {
-  background: var(--tone-active-border);
+  --stage-fill: var(--tone-active-border);
+  --stage-soft: var(--tone-active-bg);
   color: var(--tone-active-fg);
 }
 .board-list-status.tone-attention {
-  background: var(--tone-attention-border);
+  --stage-fill: var(--tone-attention-border);
+  --stage-soft: var(--tone-attention-bg);
   color: var(--tone-attention-fg);
 }
+.board-list-status.tone-review {
+  --stage-fill: var(--tone-review-border);
+  --stage-soft: var(--tone-review-bg);
+  color: var(--tone-review-fg);
+}
+.board-list-status.tone-approved {
+  --stage-fill: var(--tone-approved-border);
+  --stage-soft: var(--tone-approved-bg);
+  color: var(--tone-approved-fg);
+}
 .board-list-status.tone-complete {
-  background: var(--tone-complete-border);
+  --stage-fill: var(--tone-complete-border);
+  --stage-soft: var(--tone-complete-bg);
   color: var(--tone-complete-fg);
 }
 .board-list-due {
@@ -1248,39 +1316,59 @@
 .board-list-due.is-done > span {
   text-decoration: line-through;
 }
+
+/*
+ * A group's closing line: how many projects sit in each status, each marked with its tone's dot,
+ * and the span of their due dates.
+ */
 .board-list-summary {
-  min-height: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 20px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
   background: var(--surface-hover);
-}
-.board-list-summary:hover {
-  background: var(--surface-hover);
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 .board-list-mix {
   display: flex;
-  height: 22px;
-  overflow: hidden;
-  border-radius: 4px;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 .board-list-mix > span {
-  flex-basis: 0;
-  background: var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
-.board-list-mix > .tone-active {
-  background: var(--tone-active-border);
+.board-list-mix > span::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  content: "";
 }
-.board-list-mix > .tone-attention {
-  background: var(--tone-attention-border);
+.board-list-mix > .tone-active::before {
+  background: var(--tone-active-fg);
 }
-.board-list-mix > .tone-complete {
-  background: var(--tone-complete-border);
+.board-list-mix > .tone-attention::before {
+  background: var(--tone-attention-fg);
+}
+.board-list-mix > .tone-review::before {
+  background: var(--tone-review-fg);
+}
+.board-list-mix > .tone-approved::before {
+  background: var(--tone-approved-fg);
+}
+.board-list-mix > .tone-complete::before {
+  background: var(--tone-complete-fg);
 }
 .board-list-range {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--on-ink);
-  font-size: var(--text-sm);
+  color: var(--foreground);
+  white-space: nowrap;
 }
 
 /* A Kanban card names its requester on its own line under the due date. */
@@ -1374,16 +1462,6 @@
   .board-list-status {
     justify-content: center;
   }
-  .board-list .project-row > .board-list-mix {
-    align-items: stretch;
-    align-self: center;
-    margin: 0 12px;
-    padding: 0;
-    border-left: 0;
-  }
-  .board-list .board-list-summary > * {
-    border-left-color: transparent;
-  }
 }
 @media (min-width: 641px) and (max-width: 1000px) {
   .board-list,
@@ -1421,15 +1499,5 @@
     grid-row: 3;
     justify-self: start;
     font-size: var(--text-sm);
-  }
-  .board-list .board-list-summary {
-    display: flex;
-    min-height: 0;
-  }
-  .board-list .board-list-summary > :not(.board-list-mix) {
-    display: none;
-  }
-  .board-list-mix {
-    flex: 1;
   }
 }

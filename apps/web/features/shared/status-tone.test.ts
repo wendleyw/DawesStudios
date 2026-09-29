@@ -18,7 +18,7 @@ import { statusToneClass, type StatusTone } from "./status-tone";
 // appearance and reintroduce exactly the flattening this replaced. These tests check totality
 // against the database enums rather than against a list copied into the test.
 
-const tones: StatusTone[] = ["neutral", "active", "attention", "complete"];
+const tones: StatusTone[] = ["neutral", "active", "attention", "review", "approved", "complete"];
 
 // A credit request's status is not a database enum — the table stores it as text and
 // `credit-model.ts` narrows it — so its values are named here, next to the two that are read from
@@ -72,11 +72,23 @@ describe("status tones", () => {
     // must carry the same tone (and hue) as a project labelled "In progress".
     expect(briefingStatusLabels.accepted).toBe(statusLabels.in_progress);
     expect(briefingStatusTones.accepted).toBe(projectStatusTones.in_progress);
-    // A briefing waiting on the studio and a project sent back for changes are both waiting on a
-    // person.
+    // A briefing waiting on the studio, a pending credit request and a project sent back for changes
+    // are all waiting on a person.
     expect(briefingStatusTones.awaiting_review).toBe(projectStatusTones.changes_requested);
-    expect(creditRequestStatusTones.pending).toBe(projectStatusTones.client_review);
+    expect(creditRequestStatusTones.pending).toBe(projectStatusTones.changes_requested);
     expect(projectStatusTones.internal_review).toBe(projectStatusTones.in_progress);
+  });
+
+  it("gives each public project stage its own tone", () => {
+    const stages = [
+      "planned",
+      "in_progress",
+      "client_review",
+      "changes_requested",
+      "approved",
+      "delivered",
+    ] as const;
+    expect(new Set(stages.map((stage) => projectStatusTones[stage])).size).toBe(stages.length);
   });
 });
 
@@ -89,6 +101,8 @@ describe("statusToneClass", () => {
   it("renders every other tone as one modifier class", () => {
     expect(statusToneClass("active")).toBe("status-badge tone-active");
     expect(statusToneClass("attention")).toBe("status-badge tone-attention");
+    expect(statusToneClass("review")).toBe("status-badge tone-review");
+    expect(statusToneClass("approved")).toBe("status-badge tone-approved");
     expect(statusToneClass("complete")).toBe("status-badge tone-complete");
   });
 
