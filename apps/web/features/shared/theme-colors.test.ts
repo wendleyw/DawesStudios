@@ -25,8 +25,6 @@ const themeIndependent: Record<string, string> = {
   "::selection": "White on the dark olive highlight reads on either theme.",
   ".login-story": "The login story panel always uses the dark sidebar colour.",
   ".sidebar-collapse:hover:not(:disabled)": "The sidebar is dark in both themes.",
-  ".profile-bar strong": "The sidebar is dark in both themes.",
-  ".profile-bar .icon-button:hover": "The sidebar is dark in both themes.",
   ".mobile-sidebar-close:hover:not(:disabled)": "The sidebar is dark in both themes.",
 };
 

@@ -99,6 +99,16 @@ export async function signIn(page: Page, email: string) {
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 }
 
+/** Signs out from the account menu in the top-right header, the only Sign out in the product. */
+export async function signOut(page: Page) {
+  await page.getByRole("button", { name: /^Account menu:/ }).click();
+  await page
+    .getByRole("dialog", { name: "Account" })
+    .getByRole("button", { name: "Sign out", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/login/);
+}
+
 /** The visible name of each brand section, which is what the navigation row is driven by. */
 export const sectionLabels: Record<string, string> = {
   overview: "Overview",

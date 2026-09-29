@@ -2,7 +2,7 @@ import { expect, test as base, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { cleanupIntakeFixture, createIntakeFixture, type IntakeFixture } from "./intake-fixture";
 import { createTeamFixture, type TeamFixture } from "./team-fixture";
-import { credentials, localAdmin, localCaller, password, signIn } from "./test-support";
+import { credentials, localAdmin, localCaller, password, signIn, signOut } from "./test-support";
 
 const logoImage = fileURLToPath(new URL("../fixtures/campaign-preview.png", import.meta.url));
 
@@ -75,7 +75,7 @@ async function verifyAccountActions(
   await page.getByRole("button", { name: "Update password" }).click();
   await expect(page.getByText("Password updated.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("New password", { exact: true })).toBeEmpty();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signOut(page);
   await expect(page).toHaveURL(/\/login(?:\?.*)?$/);
 
   await page.getByLabel("Email address").fill(account.email);
@@ -243,7 +243,7 @@ test("agency edits a campaign and another client's account cannot change it", as
   await expect(dialog.getByLabel("Start date")).toHaveValue("2026-11-01");
   await expect(dialog.getByLabel("End date")).toHaveValue("2026-12-15");
   await dialog.getByRole("button", { name: `Close ${intake.clientName} campaigns` }).click();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signOut(page);
   await signIn(page, intake.email);
   await page.goto("/settings/clients");
   await expect(page.getByRole("heading", { name: "Studio settings are private." })).toBeVisible();

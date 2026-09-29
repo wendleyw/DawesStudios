@@ -73,3 +73,13 @@ round → client decides → client feedback is sent back to designers from Work
 
 ![Studio review](screenshots/page-consistency-2026-09-28/studio-review-actions.png)
 ![Client feedback in Working files](screenshots/page-consistency-2026-09-28/feedback-actions.png)
+
+## Follow-up: sidebar profile and Credits month (same day)
+
+- The sidebar no longer repeats the signed-in profile or Sign out; both are in the top-right account
+  menu. Specs sign out through a shared `signOut` helper.
+- Credits: the month switcher and the agency's month actions head the balance card instead of
+  floating between the title card and the figures.
+- `npm run check`: 135 files / 1,308 tests PASS. Playwright `client-navigation` and
+  `settings-actions` PASS; `monthly-credits` 1 of its tests fails ("Move to another month" is not
+  offered in Project details), a panel this change does not touch — cause not investigated.

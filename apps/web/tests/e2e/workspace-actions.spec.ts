@@ -1,4 +1,4 @@
-import { openBoardSearch, setBoardSearch } from "./test-support";
+import { openBoardSearch, setBoardSearch, signOut } from "./test-support";
 import { test, expect } from "@playwright/test";
 import {
   credentials,
@@ -296,7 +296,7 @@ test("project details detect stale edits, persist dates, revoke assignment and k
     await expect(event).not.toHaveClass(/unread/);
     await event.getByRole("link").click();
     await expect(client).toHaveURL(new RegExp(`/projects/${fixture.projectId}$`));
-    await client.getByRole("button", { name: "Sign out", exact: true }).click();
+    await signOut(client);
     await client.goto(`/projects/${fixture.projectId}?channel=client`);
     await expect(client).toHaveURL(/\/login\?returnTo=/);
     await client.getByLabel("Email address").fill(credentials.client);

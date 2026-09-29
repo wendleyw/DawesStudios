@@ -200,63 +200,64 @@ export function CreditsPage({ clientId }: { clientId: string }) {
           </button>
         </div>
       </header>
-      <div className="credit-month-bar">
-        <div className="credit-month-switcher">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Previous month"
-            disabled={monthIndex <= 0}
-            onClick={() => changeFilter({ month: months[monthIndex - 1] })}
-          >
-            <ChevronLeft size={16} aria-hidden="true" />
-          </button>
-          <select
-            aria-label="Credit month"
-            value={filters.month}
-            onChange={(event) => changeFilter({ month: event.target.value })}
-          >
-            <option value="">All months</option>
-            {months.map((item) => (
-              <option key={item} value={item}>
-                {formatMonth(item)}
-                {item === currentMonth ? " (this month)" : ""}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Next month"
-            disabled={monthIndex < 0 || monthIndex >= months.length - 1}
-            onClick={() => changeFilter({ month: months[monthIndex + 1] })}
-          >
-            <ChevronRight size={16} aria-hidden="true" />
-          </button>
-        </div>
-        {isAgency && (
-          <div className="credit-month-actions">
-            <button type="button" className="button quiet" onClick={() => setMonthAction("plan")}>
-              Set plan
-            </button>
-            {writable && (
-              <>
-                <button
-                  type="button"
-                  className="button quiet"
-                  onClick={() => setMonthAction("transfer")}
-                >
-                  Transfer
-                </button>
-                <button type="button" className="button" onClick={() => setMonthAction("extra")}>
-                  Add extra
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
       <div className="credit-overview" aria-busy={summary.isFetching}>
+        {/* The month the figures below describe, and the agency's month actions, head the card. */}
+        <div className="credit-month-bar">
+          <div className="credit-month-switcher">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Previous month"
+              disabled={monthIndex <= 0}
+              onClick={() => changeFilter({ month: months[monthIndex - 1] })}
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <select
+              aria-label="Credit month"
+              value={filters.month}
+              onChange={(event) => changeFilter({ month: event.target.value })}
+            >
+              <option value="">All months</option>
+              {months.map((item) => (
+                <option key={item} value={item}>
+                  {formatMonth(item)}
+                  {item === currentMonth ? " (this month)" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Next month"
+              disabled={monthIndex < 0 || monthIndex >= months.length - 1}
+              onClick={() => changeFilter({ month: months[monthIndex + 1] })}
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {isAgency && (
+            <div className="credit-month-actions">
+              <button type="button" className="button quiet" onClick={() => setMonthAction("plan")}>
+                Set plan
+              </button>
+              {writable && (
+                <>
+                  <button
+                    type="button"
+                    className="button quiet"
+                    onClick={() => setMonthAction("transfer")}
+                  >
+                    Transfer
+                  </button>
+                  <button type="button" className="button" onClick={() => setMonthAction("extra")}>
+                    Add extra
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         {summary.error ? (
           <FormError>
             {formatMonth(cardMonth)} could not be loaded.{" "}

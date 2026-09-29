@@ -7,6 +7,7 @@ import {
   openBoardSearch,
   screenshotDirectory,
   signIn,
+  signOut,
 } from "./test-support";
 
 test("the client switcher searches authorized workspaces and keeps one navigation context", async ({
@@ -93,15 +94,16 @@ test("mobile client switching contains focus and a single-client account needs n
     await search.press("Escape");
     await expect(drawer).toBeVisible();
     await expect(trigger).toBeFocused();
-    const signOut = drawer.getByRole("button", { name: "Sign out", exact: true });
-    await signOut.scrollIntoViewIfNeeded();
-    await expect(signOut).toBeInViewport();
+    // The drawer's last control stays reachable; Sign out lives in the account menu.
+    const lastControl = drawer.getByRole("button", { name: /^Theme/ });
+    await lastControl.scrollIntoViewIfNeeded();
+    await expect(lastControl).toBeInViewport();
     await trigger.press("Escape");
     await expect(drawer).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Open navigation", exact: true })).toBeFocused();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signOut(page);
   await signIn(page, credentials.client);
   await expect(page.getByRole("link", { name: "SABRE workspace", exact: true })).toBeVisible();
   await expect(page.locator(".client-switcher button")).toHaveCount(0);
@@ -177,7 +179,7 @@ test("client links stay visible at the top across pages without duplicating side
         }),
       )
       .toBe(true);
-    await expect(sidebar.getByRole("button", { name: "Sign out", exact: true })).toBeInViewport();
+    await expect(sidebar.getByRole("button", { name: /^Theme/ })).toBeInViewport();
     await page.screenshot({ path: `${screenshotDirectory}/board-general-navigation-${width}.png` });
     if (width <= 900) await page.keyboard.press("Escape");
   }

@@ -32,6 +32,7 @@ import {
   password,
   screenshotDirectory,
   signIn,
+  signOut,
 } from "./test-support";
 
 let fixture: IntakeFixture;
@@ -725,7 +726,7 @@ test.describe("Briefing intake, credits, and account administration", () => {
       ).toBeVisible();
       await recoveryPage.getByRole("link", { name: "Back to your work" }).click();
       await expect(recoveryPage).toHaveURL(new RegExp(`/clients/${fixture.clientId}/overview$`));
-      await recoveryPage.getByRole("button", { name: "Sign out", exact: true }).click();
+      await signOut(recoveryPage);
       await recoveryPage.getByLabel("Email address").fill(email);
       await recoveryPage.getByLabel("Password", { exact: true }).fill(changed);
       await recoveryPage.getByRole("button", { name: "Sign in", exact: true }).click();

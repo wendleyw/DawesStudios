@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, LogOut, Menu, PanelLeftClose, Settings2, Users, X } from "lucide-react";
+import { Home, Menu, PanelLeftClose, Settings2, Users, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSelectedLayoutSegments } from "next/navigation";
@@ -31,7 +31,7 @@ export function useFoldSidebarWhile(active: boolean) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { database, session, profile, loading, error } = useAuth();
+  const { session, profile, loading, error } = useAuth();
   const clients = useClients();
   const settings = useWorkspaceSettings();
   const pathname = usePathname();
@@ -327,42 +327,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
             <FontToggle />
             <ThemeToggle />
-            <div className="profile-bar">
-              <Link
-                href="/settings/account"
-                className="profile-account"
-                aria-label={`Account settings for ${profile.display_name}`}
-              >
-                <span className="profile-avatar" aria-hidden="true">
-                  {profile.display_name
-                    .split(" ")
-                    .map((value) => value[0])
-                    .slice(0, 2)
-                    .join("")}
-                </span>
-                <div className="profile-account-copy">
-                  <strong>{profile.display_name}</strong>
-                  <span>
-                    {profile.role === "agency"
-                      ? "Studio team"
-                      : profile.role === "designer"
-                        ? "Designer"
-                        : "Client"}
-                  </span>
-                </div>
-              </Link>
-            </div>
-            <button
-              className="nav-item"
-              onClick={async () => {
-                setMobileOpen(false);
-                await database.auth.signOut();
-                router.replace("/login");
-              }}
-            >
-              <LogOut size={17} />
-              <span>Sign out</span>
-            </button>
           </div>
         </div>
         {/* Every page shares the floating header cards; each canvas owns its own placement. */}

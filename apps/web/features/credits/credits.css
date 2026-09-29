@@ -21,9 +21,18 @@
 .credit-month-bar {
   display: flex;
   flex-wrap: wrap;
+  grid-column: 1 / -1;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
+  /* The card's own padding holds the row; its rule separates the month from its figures. */
+  margin: calc(var(--space-sm) * -1) 0 0;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+/* The switcher's first control sits on the card's text edge. */
+.credit-month-switcher > .icon-button:first-child {
+  margin-left: -8px;
 }
 .credit-month-switcher,
 .credit-month-actions {

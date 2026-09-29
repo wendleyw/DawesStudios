@@ -12,7 +12,9 @@ Every non-canvas page shares the floating header cards: client pages show the cl
 `CanvasHeader`; studio pages (Overview, Team, Settings, Notifications) show `StudioHeader` — the
 studio name on the left, notifications and the account menu (without a client's Credits block) on
 the right — and put their title in the same white title card. The sidebar no longer has a Help &
-support item (removed at the user's request on 2026-09-28).
+support item (removed at the user's request on 2026-09-28). Account settings and Sign out live only in
+the top-right account menu; the sidebar no longer repeats the signed-in profile or a Sign out
+button (removed at the user's request on 2026-09-28).
 
 ## `/home`
 
