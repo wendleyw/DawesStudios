@@ -57,10 +57,8 @@ export function BoardKanban({
         const inColumn = projects.filter((project) => project.status === column);
         return (
           <section className="kanban-column" key={column}>
-            <div className="kanban-heading">
-              <h3 className={`kanban-stage tone-${projectStatusTones[column]}`}>
-                {statusLabels[column]}
-              </h3>
+            <div className={`kanban-heading tone-${projectStatusTones[column]}`}>
+              <h3>{statusLabels[column]}</h3>
               <span className="count-badge">{inColumn.length}</span>
             </div>
             {inColumn.length ? (

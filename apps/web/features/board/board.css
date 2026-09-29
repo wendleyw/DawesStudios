@@ -225,34 +225,49 @@
   border-radius: 11px 11px 0 0;
   background: var(--surface-subtle);
 }
-/* Each stage's heading carries its colour as a dot, matching the badges and List cells. */
-.kanban-stage {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+/*
+ * Each stage's heading is filled with its colour, like a Monday group header: the same 60% mix the
+ * List's status cells use, so the two views read as one palette and the text keeps 4.5:1. Planned
+ * (neutral) keeps the plain grey heading.
+ */
+.kanban-heading:is(.tone-active, .tone-attention, .tone-review, .tone-approved, .tone-complete) {
+  background: color-mix(in srgb, var(--stage-fill) 60%, var(--stage-soft));
 }
-.kanban-stage::before {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-  background: var(--muted);
-  content: "";
+.kanban-heading.tone-active {
+  --stage-fill: var(--tone-active-border);
+  --stage-soft: var(--tone-active-bg);
+  color: var(--tone-active-fg);
 }
-.kanban-stage.tone-active::before {
-  background: var(--tone-active-fg);
+.kanban-heading.tone-attention {
+  --stage-fill: var(--tone-attention-border);
+  --stage-soft: var(--tone-attention-bg);
+  color: var(--tone-attention-fg);
 }
-.kanban-stage.tone-attention::before {
-  background: var(--tone-attention-fg);
+.kanban-heading.tone-review {
+  --stage-fill: var(--tone-review-border);
+  --stage-soft: var(--tone-review-bg);
+  color: var(--tone-review-fg);
 }
-.kanban-stage.tone-review::before {
-  background: var(--tone-review-fg);
+.kanban-heading.tone-approved {
+  --stage-fill: var(--tone-approved-border);
+  --stage-soft: var(--tone-approved-bg);
+  color: var(--tone-approved-fg);
 }
-.kanban-stage.tone-approved::before {
-  background: var(--tone-approved-fg);
+.kanban-heading.tone-complete {
+  --stage-fill: var(--tone-complete-border);
+  --stage-soft: var(--tone-complete-bg);
+  color: var(--tone-complete-fg);
 }
-.kanban-stage.tone-complete::before {
-  background: var(--tone-complete-fg);
+.kanban-heading.tone-neutral {
+  background: color-mix(in srgb, var(--border) 70%, var(--surface-subtle));
+}
+.kanban-heading[class*="tone-"] h3 {
+  color: inherit;
+  font-weight: 600;
+}
+.kanban-heading[class*="tone-"] > span {
+  color: inherit;
+  opacity: 0.8;
 }
 .kanban-heading > span {
   color: var(--muted);
