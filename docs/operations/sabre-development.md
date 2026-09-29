@@ -88,3 +88,21 @@ After application, inspect all six projects with agency, SABRE client, and both 
 sessions. Check role isolation, current work requests, retained Miro links and downloads, the
 Backlog/Active filter, and the five public phases. The deterministic canonical tests should run
 against a separate canonical fixture, not this intentionally smaller local dataset.
+
+## Dates and team members
+
+On 2026-09-28 the user asked for realistic dates and a larger SABRE team in the local dataset, so
+the board's due marks, ranges and "Requested by" can be exercised:
+
+- Every SABRE project has a start and due date relative to 2026-09-28: delivered work was due the
+  week before; F08 and S01 are overdue (Sep 26 and Sep 27); the rest are due Sep 30 – Oct 23.
+- Every design board carries the designer's internal date, two to four days before its project's
+  due date, so designers see earlier dates (and more overdue work) than the client.
+- Two client members joined SABRE: Alexia (`alexia@client.dawes.local`) and Molly
+  (`molly@client.dawes.local`), with the local demo password. Alexia requested D01, F01, F05, F08,
+  F12, F15, F18 and S01; Molly requested F02, F04, F06, F09, F13, F16, F20 and S02; SABRE Team keeps
+  the other nine.
+
+`supabase/.backups/20260928-before-due-dates/restore.sql` (ignored) puts the previous dates and
+requesters back; its closing comment removes the two memberships, after which their Auth users are
+deleted through the Auth admin API.

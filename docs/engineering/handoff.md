@@ -14,7 +14,10 @@ Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writ
   (1,328 tests); "list sorts" Playwright PASS; screenshots checked for all five views + designer.
 - Canvas campaign fold saved per viewer: migration `202609280010` (applied with `migration up
   --local`), pgTAP `board_collapsed_campaigns` 12/12, Playwright fold/reload PASS.
-- Next: move the Canvas zoom pill into the left tool rail, below the menu (user request).
+- Canvas zoom pill stacked under the tool rail (horizontal fallback under 721px tall; bar at ≤900px).
+- Local SABRE data now has project/board due dates and members Alexia/Molly as requesters
+  ([dataset guide](../operations/sabre-development.md#dates-and-team-members); restore script in
+  the ignored `supabase/.backups/20260928-before-due-dates`).
 
 ## Earlier task (Claude, 2026-09-28) — sign-in intro
 
