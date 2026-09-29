@@ -2,10 +2,10 @@
 
 A creative collaboration application built with Next.js, React and xyflow, backed by Docker-managed Supabase authentication, PostgreSQL, storage and realtime.
 
-Private source repository: [briannadawesstudio/DawesStudios](https://github.com/briannadawesstudio/DawesStudios), with `main` as the default branch. Repository access is required to clone it:
+Private source repository: [wendleyw/DawesStudios](https://github.com/wendleyw/DawesStudios), with `main` as the default branch. Repository access is required to clone it:
 
 ```bash
-git clone https://github.com/briannadawesstudio/DawesStudios.git
+git clone https://github.com/wendleyw/DawesStudios.git
 cd DawesStudios
 ```
 

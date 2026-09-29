@@ -2,14 +2,14 @@
 
 Updated: 2026-09-29 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Latest task — private GitHub repository
+## Latest task — private GitHub repository under wendleyw
 
-- User authorized repository creation and push. Private remote `origin`:
-  [briannadawesstudio/DawesStudios](https://github.com/briannadawesstudio/DawesStudios); `main` retains its history.
-- Current-session `npm run check`: PASS, 141 files / 1,342 tests; types, lint and formatting PASS.
-- GitLeaks: PASS on `main` history and 2,366 tracked working-tree files; ignored environment files,
-  local state and backups excluded. Shared instructions remain synchronized. Preserve `D login.png`.
-- GitHub Actions starts on push; hosted results remain pending. No deployment requested.
+- User authenticated GitHub CLI as `wendleyw` and authorized private publication under that account.
+- Private `origin`: [wendleyw/DawesStudios](https://github.com/wendleyw/DawesStudios); `main` retains its history.
+- Previous repository remains at `briannadawesstudio/DawesStudios`, saved locally as remote `studio`.
+- Current checks: GitLeaks history PASS; documentation links/100-line limit/instruction sync PASS.
+- Earlier publication gate: 141 files / 1,342 tests PASS; no application changes since that run.
+- Environment/local state/backups remain ignored; preserve `D login.png`. Hosted CI pending; no deployment.
 
 ## Previous task (Claude, 2026-09-28) — grouped List view
 
