@@ -1037,9 +1037,33 @@
   }
 }
 
-/* On a wide board the rail's column runs to the bottom, where the shared zoom pill sits. */
-.board-zoom-dock {
-  margin-top: auto;
+/*
+ * On desktop the shared zoom pill sits right under the tool rail, stacked vertically to the rail's
+ * width. Short windows cannot fit both in one column, so there it stays a horizontal pill at the
+ * foot of the column; at 900px and below the dock becomes a bottom bar (see above).
+ */
+@media (min-width: 901px) and (min-height: 721px) {
+  .board-zoom-dock .react-flow__controls.canvas-zoom {
+    flex-direction: column;
+    width: 56px;
+    padding: 6px 4px;
+    border-radius: 14px;
+  }
+  .board-zoom-dock .canvas-zoom-level {
+    min-width: 0;
+    padding-block: 4px;
+    font-size: var(--text-xs);
+  }
+  .board-zoom-dock .canvas-zoom-divider {
+    width: 24px;
+    height: 1px;
+    margin: 4px 0;
+  }
+}
+@media (min-width: 901px) and (max-height: 720px) {
+  .board-zoom-dock {
+    margin-top: auto;
+  }
 }
 @media (max-width: 640px), (max-height: 650px) {
   .board-period-trigger {
