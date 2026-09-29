@@ -36,7 +36,7 @@ vi.mock("@/features/workspace/workspace-data", async (importOriginal) => ({
     refetch: vi.fn(),
   }),
   useProjects: () => ({ data: fixture.projects, isPending: false, refetch: vi.fn() }),
-  useDateFormat: () => ({ formatDate: () => "" }),
+  useDateFormat: () => ({ formatDate: () => "", formatDayKey: () => "2026-09-28" }),
   useInvalidateWorkspace: () => vi.fn(),
 }));
 vi.mock("./board-data", () => ({

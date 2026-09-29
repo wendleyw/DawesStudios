@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, ArrowUpRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useId } from "react";
 import {
@@ -10,7 +10,13 @@ import {
   useDateFormat,
   type Project,
 } from "@/features/workspace/workspace-data";
-import { statusToneClass } from "@/features/shared/status-tone";
+import {
+  dueRange,
+  groupProjects,
+  isOverdue,
+  statusSegments,
+  type ListGroupKey,
+} from "./list-groups";
 import {
   LIST_SORT_COLUMNS,
   LIST_SORT_OPTIONS,
@@ -23,8 +29,9 @@ import {
 import { projectHref } from "./project-open";
 
 /**
- * The board's List view: PROJECT/CAMPAIGN/STATUS/DUE sortable headers, a compact "Sort by" select
- * for phones, and the project rows themselves. See `list-sort.ts` for the pure sort rules and
+ * The board's List view: an Active and a Delivered group, each a collapsible table with
+ * PROJECT/CAMPAIGN/STATUS/DUE sortable headers, full-colour status cells and a summary row (status
+ * mix and due range); a compact "Sort by" select stands in for the headers on phones. See `list-sort.ts` for the pure sort rules and
  * `README.md` for the sorting contract this renders.
  */
 export function BoardListView({
@@ -36,6 +43,8 @@ export function BoardListView({
   hasSearch,
   onClearFilters,
   campaignName,
+  collapsedGroups,
+  onToggleGroup,
 }: {
   projects: Project[];
   listSort: ListSort;
@@ -45,11 +54,14 @@ export function BoardListView({
   hasSearch: boolean;
   onClearFilters: () => void;
   campaignName: (id: string | null) => string;
+  collapsedGroups: ReadonlySet<ListGroupKey>;
+  onToggleGroup: (key: ListGroupKey) => void;
 }) {
-  const { formatDate } = useDateFormat();
+  const { formatDate, formatDayKey } = useDateFormat();
   const selectId = useId();
+  const todayKey = formatDayKey(new Date().toISOString());
   return (
-    <div className="board-list project-table">
+    <div className="board-list">
       {/* Phones hide `.table-head` below (globals.css); this compact control keeps sorting
         reachable there, reading and writing the same `listSort` state as the header buttons. */}
       <div className="board-list-sort-mobile">
@@ -68,64 +80,150 @@ export function BoardListView({
           ))}
         </select>
       </div>
-      <div className="table-head">
-        {LIST_SORT_COLUMNS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            className="board-list-sort-button"
-            onClick={() => onHeaderSort(key)}
-            aria-label={listSortAccessibleName(key, listSort)}
-          >
-            {label.toUpperCase()}
-            {listSort?.key === key && listSort.lead ? (
-              <span className="board-list-sort-lead" aria-hidden="true">
-                {statusLabels[listSort.lead]}
-              </span>
-            ) : (
-              listSort?.key === key &&
-              (listSort.direction === "asc" ? (
-                <ArrowUp size={14} aria-hidden="true" />
-              ) : (
-                <ArrowDown size={14} aria-hidden="true" />
-              ))
+      {/* When nothing matches, one empty state replaces both groups. */}
+      {projects.length === 0 ? (
+        <div className="project-table">
+          <ListHead listSort={listSort} onHeaderSort={onHeaderSort} />
+          <div className="empty-state board-list-empty">
+            <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
+            <p>
+              {filtered
+                ? hasSearch
+                  ? "Try a different search or clear your filters."
+                  : "Try a different filter or clear your filters."
+                : "Start with a briefing. We’ll take it from there."}
+            </p>
+            {filtered && (
+              <button className="button" onClick={onClearFilters}>
+                Clear filters
+              </button>
             )}
-          </button>
-        ))}
-        <span />
-      </div>
-      {/* The head stays put when nothing matches, so a filtered table still reads as the same
-        table rather than as a different screen. */}
-      {projects.length === 0 && (
-        <div className="empty-state board-list-empty">
-          <h2>{filtered ? "No projects match." : "A fresh space for your next idea."}</h2>
-          <p>
-            {filtered
-              ? hasSearch
-                ? "Try a different search or clear your filters."
-                : "Try a different filter or clear your filters."
-              : "Start with a briefing. We’ll take it from there."}
-          </p>
-          {filtered && (
-            <button className="button" onClick={onClearFilters}>
-              Clear filters
-            </button>
-          )}
+          </div>
         </div>
+      ) : (
+        groupProjects(projects).map((group) => {
+          const open = !collapsedGroups.has(group.key);
+          const bodyId = `${selectId}-${group.key}`;
+          const range = dueRange(group.projects);
+          const segments = statusSegments(group.projects);
+          return (
+            <section key={group.key} className={`board-list-group group-${group.key}`}>
+              <button
+                type="button"
+                className="board-list-group-toggle"
+                aria-expanded={open}
+                aria-controls={bodyId}
+                onClick={() => onToggleGroup(group.key)}
+              >
+                <ChevronDown size={18} aria-hidden="true" />
+                <h2>{group.label}</h2>
+                <span className="board-list-group-count">
+                  {group.projects.length} {group.projects.length === 1 ? "project" : "projects"}
+                </span>
+              </button>
+              {open && (
+                <div id={bodyId} className="project-table board-list-table">
+                  <ListHead listSort={listSort} onHeaderSort={onHeaderSort} />
+                  {group.projects.length === 0 && (
+                    <p className="board-list-group-empty">
+                      No {group.label.toLowerCase()} projects.
+                    </p>
+                  )}
+                  {group.projects.map((project) => {
+                    const overdue = isOverdue(project, todayKey);
+                    const delivered = project.status === "delivered" && Boolean(project.due_date);
+                    return (
+                      <Link key={project.id} href={projectHref(project.id)} className="project-row">
+                        <strong title={project.title}>{project.title}</strong>
+                        <span>{campaignName(project.campaign_id)}</span>
+                        <span className={`board-list-status tone-${projectStatusTone(project)}`}>
+                          {projectStatusLabel(project)}
+                        </span>
+                        <span
+                          className={`board-list-due${overdue ? " is-overdue" : ""}${delivered ? " is-done" : ""}`}
+                        >
+                          {overdue && <AlertCircle size={15} aria-label="Overdue" />}
+                          {delivered && <Check size={15} aria-label="Delivered" />}
+                          <span>{formatDate(project.due_date, "No due date")}</span>
+                        </span>
+                        <ArrowUpRight size={16} />
+                      </Link>
+                    );
+                  })}
+                  {group.projects.length > 0 && (
+                    <div className="project-row board-list-summary">
+                      <span />
+                      <span />
+                      <span
+                        className="board-list-mix"
+                        role="img"
+                        aria-label={segments.map((s) => `${s.count} ${s.label}`).join(", ")}
+                      >
+                        {segments.map((segment) => (
+                          <span
+                            key={segment.label}
+                            className={`tone-${segment.tone}`}
+                            style={{ flexGrow: segment.count }}
+                            title={`${segment.count} ${segment.label}`}
+                          />
+                        ))}
+                      </span>
+                      <span>
+                        {range && (
+                          <span className="board-list-range">
+                            {range.from === range.to
+                              ? formatDate(range.from)
+                              : `${formatDate(range.from)} – ${formatDate(range.to)}`}
+                          </span>
+                        )}
+                      </span>
+                      <span />
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })
       )}
-      {projects.map((project: Project) => (
-        <Link key={project.id} href={projectHref(project.id)} className="project-row">
-          <strong title={project.title}>{project.title}</strong>
-          <span>{campaignName(project.campaign_id)}</span>
-          <span>
-            <span className={statusToneClass(projectStatusTone(project))}>
-              {projectStatusLabel(project)}
+    </div>
+  );
+}
+
+/** The sortable header row, repeated at the top of each group's table. */
+function ListHead({
+  listSort,
+  onHeaderSort,
+}: {
+  listSort: ListSort;
+  onHeaderSort: (key: ListSortKey) => void;
+}) {
+  return (
+    <div className="table-head">
+      {LIST_SORT_COLUMNS.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          className="board-list-sort-button"
+          onClick={() => onHeaderSort(key)}
+          aria-label={listSortAccessibleName(key, listSort)}
+        >
+          {label}
+          {listSort?.key === key && listSort.lead ? (
+            <span className="board-list-sort-lead" aria-hidden="true">
+              {statusLabels[listSort.lead]}
             </span>
-          </span>
-          <span>{formatDate(project.due_date, "No due date")}</span>
-          <ArrowUpRight size={16} />
-        </Link>
+          ) : (
+            listSort?.key === key &&
+            (listSort.direction === "asc" ? (
+              <ArrowUp size={14} aria-hidden="true" />
+            ) : (
+              <ArrowDown size={14} aria-hidden="true" />
+            ))
+          )}
+        </button>
       ))}
+      <span />
     </div>
   );
 }

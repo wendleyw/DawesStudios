@@ -4,6 +4,8 @@ The board has five mutually exclusive views: **List** (the default, so its icon 
 
 List's PROJECT/CAMPAIGN/STATUS/DUE headers are buttons: the first click sorts that column ascending, a second click on the same column reverses it, a third returns the list to its default order, and clicking another column restarts at ascending on the new one. Project and Campaign sort A–Z (locale-aware, case-insensitive); Status does not reverse: each click brings the next status the list holds to the top (Planned, In progress, Studio review, In review, Changes requested, Approved, Delivered — only the statuses the list holds — then back to the default order), with the rest following in workflow order (the key order of `statusLabels` in `workspace/workspace-data.ts`, also the Kanban column order), so a client can look at every status first in turn; Due sorts by date with undated projects always last in both directions; Campaign/Status/Due ties break by title. An arrow icon marks the active column (Status shows its leading status instead), and each header button's accessible name states the column and, once active, its direction and what the next click does (e.g. "Due, earliest first. Click to reverse") or leading status ("Status, Approved first"). The sort is `board-page.tsx` state kept for the board visit — it survives switching views, combines with search/campaign/status/period filters, and is not reset by Clear filters, only by switching clients (which remounts the board). Below 640px, where `.table-head` hides (`app/globals.css`) and List is the phone default, a compact "Sort by" select above the rows reads and writes the same state, with one "Status: … first" option per status. The pure sort (no React) lives in `list-sort.ts`.
 
+List splits the sorted projects into two collapsible groups, **Active** (every status but Delivered) and **Delivered**, each its own table with a colored left edge and a repeated header row; the sort orders projects within each group. Delivered starts folded; which groups are folded is `board-page.tsx` state (`collapsedGroups`) for the board visit, like the sort. The status cell is filled with its tone (the same tones as `.status-badge`), the Due cell adds an overdue mark for a dated, undelivered project past today (in the studio timezone) and a check with the date struck through for a delivered one, and a summary row closes each group with the mix of statuses (a proportional bar with an accessible count list) and its earliest–latest due range. When nothing matches, one empty state replaces both groups. The pure grouping, overdue, mix and range rules live in `list-groups.ts`.
+
 ## Floating tools
 
 `board-header.tsx` supplies the quarter picker to `workspace/canvas-header.tsx`, shared with projects and all client sections.
@@ -72,7 +74,7 @@ Selection (`selectedProjectId`, the authorized `scope` it resolves against, and 
 in the page because every view reads it, and the List sort (`listSort`) stays there so it survives
 view switches. Three presentation-only sub-components render the
 board's non-trivial view branches from that state: `board-canvas-view.tsx` (the xyflow surface),
-`board-list-view.tsx` (the sortable table and its phone "Sort by" select) and
+`board-list-view.tsx` (the grouped, sortable tables and their phone "Sort by" select) and
 `board-planning-panel.tsx` (Timeline/Kanban's shared header and scale control); `board-notices.tsx`
 renders the selection live-region and the position/preferences/save error banners.
 

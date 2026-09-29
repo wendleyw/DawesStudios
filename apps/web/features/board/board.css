@@ -247,7 +247,12 @@
   font-size: var(--text-xs);
 }
 .board-list {
+  --list-group-color: var(--tone-active-fg);
+  --list-overdue: light-dark(#b42318, #f29b8f);
+  display: flex;
   min-height: 0;
+  flex-direction: column;
+  gap: var(--space-lg);
   margin: var(--space-lg) var(--space-page);
   overflow: auto;
 }
@@ -1108,5 +1113,206 @@
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--surface-hover);
+  }
+}
+
+/*
+ * List groups (Active / Delivered). Each group is a collapsible table with a colored left edge;
+ * the status cell fills its column edge to edge, and a summary row closes the group with the
+ * status mix and due range. Home shares `.project-table`, so every rule here is scoped to the board.
+ */
+.board-list-group.group-delivered {
+  --list-group-color: var(--tone-complete-fg);
+}
+.board-list-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  border: 0;
+  padding: 2px 0;
+  background: none;
+  color: var(--list-group-color);
+  font: inherit;
+}
+.board-list-group-toggle h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.board-list-group-toggle svg {
+  transition: transform 140ms ease;
+}
+.board-list-group-toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+.board-list-group-count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.board-list-table {
+  border-left: 4px solid var(--list-group-color);
+}
+.board-list-group-empty {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.board-list-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: center;
+}
+.board-list-status.tone-active {
+  background: var(--tone-active-border);
+  color: var(--tone-active-fg);
+}
+.board-list-status.tone-attention {
+  background: var(--tone-attention-border);
+  color: var(--tone-attention-fg);
+}
+.board-list-status.tone-complete {
+  background: var(--tone-complete-border);
+  color: var(--tone-complete-fg);
+}
+.board-list-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.board-list-due.is-overdue svg {
+  color: var(--list-overdue);
+}
+.board-list-due.is-done svg {
+  color: var(--tone-complete-fg);
+}
+.board-list-due.is-done > span {
+  text-decoration: line-through;
+}
+.board-list-summary {
+  min-height: 48px;
+  background: var(--surface-hover);
+}
+.board-list-summary:hover {
+  background: var(--surface-hover);
+}
+.board-list-mix {
+  display: flex;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.board-list-mix > span {
+  flex-basis: 0;
+  background: var(--border);
+}
+.board-list-mix > .tone-active {
+  background: var(--tone-active-border);
+}
+.board-list-mix > .tone-attention {
+  background: var(--tone-attention-border);
+}
+.board-list-mix > .tone-complete {
+  background: var(--tone-complete-border);
+}
+.board-list-range {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--text-sm);
+}
+
+/* Above phones the cells butt together with dividers, so the status fill reads as a cell. */
+@media (min-width: 641px) {
+  .board-list .table-head,
+  .board-list .project-row {
+    gap: 0;
+    padding: 0;
+  }
+  .board-list .table-head > *,
+  .board-list .project-row > * {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    min-width: 0;
+    padding: 0 16px;
+  }
+  .board-list .table-head > * + *,
+  .board-list .project-row > * + * {
+    border-left: 1px solid var(--border);
+  }
+  .board-list .table-head > :last-child,
+  .board-list .project-row > :last-child {
+    border-left: 0;
+    padding: 0;
+  }
+  .board-list .project-row {
+    min-height: 56px;
+    grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(140px, 0.9fr) 150px 40px;
+  }
+  .board-list .table-head {
+    grid-template-columns: minmax(160px, 2fr) minmax(100px, 1.1fr) minmax(140px, 0.9fr) 150px 40px;
+  }
+  .board-list .project-row > svg {
+    display: block;
+    align-self: center;
+    justify-self: center;
+  }
+  .board-list .project-row > strong {
+    display: block;
+    line-height: 56px;
+  }
+  .board-list-status {
+    justify-content: center;
+  }
+  .board-list .project-row > .board-list-mix {
+    align-items: stretch;
+    align-self: center;
+    margin: 0 12px;
+    padding: 0;
+    border-left: 0;
+  }
+  .board-list .board-list-summary > * {
+    border-left-color: transparent;
+  }
+  .board-list .board-list-summary > .board-list-mix + span {
+    border-left: 0;
+  }
+}
+@media (min-width: 641px) and (max-width: 1000px) {
+  .board-list .table-head,
+  .board-list .project-row {
+    grid-template-columns: minmax(135px, 1.6fr) minmax(100px, 1fr) minmax(120px, 1fr) 40px;
+  }
+  .board-list .table-head > :nth-child(4),
+  .board-list .project-row > :nth-child(4) {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .board-list-sort-mobile {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .board-list-status {
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .board-list-summary {
+    display: flex;
+    min-height: 0;
+  }
+  .board-list-summary > :not(.board-list-mix) {
+    display: none;
+  }
+  .board-list-mix {
+    flex: 1;
   }
 }

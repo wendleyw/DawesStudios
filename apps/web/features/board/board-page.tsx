@@ -27,6 +27,7 @@ import { useBoardCompetitorWidget } from "./use-board-competitor-widget";
 import { useBoardCardPositions } from "./use-board-card-positions";
 import { useBoardFilters } from "./use-board-filters";
 import { BoardListView } from "./board-list-view";
+import type { ListGroupKey } from "./list-groups";
 import { BoardCanvasView } from "./board-canvas-view";
 import { BoardPlanningPanel } from "./board-planning-panel";
 import { BoardNotices } from "./board-notices";
@@ -62,6 +63,10 @@ function ClientBoard({ clientId }: { clientId: string }) {
   // clicked. It lives here — kept for the board visit, surviving view switches, untouched by
   // Clear filters, and reset only when switching clients remounts the board.
   const [listSort, setListSort] = useState<ListSort>(null);
+  // List groups folded for this visit; Delivered starts folded, like a finished group in a tracker.
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<ListGroupKey>>(
+    () => new Set(["delivered"]),
+  );
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const cardPositions = useBoardCardPositions({ database, invalidateWorkspace });
 
@@ -234,6 +239,14 @@ function ClientBoard({ clientId }: { clientId: string }) {
             hasSearch={Boolean(filters.search)}
             onClearFilters={filters.clearFilters}
             campaignName={campaignName}
+            collapsedGroups={collapsedGroups}
+            onToggleGroup={(key) =>
+              setCollapsedGroups((current) => {
+                const next = new Set(current);
+                if (!next.delete(key)) next.add(key);
+                return next;
+              })
+            }
           />
         ) : view.layout === "calendar" ? (
           <BoardCalendar

@@ -322,7 +322,7 @@ test("list sorts by a clicked column title and by the phone menu", async ({ page
   const rowDueDates = async () =>
     (
       await page
-        .locator(".board-list .project-row")
+        .locator(".board-list a.project-row")
         .evaluateAll((rows) => rows.map((row) => row.getAttribute("href")!.split("/").pop()!))
     ).map((id) => dueDates.get(id) ?? null);
   const expectDueOrder = async (direction: "asc" | "desc") => {
@@ -338,7 +338,8 @@ test("list sorts by a clicked column title and by the phone menu", async ({ page
     await signIn(page, credentials.agency);
     await page.goto(`/clients/${clientId}/board`);
     await chooseView(page, "list");
-    const head = page.locator(".board-list .table-head");
+    // Each open group repeats the header row; the first one belongs to Active.
+    const head = page.locator(".board-list .table-head").first();
     const due = head.getByRole("button", { name: /^Due/ });
     await due.click();
     await expect(due).toHaveAccessibleName("Due, earliest first. Click to reverse");
