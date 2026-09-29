@@ -1,27 +1,23 @@
 # Codex / Claude continuation checkpoint
 
-Updated: 2026-09-29 EDT. Owner: **Codex orchestrator**. No active delegated writers.
+Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Latest task — private GitHub repository
+## Latest task (Claude, 2026-09-28) — grouped List view
 
-- User authorized repository creation and push. Private remote `origin`:
-  [briannadawesstudio/DawesStudios](https://github.com/briannadawesstudio/DawesStudios); `main` retains its history.
-- Current-session `npm run check`: PASS, 141 files / 1,342 tests; types, lint and formatting PASS.
-- GitLeaks: PASS on `main` history and 2,366 tracked working-tree files; ignored environment files,
-  local state and backups excluded. Shared instructions remain synchronized. Preserve `D login.png`.
-- GitHub Actions starts on push; hosted results remain pending. No deployment requested.
-
-## Previous task (Claude, 2026-09-28) — grouped List view
-
-- Board List has collapsible **Active** / **Delivered** tables, stage colours, due marks and
-  status/due summaries (`board/list-groups.ts`). Historical gate: 1,320 tests PASS; "list sorts" PASS.
+- Board List is grouped into collapsible **Active** / **Delivered** tables (Delivered folded),
+  full-tone status cells, overdue/delivered due marks and a per-group status-mix + due-range summary
+  (`features/board/list-groups.ts`). Home's `.project-table` is unchanged. `npm run check` PASS
+  (1,320 tests); Playwright `board-views` "list sorts" PASS. Local data has no due dates, so the
+  overdue mark and range pill are covered by unit tests only.
 - "Requested by" (briefing `requested_by`) on every board view for agency/client, never designers
   (`board/project-requester.tsx`, `useBriefingRequesters`); List column sortable. `npm run check` PASS
   (1,328 tests); "list sorts" Playwright PASS; screenshots checked for all five views + designer.
 - Canvas campaign fold saved per viewer: migration `202609280010` (applied with `migration up
   --local`), pgTAP `board_collapsed_campaigns` 12/12, Playwright fold/reload PASS.
-- Canvas zoom sits under the tool rail, with responsive fallbacks; each stage has one colour.
-  List summaries show counts/due range; Canvas uses an open arrow and blurred-art backdrop.
+- Canvas zoom pill stacked under the tool rail (horizontal fallback under 721px tall; bar at ≤900px).
+- One colour per project stage system-wide (new `review` violet / `approved` teal tones); List summary
+  is written counts + "Due" range; Canvas open arrow beside the title, blurred-art backdrop.
+  Dev server restarted (stale Turbopack `globals.css`; `.next/dev` cleared, `npm run dev:lan`).
 - Kanban: stage-coloured headings; Planned column replaced by Backlog (paused work); board Activity
   filter defaults to All projects.
 - Briefing Service step: categories first, then only that category's services; search spans all.
@@ -31,16 +27,17 @@ Updated: 2026-09-29 EDT. Owner: **Codex orchestrator**. No active delegated writ
   ([dataset guide](../operations/sabre-development.md#dates-and-team-members); restore script in
   the ignored `supabase/.backups/20260928-before-due-dates`).
 
-- Earlier UI/runtime evidence: [archived checkpoint](history/handoff-2026-09-29-before-private-repository.md).
+- Sign-in intro entry: [history](history/handoff-2026-09-28-page-consistency.md).
 
 ## Current objective and completed workflow task
 
-- Action-driven workflow is implemented locally. The local target is **SABRE only, 20 funnel
-  projects (F01–F20)**, superseding the six-project reduction and previous 10/68 overlay.
+- Action-driven project workflow is implemented locally; the latest authorized data reduction is
+  complete. The local target is now **SABRE only, six projects**, not the previous 10/68 overlay.
 - [Verification record](../verification/action-driven-workflow-2026-09-28.md) contains commands,
   results, screenshots and remaining release evidence. [Workflow guide](../architecture/production-workflow.md)
   describes current buttons and notification recipients.
-- No database reset or migration down is allowed.
+- Root instructions remain synchronized. Preserve the unrelated preexisting `D login.png`.
+- No push/deployment requested. No database reset or migration down is allowed.
 
 ## Implemented behavior
 
@@ -96,5 +93,8 @@ Updated: 2026-09-29 EDT. Owner: **Codex orchestrator**. No active delegated writ
   do not reset/reseed this local SABRE dataset. See verification record for unexercised race and
   Realtime permutations, fresh canonical provisioning and external Miro/Resend requirements.
 - SMTP/DNS/TLS, off-host recovery and hosted CI remain release gates. Local checks do not establish
-  production readiness; deployment and future pushes need a user request.
-- Earlier worker reports and pre-workflow checkpoints are linked from the archived checkpoint.
+  production readiness; push/deployment need a user request.
+- Worker reports in `handoffs/2026-09-27-workflow-*.md` and `2026-09-28-workflow-*.md` preserve
+  bounded evidence; their earlier pending checks are superseded by the integrated record above.
+- [Previous checkpoint](history/handoff-2026-09-27-before-workflow-implementation.md) preserves
+  pre-workflow history. Read archived material only when needed.

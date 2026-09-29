@@ -2,6 +2,15 @@
 
 A creative collaboration application built with Next.js, React and xyflow, backed by Docker-managed Supabase authentication, PostgreSQL, storage and realtime.
 
+Private source repository: [briannadawesstudio/DawesStudios](https://github.com/briannadawesstudio/DawesStudios), with `main` as the default branch. Repository access is required to clone it:
+
+```bash
+git clone https://github.com/briannadawesstudio/DawesStudios.git
+cd DawesStudios
+```
+
+Environment files, local database state, Storage uploads and backups are not included in the repository. Follow the setup guides below to configure a fresh checkout. Pushes to `main` run the [CI checks](.github/README.md); they do not deploy the application.
+
 ## Development
 
 - Follow the [web application setup](apps/web/README.md) to install dependencies, configure the environment and run the app at `http://localhost:3003`.
@@ -27,7 +36,7 @@ Keep the terminal running and open `http://localhost:3003`. To try it on a phone
 - [Domain model](docs/architecture/domain.md)
 - [Permissions](docs/architecture/permissions.md)
 - [Board views](apps/web/features/board/README.md)
-- [Current local SABRE dataset: six workflow examples](docs/operations/sabre-development.md)
+- [Current local SABRE dataset: 20-project funnel](docs/operations/sabre-development.md)
 - [Historical SABRE population recipe: 50 projects](supabase/demo/sabre/README.md)
 - [Project buttons and workflow](docs/architecture/production-workflow.md)
 - [Playground and original board widget history](docs/architecture/playground-and-board-widgets.md)
