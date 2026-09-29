@@ -2,7 +2,16 @@
 
 Updated: 2026-09-28 EDT. Owner: **Codex orchestrator**. No active delegated writers.
 
-## Latest task (Claude, 2026-09-28) — sign-in intro
+## Latest task (Claude, 2026-09-28) — grouped List view
+
+- Board List is grouped into collapsible **Active** / **Delivered** tables (Delivered folded),
+  full-tone status cells, overdue/delivered due marks and a per-group status-mix + due-range summary
+  (`features/board/list-groups.ts`). Home's `.project-table` is unchanged. `npm run check` PASS
+  (1,320 tests); Playwright `board-views` "list sorts" PASS. Local data has no due dates, so the
+  overdue mark and range pill are covered by unit tests only.
+- Next requested: author on every board view; Canvas campaign collapse toggle (designs pending).
+
+## Earlier task (Claude, 2026-09-28) — sign-in intro
 
 - After a sign-in the workspace opens behind a one-time full-screen intro (`workspace/sign-in-intro.tsx`,
   `public/brand/intro.webm`, black mark on white): holds until auth/profile load, fades, skippable,
